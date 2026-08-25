@@ -1,0 +1,1184 @@
+/**
+ * Hermes Workstation Browser Runtime
+ *
+ * First-class Chromium runtime hosted inside Hermes Desktop. Electron already
+ * ships Chromium, so Workstation does not require Chrome/Edge as a product
+ * dependency.
+ *
+ * The runtime deliberately has two control surfaces over ONE WebContentsView
+ * pool:
+ *   1. Electron IPC for the Browser page the human sees.
+ *   2. A loopback-only bearer-authenticated controller for Hermes browser_*
+ *      tools and Kanban workers. The controller file is user-local and never
+ *      exposed on LAN.
+ *
+ * Browser tabs survive route changes and continue in the background. Task ids
+ * are bound to tabs so a background worker never steals the user's active tab.
+ * Once a task owns an internal tab, recovery is expected to reconnect to this
+ * runtime rather than silently moving the task to a different browser.
+ *
+ * The attach/detach + lifecycle design is adapted from browser-use/desktop's
+ * BrowserPool (MIT). See workstation/THIRD_PARTY_NOTICES.md.
+ */
+
+import crypto from 'node:crypto'
+import fs from 'node:fs'
+import http, { type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import os from 'node:os'
+import path from 'node:path'
+
+import { app, BrowserWindow, ipcMain, session, WebContentsView, type Session, type WebContents } from 'electron'
+
+const CACHE_CHECK_INTERVAL_MS = 30 * 60 * 1000
+const DEFAULT_CACHE_MAX_MB = 512
+const DEFAULT_BACKGROUND_FRAME_RATE = 6
+const DEFAULT_VISIBLE_FRAME_RATE = 60
+const DEFAULT_BROWSER_WIDTH = 1280
+const DEFAULT_BROWSER_HEIGHT = 800
+const CONTROL_FILE_VERSION = 1
+const MAX_CONTROL_BODY_BYTES = 512 * 1024
+const COMPACT_TEXT_CHARS = 8_000
+const FULL_TEXT_CHARS = 24_000
+const COMPACT_ELEMENTS = 120
+const FULL_ELEMENTS = 400
+
+export type WorkstationBrowserControlOwner = 'agent' | 'human'
+
+export interface WorkstationBrowserBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface WorkstationBrowserTabState {
+  id: string
+  title: string
+  url: string
+  active: boolean
+  loading: boolean
+  canGoBack: boolean
+  canGoForward: boolean
+  crashed: boolean
+  ownerTaskId: string | null
+}
+
+export interface WorkstationBrowserState {
+  runtime: 'electron-chromium'
+  ready: boolean
+  attached: boolean
+  backgroundCapable: true
+  paused: boolean
+  controlOwner: WorkstationBrowserControlOwner
+  controlReady: boolean
+  profilePath: string
+  cacheBytes: number | null
+  activeTabId: string | null
+  tabs: WorkstationBrowserTabState[]
+  lastError: string | null
+}
+
+interface BrowserEntry {
+  id: string
+  view: WebContentsView
+  loading: boolean
+  crashed: boolean
+  ownerTaskId: string | null
+}
+
+interface ControlHandle {
+  server: Server
+  url: string
+  token: string
+  controlPath: string
+}
+
+interface BrowserControlRequest {
+  action?: unknown
+  arguments?: unknown
+  task_id?: unknown
+  session_id?: unknown
+}
+
+interface PageInventory {
+  url: string
+  title: string
+  text: string
+  totalTextChars: number
+  truncated: boolean
+  elements: Array<{
+    ref: string
+    tag: string
+    role: string
+    label: string
+    value?: string
+    disabled: boolean
+  }>
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function cacheLimitBytes(): number {
+  const raw = Number(process.env.HERMES_WORKSTATION_BROWSER_CACHE_MAX_MB ?? DEFAULT_CACHE_MAX_MB)
+  const mb = Number.isFinite(raw) && raw > 32 ? raw : DEFAULT_CACHE_MAX_MB
+  return Math.round(mb * 1024 * 1024)
+}
+
+function backgroundFrameRate(): number {
+  const raw = Number(process.env.HERMES_WORKSTATION_BROWSER_BACKGROUND_FPS ?? DEFAULT_BACKGROUND_FRAME_RATE)
+  if (!Number.isFinite(raw)) return DEFAULT_BACKGROUND_FRAME_RATE
+  return Math.max(1, Math.min(30, Math.round(raw)))
+}
+
+function workstationBasePath(): string {
+  if (process.env.HERMES_WORKSTATION_HOME?.trim()) return path.resolve(process.env.HERMES_WORKSTATION_HOME.trim())
+
+  if (process.platform === 'win32') {
+    const base = process.env.LOCALAPPDATA?.trim() || path.dirname(app.getPath('userData'))
+    return path.join(base, 'HermesWorkstation')
+  }
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support', 'HermesWorkstation')
+  }
+  const base = process.env.XDG_CONFIG_HOME?.trim() || path.join(os.homedir(), '.config')
+  return path.join(base, 'HermesWorkstation')
+}
+
+export function workstationBrowserProfilePath(): string {
+  if (process.env.HERMES_WORKSTATION_BROWSER_PROFILE?.trim()) {
+    return path.resolve(process.env.HERMES_WORKSTATION_BROWSER_PROFILE.trim())
+  }
+  return path.join(workstationBasePath(), 'Browser', 'User Data')
+}
+
+export function workstationBrowserControlPath(): string {
+  if (process.env.HERMES_WORKSTATION_BROWSER_CONTROL_FILE?.trim()) {
+    return path.resolve(process.env.HERMES_WORKSTATION_BROWSER_CONTROL_FILE.trim())
+  }
+  return path.join(workstationBasePath(), 'Runtime', 'browser-control.json')
+}
+
+function screenshotDirectory(): string {
+  return path.join(workstationBasePath(), 'Browser', 'Screenshots')
+}
+
+function historyState(wc: WebContents): { canGoBack: boolean; canGoForward: boolean } {
+  try {
+    return {
+      canGoBack: wc.navigationHistory.canGoBack(),
+      canGoForward: wc.navigationHistory.canGoForward()
+    }
+  } catch {
+    return { canGoBack: false, canGoForward: false }
+  }
+}
+
+export function normalizeWorkstationBrowserTarget(value: string): string {
+  const raw = String(value ?? '').trim()
+  if (!raw) return 'about:blank'
+  if (raw === 'about:blank') return raw
+
+  try {
+    const parsed = new URL(raw)
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.toString()
+  } catch {
+    // Fall through to hostname/search heuristics.
+  }
+
+  const localish = /^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/.*)?$/i.test(raw)
+  if (localish) return `http://${raw}`
+
+  const hostish = /^[a-z0-9.-]+\.[a-z]{2,}(?::\d+)?(?:\/.*)?$/i.test(raw)
+  if (hostish) return `https://${raw}`
+
+  return `https://duckduckgo.com/?q=${encodeURIComponent(raw)}`
+}
+
+function blockedSensitiveNetworkUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase()
+    if (host === 'metadata.google.internal' || host === 'metadata.goog' || host === '100.100.100.200') return true
+    if (host.startsWith('169.254.')) return true
+    if (host === 'fd00:ec2::254') return true
+    if (host.startsWith('::ffff:169.254.')) return true
+    if (host === '::ffff:100.100.100.200') return true
+    return false
+  } catch {
+    return false
+  }
+}
+
+function permittedTopLevelUrl(url: string): boolean {
+  if (url === 'about:blank') return true
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return false
+  return !blockedSensitiveNetworkUrl(url)
+}
+
+function sendJson(res: ServerResponse, status: number, body: Record<string, unknown>): void {
+  const raw = JSON.stringify(body)
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'content-length': Buffer.byteLength(raw),
+    'cache-control': 'no-store'
+  })
+  res.end(raw)
+}
+
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = ''
+    let bytes = 0
+    req.setEncoding('utf-8')
+    req.on('data', (chunk: string) => {
+      bytes += Buffer.byteLength(chunk)
+      if (bytes > MAX_CONTROL_BODY_BYTES) {
+        reject(new Error('request body too large'))
+        req.destroy()
+        return
+      }
+      body += chunk
+    })
+    req.on('end', () => resolve(body))
+    req.on('error', reject)
+  })
+}
+
+function authorized(req: IncomingMessage, token: string): boolean {
+  return req.headers.authorization === `Bearer ${token}`
+}
+
+function atomicWritePrivateJson(filePath: string, value: unknown): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  const temp = `${filePath}.${process.pid}.tmp`
+  fs.writeFileSync(temp, JSON.stringify(value, null, 2), { encoding: 'utf-8', mode: 0o600 })
+  fs.renameSync(temp, filePath)
+  try {
+    fs.chmodSync(filePath, 0o600)
+  } catch {
+    // Best effort on Windows / filesystems without POSIX permissions.
+  }
+}
+
+function removeOwnedControlFile(filePath: string, token: string): void {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as { token?: unknown }
+    if (parsed.token !== token) return
+    fs.rmSync(filePath, { force: true })
+  } catch {
+    // Missing/malformed files are safe to ignore at shutdown.
+  }
+}
+
+function inventoryScript(maxText: number, maxElements: number): string {
+  return `(async function () {
+    var w = window;
+    var state = w.__hermesWorkstationRefs;
+    if (!state || state.href !== location.href) {
+      state = { href: location.href, counter: 0, byRef: new Map(), byElement: new WeakMap() };
+      w.__hermesWorkstationRefs = state;
+    }
+
+    var roots = [document];
+    var candidates = [];
+    var seen = new Set();
+    while (roots.length) {
+      var root = roots.shift();
+      if (!root || !root.querySelectorAll) continue;
+      var all = Array.from(root.querySelectorAll('*'));
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i];
+        if (el.shadowRoot) roots.push(el.shadowRoot);
+        if (el.tagName === 'IFRAME') {
+          try { if (el.contentDocument) roots.push(el.contentDocument); } catch (err) {}
+        }
+        if (seen.has(el)) continue;
+        seen.add(el);
+        var tag = String(el.tagName || '').toLowerCase();
+        var role = String(el.getAttribute && el.getAttribute('role') || '').toLowerCase();
+        var interactive = ['a','button','input','textarea','select','summary','option'].includes(tag) ||
+          ['button','link','textbox','searchbox','checkbox','radio','combobox','menuitem','option','switch','slider','tab','treeitem','spinbutton'].includes(role) ||
+          (typeof el.tabIndex === 'number' && el.tabIndex >= 0);
+        if (interactive) candidates.push(el);
+      }
+    }
+
+    var out = [];
+    for (var j = 0; j < candidates.length && out.length < ${maxElements}; j++) {
+      var el = candidates[j];
+      var rect = el.getBoundingClientRect();
+      var style = getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || rect.width < 1 || rect.height < 1) continue;
+      var ref = state.byElement.get(el);
+      if (!ref) {
+        ref = '@e' + (++state.counter);
+        state.byElement.set(el, ref);
+        state.byRef.set(ref, el);
+      }
+      var tag = String(el.tagName || '').toLowerCase();
+      var role = String(el.getAttribute('role') || tag || 'element');
+      var type = String(el.getAttribute('type') || '').toLowerCase();
+      var rawValue = 'value' in el ? String(el.value || '') : '';
+      var value = type === 'password' && rawValue ? '[REDACTED]' : rawValue;
+      var label = String(
+        el.getAttribute('aria-label') ||
+        el.getAttribute('alt') ||
+        el.getAttribute('title') ||
+        el.getAttribute('placeholder') ||
+        el.innerText ||
+        el.textContent ||
+        el.getAttribute('name') ||
+        ''
+      ).replace(/\\s+/g, ' ').trim().slice(0, 240);
+      out.push({
+        ref: ref,
+        tag: tag,
+        role: role,
+        label: label,
+        value: value ? value.slice(0, 240) : undefined,
+        disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true'
+      });
+    }
+
+    var bodyText = String(document.body && document.body.innerText || '').replace(/\\u0000/g, '');
+    return {
+      url: location.href,
+      title: document.title || '',
+      text: bodyText.slice(0, ${maxText}),
+      totalTextChars: bodyText.length,
+      truncated: bodyText.length > ${maxText} || candidates.length > ${maxElements},
+      elements: out
+    };
+  })()`
+}
+
+function pointScript(ref: string, focus: boolean): string {
+  return `(function () {
+    var state = window.__hermesWorkstationRefs;
+    var el = state && state.byRef && state.byRef.get(${JSON.stringify(ref)});
+    if (!el || !el.isConnected) return { success: false, error: 'stale_or_unknown_ref' };
+    try { el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' }); } catch (err) {}
+    if (${focus ? 'true' : 'false'}) { try { el.focus({ preventScroll: true }); } catch (err) { try { el.focus(); } catch (err2) {} } }
+    var r = el.getBoundingClientRect();
+    if (!r || r.width < 1 || r.height < 1) return { success: false, error: 'element_not_visible' };
+    return { success: true, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+  })()`
+}
+
+function formatInventory(inv: PageInventory, full: boolean): string {
+  const lines: string[] = []
+  lines.push(`URL: ${inv.url}`)
+  if (inv.title) lines.push(`Title: ${inv.title}`)
+  lines.push('')
+  if (inv.elements.length) {
+    lines.push('Interactive elements:')
+    for (const item of inv.elements) {
+      const label = item.label ? ` "${item.label.replace(/"/g, '\\"')}"` : ''
+      const value = item.value ? ` value="${item.value.replace(/"/g, '\\"')}"` : ''
+      const disabled = item.disabled ? ' disabled' : ''
+      lines.push(`- [${item.ref}] ${item.role || item.tag}${label}${value}${disabled}`)
+    }
+  }
+  if (full || inv.text.trim()) {
+    lines.push('', 'Page text:', inv.text.trim())
+  }
+  if (inv.truncated) lines.push('', '[Snapshot truncated by Hermes Workstation budget]')
+  return lines.join('\n').trim()
+}
+
+export class WorkstationBrowserRuntime {
+  private browserSession: Session | null = null
+  private entries = new Map<string, BrowserEntry>()
+  private taskTabs = new Map<string, string>()
+  private activeTabId: string | null = null
+  private ownerWindow: BrowserWindow | null = null
+  private attached = false
+  private bounds: WorkstationBrowserBounds | null = null
+  private paused = false
+  private controlOwner: WorkstationBrowserControlOwner = 'agent'
+  private lastError: string | null = null
+  private cacheBytes: number | null = null
+  private cacheTimer: NodeJS.Timeout | null = null
+  private control: ControlHandle | null = null
+
+  ensure(): WorkstationBrowserState {
+    this.ensureSession()
+    if (!this.activeTabId || !this.entries.has(this.activeTabId)) this.createTab('about:blank', true)
+    void this.refreshCacheSize()
+    this.emitState()
+    return this.state()
+  }
+
+  state(): WorkstationBrowserState {
+    return {
+      runtime: 'electron-chromium',
+      ready: this.browserSession !== null,
+      attached: this.attached,
+      backgroundCapable: true,
+      paused: this.paused,
+      controlOwner: this.controlOwner,
+      controlReady: this.control !== null,
+      profilePath: workstationBrowserProfilePath(),
+      cacheBytes: this.cacheBytes,
+      activeTabId: this.activeTabId,
+      tabs: Array.from(this.entries.values()).map(entry => this.tabState(entry)),
+      lastError: this.lastError
+    }
+  }
+
+  getSession(): Session {
+    this.ensureSession()
+    return this.browserSession!
+  }
+
+  getActiveWebContents(): WebContents | null {
+    if (!this.activeTabId) return null
+    return this.entries.get(this.activeTabId)?.view.webContents ?? null
+  }
+
+  getWebContents(tabId: string): WebContents | null {
+    return this.entries.get(tabId)?.view.webContents ?? null
+  }
+
+  createTab(target = 'about:blank', activate = true, ownerTaskId: string | null = null): WorkstationBrowserState {
+    this.ensureSession()
+    const id = crypto.randomUUID()
+    const view = new WebContentsView({
+      webPreferences: {
+        session: this.browserSession!,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        spellcheck: true,
+        backgroundThrottling: false
+      }
+    })
+
+    view.setBackgroundColor('#111111')
+
+    const entry: BrowserEntry = { id, view, loading: false, crashed: false, ownerTaskId }
+    this.entries.set(id, entry)
+    this.applyFrameRate(entry, false)
+    if (ownerTaskId) this.taskTabs.set(ownerTaskId, id)
+    this.wireEntry(entry)
+
+    if (activate || !this.activeTabId) this.activateTab(id)
+
+    const url = normalizeWorkstationBrowserTarget(target)
+    if (url !== 'about:blank') void view.webContents.loadURL(url).catch(error => this.recordError(error))
+
+    this.emitState()
+    return this.state()
+  }
+
+  closeTab(tabId: string): WorkstationBrowserState {
+    const entry = this.entries.get(tabId)
+    if (!entry) return this.state()
+
+    if (this.activeTabId === tabId && this.attached) this.detachActiveView(false)
+    this.removeChildView(entry)
+    if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === tabId) this.taskTabs.delete(entry.ownerTaskId)
+
+    try {
+      entry.view.webContents.close()
+    } catch {
+      try {
+        entry.view.webContents.destroy()
+      } catch {
+        // Already gone.
+      }
+    }
+    this.entries.delete(tabId)
+
+    if (this.activeTabId === tabId) {
+      this.activeTabId = null
+      const replacement = this.entries.values().next().value as BrowserEntry | undefined
+      if (replacement) this.activateTab(replacement.id)
+    }
+
+    if (this.entries.size === 0) this.createTab('about:blank', true)
+    this.emitState()
+    return this.state()
+  }
+
+  activateTab(tabId: string): WorkstationBrowserState {
+    const entry = this.entries.get(tabId)
+    if (!entry) throw new Error(`Unknown Hermes Browser tab: ${tabId}`)
+    if (this.activeTabId === tabId) return this.state()
+
+    const shouldReattach = this.attached && this.ownerWindow && !this.ownerWindow.isDestroyed() && this.bounds
+    if (this.attached) this.detachActiveView(true)
+    this.activeTabId = tabId
+    if (shouldReattach && this.ownerWindow && this.bounds) this.attach(this.ownerWindow, this.bounds)
+    this.emitState()
+    return this.state()
+  }
+
+  async navigate(value: string): Promise<WorkstationBrowserState> {
+    this.ensure()
+    const wc = this.getActiveWebContents()
+    if (!wc) throw new Error('Hermes Browser has no active tab.')
+    await wc.loadURL(normalizeWorkstationBrowserTarget(value))
+    this.emitState()
+    return this.state()
+  }
+
+  back(): WorkstationBrowserState {
+    const wc = this.getActiveWebContents()
+    if (wc?.navigationHistory.canGoBack()) wc.navigationHistory.goBack()
+    return this.state()
+  }
+
+  forward(): WorkstationBrowserState {
+    const wc = this.getActiveWebContents()
+    if (wc?.navigationHistory.canGoForward()) wc.navigationHistory.goForward()
+    return this.state()
+  }
+
+  reload(): WorkstationBrowserState {
+    this.getActiveWebContents()?.reload()
+    return this.state()
+  }
+
+  stop(): WorkstationBrowserState {
+    this.getActiveWebContents()?.stop()
+    return this.state()
+  }
+
+  focus(): WorkstationBrowserState {
+    this.getActiveWebContents()?.focus()
+    return this.state()
+  }
+
+  attach(window: BrowserWindow, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
+    this.ensure()
+    const entry = this.activeEntry()
+    if (!entry) return this.state()
+    const bounds = this.validBounds(rawBounds)
+    if (!bounds) return this.state()
+
+    if (this.ownerWindow && this.ownerWindow !== window && this.attached) this.detachActiveView(false)
+    this.ownerWindow = window
+    this.bounds = bounds
+    this.ensureChildView(window, entry.view)
+    entry.view.setBounds(bounds)
+    this.applyFrameRate(entry, true)
+    try {
+      entry.view.webContents.focus()
+    } catch {
+      // View may have crashed between checks.
+    }
+    this.attached = true
+    this.emitState()
+    return this.state()
+  }
+
+  setBounds(window: BrowserWindow, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
+    const bounds = this.validBounds(rawBounds)
+    if (!bounds) return this.state()
+    this.bounds = bounds
+    if (this.attached && this.ownerWindow === window) {
+      const entry = this.activeEntry()
+      if (entry) entry.view.setBounds(bounds)
+    }
+    return this.state()
+  }
+
+  detach(window?: BrowserWindow | null): WorkstationBrowserState {
+    if (window && this.ownerWindow && window !== this.ownerWindow) return this.state()
+    this.detachActiveView(true)
+    this.emitState()
+    return this.state()
+  }
+
+  async pause(): Promise<WorkstationBrowserState> {
+    if (this.paused) return this.state()
+    this.paused = true
+    // Do not destroy tabs or auth state. Hidden Chromium keeps its process and
+    // profile; pausing is an agent-control gate, not a logout/reset operation.
+    this.emitState()
+    return this.state()
+  }
+
+  async resume(): Promise<WorkstationBrowserState> {
+    if (!this.paused) return this.state()
+    this.paused = false
+    this.emitState()
+    return this.state()
+  }
+
+  takeControl(): WorkstationBrowserState {
+    this.controlOwner = 'human'
+    this.emitState()
+    return this.state()
+  }
+
+  releaseControl(): WorkstationBrowserState {
+    this.controlOwner = 'agent'
+    this.emitState()
+    return this.state()
+  }
+
+  async cleanupCache(force = false): Promise<WorkstationBrowserState> {
+    this.ensureSession()
+    const size = await this.browserSession!.getCacheSize()
+    this.cacheBytes = size
+    const busy = Array.from(this.entries.values()).some(entry => entry.loading)
+    if ((force || size > cacheLimitBytes()) && !busy) {
+      // Cache only: cookies, localStorage, IndexedDB and login/session state survive.
+      await this.browserSession!.clearCache()
+      this.cacheBytes = await this.browserSession!.getCacheSize()
+    }
+    this.emitState()
+    return this.state()
+  }
+
+  async startControlServer(): Promise<void> {
+    if (this.control) return
+    this.ensure()
+    const token = crypto.randomBytes(32).toString('base64url')
+    const controlPath = workstationBrowserControlPath()
+
+    const server = http.createServer(async (req, res) => {
+      const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+      if (!authorized(req, token)) {
+        sendJson(res, 401, { success: false, error: 'unauthorized' })
+        return
+      }
+      if (url.pathname === '/health' && req.method === 'GET') {
+        sendJson(res, 200, { success: true, runtime: 'electron-chromium', state: this.state() })
+        return
+      }
+      if (url.pathname !== '/v1/action' || req.method !== 'POST') {
+        sendJson(res, 404, { success: false, error: 'not_found' })
+        return
+      }
+
+      try {
+        const raw = await readBody(req)
+        const request = JSON.parse(raw || '{}') as BrowserControlRequest
+        const result = await this.executeControlRequest(request)
+        sendJson(res, 200, { success: true, result })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        this.recordError(error)
+        sendJson(res, 400, { success: false, error: message })
+      }
+    })
+
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject)
+      server.listen(0, '127.0.0.1', () => {
+        server.off('error', reject)
+        resolve()
+      })
+    })
+
+    const address = server.address()
+    if (!address || typeof address === 'string') {
+      server.close()
+      throw new Error('Hermes Browser controller could not bind a loopback TCP port.')
+    }
+
+    const control: ControlHandle = {
+      server,
+      url: `http://127.0.0.1:${address.port}`,
+      token,
+      controlPath
+    }
+    this.control = control
+    atomicWritePrivateJson(controlPath, {
+      version: CONTROL_FILE_VERSION,
+      pid: process.pid,
+      url: control.url,
+      token,
+      runtime: 'electron-chromium',
+      profile_path: workstationBrowserProfilePath(),
+      created_at: new Date().toISOString()
+    })
+    this.emitState()
+  }
+
+  async stopControlServer(): Promise<void> {
+    const control = this.control
+    this.control = null
+    if (!control) return
+    removeOwnedControlFile(control.controlPath, control.token)
+    await new Promise<void>(resolve => control.server.close(() => resolve()))
+    this.emitState()
+  }
+
+  async destroy(): Promise<void> {
+    if (this.cacheTimer) clearInterval(this.cacheTimer)
+    this.cacheTimer = null
+    await this.stopControlServer()
+    this.detachActiveView(false)
+    for (const entry of this.entries.values()) {
+      this.removeChildView(entry)
+      try {
+        entry.view.webContents.close()
+      } catch {
+        // Best effort during app shutdown.
+      }
+    }
+    this.entries.clear()
+    this.taskTabs.clear()
+    this.activeTabId = null
+  }
+
+  private async executeControlRequest(request: BrowserControlRequest): Promise<Record<string, unknown>> {
+    const action = typeof request.action === 'string' ? request.action : ''
+    const args = request.arguments && typeof request.arguments === 'object' ? request.arguments as Record<string, unknown> : {}
+    const taskId = typeof request.task_id === 'string' && request.task_id.trim() ? request.task_id.trim() : 'default'
+
+    if (!action.startsWith('browser_')) throw new Error('unsupported_action')
+    const mutating = new Set(['browser_navigate', 'browser_click', 'browser_type', 'browser_scroll', 'browser_back', 'browser_press'])
+    if (mutating.has(action)) this.assertAgentControl()
+
+    if (action === 'browser_navigate') {
+      const entry = this.entryForTask(taskId, true)!
+      const url = normalizeWorkstationBrowserTarget(String(args.url ?? ''))
+      await entry.view.webContents.loadURL(url)
+      return this.snapshotForEntry(entry, false)
+    }
+
+    const entry = this.entryForTask(taskId, false)
+    if (!entry) throw new Error('no_bound_browser_tab: call browser_navigate first')
+
+    switch (action) {
+      case 'browser_snapshot':
+        return this.snapshotForEntry(entry, Boolean(args.full))
+      case 'browser_click':
+        await this.clickRef(entry, String(args.ref ?? ''))
+        await delay(220)
+        return this.snapshotForEntry(entry, false)
+      case 'browser_type':
+        await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''))
+        await delay(160)
+        return this.snapshotForEntry(entry, false)
+      case 'browser_scroll':
+        await this.scrollEntry(entry, String(args.direction ?? 'down'))
+        await delay(140)
+        return this.snapshotForEntry(entry, false)
+      case 'browser_back':
+        if (entry.view.webContents.navigationHistory.canGoBack()) entry.view.webContents.navigationHistory.goBack()
+        await delay(220)
+        return this.snapshotForEntry(entry, false)
+      case 'browser_press':
+        await this.pressKey(entry, String(args.key ?? ''))
+        await delay(120)
+        return this.snapshotForEntry(entry, false)
+      case 'browser_get_images':
+        return this.imagesForEntry(entry)
+      case 'browser_console':
+        return this.consoleForEntry(entry, args)
+      case 'browser_vision':
+        return this.screenshotForEntry(entry)
+      default:
+        throw new Error(`unsupported_action:${action}`)
+    }
+  }
+
+  private assertAgentControl(): void {
+    if (this.paused) throw new Error('Hermes Browser is paused. Resume it before agent actions continue.')
+    if (this.controlOwner === 'human') throw new Error('Hermes Browser is under human control. Release Control before agent actions continue.')
+  }
+
+  private entryForTask(taskId: string, create: boolean): BrowserEntry | null {
+    const mapped = this.taskTabs.get(taskId)
+    if (mapped) {
+      const entry = this.entries.get(mapped)
+      if (entry && !entry.view.webContents.isDestroyed()) {
+        if (entry.id !== this.activeTabId || !this.attached) this.parkEntry(entry)
+        return entry
+      }
+      this.taskTabs.delete(taskId)
+    }
+    if (!create) return null
+    this.createTab('about:blank', !this.activeTabId, taskId)
+    const id = this.taskTabs.get(taskId)
+    const entry = id ? this.entries.get(id) ?? null : null
+    if (entry) this.parkEntry(entry)
+    return entry
+  }
+
+  private async snapshotForEntry(entry: BrowserEntry, full: boolean): Promise<Record<string, unknown>> {
+    const wc = entry.view.webContents
+    if (wc.isDestroyed()) throw new Error('browser_tab_destroyed')
+    const inv = await wc.executeJavaScript(
+      inventoryScript(full ? FULL_TEXT_CHARS : COMPACT_TEXT_CHARS, full ? FULL_ELEMENTS : COMPACT_ELEMENTS),
+      true
+    ) as PageInventory
+    return {
+      success: true,
+      runtime: 'electron-chromium',
+      task_id: entry.ownerTaskId,
+      tab_id: entry.id,
+      url: inv.url,
+      title: inv.title,
+      snapshot: formatInventory(inv, full),
+      truncated: inv.truncated,
+      total_text_chars: inv.totalTextChars,
+      element_count: inv.elements.length
+    }
+  }
+
+  private async resolvePoint(entry: BrowserEntry, ref: string, focus: boolean): Promise<{ x: number; y: number }> {
+    if (!ref) throw new Error('ref_required')
+    const result = await entry.view.webContents.executeJavaScript(pointScript(ref, focus), true) as {
+      success?: boolean
+      error?: string
+      x?: number
+      y?: number
+    }
+    if (!result?.success || !Number.isFinite(result.x) || !Number.isFinite(result.y)) {
+      throw new Error(result?.error || 'element_unavailable')
+    }
+    return { x: Number(result.x), y: Number(result.y) }
+  }
+
+  private async ensureDebugger(wc: WebContents): Promise<void> {
+    if (wc.debugger.isAttached()) return
+    try {
+      wc.debugger.attach('1.3')
+    } catch (error) {
+      if (!wc.debugger.isAttached()) throw error
+    }
+  }
+
+  private async cdp(wc: WebContents, method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    await this.ensureDebugger(wc)
+    return wc.debugger.sendCommand(method, params)
+  }
+
+  private async cdpClick(wc: WebContents, x: number, y: number): Promise<void> {
+    await this.cdp(wc, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
+    await this.cdp(wc, 'Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 })
+    await this.cdp(wc, 'Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 })
+  }
+
+  private async clickRef(entry: BrowserEntry, ref: string): Promise<void> {
+    const wc = entry.view.webContents
+    const point = await this.resolvePoint(entry, ref, true)
+    await this.cdpClick(wc, point.x, point.y)
+  }
+
+  private async typeRef(entry: BrowserEntry, ref: string, text: string): Promise<void> {
+    const wc = entry.view.webContents
+    const point = await this.resolvePoint(entry, ref, true)
+    await this.cdpClick(wc, point.x, point.y)
+    const modifiers = process.platform === 'darwin' ? 4 : 2 // Meta=4, Ctrl=2 in CDP Input domain.
+    await this.cdp(wc, 'Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'a', code: 'KeyA', modifiers })
+    await this.cdp(wc, 'Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', modifiers })
+    await this.cdp(wc, 'Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Backspace', code: 'Backspace' })
+    await this.cdp(wc, 'Input.dispatchKeyEvent', { type: 'keyUp', key: 'Backspace', code: 'Backspace' })
+    await this.cdp(wc, 'Input.insertText', { text })
+  }
+
+  private async scrollEntry(entry: BrowserEntry, direction: string): Promise<void> {
+    const wc = entry.view.webContents
+    const sign = direction.toLowerCase() === 'up' ? -1 : 1
+    const viewport = await wc.executeJavaScript('({ width: window.innerWidth, height: window.innerHeight })', true) as { width?: number; height?: number }
+    const width = Math.max(2, Number(viewport.width) || 1280)
+    const height = Math.max(2, Number(viewport.height) || 720)
+    await this.cdp(wc, 'Input.dispatchMouseEvent', {
+      type: 'mouseWheel',
+      x: Math.round(width / 2),
+      y: Math.round(height / 2),
+      deltaX: 0,
+      deltaY: sign * Math.max(400, Math.round(height * 0.75))
+    })
+  }
+
+  private async pressKey(entry: BrowserEntry, key: string): Promise<void> {
+    if (!key) throw new Error('key_required')
+    const wc = entry.view.webContents
+    await this.cdp(wc, 'Input.dispatchKeyEvent', { type: 'rawKeyDown', key })
+    await this.cdp(wc, 'Input.dispatchKeyEvent', { type: 'keyUp', key })
+  }
+
+  private async imagesForEntry(entry: BrowserEntry): Promise<Record<string, unknown>> {
+    const images = await entry.view.webContents.executeJavaScript(`(function () {
+      return Array.from(document.images).slice(0, 250).map(function (img) {
+        return { src: img.currentSrc || img.src || '', alt: img.alt || '', width: img.naturalWidth || 0, height: img.naturalHeight || 0 };
+      }).filter(function (img) { return !!img.src; });
+    })()`, true) as Array<Record<string, unknown>>
+    return { success: true, runtime: 'electron-chromium', task_id: entry.ownerTaskId, images, count: images.length }
+  }
+
+  private async consoleForEntry(entry: BrowserEntry, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const expression = typeof args.expression === 'string' ? args.expression : ''
+    if (!expression) {
+      return {
+        success: true,
+        runtime: 'electron-chromium',
+        task_id: entry.ownerTaskId,
+        messages: [],
+        note: 'Historical console capture is not enabled in Workstation V1 foundation; expression evaluation is available.'
+      }
+    }
+    const result = await entry.view.webContents.executeJavaScript(expression, true)
+    return { success: true, runtime: 'electron-chromium', task_id: entry.ownerTaskId, result }
+  }
+
+  private async screenshotForEntry(entry: BrowserEntry): Promise<Record<string, unknown>> {
+    fs.mkdirSync(screenshotDirectory(), { recursive: true })
+    const image = await entry.view.webContents.capturePage()
+    const filePath = path.join(screenshotDirectory(), `browser-${Date.now()}-${entry.id.slice(0, 8)}.png`)
+    fs.writeFileSync(filePath, image.toPNG())
+    return {
+      success: true,
+      runtime: 'electron-chromium',
+      task_id: entry.ownerTaskId,
+      screenshot_path: filePath,
+      note: 'Screenshot captured locally. Use the normal Hermes vision pipeline when visual interpretation is required.'
+    }
+  }
+
+  private ensureSession(): void {
+    if (this.browserSession) return
+    const profilePath = workstationBrowserProfilePath()
+    fs.mkdirSync(profilePath, { recursive: true })
+    this.browserSession = session.fromPath(profilePath, { cache: true })
+    this.cacheTimer = setInterval(() => {
+      void this.cleanupCache(false).catch(error => this.recordError(error))
+    }, CACHE_CHECK_INTERVAL_MS)
+    this.cacheTimer.unref?.()
+    setTimeout(() => void this.cleanupCache(false).catch(error => this.recordError(error)), 5_000).unref?.()
+  }
+
+  private wireEntry(entry: BrowserEntry): void {
+    const wc = entry.view.webContents
+    wc.setWindowOpenHandler(details => {
+      if (permittedTopLevelUrl(details.url)) {
+        const shouldActivate = this.activeTabId === entry.id
+        this.createTab(details.url, shouldActivate, entry.ownerTaskId)
+      }
+      return { action: 'deny' }
+    })
+    const guardTopLevelNavigation = (event: { preventDefault: () => void }, url: string): void => {
+      if (!permittedTopLevelUrl(url)) {
+        event.preventDefault()
+        this.lastError = `Blocked unsafe top-level navigation: ${url}`
+        this.emitState()
+      }
+    }
+    wc.on('will-navigate', guardTopLevelNavigation)
+    wc.on('will-redirect', guardTopLevelNavigation)
+    wc.on('did-start-loading', () => {
+      entry.loading = true
+      this.emitState()
+    })
+    wc.on('did-stop-loading', () => {
+      entry.loading = false
+      this.emitState()
+    })
+    wc.on('did-navigate', () => this.emitState())
+    wc.on('did-navigate-in-page', () => this.emitState())
+    wc.on('page-title-updated', () => this.emitState())
+    wc.on('render-process-gone', (_event, details) => {
+      entry.crashed = true
+      this.lastError = `Browser renderer exited: ${details.reason}`
+      this.emitState()
+    })
+    wc.on('destroyed', () => {
+      if (this.entries.get(entry.id) === entry) {
+        this.entries.delete(entry.id)
+        if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === entry.id) this.taskTabs.delete(entry.ownerTaskId)
+        if (this.activeTabId === entry.id) this.activeTabId = null
+        this.emitState()
+      }
+    })
+  }
+
+  private activeEntry(): BrowserEntry | null {
+    return this.activeTabId ? this.entries.get(this.activeTabId) ?? null : null
+  }
+
+  private tabState(entry: BrowserEntry): WorkstationBrowserTabState {
+    const wc = entry.view.webContents
+    if (wc.isDestroyed()) {
+      return {
+        id: entry.id,
+        title: 'Crashed tab',
+        url: '',
+        active: entry.id === this.activeTabId,
+        loading: false,
+        canGoBack: false,
+        canGoForward: false,
+        crashed: true,
+        ownerTaskId: entry.ownerTaskId
+      }
+    }
+    const history = historyState(wc)
+    return {
+      id: entry.id,
+      title: wc.getTitle() || 'New Tab',
+      url: wc.getURL() || 'about:blank',
+      active: entry.id === this.activeTabId,
+      loading: entry.loading,
+      canGoBack: history.canGoBack,
+      canGoForward: history.canGoForward,
+      crashed: entry.crashed,
+      ownerTaskId: entry.ownerTaskId
+    }
+  }
+
+  private ensureChildView(window: BrowserWindow, view: WebContentsView): void {
+    if (window.contentView.children.includes(view)) return
+    window.contentView.addChildView(view)
+  }
+
+  private removeChildView(entry: BrowserEntry): void {
+    const window = this.ownerWindow
+    if (!window || window.isDestroyed()) return
+    if (!window.contentView.children.includes(entry.view)) return
+    try {
+      window.contentView.removeChildView(entry.view)
+    } catch {
+      // View may already be detached/destroyed.
+    }
+  }
+
+  private applyFrameRate(entry: BrowserEntry, visible: boolean): void {
+    try {
+      entry.view.webContents.setFrameRate(visible ? DEFAULT_VISIBLE_FRAME_RATE : backgroundFrameRate())
+    } catch {
+      // Frame-rate throttling is an optimization; control remains functional.
+    }
+  }
+
+  private parkEntry(entry: BrowserEntry): void {
+    // Keeping task-owned WebContentsView attached at the edge of the compositor
+    // avoids background-rendering/screenshot stalls while exposing only a 1px
+    // sliver. This mirrors the proven parking pattern in browser-use/desktop.
+    if (!entry.ownerTaskId) {
+      this.applyFrameRate(entry, false)
+      return
+    }
+    const window = this.ownerWindow ?? BrowserWindow.getAllWindows().find(candidate => !candidate.isDestroyed()) ?? null
+    if (!window || window.isDestroyed()) {
+      this.applyFrameRate(entry, false)
+      return
+    }
+    this.ownerWindow = window
+    this.ensureChildView(window, entry.view)
+    const content = window.getContentBounds()
+    const width = Math.max(1, this.bounds?.width ?? DEFAULT_BROWSER_WIDTH)
+    const height = Math.max(1, this.bounds?.height ?? DEFAULT_BROWSER_HEIGHT)
+    entry.view.setBounds({
+      x: Math.max(0, content.width - 1),
+      y: Math.max(0, content.height - 1),
+      width,
+      height
+    })
+    this.applyFrameRate(entry, false)
+  }
+
+  private detachActiveView(park: boolean): void {
+    if (!this.attached || !this.ownerWindow || this.ownerWindow.isDestroyed()) {
+      this.attached = false
+      return
+    }
+    const entry = this.activeEntry()
+    if (entry) {
+      this.removeChildView(entry)
+      if (park) this.parkEntry(entry)
+    }
+    this.attached = false
+  }
+
+  private validBounds(bounds: WorkstationBrowserBounds): WorkstationBrowserBounds | null {
+    const finite = [bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
+    if (!finite || bounds.width < 1 || bounds.height < 1) return null
+    return {
+      x: Math.max(0, Math.round(bounds.x)),
+      y: Math.max(0, Math.round(bounds.y)),
+      width: Math.max(1, Math.round(bounds.width)),
+      height: Math.max(1, Math.round(bounds.height))
+    }
+  }
+
+  private async refreshCacheSize(): Promise<void> {
+    if (!this.browserSession) return
+    try {
+      this.cacheBytes = await this.browserSession.getCacheSize()
+      this.emitState()
+    } catch {
+      // Metrics are non-critical.
+    }
+  }
+
+  private recordError(error: unknown): void {
+    this.lastError = error instanceof Error ? error.message : String(error)
+    this.emitState()
+  }
+
+  private emitState(): void {
+    const state = this.state()
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) window.webContents.send('hermes:workstation-browser:state', state)
+    }
+  }
+}
+
+let runtime: WorkstationBrowserRuntime | null = null
+
+export function getWorkstationBrowserRuntime(): WorkstationBrowserRuntime {
+  if (!runtime) runtime = new WorkstationBrowserRuntime()
+  return runtime
+}
+
+function senderWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  if (!window) throw new Error('Hermes Browser IPC sender is not a BrowserWindow.')
+  return window
+}
+
+function registerIpc(): void {
+  ipcMain.handle('hermes:workstation-browser:status', () => getWorkstationBrowserRuntime().ensure())
+  ipcMain.handle('hermes:workstation-browser:ensure', () => getWorkstationBrowserRuntime().ensure())
+  ipcMain.handle('hermes:workstation-browser:new-tab', (_event, target) =>
+    getWorkstationBrowserRuntime().createTab(String(target ?? 'about:blank'), true)
+  )
+  ipcMain.handle('hermes:workstation-browser:activate-tab', (_event, tabId) =>
+    getWorkstationBrowserRuntime().activateTab(String(tabId ?? ''))
+  )
+  ipcMain.handle('hermes:workstation-browser:close-tab', (_event, tabId) =>
+    getWorkstationBrowserRuntime().closeTab(String(tabId ?? ''))
+  )
+  ipcMain.handle('hermes:workstation-browser:navigate', async (_event, target) =>
+    getWorkstationBrowserRuntime().navigate(String(target ?? ''))
+  )
+  ipcMain.handle('hermes:workstation-browser:back', () => getWorkstationBrowserRuntime().back())
+  ipcMain.handle('hermes:workstation-browser:forward', () => getWorkstationBrowserRuntime().forward())
+  ipcMain.handle('hermes:workstation-browser:reload', () => getWorkstationBrowserRuntime().reload())
+  ipcMain.handle('hermes:workstation-browser:stop', () => getWorkstationBrowserRuntime().stop())
+  ipcMain.handle('hermes:workstation-browser:focus', () => getWorkstationBrowserRuntime().focus())
+  ipcMain.handle('hermes:workstation-browser:attach', (event, bounds) =>
+    getWorkstationBrowserRuntime().attach(senderWindow(event), bounds as WorkstationBrowserBounds)
+  )
+  ipcMain.handle('hermes:workstation-browser:set-bounds', (event, bounds) =>
+    getWorkstationBrowserRuntime().setBounds(senderWindow(event), bounds as WorkstationBrowserBounds)
+  )
+  ipcMain.handle('hermes:workstation-browser:detach', event =>
+    getWorkstationBrowserRuntime().detach(senderWindow(event))
+  )
+  ipcMain.handle('hermes:workstation-browser:pause', () => getWorkstationBrowserRuntime().pause())
+  ipcMain.handle('hermes:workstation-browser:resume', () => getWorkstationBrowserRuntime().resume())
+  ipcMain.handle('hermes:workstation-browser:take-control', () => getWorkstationBrowserRuntime().takeControl())
+  ipcMain.handle('hermes:workstation-browser:release-control', () => getWorkstationBrowserRuntime().releaseControl())
+  ipcMain.handle('hermes:workstation-browser:cleanup-cache', (_event, force) =>
+    getWorkstationBrowserRuntime().cleanupCache(Boolean(force))
+  )
+}
+
+registerIpc()
+void app.whenReady().then(() => getWorkstationBrowserRuntime().startControlServer()).catch(error => {
+  console.error('[workstation-browser] failed to start controller', error)
+})
+app.on('before-quit', () => {
+  void runtime?.destroy()
+})

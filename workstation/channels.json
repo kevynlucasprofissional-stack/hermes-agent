@@ -1,0 +1,10 @@
+{
+  "stable": {
+    "description": "Daily-use validated channel",
+    "hermes_ref": "057dcdf236f8a6a26721c10fcc6ccb72726e272a"
+  },
+  "edge": {
+    "description": "Upstream-integration validation channel",
+    "hermes_ref": "057dcdf236f8a6a26721c10fcc6ccb72726e272a"
+  }
+}

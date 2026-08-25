@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hermes Workstation Discovered Task",
+  "type": "object",
+  "required": [
+    "title",
+    "parent_task_id",
+    "discovered_by",
+    "reason",
+    "origin_session_id",
+    "evidence"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent_task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "discovered_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origin_session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "array"
+    },
+    "required_for_parent": {
+      "type": "boolean"
+    }
+  }
+}

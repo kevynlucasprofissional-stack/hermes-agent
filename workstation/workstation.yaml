@@ -1,0 +1,73 @@
+version: 1
+
+workstation:
+  enabled: true
+  channel: stable
+
+browser:
+  runtime: electron-chromium
+  routing:
+    enabled: true
+    internal_only_when_disabled: true
+    fail_closed_after_binding: true
+  profile:
+    # Windows default is resolved by Desktop main process to:
+    # %LOCALAPPDATA%\HermesWorkstation\Browser\User Data
+    path: auto
+    persistent: true
+  background:
+    enabled: true
+    detached_frame_rate: 6
+  maintenance:
+    cache_max_mb: 512
+    interval_minutes: 30
+    preserve:
+      - cookies
+      - localStorage
+      - indexedDB
+      - serviceWorkers
+  future_runtimes:
+    lightpanda: false
+
+tasks:
+  create_kanban_for_multistep: true
+  create_followups_without_prompting: true
+  execute_followup_when_required_for_parent: true
+  require_followup_fields:
+    - parent_task_id
+    - discovered_by
+    - reason
+    - evidence
+    - origin_session_id
+
+journal:
+  enabled: true
+  full_events: true
+  screenshots: selective
+
+security:
+  fail_closed: true
+  lan_requires_auth: true
+  approvals:
+    - purchase
+    - pay
+    - send
+    - publish
+    - delete
+    - accept_contract
+    - accept_terms
+    - change_credentials
+    - change_permissions
+    - move_money
+    - irreversible
+    - reveal_secret_new_context
+    - insert_secret_new_context
+
+lan:
+  enabled: false
+  host: 0.0.0.0
+  port: 9119
+  require_auth: true
+  detect_ip: true
+  show_qr: true
+  tailscale: false

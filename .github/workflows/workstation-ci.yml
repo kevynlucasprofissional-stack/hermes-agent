@@ -1,0 +1,48 @@
+name: Workstation CI
+
+on:
+  pull_request:
+    paths:
+      - "workstation/**"
+      - "apps/desktop/electron/workstation-browser-runtime.ts"
+      - "apps/desktop/src/app/browser/**"
+      - "tools/browser_workstation.py"
+      - "tools/browser_tool.py"
+      - "cli-config.yaml.example"
+      - ".github/workflows/workstation-*.yml"
+  push:
+    branches: [main]
+    paths:
+      - "workstation/**"
+      - "apps/desktop/electron/workstation-browser-runtime.ts"
+      - "apps/desktop/src/app/browser/**"
+      - "tools/browser_workstation.py"
+      - "tools/browser_tool.py"
+      - "cli-config.yaml.example"
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install Workstation test dependencies
+        run: python -m pip install pytest==9.1.1 pyyaml==6.0.3
+      - name: Validate lockfile
+        run: python workstation/scripts/validate_lock.py
+      - name: Validate license policy
+        run: python workstation/scripts/verify_licenses.py
+      - name: Workstation contract tests
+        run: python -m pytest -q workstation/tests
+
+  core-patch-dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate downstream integration anchors
+        run: python workstation/scripts/apply_core_integration.py --root . --check

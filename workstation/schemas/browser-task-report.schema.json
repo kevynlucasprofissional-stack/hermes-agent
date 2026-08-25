@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hermes Workstation Browser Task Report",
+  "type": "object",
+  "required": [
+    "task_id",
+    "session_id",
+    "objective",
+    "result",
+    "completed"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string"
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "objective": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string"
+    },
+    "completed": {
+      "type": "boolean"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "modified_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "errors_and_retries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pending_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "input_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "output_tokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cost_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    }
+  }
+}

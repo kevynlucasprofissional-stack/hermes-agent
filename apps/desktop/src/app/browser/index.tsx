@@ -1,0 +1,321 @@
+import { type ChangeEvent, type FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
+import { Button } from '@/components/ui/button'
+import { Codicon } from '@/components/ui/codicon'
+import { cn } from '@/lib/utils'
+
+import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from './types'
+
+const EMPTY_STATE: WorkstationBrowserState = {
+  runtime: 'electron-chromium',
+  ready: false,
+  attached: false,
+  backgroundCapable: true,
+  paused: false,
+  controlOwner: 'agent',
+  controlReady: false,
+  profilePath: '',
+  cacheBytes: null,
+  activeTabId: null,
+  tabs: [],
+  lastError: null
+}
+
+function cacheLabel(bytes: number | null): string {
+  if (bytes == null) return '—'
+  const mb = bytes / (1024 * 1024)
+  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`
+}
+
+function shortTitle(tab: WorkstationBrowserTabState): string {
+  if (tab.title && tab.title !== 'New Tab') return tab.title
+  if (!tab.url || tab.url === 'about:blank') return 'New Tab'
+  try {
+    return new URL(tab.url).hostname || tab.url
+  } catch {
+    return tab.url
+  }
+}
+
+function rectToBounds(rect: DOMRect): WorkstationBrowserBounds {
+  return {
+    x: Math.max(0, Math.round(rect.left)),
+    y: Math.max(0, Math.round(rect.top)),
+    width: Math.max(1, Math.round(rect.width)),
+    height: Math.max(1, Math.round(rect.height))
+  }
+}
+
+export function BrowserView() {
+  const bridge = window.hermesDesktop?.workstationBrowser
+  const [state, setState] = useState<WorkstationBrowserState>(EMPTY_STATE)
+  const [address, setAddress] = useState('')
+  const [busy, setBusy] = useState(false)
+  const hostRef = useRef<HTMLDivElement | null>(null)
+
+  const activeTab = useMemo(
+    () => state.tabs.find(tab => tab.id === state.activeTabId) ?? state.tabs[0] ?? null,
+    [state.activeTabId, state.tabs]
+  )
+
+  useEffect(() => {
+    if (activeTab?.url && document.activeElement?.getAttribute('data-browser-address') !== 'true') {
+      setAddress(activeTab.url === 'about:blank' ? '' : activeTab.url)
+    }
+  }, [activeTab?.url])
+
+  const run = useCallback(
+    async (fn: () => Promise<WorkstationBrowserState>) => {
+      if (!bridge) return
+      try {
+        setBusy(true)
+        setState(await fn())
+      } finally {
+        setBusy(false)
+      }
+    },
+    [bridge]
+  )
+
+  const publishBounds = useCallback(
+    async (attach = false) => {
+      if (!bridge || !hostRef.current) return
+      const rect = hostRef.current.getBoundingClientRect()
+      if (rect.width < 1 || rect.height < 1) return
+      const bounds = rectToBounds(rect)
+      setState(await (attach ? bridge.attach(bounds) : bridge.setBounds(bounds)))
+    },
+    [bridge]
+  )
+
+  useEffect(() => {
+    if (!bridge) return
+
+    let disposed = false
+    const off = bridge.onState(next => {
+      if (!disposed) setState(next)
+    })
+
+    void bridge
+      .ensure()
+      .then(next => {
+        if (disposed) return
+        setState(next)
+        requestAnimationFrame(() => void publishBounds(true))
+      })
+      .catch(error => {
+        if (!disposed) setState(current => ({ ...current, lastError: String(error) }))
+      })
+
+    return () => {
+      disposed = true
+      off()
+      // Detaching removes the native view from the React page while preserving
+      // its WebContents and persistent profile. Background tasks can continue.
+      void bridge.detach()
+    }
+  }, [bridge, publishBounds])
+
+  useEffect(() => {
+    if (!bridge || !hostRef.current) return
+
+    let frame = 0
+    const schedule = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => void publishBounds(false))
+    }
+    const observer = new ResizeObserver(schedule)
+    observer.observe(hostRef.current)
+    window.addEventListener('resize', schedule)
+    window.addEventListener('scroll', schedule, true)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      window.removeEventListener('resize', schedule)
+      window.removeEventListener('scroll', schedule, true)
+    }
+  }, [bridge, publishBounds])
+
+  const submitAddress = (event: FormEvent) => {
+    event.preventDefault()
+    if (!bridge) return
+    void run(() => bridge.navigate(address))
+  }
+
+  if (!bridge) {
+    return (
+      <section className="grid h-full place-items-center bg-(--ui-main-surface-background) p-8">
+        <div className="max-w-xl rounded-xl border border-(--ui-stroke-secondary) bg-(--ui-card-background) p-6">
+          <h1 className="text-base font-semibold">Hermes Browser</h1>
+          <p className="mt-2 text-sm text-(--ui-text-secondary)">
+            The Workstation browser bridge is not installed in this Desktop build. Run
+            <code className="mx-1 rounded bg-black/10 px-1 py-0.5 font-mono text-xs">workstation\install.ps1</code>
+            from the repository root.
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-(--ui-main-surface-background)">
+      <div className="shrink-0 border-b border-(--ui-stroke-secondary) bg-(--ui-sidebar-surface-background)">
+        <div className="flex h-9 min-w-0 items-center gap-1 border-b border-(--ui-stroke-tertiary) px-2">
+          <div className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto">
+            {state.tabs.map(tab => (
+              <button
+                className={cn(
+                  'group flex h-8 max-w-52 min-w-28 items-center gap-1.5 rounded-t-md border border-transparent px-2 text-left text-xs',
+                  tab.active
+                    ? 'border-(--ui-stroke-secondary) bg-(--ui-main-surface-background) text-foreground'
+                    : 'text-(--ui-text-secondary) hover:bg-(--ui-control-hover-background)'
+                )}
+                key={tab.id}
+                onClick={() => void run(() => bridge.activateTab(tab.id))}
+                type="button"
+              >
+                {tab.loading ? (
+                  <Codicon className="shrink-0 animate-spin" name="loading" size="0.75rem" />
+                ) : tab.crashed ? (
+                  <Codicon className="shrink-0 text-red-400" name="error" size="0.75rem" />
+                ) : (
+                  <Codicon className="shrink-0" name="globe" size="0.75rem" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{shortTitle(tab)}</span>
+                <span
+                  className="rounded p-0.5 opacity-0 hover:bg-(--ui-control-hover-background) group-hover:opacity-100"
+                  onClick={(event: MouseEvent<HTMLSpanElement>) => {
+                    event.stopPropagation()
+                    void run(() => bridge.closeTab(tab.id))
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <Codicon name="close" size="0.7rem" />
+                </span>
+              </button>
+            ))}
+          </div>
+          <Button
+            aria-label="New browser tab"
+            onClick={() => void run(() => bridge.newTab())}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Codicon name="add" />
+          </Button>
+        </div>
+
+        <div className="flex h-10 items-center gap-1.5 px-2">
+          <Button
+            aria-label="Back"
+            disabled={!activeTab?.canGoBack}
+            onClick={() => void run(() => bridge.back())}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Codicon name="arrow-left" />
+          </Button>
+          <Button
+            aria-label="Forward"
+            disabled={!activeTab?.canGoForward}
+            onClick={() => void run(() => bridge.forward())}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Codicon name="arrow-right" />
+          </Button>
+          <Button
+            aria-label={activeTab?.loading ? 'Stop loading' : 'Reload'}
+            onClick={() => void run(() => (activeTab?.loading ? bridge.stop() : bridge.reload()))}
+            size="icon-sm"
+            variant="ghost"
+          >
+            <Codicon name={activeTab?.loading ? 'debug-stop' : 'refresh'} />
+          </Button>
+
+          <form className="min-w-0 flex-1" onSubmit={submitAddress}>
+            <input
+              className="h-7 w-full rounded-md border border-(--ui-stroke-secondary) bg-(--ui-input-background) px-2.5 font-mono text-[12px] outline-none focus:border-(--ui-stroke-primary)"
+              data-browser-address="true"
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setAddress(event.target.value)}
+              placeholder="Search or enter address"
+              value={address}
+            />
+          </form>
+
+          <div
+            className={cn(
+              'hidden items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium md:flex',
+              state.paused
+                ? 'border-amber-500/40 text-amber-400'
+                : state.controlOwner === 'human'
+                  ? 'border-sky-500/40 text-sky-400'
+                  : 'border-emerald-500/30 text-emerald-400'
+            )}
+            title={`Controller: ${state.controlReady ? 'ready' : 'offline'} · Profile: ${state.profilePath || 'initializing'}`}
+          >
+            <span className="size-1.5 rounded-full bg-current" />
+            {state.paused ? 'Paused' : state.controlOwner === 'human' ? 'Human control' : state.controlReady ? 'Agent ready' : 'Controller offline'}
+          </div>
+        </div>
+
+        <div className="flex min-h-8 flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) px-2 py-1">
+          {state.paused ? (
+            <Button onClick={() => void run(() => bridge.resume())} size="sm" variant="ghost">
+              <Codicon name="debug-continue" />
+              Resume
+            </Button>
+          ) : (
+            <Button onClick={() => void run(() => bridge.pause())} size="sm" variant="ghost">
+              <Codicon name="debug-pause" />
+              Pause
+            </Button>
+          )}
+          <Button onClick={() => void run(() => bridge.stop())} size="sm" variant="ghost">
+            <Codicon name="debug-stop" />
+            Stop
+          </Button>
+          <Button onClick={() => void run(() => bridge.focus())} size="sm" variant="ghost">
+            <Codicon name="target" />
+            Focus Browser
+          </Button>
+          {state.controlOwner === 'human' ? (
+            <Button onClick={() => void run(() => bridge.releaseControl())} size="sm" variant="ghost">
+              <Codicon name="robot" />
+              Release Control
+            </Button>
+          ) : (
+            <Button onClick={() => void run(() => bridge.takeControl())} size="sm" variant="ghost">
+              <Codicon name="person" />
+              Take Control
+            </Button>
+          )}
+          <span className="ml-auto hidden font-mono text-[10px] text-(--ui-text-quaternary) lg:block">
+            Electron Chromium · persistent profile · cache {cacheLabel(state.cacheBytes)}
+          </span>
+        </div>
+      </div>
+
+      {state.lastError && (
+        <div className="shrink-0 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-300">
+          {state.lastError}
+        </div>
+      )}
+
+      <div className="relative min-h-0 flex-1 bg-black">
+        {/* The Electron main process places the active WebContentsView exactly
+            over this rectangle. The native view is deliberately outside the
+            React tree so it survives route changes and can keep running in the
+            background. */}
+        <div className="absolute inset-0" ref={hostRef} />
+        {!state.ready && (
+          <div className="absolute inset-0 grid place-items-center text-xs text-(--ui-text-tertiary)">
+            Starting Hermes Browser…
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}

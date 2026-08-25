@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hermes Workstation Execution Event",
+  "type": "object",
+  "required": [
+    "event_id",
+    "kind",
+    "task_id",
+    "session_id",
+    "timestamp",
+    "message"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "browser_tab_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

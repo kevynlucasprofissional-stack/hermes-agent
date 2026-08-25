@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "workstation_version": "0.1.0-dev.1",
+  "channel": {
+    "stable": {
+      "hermes_ref": "057dcdf236f8a6a26721c10fcc6ccb72726e272a"
+    },
+    "edge": {
+      "hermes_ref": "057dcdf236f8a6a26721c10fcc6ccb72726e272a"
+    }
+  },
+  "components": {
+    "hermes-agent": {
+      "repository": "NousResearch/hermes-agent",
+      "ref": "057dcdf236f8a6a26721c10fcc6ccb72726e272a",
+      "role": "upstream-core",
+      "vendored": false
+    },
+    "hermes-browser-extension": {
+      "repository": "abundantbeing/hermes-browser-extension",
+      "ref": "05e0b2bfa38d4267d340d10616ca8a6fe43ea825",
+      "version": "0.3.0",
+      "license": "MIT",
+      "role": "protocol-and-safety-source",
+      "vendored": false
+    },
+    "browser-use-desktop": {
+      "repository": "browser-use/desktop",
+      "ref": "f073b7574f7927185ebbebd87556391d5cb0cfd1",
+      "license": "MIT",
+      "role": "webcontentsview-runtime-reference",
+      "vendored": false
+    },
+    "agent-browser": {
+      "repository": "vercel-labs/agent-browser",
+      "ref": "021d9255e543d2f1ab66b87f338d85c3d7a910be",
+      "version": "0.34.0",
+      "license": "Apache-2.0",
+      "role": "deterministic-fallback",
+      "vendored": false
+    },
+    "browser-use": {
+      "repository": "browser-use/browser-use",
+      "ref": "85ddbfedf609166b2d2c76c3d80506649fee82a9",
+      "version": "0.13.8",
+      "license": "MIT",
+      "role": "power-mode",
+      "vendored": false
+    },
+    "browser-harness": {
+      "repository": "browser-use/browser-harness",
+      "ref": "41108b8676d4bdb58b26ab3b079c0b7b0f8f3926",
+      "license": "MIT",
+      "role": "browser-exec-harness",
+      "vendored": false,
+      "version": "0.1.9"
+    },
+    "browser-memory": {
+      "repository": "browser-memory/browser-memory",
+      "ref": "138d05d5158ada28d1228240c5497423e066b56f",
+      "version": "0.1.27",
+      "license": "MIT",
+      "role": "procedural-memory-reference",
+      "vendored": false
+    },
+    "lattice": {
+      "repository": "apatureai/lattice",
+      "ref": "f33c801534ba8e528b07a8b27548c4da258b4166",
+      "version": "0.1.0",
+      "license": "MIT",
+      "role": "perception-reference",
+      "vendored": false
+    }
+  }
+}

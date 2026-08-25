@@ -1,0 +1,43 @@
+name: Workstation Browser Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "apps/desktop/electron/workstation-browser-runtime.ts"
+      - "apps/desktop/src/app/browser/**"
+      - "workstation/**"
+      - "tools/browser_workstation.py"
+      - "tools/browser_tool.py"
+      - "apps/desktop/electron/main.ts"
+      - "apps/desktop/electron/preload.ts"
+      - "apps/desktop/src/global.d.ts"
+      - "apps/desktop/src/app/routes.ts"
+      - "apps/desktop/src/app/chat/sidebar/index.tsx"
+      - "apps/desktop/src/app/contrib/surfaces.tsx"
+      - "apps/desktop/src/plugins/kanban/plugin.tsx"
+      - "apps/desktop/package.json"
+      - "package-lock.json"
+
+jobs:
+  desktop-typecheck:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Apply Workstation core integration
+        run: python workstation/scripts/apply_core_integration.py --root .
+      - name: Install Node workspaces
+        run: npm ci
+      - name: Desktop typecheck
+        run: npm run typecheck --workspace apps/desktop
+      - name: Desktop UI tests
+        run: npm run test:ui --workspace apps/desktop
+      - name: Browser runtime Electron tests
+        run: npm run test:desktop:platforms --workspace apps/desktop
