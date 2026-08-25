@@ -13,7 +13,7 @@ Use the smallest focused gate first, then expand only after it passes:
 5. **Desktop typecheck/build gates** — ensure changed contracts compile across renderer/preload/main boundaries.
 6. **Windows Desktop E2E/smoke** — required for claims that depend on real Electron/Windows composition, restart, profile persistence, or native view geometry.
 
-Do not replace an executable behavior test with a test that greps `.py`, `.ts`, or `.tsx` source text. Follow the root `AGENTS.md` testing rules.
+Do not replace an executable behavior test with a test that greps `.py`, `.ts`, or `.tsx` source text. Follow the root `AGENTS.md` testing rules. Source-shape tests are acceptable only for build/bootstrap policy (for example proving that an installer does not invoke a mutator); they are not substitutes for runtime behavior tests.
 
 ## Existing Workstation gates
 
@@ -21,14 +21,26 @@ Do not replace an executable behavior test with a test that greps `.py`, `.ts`, 
   - component lock validation;
   - third-party license validation;
   - `workstation/tests/`;
-  - downstream integration-anchor check.
+  - downstream integration-anchor check in read-only `--check` mode.
 - `Workstation Browser Windows`
   - Node/Python setup;
+  - read-only committed-integration validation;
+  - normal `workstation\\install.cmd` execution;
+  - a clean-checkout assertion after install;
   - Desktop typecheck;
   - Desktop UI tests;
-  - Desktop platform/Electron tests.
+  - Desktop platform/Electron tests;
+  - a final outcome aggregator that keeps the job red if either broad Desktop suite fails.
 
-The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run.
+The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run. A clean clone followed by normal install must remain clean according to `git status`, apart from deliberately ignored artifacts such as `.venv`, `node_modules`, caches, and runtime state outside the checkout.
+
+The UI and platform/Electron steps are intentionally independent after typecheck: each may record a failed outcome while allowing the other suite to run, then the final aggregator fails the job if either outcome is not `success`. This is **diagnostic non-masking**, not failure tolerance; no coverage is disabled and a red suite still makes the workflow red.
+
+## Baseline comparison for pre-existing failures
+
+When a broad gate is already red on `main` and blocks causality for a narrowly scoped change, reproduce the exact `main` base and the candidate with the same OS image, toolchain, dependency install, and commands. Compare failure signatures rather than only failure counts. A baseline/candidate A/B may establish that a failure is pre-existing and that the scoped change is non-regressive, but it must not be described as a green broad gate.
+
+Record the base SHA, candidate SHA, run IDs, failing files/tests or error classes, and any runner-only flake. Keep the permanent gate red until the underlying issue is fixed; do not add allowlists that silently convert known failures into success unless a separately justified test architecture explicitly requires it.
 
 ## Required browser-foundation invariants
 
@@ -68,4 +80,4 @@ Record the exact commit SHA, Windows/Node/Python versions, commands/workflow run
 
 ## Failure policy
 
-A red gate is investigated, not disabled. If a pre-existing failure blocks validation, reproduce it, identify whether it is in scope, and either fix it in the narrowest appropriate implementation or record why a different existing gate provides sufficient proof. Never make CI green by deleting coverage for the behavior being changed.
+A red gate is investigated, not disabled. If a pre-existing failure blocks validation, reproduce it, identify whether it is in scope, and either fix it in the narrowest appropriate implementation or record why a different existing gate provides sufficient proof for the scoped change. Never make CI green by deleting coverage for the behavior being changed, and never turn a baseline-equivalent failure into a claimed pass.

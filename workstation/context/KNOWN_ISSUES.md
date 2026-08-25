@@ -38,11 +38,15 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Target invariant:** hide and park preserve the page/task, show rehosts the same page, destroy is explicit.
 
-## KI-006 — Windows Browser workflow is not green at the bootstrap baseline
+## KI-006 — Broad Windows Desktop suites contain pre-existing portability/test failures
 
-**Observed:** the bootstrap head passed Workstation CI and Docker build, but `Workstation Browser Windows` failed at Desktop typecheck after dependency installation; UI/platform steps were skipped.
+**Observed:** after the canonical-source installer reached a clean install and passing Desktop typecheck, the broad UI and Electron/platform suites remained red on Windows.
 
-**Required action:** inspect the exact compiler error and fix the cause. Do not weaken or skip the typecheck to obtain a green workflow.
+**Causality status:** **not caused by Implementation 2 based on controlled A/B evidence.** Exact `main` base `a894464ba7f0f455cea28ca56a33a6b178b0a9af` and canonical-source candidate `9fd19c6ef73dc80ae9301eb983dbf2fdda7d6ef1` were run with the same Windows/Node commands. Baseline diagnostic `32815134750` and candidate diagnostic `32815214866` both fail the same UI test because the `../routes` mock in `src/app/contrib/surfaces.test.tsx` does not export `BROWSER_ROUTE`. Both platform diagnostics also share the same structural failure classes around POSIX permission bits, Windows path normalization/8.3 aliases, SSH ControlPath/Include assumptions, POSIX virtualenv layout, Darwin staging, and PowerShell handoff timing. Runner flake can change the raw failure count without changing those shared categories.
+
+**Current policy:** keep the broad workflow red while these failures exist. UI and platform suites run independently and a final aggregator preserves failure if either is red, so one failure does not hide the other.
+
+**Required action:** fix the underlying Windows portability/test assumptions in a separate, scoped implementation with baseline regression tests. Do not weaken or delete those suites merely to make Workstation CI green.
 
 ## KI-007 — `Session not found` / exported `session: null`
 
@@ -52,6 +56,14 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Required proof before any SessionDB/Gateway change:** reproduce on current `main` → identify endpoint/caller/session id → determine lineage/compression/rotation expectations → identify the responsible line/race → add regression test → only then change core.
 
+## Resolved regression classes
+
+### RI-001 — Normal Workstation install rewrote tracked source before validation
+
+**Resolved behavior:** the normal installer now treats the committed downstream tree as canonical. It validates `apply_core_integration.py --check` in read-only mode, no longer invokes the Electron compatibility mutator or source integration patcher, installs Python dependencies into the repository `.venv`, installs Node workspaces from the lockfile, prepares runtime state outside tracked source, and compares Git status before/after installation.
+
+**Evidence:** canonical-source candidate `9fd19c6ef73dc80ae9301eb983dbf2fdda7d6ef1`, `Workstation Browser Windows` run `32813688219`: committed integration validation, normal install, checkout-clean assertion, and Desktop typecheck all passed. `Workstation CI` run `32813688213` also passed the Workstation contracts. The final consolidated Implementation 2 commit must preserve these checks when revalidated.
+
 ## Closing an issue here
 
-When an issue is fixed, replace the open description with the validated commit/test evidence or move it to a short resolved section. Do not simply delete the historical symptom if it documents a regression class that future tests protect.
+When an issue is fixed, replace the open description with the validated commit/test evidence or move it to the resolved section. Do not simply delete the historical symptom if it documents a regression class that future tests protect.

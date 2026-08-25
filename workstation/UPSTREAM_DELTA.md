@@ -13,5 +13,6 @@ Base: `NousResearch/hermes-agent@057dcdf236f8a6a26721c10fcc6ccb72726e272a`
 | HW-007 | Browser tool registry | Prefer Workstation Chromium before extension/legacy lanes | Browser must be a first-class agent capability | Yes |
 | HW-008 | CLI config example | Document `browser.workstation` defaults | Makes routing/fail-closed behavior explicit | Yes |
 | HW-009 | Root `AGENTS.md` | Point coding agents at the downstream Workstation operational context/read-order | Prevents downstream architecture changes from being made from upstream-only context | No |
+| HW-010 | GitHub Actions | Windows Workstation gate installs and tests the committed downstream tree and fails if install dirties the checkout | Prevents CI from silently repairing downstream source before validating it | Maybe |
 
 Operational context, tests, migration helpers, and other files under `workstation/` are downstream-owned and do not add rows by themselves. Keep this list small. New edits outside `workstation/` require a new row.
