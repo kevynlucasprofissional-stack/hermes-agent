@@ -31,10 +31,23 @@ Do not replace an executable behavior test with a test that greps `.py`, `.ts`, 
   - Desktop UI tests;
   - Desktop platform/Electron tests;
   - a final outcome aggregator that keeps the job red if either broad Desktop suite fails.
+- `tests/tui_gateway/test_workstation_browser_schema_capability.py`
+  - focused regression gate for Desktop Browser schema ownership;
+  - proves Desktop capability survives a false reachability probe;
+  - proves Desktop tool-definition cache state cannot leak into TUI;
+  - proves a process-global `HERMES_DESKTOP` flag cannot grant TUI capability;
+  - proves Desktop source identity is sufficient without that process env flag;
+  - proves the forced Workstation set stays narrow (`browser_exec` is not promoted).
 
 The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run. A clean clone followed by normal install must remain clean according to `git status`, apart from deliberately ignored artifacts such as `.venv`, `node_modules`, caches, and runtime state outside the checkout.
 
 The UI and platform/Electron steps are intentionally independent after typecheck: each may record a failed outcome while allowing the other suite to run, then the final aggregator fails the job if either outcome is not `success`. This is **diagnostic non-masking**, not failure tolerance; no coverage is disabled and a red suite still makes the workflow red.
+
+## Session-scoped capability test policy
+
+A GUI/browser surface capability must be tested as a **session contract**, not by mutating a process-global environment variable and observing a single process-wide cache. Focused tests should bind `gateway.session_context`, exercise schema assembly with reachability forced false, and then switch surface identity within the same process to prove cache isolation.
+
+The forced-schema path may only preserve a schema that is already selected by the active toolsets; it must never re-add a disabled/unselected tool. Runtime health, recovery, bound-task fail-closed behavior, and fallback policy remain execution-time responsibilities and need their own tests.
 
 ## Baseline comparison for pre-existing failures
 

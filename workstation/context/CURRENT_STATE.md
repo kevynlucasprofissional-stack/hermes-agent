@@ -1,6 +1,6 @@
 # Current State
 
-Snapshot date: 2026-08-25. Base: downstream `main` after the Workstation bootstrap merge.
+Snapshot date: 2026-08-25. Baseline before Implementation 3: downstream `main` at `2864da0eba97742af67420a799c767264bea62e8` after the canonical-source Workstation bootstrap validation.
 
 This file describes **observed implementation state**, not the target architecture. When it disagrees with code on current `main`, inspect the code and update this file.
 
@@ -10,7 +10,10 @@ This file describes **observed implementation state**, not the target architectu
 - The internal browser runtime uses Electron Chromium through `WebContentsView` with a persistent Electron session/partition.
 - Manual Browser navigation, tab creation/activation/close, back/forward/reload, pause/resume, focus, and human/agent control ownership are implemented.
 - The Workstation controller is localhost-bound and token-authenticated.
-- `browser_*` routing already attempts the Workstation controller before fallback and has tests for bound fail-closed behavior and routing-disabled/internal-only behavior.
+- `browser_*` routing attempts the Workstation controller before fallback and has tests for bound fail-closed behavior and routing-disabled/internal-only behavior.
+- **Desktop Browser schema capability is session-scoped.** A Desktop session preserves the Workstation-routed browser schemas even when controller reachability is temporarily false during startup. Reachability/recovery remains an execution-time concern; it no longer erases a valid Desktop surface from the model schema.
+- The schema capability path is derived from Gateway session context (`source`/`platform`), not from `HERMES_DESKTOP` or another process-global Desktop identity flag.
+- The tool-definition cache fingerprints the session-surface capability, preventing a Desktop schema result from leaking into TUI/CLI sessions that request the same toolsets.
 - The browser profile preserves Chromium-managed site state such as cookies/localStorage/IndexedDB independently of renderer UI state.
 - Existing Workstation lock, license, routing, and core-integration contract tests run in `Workstation CI`.
 - The downstream `main` is the canonical source of Workstation core integration. Normal `workstation/install.cmd` validates committed integration in read-only mode, installs isolated dependencies, prepares runtime state outside the checkout, and asserts that it did not change Git-visible checkout state.
@@ -19,7 +22,6 @@ This file describes **observed implementation state**, not the target architectu
 ## Partially implemented
 
 - `BrowserEntry.ownerTaskId`, `taskTabs`, `entryForTask()`, attach/detach, and parking provide useful BrowserTask primitives, but BrowserTask is not yet a first-class lifecycle/domain object.
-- `browser_*` is registered, but Workstation reachability is currently involved in availability gating. A Desktop session can therefore lose the browser schema during startup/reachability races instead of retaining the surface capability and failing at execution time.
 - The `Browser` route is a conventional browser tab strip and address bar. It is not yet a BrowserTask hub.
 - Preview and Workstation Browser are separate lanes/runtimes. They can represent different pages instead of two views of one BrowserTask.
 - The browser host already observes geometry with `ResizeObserver`/`getBoundingClientRect`, but host ownership is not unified with Preview/Chat composition.
@@ -37,22 +39,22 @@ This file describes **observed implementation state**, not the target architectu
 
 ## Manual validation already observed
 
-During the bootstrap validation cycle, the Desktop app and the dedicated `Browser` route were opened successfully and manual navigation worked. The same cycle also exposed the semantic integration gaps recorded below: the agent could use Preview while reporting no tool for the main Browser surface, Preview and Browser could show different pages, and logical tabs did not survive application restart.
+During the bootstrap validation cycle, the Desktop app and the dedicated `Browser` route were opened successfully and manual navigation worked. The same cycle exposed the semantic integration gaps recorded below: Preview and Browser could show different pages and logical tabs did not survive application restart. The earlier symptom where the model reported no main Browser tool is now protected by the session-capability regression tests introduced in Implementation 3.
 
 Manual validation is evidence, not a substitute for automated regression coverage. These observations must be converted into behavior tests as the corresponding implementation is completed.
 
 ## Known bugs / gaps
 
-See [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md). The highest-priority gaps are browser capability availability in Desktop sessions, duplicate Preview/Browser lanes, incomplete BrowserTask lifecycle, host overlap/composition, non-persistent logical browser state, and pre-existing Windows portability/test assumptions in the broad Desktop suite.
+See [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md). The highest-priority open gaps are duplicate Preview/Browser lanes, incomplete BrowserTask lifecycle, host overlap/composition, non-persistent logical browser state, and pre-existing Windows portability/test assumptions in the broad Desktop suite.
 
 The observed `Session not found` / exported `session: null` behavior is tracked separately and is **not established as a Browser root cause**.
 
 ## Latest automated validation state
 
-Canonical-source candidate `9fd19c6ef73dc80ae9301eb983dbf2fdda7d6ef1`, built directly on `main` base `a894464ba7f0f455cea28ca56a33a6b178b0a9af`, established the scoped bootstrap invariants in `Workstation Browser Windows` run `32813688219`: committed-integration validation passed, normal `workstation\\install.cmd` passed, the checkout-clean assertion passed, and Desktop typecheck passed. `Workstation CI` run `32813688213` and Docker run `32813688229` also passed.
+Implementation 2 is committed on downstream `main` at `2864da0eba97742af67420a799c767264bea62e8` (`build(workstation): finalize canonical-source validation`). The canonical-source contract remains: committed integration is validated read-only, normal Workstation install must not repair tracked source, and the checkout must remain clean after install.
 
-The broad Windows Desktop suite is still red, but controlled A/B diagnostics reproduced those failures on the exact unmodified `main` base as well as the candidate. Baseline diagnostic run `32815134750` and candidate diagnostic run `32815214866` both produced the same UI failure in `src/app/contrib/surfaces.test.tsx`: the `../routes` mock does not export `BROWSER_ROUTE` (`590/591` UI files and `5666/5667` UI tests passed in each diagnostic). Electron/platform diagnostics also failed on both sides with the same structural Windows/POSIX categories: permission-mode assumptions, long-path versus 8.3 path comparisons, SSH/ControlPath and Include behavior, POSIX virtualenv paths, Darwin staging assumptions, and a PowerShell handoff timeout/flaky class. The exact count can vary by runner because transient filesystem/timeouts add or remove a failure; the structural signatures are shared by baseline and candidate.
+Implementation 3 adds focused regression coverage in `tests/tui_gateway/test_workstation_browser_schema_capability.py`. The tests prove that a Desktop session keeps `browser_navigate` when its reachability probe is false, that the resulting schema cache does not leak into TUI, that setting `HERMES_DESKTOP=1` does not grant a TUI session Desktop capability, and that a Desktop session receives the capability without that process env flag. The implementation also keeps `browser_exec` outside the forced Workstation schema set.
 
-This A/B proves **non-regression for Implementation 2 against those pre-existing broad-suite failures**; it does not make the broad suite green. The permanent Windows workflow therefore runs UI and platform suites independently and aggregates their outcomes at the end so one red suite cannot mask the other. The job remains red whenever either suite fails.
+During candidate validation, Workstation contract validation, Docker validation, Python lint/diff checks, Windows-footgun checks, Python E2E, and macOS-only tests passed. The Windows Workstation gate also passed committed-integration validation, normal install, checkout-clean assertion, and Desktop typecheck before entering the broad UI/platform suites. Those broad Windows suites retain separately documented baseline portability/test debt; baseline-equivalent failures are not treated as a pass and are not fixed by Implementation 3.
 
-Implementation 2 must still be re-run on its final consolidated commit before promotion to `main`. Promotion must preserve the scoped green invariants above and must not claim that the pre-existing Windows portability debt has been fixed.
+Implementation 3 is promoted only from a single commit built directly on the Implementation 2 `main` SHA, with the focused schema regression test and relevant Workstation gates attached to that exact final commit.

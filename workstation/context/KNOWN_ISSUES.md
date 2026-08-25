@@ -2,14 +2,6 @@
 
 This file records observed/reproduced gaps and the evidence boundary around them. A listed symptom is **not** permission to assume a root cause; verify current `main` before changing code.
 
-## KI-001 — Desktop Browser capability can disappear from the model schema
-
-**Observed:** a real Desktop session could use Preview tools while the model reported that it did not have a tool for the main Browser surface.
-
-**Current evidence:** `browser_*` is registered and Workstation routing exists. Availability/reachability checks participate in schema collection, and registry availability is cached process-wide. The repository-wide `AGENTS.md` explicitly states that GUI surface identity is session-scoped rather than a `check_fn`/process-env property.
-
-**Required proof before closure:** trace Desktop platform → Gateway toolsets → registry → schema, then test a GUI session with the relevant process env absent and with controller startup/reachability transitions.
-
 ## KI-002 — Preview and Workstation Browser are separate browser lanes
 
 **Observed:** Preview and the main Browser surface can show different independently navigated pages for what the user regards as one web task.
@@ -58,12 +50,20 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 ## Resolved regression classes
 
+### KI-001 — Desktop Browser capability could disappear from the model schema
+
+**Resolved behavior:** Desktop/GUI Browser surface capability is derived from the active Gateway session context instead of process-global Desktop identity or controller reachability. Selected Workstation-routed browser schemas remain present during controller startup/reachability races, while controller health/recovery still governs execution. The tool-definition cache includes the session capability fingerprint so Desktop results cannot leak into TUI/CLI.
+
+**Security/ownership boundary:** only the narrow set of actions actually routed through the embedded Workstation Browser is force-preserved, and only when those names are already selected by the active toolsets. `browser_exec` is not promoted. TUI/CLI sessions do not gain the Desktop capability even if `HERMES_DESKTOP=1` exists in the process environment.
+
+**Regression coverage:** `tests/tui_gateway/test_workstation_browser_schema_capability.py` exercises a false browser probe in a Desktop session, same-process Desktop→TUI cache isolation, rejection of process-env-only Desktop identity, and Desktop capability without the process env flag.
+
 ### RI-001 — Normal Workstation install rewrote tracked source before validation
 
 **Resolved behavior:** the normal installer now treats the committed downstream tree as canonical. It validates `apply_core_integration.py --check` in read-only mode, no longer invokes the Electron compatibility mutator or source integration patcher, installs Python dependencies into the repository `.venv`, installs Node workspaces from the lockfile, prepares runtime state outside tracked source, and compares Git status before/after installation.
 
-**Evidence:** canonical-source candidate `9fd19c6ef73dc80ae9301eb983dbf2fdda7d6ef1`, `Workstation Browser Windows` run `32813688219`: committed integration validation, normal install, checkout-clean assertion, and Desktop typecheck all passed. `Workstation CI` run `32813688213` also passed the Workstation contracts. The final consolidated Implementation 2 commit must preserve these checks when revalidated.
+**Evidence:** canonical-source candidate `9fd19c6ef73dc80ae9301eb983dbf2fdda7d6ef1`, `Workstation Browser Windows` run `32813688219`: committed integration validation, normal install, checkout-clean assertion, and Desktop typecheck all passed. `Workstation CI` run `32813688213` also passed the Workstation contracts. The final Implementation 2 canonical-source result is committed on downstream `main` at `2864da0eba97742af67420a799c767264bea62e8`.
 
 ## Closing an issue here
 
-When an issue is fixed, replace the open description with the validated commit/test evidence or move it to the resolved section. Do not simply delete the historical symptom if it documents a regression class that future tests protect.
+When an issue is fixed, replace the open description with the validated behavior/test evidence or move it to the resolved section. Do not simply delete the historical symptom if it documents a regression class that future tests protect.
