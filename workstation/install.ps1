@@ -7,6 +7,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$VenvRoot = Join-Path $Root ".venv"
+$VenvPython = Join-Path $VenvRoot "Scripts\python.exe"
 
 function Invoke-NativeChecked {
   param(
@@ -79,9 +81,30 @@ function Invoke-HermesPython {
   }
 }
 
+function Ensure-WorkstationVenv {
+  if (Test-Path $VenvPython) {
+    & $VenvPython -c "import sys; assert (3, 11) <= sys.version_info[:2] < (3, 14); print(sys.version.split()[0])" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+      throw "Existing Workstation venv is invalid or uses an unsupported Python: $VenvRoot. Remove .venv and rerun install.cmd -InstallDependencies."
+    }
+    Write-Host "Using existing isolated Python environment: $VenvRoot" -ForegroundColor Green
+    return
+  }
+
+  if ($Python.Version -lt [version]"3.11.0" -or $Python.Version -ge [version]"3.14.0") {
+    throw "Hermes dependency installation requires Python >=3.11,<3.14, but selected Python is $($Python.Version). Install/select Python 3.13, 3.12, or 3.11."
+  }
+
+  Write-Host "Creating isolated Python environment: $VenvRoot" -ForegroundColor Cyan
+  Invoke-HermesPython -Arguments @("-m", "venv", $VenvRoot)
+  if (-not (Test-Path $VenvPython)) {
+    throw "Python venv creation completed without producing $VenvPython"
+  }
+}
+
 Write-Host "Hermes Workstation - initial install" -ForegroundColor Cyan
 Write-Host "Root: $Root"
-Write-Host ("Python: {0} {1} ({2})" -f $Python.Command, ($Python.Prefix -join ' '), $Python.Version)
+Write-Host ("Bootstrap Python: {0} {1} ({2})" -f $Python.Command, ($Python.Prefix -join ' '), $Python.Version)
 Write-Host ""
 
 if (-not (Test-Path (Join-Path $Root ".git"))) {
@@ -96,9 +119,6 @@ $LicenseScript = Join-Path $PSScriptRoot "scripts\verify_licenses.py"
 Write-Host "[1/5] Normalizing Electron compatibility..." -ForegroundColor Cyan
 Invoke-HermesPython -Arguments @($CompatScript, "--root", $Root)
 
-# Validate everything we can before mutating Hermes core. The previous bootstrap
-# applied immediately; if a later anchor failed, the working tree could be left
-# partially patched.
 if (-not $SkipCorePatch) {
   Write-Host "[2/5] Validating Hermes integration anchors..." -ForegroundColor Cyan
   Invoke-HermesPython -Arguments @($IntegrationScript, "--root", $Root, "--check")
@@ -120,10 +140,6 @@ if (-not $SkipCorePatch) {
 }
 
 if ($InstallDependencies) {
-  if ($Python.Version -lt [version]"3.11.0" -or $Python.Version -ge [version]"3.14.0") {
-    throw "Hermes dependency installation requires Python >=3.11,<3.14, but selected Python is $($Python.Version). Install/select Python 3.13, 3.12, or 3.11."
-  }
-
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     throw "Node.js was not found. Hermes Desktop requires Node >=22.22.0; the repository .nvmrc selects Node 26."
   }
@@ -140,11 +156,19 @@ if ($InstallDependencies) {
   if ($nodeVersion -lt $minimumNode) {
     throw "Node $nodeVersion is below the Hermes Desktop minimum $minimumNode. Use the repository .nvmrc (Node 26) and retry."
   }
+  if ($nodeVersion.Major -ne 26) {
+    Write-Host ("[WARN] Node {0} satisfies the minimum, but .nvmrc selects Node 26. CI validates on Node 26." -f $nodeVersion) -ForegroundColor Yellow
+  }
+
+  Ensure-WorkstationVenv
 
   Push-Location $Root
   try {
-    Write-Host "Installing Python package in editable mode..." -ForegroundColor Cyan
-    Invoke-HermesPython -Arguments @("-m", "pip", "install", "-e", ".")
+    Write-Host "Installing Hermes into isolated .venv (editable mode)..." -ForegroundColor Cyan
+    & $VenvPython -m pip install -e "."
+    if ($LASTEXITCODE -ne 0) {
+      throw "Isolated Hermes Python installation failed with exit code ${LASTEXITCODE}."
+    }
 
     Write-Host "Installing Node workspaces..." -ForegroundColor Cyan
     Invoke-NativeChecked -Command "npm" -Arguments @("ci")
@@ -152,6 +176,10 @@ if ($InstallDependencies) {
   finally {
     Pop-Location
   }
+
+  Write-Host ""
+  Write-Host "Dependencies are isolated and ready." -ForegroundColor Green
+  Write-Host "Python runtime: $VenvPython"
 }
 else {
   Write-Host ""
