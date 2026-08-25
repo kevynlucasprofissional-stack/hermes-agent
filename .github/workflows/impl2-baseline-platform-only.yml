@@ -1,0 +1,19 @@
+name: Impl2 Baseline Platform Only Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/impl2-baseline-platform-only.yml"
+
+jobs:
+  baseline-platform:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+      - run: npm ci
+      - name: Desktop Electron/platform tests
+        run: npm run test:desktop:platforms --workspace apps/desktop
