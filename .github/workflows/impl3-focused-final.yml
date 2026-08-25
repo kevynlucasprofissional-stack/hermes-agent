@@ -30,7 +30,12 @@ jobs:
       - name: Compile touched modules
         run: uv run python -m py_compile model_tools.py tools/registry.py tools/browser_workstation.py tests/tui_gateway/test_workstation_browser_schema_capability.py
 
-  full-python-standard:
+  full-python-shards:
+    name: full-python-shard-${{ matrix.slice }}
+    strategy:
+      fail-fast: false
+      matrix:
+        slice: [1, 2, 3, 4]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -44,10 +49,10 @@ jobs:
         run: uv python install 3.11
       - name: Install official test dependency set
         run: uv sync --locked --python 3.11 --extra all --extra dev --extra anthropic --extra mistral --extra fal --extra modal --extra daytona --extra hindsight --extra parallel-web
-      - name: Run repository Python suite on standard runner
+      - name: Run repository Python suite shard
         run: |
           source .venv/bin/activate
-          scripts/run_tests.sh
+          scripts/run_tests.sh --slice "${{ matrix.slice }}/4"
         env:
           HERMES_TEST_WORKERS: 8
           OPENROUTER_API_KEY: ""
