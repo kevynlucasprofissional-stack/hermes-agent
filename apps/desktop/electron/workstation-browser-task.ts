@@ -1,0 +1,291 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
+export const BROWSER_TASK_STATE_VERSION = 1
+
+export type BrowserTaskStatus = 'visible' | 'hidden' | 'parked'
+export type BrowserTaskRecoveryState = 'fresh' | 'restored' | 'recreated' | null
+
+export interface BrowserTask {
+  taskId: string
+  createdAt: string
+  panelHost: string | null
+  controlHost: string | null
+  sessionHost: string | null
+  localConnection: string | null
+  status: BrowserTaskStatus
+  leaseState: string | null
+  parked: boolean
+  recoveryState: BrowserTaskRecoveryState
+  updatedAt: string
+}
+
+export interface BrowserTaskSnapshot {
+  version: typeof BROWSER_TASK_STATE_VERSION
+  browserTaskCounter: number
+  tasks: BrowserTask[]
+}
+
+export interface BrowserTaskSeed {
+  taskId?: string
+  panelHost?: string | null
+  controlHost?: string | null
+  sessionHost?: string | null
+  localConnection?: string | null
+  leaseState?: string | null
+}
+
+export interface BrowserTaskBindings<Page, ShowContext = void> {
+  ensurePage(taskId: string): Page
+  pageForTask(taskId: string): Page | null
+  pageIsAlive(page: Page): boolean
+  showPage(taskId: string, page: Page, context: ShowContext): void
+  hidePage(taskId: string, page: Page): void
+  parkPage(taskId: string, page: Page): void
+  destroyPage(taskId: string, page: Page): void
+}
+
+export interface BrowserTaskPersistence {
+  load(): BrowserTaskSnapshot | null
+  save(snapshot: BrowserTaskSnapshot): void
+}
+
+function cloneTask(task: BrowserTask): BrowserTask {
+  return { ...task }
+}
+
+function validText(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function validNullableText(value: unknown): value is string | null {
+  return value === null || typeof value === 'string'
+}
+
+function validStatus(value: unknown): value is BrowserTaskStatus {
+  return value === 'visible' || value === 'hidden' || value === 'parked'
+}
+
+function validRecoveryState(value: unknown): value is BrowserTaskRecoveryState {
+  return value === null || value === 'fresh' || value === 'restored' || value === 'recreated'
+}
+
+function parsePersistedTask(value: unknown): BrowserTask | null {
+  if (!value || typeof value !== 'object') return null
+  const task = value as Partial<BrowserTask> & { status?: unknown; recoveryState?: unknown }
+  if (!validText(task.taskId) || !validText(task.createdAt) || !validText(task.updatedAt)) return null
+  if (!validStatus(task.status) || !validRecoveryState(task.recoveryState)) return null
+  if (!validNullableText(task.panelHost) || !validNullableText(task.controlHost)) return null
+  if (!validNullableText(task.sessionHost) || !validNullableText(task.localConnection)) return null
+  if (!validNullableText(task.leaseState) || typeof task.parked !== 'boolean') return null
+
+  return {
+    taskId: task.taskId.trim(),
+    createdAt: task.createdAt,
+    panelHost: task.panelHost,
+    controlHost: task.controlHost,
+    sessionHost: task.sessionHost,
+    localConnection: task.localConnection,
+    status: task.status,
+    leaseState: task.leaseState,
+    parked: task.parked,
+    recoveryState: task.recoveryState,
+    updatedAt: task.updatedAt
+  }
+}
+
+export function normalizeBrowserTaskSnapshot(value: unknown): BrowserTaskSnapshot | null {
+  if (!value || typeof value !== 'object') return null
+  const snapshot = value as { version?: unknown; browserTaskCounter?: unknown; tasks?: unknown }
+  if (snapshot.version !== BROWSER_TASK_STATE_VERSION) return null
+  if (!Number.isInteger(snapshot.browserTaskCounter) || Number(snapshot.browserTaskCounter) < 0) return null
+  if (!Array.isArray(snapshot.tasks)) return null
+
+  // One logical task may appear only once. If a crash left duplicate metadata,
+  // keep the most recently updated valid record and discard the stale duplicate.
+  const deduped = new Map<string, BrowserTask>()
+  for (const raw of snapshot.tasks) {
+    const parsed = parsePersistedTask(raw)
+    if (!parsed) continue
+    const current = deduped.get(parsed.taskId)
+    if (!current || parsed.updatedAt >= current.updatedAt) deduped.set(parsed.taskId, parsed)
+  }
+
+  return {
+    version: BROWSER_TASK_STATE_VERSION,
+    browserTaskCounter: Number(snapshot.browserTaskCounter),
+    tasks: [...deduped.values()]
+  }
+}
+
+export class BrowserTaskFilePersistence implements BrowserTaskPersistence {
+  constructor(readonly filePath: string) {}
+
+  load(): BrowserTaskSnapshot | null {
+    try {
+      return normalizeBrowserTaskSnapshot(JSON.parse(fs.readFileSync(this.filePath, 'utf-8')))
+    } catch {
+      return null
+    }
+  }
+
+  save(snapshot: BrowserTaskSnapshot): void {
+    fs.mkdirSync(path.dirname(this.filePath), { recursive: true })
+    const temp = `${this.filePath}.${process.pid}.${Date.now()}.tmp`
+    fs.writeFileSync(temp, JSON.stringify(snapshot, null, 2), { encoding: 'utf-8', mode: 0o600 })
+    fs.renameSync(temp, this.filePath)
+    try {
+      fs.chmodSync(this.filePath, 0o600)
+    } catch {
+      // Best effort on Windows / filesystems without POSIX permissions.
+    }
+  }
+}
+
+export class BrowserTaskLifecycle<Page, ShowContext = void> {
+  private readonly tasks = new Map<string, BrowserTask>()
+  private browserTaskCounter = 0
+
+  constructor(
+    private readonly bindings: BrowserTaskBindings<Page, ShowContext>,
+    private readonly persistence: BrowserTaskPersistence | null = null,
+    private readonly now: () => Date = () => new Date()
+  ) {}
+
+  restore(): BrowserTask[] {
+    const snapshot = this.persistence?.load()
+    if (!snapshot) return []
+
+    this.tasks.clear()
+    this.browserTaskCounter = snapshot.browserTaskCounter
+    const timestamp = this.timestamp()
+    for (const saved of snapshot.tasks) {
+      // Renderer/WebContents identity cannot survive an Electron process restart.
+      // Preserve logical ownership, but normalize the task to parked metadata and
+      // lazily recreate/recover its page only when the task is shown or used.
+      this.tasks.set(saved.taskId, {
+        ...saved,
+        status: 'parked',
+        parked: true,
+        recoveryState: 'restored',
+        updatedAt: timestamp
+      })
+    }
+    this.persist()
+    return this.listTasks()
+  }
+
+  createTask(seed: BrowserTaskSeed = {}): BrowserTask {
+    const taskId = seed.taskId?.trim() || `browser-task-${++this.browserTaskCounter}`
+    const existing = this.tasks.get(taskId)
+    if (existing) {
+      this.ensureLivePage(taskId, existing)
+      return cloneTask(existing)
+    }
+
+    const timestamp = this.timestamp()
+    const task: BrowserTask = {
+      taskId,
+      createdAt: timestamp,
+      panelHost: seed.panelHost ?? null,
+      controlHost: seed.controlHost ?? null,
+      sessionHost: seed.sessionHost ?? null,
+      localConnection: seed.localConnection ?? null,
+      status: 'parked',
+      leaseState: seed.leaseState ?? null,
+      parked: true,
+      recoveryState: 'fresh',
+      updatedAt: timestamp
+    }
+    this.tasks.set(taskId, task)
+    this.bindings.ensurePage(taskId)
+    this.persist()
+    return cloneTask(task)
+  }
+
+  showTask(taskId: string, context: ShowContext): BrowserTask {
+    const task = this.requireTask(taskId)
+    const page = this.ensureLivePage(taskId, task)
+    this.bindings.showPage(taskId, page, context)
+    return this.updateTask(task, { status: 'visible', parked: false })
+  }
+
+  hideTask(taskId: string): BrowserTask {
+    const task = this.requireTask(taskId)
+    const page = this.livePage(taskId)
+    if (page) this.bindings.hidePage(taskId, page)
+    return this.updateTask(task, { status: 'hidden', parked: false })
+  }
+
+  parkTask(taskId: string): BrowserTask {
+    const task = this.requireTask(taskId)
+    const page = this.livePage(taskId)
+    if (page) this.bindings.parkPage(taskId, page)
+    return this.updateTask(task, { status: 'parked', parked: true })
+  }
+
+  destroyTask(taskId: string): boolean {
+    const task = this.tasks.get(taskId)
+    if (!task) return false
+    const page = this.livePage(taskId)
+    if (page) this.bindings.destroyPage(taskId, page)
+    this.tasks.delete(taskId)
+    this.persist()
+    return true
+  }
+
+  task(taskId: string): BrowserTask | null {
+    const task = this.tasks.get(taskId)
+    return task ? cloneTask(task) : null
+  }
+
+  listTasks(): BrowserTask[] {
+    return [...this.tasks.values()].map(cloneTask)
+  }
+
+  snapshot(): BrowserTaskSnapshot {
+    return {
+      version: BROWSER_TASK_STATE_VERSION,
+      browserTaskCounter: this.browserTaskCounter,
+      tasks: this.listTasks()
+    }
+  }
+
+  private requireTask(taskId: string): BrowserTask {
+    const task = this.tasks.get(taskId)
+    if (!task) throw new Error(`BrowserTask not found: ${taskId}`)
+    return task
+  }
+
+  private livePage(taskId: string): Page | null {
+    const page = this.bindings.pageForTask(taskId)
+    return page && this.bindings.pageIsAlive(page) ? page : null
+  }
+
+  private ensureLivePage(taskId: string, task: BrowserTask): Page {
+    const existing = this.livePage(taskId)
+    if (existing) return existing
+    const page = this.bindings.ensurePage(taskId)
+    if (!this.bindings.pageIsAlive(page)) throw new Error(`BrowserTask page could not be recovered: ${taskId}`)
+    if (task.recoveryState === 'restored') {
+      task.recoveryState = 'recreated'
+      task.updatedAt = this.timestamp()
+      this.persist()
+    }
+    return page
+  }
+
+  private updateTask(task: BrowserTask, patch: Pick<BrowserTask, 'status' | 'parked'>): BrowserTask {
+    Object.assign(task, patch, { updatedAt: this.timestamp() })
+    this.persist()
+    return cloneTask(task)
+  }
+
+  private persist(): void {
+    this.persistence?.save(this.snapshot())
+  }
+
+  private timestamp(): string {
+    return this.now().toISOString()
+  }
+}
