@@ -29,6 +29,13 @@ import path from 'node:path'
 
 import { app, BrowserWindow, ipcMain, session, WebContentsView, type Session, type WebContents } from 'electron'
 
+import {
+  BrowserTaskFilePersistence,
+  BrowserTaskLifecycle,
+  type BrowserTask,
+  type BrowserTaskSeed
+} from './workstation-browser-task'
+
 const CACHE_CHECK_INTERVAL_MS = 30 * 60 * 1000
 const DEFAULT_CACHE_MAX_MB = 512
 const DEFAULT_BACKGROUND_FRAME_RATE = 6
@@ -116,6 +123,11 @@ interface PageInventory {
   }>
 }
 
+interface BrowserTaskShowContext {
+  window: BrowserWindow
+  bounds: WorkstationBrowserBounds
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -158,6 +170,13 @@ export function workstationBrowserControlPath(): string {
     return path.resolve(process.env.HERMES_WORKSTATION_BROWSER_CONTROL_FILE.trim())
   }
   return path.join(workstationBasePath(), 'Runtime', 'browser-control.json')
+}
+
+export function workstationBrowserTaskStatePath(): string {
+  if (process.env.HERMES_WORKSTATION_BROWSER_TASK_FILE?.trim()) {
+    return path.resolve(process.env.HERMES_WORKSTATION_BROWSER_TASK_FILE.trim())
+  }
+  return path.join(workstationBasePath(), 'Runtime', 'browser-tasks.json')
 }
 
 function screenshotDirectory(): string {
@@ -402,9 +421,12 @@ export class WorkstationBrowserRuntime {
   private cacheBytes: number | null = null
   private cacheTimer: NodeJS.Timeout | null = null
   private control: ControlHandle | null = null
+  private browserTasks: BrowserTaskLifecycle<BrowserEntry, BrowserTaskShowContext> | null = null
+  private browserTasksRestored = false
 
   ensure(): WorkstationBrowserState {
     this.ensureSession()
+    this.ensureBrowserTasksRestored()
     if (!this.activeTabId || !this.entries.has(this.activeTabId)) this.createTab('about:blank', true)
     void this.refreshCacheSize()
     this.emitState()
@@ -442,8 +464,57 @@ export class WorkstationBrowserRuntime {
     return this.entries.get(tabId)?.view.webContents ?? null
   }
 
+  createTask(seed: BrowserTaskSeed = {}): BrowserTask {
+    this.ensureSession()
+    this.ensureBrowserTasksRestored()
+    return this.taskLifecycle().createTask(seed)
+  }
+
+  showTask(taskId: string, window: BrowserWindow, bounds: WorkstationBrowserBounds): BrowserTask {
+    this.ensureSession()
+    this.ensureBrowserTasksRestored()
+    return this.taskLifecycle().showTask(taskId, { window, bounds })
+  }
+
+  hideTask(taskId: string): BrowserTask {
+    this.ensureBrowserTasksRestored()
+    return this.taskLifecycle().hideTask(taskId)
+  }
+
+  parkTask(taskId: string): BrowserTask {
+    this.ensureBrowserTasksRestored()
+    return this.taskLifecycle().parkTask(taskId)
+  }
+
+  destroyTask(taskId: string): boolean {
+    this.ensureBrowserTasksRestored()
+    return this.taskLifecycle().destroyTask(taskId)
+  }
+
+  listTasks(): BrowserTask[] {
+    this.ensureBrowserTasksRestored()
+    return this.taskLifecycle().listTasks()
+  }
+
   createTab(target = 'about:blank', activate = true, ownerTaskId: string | null = null): WorkstationBrowserState {
     this.ensureSession()
+
+    if (ownerTaskId) {
+      const mapped = this.taskTabs.get(ownerTaskId)
+      const existing = mapped ? this.entries.get(mapped) : null
+      if (existing && !existing.view.webContents.isDestroyed()) {
+        if (activate) this.activateTab(existing.id)
+        else this.parkEntry(existing)
+        const url = normalizeWorkstationBrowserTarget(target)
+        if (url !== 'about:blank' && existing.view.webContents.getURL() !== url) {
+          void existing.view.webContents.loadURL(url).catch(error => this.recordError(error))
+        }
+        this.emitState()
+        return this.state()
+      }
+      if (mapped) this.taskTabs.delete(ownerTaskId)
+    }
+
     const id = crypto.randomUUID()
     const view = new WebContentsView({
       webPreferences: {
@@ -717,6 +788,9 @@ export class WorkstationBrowserRuntime {
         // Best effort during app shutdown.
       }
     }
+    // App shutdown destroys Chromium process objects, but BrowserTask metadata is
+    // intentionally retained on disk. The next boot restores it as parked and
+    // lazily recreates/reconnects a page only when that task is used again.
     this.entries.clear()
     this.taskTabs.clear()
     this.activeTabId = null
@@ -780,7 +854,68 @@ export class WorkstationBrowserRuntime {
     if (this.controlOwner === 'human') throw new Error('Hermes Browser is under human control. Release Control before agent actions continue.')
   }
 
+  private taskLifecycle(): BrowserTaskLifecycle<BrowserEntry, BrowserTaskShowContext> {
+    if (this.browserTasks) return this.browserTasks
+
+    this.browserTasks = new BrowserTaskLifecycle(
+      {
+        ensurePage: taskId => {
+          const entry = this.rawEntryForTask(taskId, true)
+          if (!entry) throw new Error(`BrowserTask page could not be created: ${taskId}`)
+          return entry
+        },
+        pageForTask: taskId => this.rawEntryForTask(taskId, false),
+        pageIsAlive: entry => !entry.view.webContents.isDestroyed(),
+        showPage: (_taskId, entry, context) => {
+          if (entry.id !== this.activeTabId) this.activateTab(entry.id)
+          this.attach(context.window, context.bounds)
+        },
+        hidePage: (_taskId, entry) => {
+          this.removeChildView(entry)
+          if (entry.id === this.activeTabId) this.attached = false
+          this.applyFrameRate(entry, false)
+          this.emitState()
+        },
+        parkPage: (_taskId, entry) => {
+          if (entry.id === this.activeTabId && this.attached) {
+            this.removeChildView(entry)
+            this.attached = false
+          }
+          this.parkEntry(entry)
+          this.emitState()
+        },
+        destroyPage: (_taskId, entry) => {
+          this.closeTab(entry.id)
+        }
+      },
+      new BrowserTaskFilePersistence(workstationBrowserTaskStatePath())
+    )
+    return this.browserTasks
+  }
+
+  private ensureBrowserTasksRestored(): void {
+    if (this.browserTasksRestored) return
+    this.taskLifecycle().restore()
+    this.browserTasksRestored = true
+  }
+
   private entryForTask(taskId: string, create: boolean): BrowserEntry | null {
+    this.ensureBrowserTasksRestored()
+    const lifecycle = this.taskLifecycle()
+    if (create) {
+      lifecycle.createTask({ taskId })
+    } else if (!lifecycle.task(taskId)) {
+      const legacyEntry = this.rawEntryForTask(taskId, false)
+      if (!legacyEntry) return null
+      lifecycle.createTask({ taskId })
+    }
+
+    const entry = this.rawEntryForTask(taskId, create)
+    if (entry) lifecycle.parkTask(taskId)
+    return entry
+  }
+
+  private rawEntryForTask(taskId: string, create: boolean): BrowserEntry | null {
     const mapped = this.taskTabs.get(taskId)
     if (mapped) {
       const entry = this.entries.get(mapped)
@@ -948,6 +1083,8 @@ export class WorkstationBrowserRuntime {
     wc.setWindowOpenHandler(details => {
       if (permittedTopLevelUrl(details.url)) {
         const shouldActivate = this.activeTabId === entry.id
+        // createTab is idempotent for ownerTaskId, so a task-owned popup is
+        // redirected into the same live page instead of creating a second owner.
         this.createTab(details.url, shouldActivate, entry.ownerTaskId)
       }
       return { action: 'deny' }
