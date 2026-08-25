@@ -16,7 +16,7 @@ function Invoke-NativeChecked {
 
   & $Command @Arguments
   if ($LASTEXITCODE -ne 0) {
-    throw "Command failed with exit code $LASTEXITCODE: $Command $($Arguments -join ' ')"
+    throw "Command failed with exit code ${LASTEXITCODE}: $Command $($Arguments -join ' ')"
   }
 }
 
@@ -75,7 +75,7 @@ function Invoke-HermesPython {
   $pythonArgs += $Arguments
   & $Python.Command @pythonArgs
   if ($LASTEXITCODE -ne 0) {
-    throw "Python command failed with exit code $LASTEXITCODE: $($Python.Command) $($pythonArgs -join ' ')"
+    throw "Python command failed with exit code ${LASTEXITCODE}: $($Python.Command) $($pythonArgs -join ' ')"
   }
 }
 
