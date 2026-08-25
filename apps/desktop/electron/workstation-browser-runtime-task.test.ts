@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { EventEmitter } from 'node:events'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -7,10 +6,12 @@ import path from 'node:path'
 import { afterEach, test, vi } from 'vitest'
 
 const electron = vi.hoisted(() => {
+  type Listener = (...args: unknown[]) => void
   const windows: FakeBrowserWindow[] = []
 
-  class FakeWebContents extends EventEmitter {
+  class FakeWebContents {
     private destroyed = false
+    private readonly listeners = new Map<string, Listener[]>()
     private title = ''
     private url = 'about:blank'
     private windowOpenHandler: ((details: { url: string }) => { action: string }) | null = null
@@ -26,6 +27,17 @@ const electron = vi.hoisted(() => {
       isAttached: () => false,
       attach: () => undefined,
       sendCommand: async () => ({})
+    }
+
+    on(event: string, listener: Listener): this {
+      const current = this.listeners.get(event) ?? []
+      current.push(listener)
+      this.listeners.set(event, current)
+      return this
+    }
+
+    private emit(event: string, ...args: unknown[]): void {
+      for (const listener of this.listeners.get(event) ?? []) listener(...args)
     }
 
     setWindowOpenHandler(handler: (details: { url: string }) => { action: string }): void {
@@ -68,7 +80,7 @@ const electron = vi.hoisted(() => {
     reload(): void {}
     stop(): void {}
     async executeJavaScript(): Promise<unknown> { return {} }
-    async capturePage(): Promise<{ toPNG: () => Buffer }> { return { toPNG: () => Buffer.from('') } }
+    async capturePage(): Promise<{ toPNG: () => Uint8Array }> { return { toPNG: () => new Uint8Array() } }
   }
 
   class FakeWebContentsView {
@@ -125,7 +137,7 @@ const electron = vi.hoisted(() => {
     FakeWebContents,
     FakeWebContentsView,
     app: {
-      getPath: () => path.join(os.tmpdir(), 'hermes-runtime-task-app'),
+      getPath: () => 'C:/tmp/hermes-runtime-task-app',
       whenReady: () => new Promise<never>(() => undefined),
       on: () => undefined
     },
