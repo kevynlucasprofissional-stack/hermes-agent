@@ -267,11 +267,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     if (existing) return existing
     const page = this.bindings.ensurePage(taskId)
     if (!this.bindings.pageIsAlive(page)) throw new Error(`BrowserTask page could not be recovered: ${taskId}`)
-    if (task.recoveryState === 'restored') {
-      task.recoveryState = 'recreated'
-      task.updatedAt = this.timestamp()
-      this.persist()
-    }
+    task.recoveryState = 'recreated'
+    task.updatedAt = this.timestamp()
+    this.persist()
     return page
   }
 
