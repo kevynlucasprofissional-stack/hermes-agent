@@ -22,6 +22,12 @@ The Chromium profile owns browser-managed state such as cookies, localStorage, I
 
 A BrowserTask represents the durable semantic ownership of an automated web task. It may be hidden, parked, focused, or moved between hosts without navigating again. The same task must not be represented by two independently navigated live pages.
 
+`taskTabs`/`ownerTaskId` remain the authoritative live-page binding inside the Electron process. BrowserTask lifecycle metadata wraps those existing primitives; it does not introduce a second map that owns `WebContentsView` instances.
+
+`hide` and `park` never mean destroy. While the Electron process remains alive, a later `show` must re-expose the same live page and preserve its current URL/page state. `destroy` is an explicit lifecycle operation.
+
+A `WebContentsView` object is process-local and is not serializable across a Desktop restart. Restart recovery therefore preserves the BrowserTask identity and safe metadata, normalizes the task to `parked`, and lazily recreates/reconnects one page under the same `taskId` when the task is used again. Do not describe that as preserving JavaScript heap or `WebContents` object identity across process restart.
+
 ## D-006 — Chat Browser View and Browser Hub are views of the same runtime
 
 The contextual Chat Browser View and the global Browser Hub expose the same BrowserRuntime/BrowserTask state. A live `WebContentsView` has one active host at a time; the other surface represents the task with state/card/thumbnail rather than duplicating the page.
