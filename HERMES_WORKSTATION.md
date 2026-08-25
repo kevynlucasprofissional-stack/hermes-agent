@@ -9,13 +9,29 @@ Desktop itself.
 
 Start here: [`workstation/README.md`](workstation/README.md).
 
+## Windows first run
 
-## Apply after extracting this patch at the repository root
+From the repository root, prefer the `.cmd` launchers so Windows PowerShell's
+execution policy cannot block the bootstrap before it starts:
 
-```powershell
-.\workstation\install.ps1
-.\workstation\doctor.ps1
-.\workstation\start.ps1
+```bat
+workstation\install.cmd
+workstation\doctor.cmd
+workstation\start.cmd
 ```
 
-Use `install.ps1 -InstallDependencies` only when Python/Node workspace dependencies need to be installed. The installer is idempotent and records its core integration through stable anchors rather than replacing the Hermes source wholesale.
+Install the full development dependency set only when needed:
+
+```bat
+workstation\install.cmd -InstallDependencies
+```
+
+Equivalent explicit PowerShell invocation:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\workstation\install.ps1
+```
+
+The installer is idempotent, validates all core patch anchors before writing,
+selects a usable Python interpreter, and records its integration through stable
+anchors rather than replacing Hermes source wholesale.
