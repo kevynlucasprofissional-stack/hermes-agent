@@ -1,17 +1,57 @@
-from pathlib import Path
+import base64
+import json
+import os
+import urllib.parse
+import urllib.request
+
+REPO = "kevynlucasprofissional-stack/hermes-agent"
+BRANCH = "validation/impl3-browser-session-capability"
+TOKEN = os.environ["GITHUB_TOKEN"]
+API = "https://api.github.com"
+
+
+def api(method: str, path: str, payload=None):
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        API + path,
+        data=data,
+        method=method,
+        headers={
+            "Authorization": f"Bearer {TOKEN}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+            "User-Agent": "hermes-workstation-impl3",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=60) as response:
+        body = response.read()
+    return json.loads(body.decode("utf-8")) if body else {}
+
+
+branch_ref = api("GET", f"/repos/{REPO}/git/ref/heads/{BRANCH}")
+base_sha = branch_ref["object"]["sha"]
+base_commit = api("GET", f"/repos/{REPO}/git/commits/{base_sha}")
+base_tree = base_commit["tree"]["sha"]
+
+paths = ["tools/registry.py", "tools/browser_workstation.py", "model_tools.py"]
+contents: dict[str, str] = {}
+for path in paths:
+    item = api(
+        "GET",
+        f"/repos/{REPO}/contents/{urllib.parse.quote(path, safe='/')}?ref={base_sha}",
+    )
+    contents[path] = base64.b64decode(item["content"]).decode("utf-8")
 
 
 def replace_once(path: str, old: str, new: str) -> None:
-    p = Path(path)
-    text = p.read_text(encoding="utf-8")
+    text = contents[path]
     count = text.count(old)
     if count != 1:
         raise SystemExit(f"{path}: expected exactly one anchor, found {count}")
-    p.write_text(text.replace(old, new, 1), encoding="utf-8")
+    contents[path] = text.replace(old, new, 1)
 
 
-# Generic registry seam: a caller that already proved a session-scoped surface
-# capability may keep selected schemas visible without running reachability probes.
 replace_once(
     "tools/registry.py",
     '    def get_definitions(self, tool_names: Set[str], quiet: bool = False) -> List[dict]:\n',
@@ -40,8 +80,6 @@ replace_once(
     '            if entry.check_fn and name not in forced:\n                if entry.check_fn not in check_results:\n',
 )
 
-# Workstation owns the session-scoped capability decision. Only tools whose
-# handlers actually route through the embedded Browser are force-exposed.
 replace_once(
     "tools/browser_workstation.py",
     'def workstation_browser_enabled() -> bool:\n'
@@ -87,8 +125,6 @@ replace_once(
     'def workstation_routing_enabled() -> bool:\n',
 )
 
-# Schema assembly consumes the surface capability explicitly and fingerprints
-# it in the outer memoization key, preventing Desktop -> TUI cache leakage.
 replace_once(
     "model_tools.py",
     'def get_tool_definitions(\n',
@@ -158,8 +194,7 @@ replace_once(
     '    )\n',
 )
 
-Path("tests/tui_gateway/test_workstation_browser_schema_capability.py").write_text(
-    r'''"""Workstation Browser schema capability is owned by the Desktop session."""
+contents["tests/tui_gateway/test_workstation_browser_schema_capability.py"] = r'''"""Workstation Browser schema capability is owned by the Desktop session."""
 
 import pytest
 
@@ -172,11 +207,7 @@ TARGET = "browser_navigate"
 
 
 def _tool_names(platform: str, source: str) -> set[str]:
-    tokens = set_session_vars(
-        platform=platform,
-        source=source,
-        session_id=f"schema-{platform}",
-    )
+    tokens = set_session_vars(platform=platform, source=source, session_id=f"schema-{platform}")
     try:
         return {
             item["function"]["name"]
@@ -194,11 +225,7 @@ def _tool_names(platform: str, source: str) -> set[str]:
 def clean_schema_cache(monkeypatch):
     monkeypatch.delenv("HERMES_DESKTOP", raising=False)
     monkeypatch.setenv("HERMES_WORKSTATION_BROWSER", "1")
-    monkeypatch.setattr(
-        browser_workstation,
-        "_browser_config",
-        lambda: {"enabled": True, "routing_enabled": True},
-    )
+    monkeypatch.setattr(browser_workstation, "_browser_config", lambda: {"enabled": True, "routing_enabled": True})
     model_tools._clear_tool_defs_cache()
     yield
     model_tools._clear_tool_defs_cache()
@@ -209,11 +236,7 @@ def _force_probe_false(monkeypatch):
     assert entry is not None
     monkeypatch.setattr(entry, "check_fn", lambda: False)
     monkeypatch.setattr(model_tools, "validate_toolset", lambda name: name == "browser")
-    monkeypatch.setattr(
-        model_tools,
-        "resolve_toolset",
-        lambda name: [TARGET] if name == "browser" else [],
-    )
+    monkeypatch.setattr(model_tools, "resolve_toolset", lambda name: [TARGET] if name == "browser" else [])
 
 
 def test_desktop_surface_preserves_browser_schema_when_probe_is_false(monkeypatch):
@@ -237,11 +260,7 @@ def test_process_desktop_env_does_not_grant_tui_browser_capability(monkeypatch):
 
 
 def test_desktop_source_grants_capability_without_process_env():
-    tokens = set_session_vars(
-        platform="desktop",
-        source="desktop",
-        session_id="schema-desktop-no-env",
-    )
+    tokens = set_session_vars(platform="desktop", source="desktop", session_id="schema-desktop-no-env")
     try:
         tools = browser_workstation.workstation_schema_tools_for_current_session()
         assert TARGET in tools
@@ -249,6 +268,30 @@ def test_desktop_source_grants_capability_without_process_env():
         assert "browser_exec" not in tools
     finally:
         clear_session_vars(tokens)
-''',
-    encoding="utf-8",
+'''
+
+entries = []
+for path, content in contents.items():
+    blob = api("POST", f"/repos/{REPO}/git/blobs", {"content": content, "encoding": "utf-8"})
+    entries.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
+
+# Remove the two temporary patching files from the resulting candidate tree.
+entries.append({"path": ".github/impl3_patch.py", "mode": "100644", "type": "blob", "sha": None})
+entries.append({"path": ".github/workflows/impl3-session-capability-patch.yml", "mode": "100644", "type": "blob", "sha": None})
+
+new_tree = api("POST", f"/repos/{REPO}/git/trees", {"base_tree": base_tree, "tree": entries})
+new_commit = api(
+    "POST",
+    f"/repos/{REPO}/git/commits",
+    {
+        "message": "feat(workstation): make browser schema a desktop session capability",
+        "tree": new_tree["sha"],
+        "parents": [base_sha],
+    },
 )
+api(
+    "PATCH",
+    f"/repos/{REPO}/git/refs/heads/{BRANCH}",
+    {"sha": new_commit["sha"], "force": False},
+)
+print(new_commit["sha"])
