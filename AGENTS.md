@@ -4,6 +4,10 @@ Instructions for AI coding assistants and developers working on the hermes-agent
 
 **Never give up on the right solution.**
 
+## Downstream Workstation context
+
+This downstream fork contains a first-class Hermes Workstation product layer. If a task touches `workstation/`, the Desktop Workstation Browser, `browser_*` Workstation routing, or another Workstation-owned integration point, **read `workstation/context/README.md` and follow its required reading order before editing code**. The root rules in this file remain authoritative; the Workstation context adds current downstream state, settled decisions, constraints, tests, known issues, and the maintained upstream delta. Always verify those documents against current `main` implementation and tests rather than relying on old plans or conversation state.
+
 ## What Hermes Is
 
 Hermes is a personal AI agent that runs the same agent core across a CLI, a

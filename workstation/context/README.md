@@ -1,0 +1,38 @@
+# Hermes Workstation — Coding-Agent Context
+
+This directory is the operational entry point for coding agents working on the downstream Hermes Workstation surface. It does **not** replace the repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) or duplicate the architecture documents in `workstation/`.
+
+## Required reading order
+
+Before changing Workstation code, read these documents in order:
+
+1. [`../../AGENTS.md`](../../AGENTS.md) — repository-wide engineering rules and invariants.
+2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
+3. [`DECISIONS.md`](DECISIONS.md) — settled downstream architecture decisions.
+4. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable boundaries and security/maintenance constraints.
+5. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — Workstation runtime architecture and distribution model.
+6. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model, and tracked downstream delta.
+7. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership and use of internal/external components.
+8. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work.
+9. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
+10. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced or observed problems whose causes must not be guessed.
+11. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
+
+After this read-order, inspect the **current `main` implementation and its tests** for the subsystem you intend to change. Documentation is intent and state; code on `main` is the source of truth for implementation details.
+
+## Working rule
+
+A coding agent must be able to answer these questions before editing Workstation code:
+
+- Which existing Hermes subsystem owns this state or capability?
+- Is the proposed change extending an existing path or creating a duplicate source of truth?
+- Is the capability process-scoped, session-scoped, BrowserTask-scoped, or profile-scoped?
+- What is the upstream delta created by the change?
+- Which behavior contract will prove the change works end to end?
+- What security boundary changes, if any?
+
+If any answer is unclear, inspect the implementation and tests before writing code. Do not infer missing behavior from filenames, old plans, or previous conversation state.
+
+## Maintenance
+
+Update these context documents when the corresponding fact changes. Keep them concise and refer to the canonical detailed document instead of copying it. `CURRENT_STATE.md` and `KNOWN_ISSUES.md` are expected to evolve most frequently; architectural decisions should change only when a deliberate replacement decision is recorded.
