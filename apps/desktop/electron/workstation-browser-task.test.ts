@@ -120,6 +120,22 @@ test('create -> park -> show keeps the same page identity', () => {
   assert.equal(browser.pageCount(), 1)
 })
 
+test('showing another task parks the previously visible task metadata and page', () => {
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings)
+
+  lifecycle.createTask({ taskId: 'task-a' })
+  lifecycle.createTask({ taskId: 'task-b' })
+  lifecycle.showTask('task-a', { host: 'panel' })
+  lifecycle.showTask('task-b', { host: 'control' })
+
+  assert.equal(lifecycle.task('task-a')?.status, 'parked')
+  assert.equal(lifecycle.task('task-a')?.parked, true)
+  assert.equal(browser.pages.get('task-a')?.parked, true)
+  assert.equal(lifecycle.task('task-b')?.status, 'visible')
+  assert.equal(browser.pages.get('task-b')?.visible, true)
+})
+
 test('hide never destroys the page; destroy is explicit and removes the task', () => {
   const browser = fakeBrowser()
   const lifecycle = new BrowserTaskLifecycle(browser.bindings)
@@ -150,6 +166,24 @@ test('one task owns exactly one live page across repeated create/show operations
   assert.equal(browser.pages.size, 1)
   assert.equal(browser.pageCount(), 1)
   assert.equal(lifecycle.listTasks().length, 1)
+})
+
+test('an existing task recreates one missing page and records recovery', () => {
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings)
+
+  lifecycle.createTask({ taskId: 'task-a' })
+  const original = browser.pages.get('task-a')
+  assert.ok(original)
+  original.destroyed = true
+
+  const recovered = lifecycle.createTask({ taskId: 'task-a' })
+  const replacement = browser.pages.get('task-a')
+  assert.ok(replacement)
+  assert.notEqual(replacement, original)
+  assert.equal(recovered.recoveryState, 'recreated')
+  assert.equal(browser.pageCount(), 2)
+  assert.equal(browser.pages.size, 1)
 })
 
 test('restart preserves metadata, normalizes it to parked, and lazily recreates one page', () => {
