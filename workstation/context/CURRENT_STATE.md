@@ -4,7 +4,9 @@ Snapshot date: 2026-08-25. Downstream `main` is at Implementation 3 (`ce78f120e8
 
 This file describes **observed implementation state**, not the target architecture. When it disagrees with code on current `main` or an explicitly named candidate branch, inspect the code and update this file.
 
-## Working on current `main`
+## Working now
+
+On current `main`:
 
 - Hermes Workstation is integrated into this downstream fork and the Desktop application can expose a dedicated `Browser` route.
 - The internal browser runtime uses Electron Chromium through `WebContentsView` with a persistent Electron session/partition.
