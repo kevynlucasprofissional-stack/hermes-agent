@@ -97,20 +97,20 @@ $LicenseScript = Join-Path $PSScriptRoot "scripts\verify_licenses.py"
 # partially patched.
 if (-not $SkipCorePatch) {
   Write-Host "[1/4] Validating Hermes integration anchors..." -ForegroundColor Cyan
-  Invoke-HermesPython @($IntegrationScript, "--root", $Root, "--check")
+  Invoke-HermesPython -Arguments @($IntegrationScript, "--root", $Root, "--check")
 } else {
   Write-Host "[1/4] Core patch skipped by request." -ForegroundColor Yellow
 }
 
 Write-Host "[2/4] Validating Workstation component lock..." -ForegroundColor Cyan
-Invoke-HermesPython @($LockScript)
+Invoke-HermesPython -Arguments @($LockScript)
 
 Write-Host "[3/4] Validating third-party license policy..." -ForegroundColor Cyan
-Invoke-HermesPython @($LicenseScript)
+Invoke-HermesPython -Arguments @($LicenseScript)
 
 if (-not $SkipCorePatch) {
   Write-Host "[4/4] Applying Hermes Workstation core integration..." -ForegroundColor Cyan
-  Invoke-HermesPython @($IntegrationScript, "--root", $Root)
+  Invoke-HermesPython -Arguments @($IntegrationScript, "--root", $Root)
 } else {
   Write-Host "[4/4] Core integration not modified." -ForegroundColor Yellow
 }
@@ -140,7 +140,7 @@ if ($InstallDependencies) {
   Push-Location $Root
   try {
     Write-Host "Installing Python package in editable mode..." -ForegroundColor Cyan
-    Invoke-HermesPython @("-m", "pip", "install", "-e", ".")
+    Invoke-HermesPython -Arguments @("-m", "pip", "install", "-e", ".")
 
     Write-Host "Installing Node workspaces..." -ForegroundColor Cyan
     Invoke-NativeChecked -Command "npm" -Arguments @("ci")
