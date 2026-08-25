@@ -27,6 +27,9 @@ state.
    completion metadata.
 10. **Upstream delta stays visible.** Every core change is documented in
     `UPSTREAM_DELTA.md`.
+11. **Isolated Python runtime.** Development/runtime dependencies live in the
+    repo-local `.venv`; Workstation never intentionally mutates the user's
+    global Python environment.
 
 ## Windows bootstrap
 
@@ -45,11 +48,19 @@ When you are ready to install the full Python and Node development dependencies:
 workstation\install.cmd -InstallDependencies
 ```
 
+This creates/reuses `.venv` at the repository root and installs Hermes there in
+editable mode. `.venv` is already ignored by Git. Node workspaces remain managed
+by `npm ci`.
+
 Then start Desktop development with:
 
 ```bat
 workstation\start.cmd
 ```
+
+`start.cmd` prepends `.venv\Scripts` to `PATH` and sets `VIRTUAL_ENV`/
+`HERMES_PYTHON` before starting Electron, so the Desktop resolves this checkout's
+Hermes backend instead of a global Python installation.
 
 The PowerShell entrypoints remain available when needed explicitly:
 
@@ -61,7 +72,7 @@ The installer selects an available Python 3.13/3.12/3.11 through the Windows
 `py` launcher when possible, validates every core patch anchor before writing,
 and checks native-command exit codes. Dependency installation requires Hermes'
 current Python range `>=3.11,<3.14` and Desktop requires Node `>=22.22.0` (the
-repository `.nvmrc` selects Node 26).
+repository `.nvmrc` selects Node 26; CI validates with Node 26).
 
 ## Browser integration
 
