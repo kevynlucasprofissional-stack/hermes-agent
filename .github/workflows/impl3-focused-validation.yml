@@ -1,0 +1,27 @@
+name: Impl3 focused validation
+
+on:
+  push:
+    branches:
+      - validation/impl3-browser-session-capability
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: "0.9.28"
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+      - name: Install minimal test dependencies
+        run: uv sync --locked --python 3.11 --extra dev
+      - name: Run Implementation 3 focused tests
+        run: uv run python -m pytest -q tests/tui_gateway/test_workstation_browser_schema_capability.py tests/tui_gateway/test_server_browser_session.py tests/tools/test_browser_workstation.py
+      - name: Compile touched Python modules
+        run: uv run python -m py_compile model_tools.py tools/registry.py tools/browser_workstation.py tests/tui_gateway/test_workstation_browser_schema_capability.py
