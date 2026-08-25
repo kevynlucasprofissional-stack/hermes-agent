@@ -205,6 +205,17 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
 
   showTask(taskId: string, context: ShowContext): BrowserTask {
     const task = this.requireTask(taskId)
+    const timestamp = this.timestamp()
+    let parkedOther = false
+    for (const other of this.tasks.values()) {
+      if (other.taskId === taskId || other.status !== 'visible') continue
+      const otherPage = this.livePage(other.taskId)
+      if (otherPage) this.bindings.parkPage(other.taskId, otherPage)
+      Object.assign(other, { status: 'parked' as const, parked: true, updatedAt: timestamp })
+      parkedOther = true
+    }
+    if (parkedOther) this.persist()
+
     const page = this.ensureLivePage(taskId, task)
     this.bindings.showPage(taskId, page, context)
     return this.updateTask(task, { status: 'visible', parked: false })
