@@ -1,0 +1,297 @@
+name: Impl3 session capability patch
+
+on:
+  push:
+    branches:
+      - validation/impl3-browser-session-capability
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: validation/impl3-browser-session-capability
+          fetch-depth: 0
+
+      - name: Apply Implementation 3 patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected exactly one anchor, found {count}")
+              p.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          # 1) Generic registry seam: a caller that already proved a session-scoped
+          # surface capability may keep selected schemas visible without executing
+          # process/global reachability probes. Runtime dispatch remains unchanged.
+          replace_once(
+              "tools/registry.py",
+              '    def get_definitions(self, tool_names: Set[str], quiet: bool = False) -> List[dict]:\n',
+              '    def get_definitions(\n'
+              '        self,\n'
+              '        tool_names: Set[str],\n'
+              '        quiet: bool = False,\n'
+              '        force_available: Optional[Set[str]] = None,\n'
+              '    ) -> List[dict]:\n',
+          )
+          replace_once(
+              "tools/registry.py",
+              '        result = []\n        # Per-call cache on top of the 30 s TTL — handles repeat probes of the\n',
+              '        result = []\n'
+              '        # Session/surface owners may explicitly preserve a schema after\n'
+              '        # deciding capability outside check_fn. This is intentionally a\n'
+              '        # per-call input: it is never stored in the process-wide check_fn\n'
+              '        # cache, and runtime dispatch still performs its own health/recovery\n'
+              '        # checks. See Workstation Browser session capability.\n'
+              '        forced = set(force_available or ())\n'
+              '        # Per-call cache on top of the 30 s TTL — handles repeat probes of the\n',
+          )
+          replace_once(
+              "tools/registry.py",
+              '            if entry.check_fn:\n                if entry.check_fn not in check_results:\n',
+              '            if entry.check_fn and name not in forced:\n                if entry.check_fn not in check_results:\n',
+          )
+
+          # 2) Workstation owns the session-scoped capability decision. The list is
+          # deliberately only actions actually routed through the embedded Browser.
+          replace_once(
+              "tools/browser_workstation.py",
+              'def workstation_browser_enabled() -> bool:\n'
+              '    if not _bool_env("HERMES_WORKSTATION_BROWSER", True):\n'
+              '        return False\n'
+              '    return bool(_browser_config().get("enabled", True))\n\n\n'
+              'def workstation_routing_enabled() -> bool:\n',
+              'def workstation_browser_enabled() -> bool:\n'
+              '    if not _bool_env("HERMES_WORKSTATION_BROWSER", True):\n'
+              '        return False\n'
+              '    return bool(_browser_config().get("enabled", True))\n\n\n'
+              '_WORKSTATION_SCHEMA_TOOLS = frozenset({\n'
+              '    "browser_navigate",\n'
+              '    "browser_snapshot",\n'
+              '    "browser_click",\n'
+              '    "browser_type",\n'
+              '    "browser_scroll",\n'
+              '    "browser_back",\n'
+              '    "browser_press",\n'
+              '    "browser_get_images",\n'
+              '    "browser_vision",\n'
+              '    "browser_console",\n'
+              '})\n\n\n'
+              'def workstation_schema_tools_for_current_session() -> set[str]:\n'
+              '    """Schemas structurally owned by a Desktop/Workstation session.\n\n'
+              '    Surface capability belongs to the session source, not to a 200 ms\n'
+              '    controller health probe. Returning these names does *not* claim the\n'
+              '    controller is reachable; workstation_routed_browser_handler() keeps\n'
+              '    the authoritative health/recovery/fail-closed decision at dispatch.\n'
+              '    """\n'
+              '    if not workstation_browser_enabled():\n'
+              '        return set()\n'
+              '    try:\n'
+              '        from gateway.session_context import get_session_env\n'
+              '    except Exception:\n'
+              '        return set()\n'
+              '    source = str(get_session_env("HERMES_SESSION_SOURCE", "") or "").strip().lower()\n'
+              '    platform = str(get_session_env("HERMES_SESSION_PLATFORM", "") or "").strip().lower()\n'
+              '    surface = source or platform\n'
+              '    if surface != "desktop":\n'
+              '        return set()\n'
+              '    return set(_WORKSTATION_SCHEMA_TOOLS)\n\n\n'
+              'def workstation_routing_enabled() -> bool:\n',
+          )
+
+          # 3) Schema assembly consumes the session-scoped capability as an explicit
+          # input and fingerprints it in the outer memoization key, preventing a
+          # Desktop result from leaking to a TUI/CLI session with the same toolsets.
+          replace_once(
+              "model_tools.py",
+              'def get_tool_definitions(\n',
+              'def _session_force_available_tools() -> frozenset[str]:\n'
+              '    """Return schemas guaranteed by the current client surface.\n\n'
+              '    This decision is intentionally outside registry check_fn: one gateway\n'
+              '    process serves many session sources, while check_fn probes are cached.\n'
+              '    """\n'
+              '    try:\n'
+              '        from tools.browser_workstation import workstation_schema_tools_for_current_session\n'
+              '        return frozenset(workstation_schema_tools_for_current_session())\n'
+              '    except Exception:\n'
+              '        return frozenset()\n\n\n'
+              'def get_tool_definitions(\n',
+          )
+          replace_once(
+              "model_tools.py",
+              '    cache_key = None\n    if quiet_mode:\n',
+              '    force_available_tools = _session_force_available_tools()\n'
+              '    cache_key = None\n'
+              '    if quiet_mode:\n',
+          )
+          replace_once(
+              "model_tools.py",
+              '                profile_scope,\n            )\n',
+              '                profile_scope,\n'
+              '                force_available_tools,\n'
+              '            )\n',
+          )
+          replace_once(
+              "model_tools.py",
+              '    result = _compute_tool_definitions(enabled_toolsets, disabled_toolsets, quiet_mode,\n                                       skip_tool_search_assembly=skip_tool_search_assembly)\n',
+              '    result = _compute_tool_definitions(\n'
+              '        enabled_toolsets,\n'
+              '        disabled_toolsets,\n'
+              '        quiet_mode,\n'
+              '        skip_tool_search_assembly=skip_tool_search_assembly,\n'
+              '        force_available_tools=force_available_tools,\n'
+              '    )\n',
+          )
+          replace_once(
+              "model_tools.py",
+              'def _compute_tool_definitions(\n'
+              '    enabled_toolsets: Optional[List[str]] = None,\n'
+              '    disabled_toolsets: Optional[List[str]] = None,\n'
+              '    quiet_mode: bool = False,\n'
+              '    skip_tool_search_assembly: bool = False,\n'
+              ') -> List[Dict[str, Any]]:\n',
+              'def _compute_tool_definitions(\n'
+              '    enabled_toolsets: Optional[List[str]] = None,\n'
+              '    disabled_toolsets: Optional[List[str]] = None,\n'
+              '    quiet_mode: bool = False,\n'
+              '    skip_tool_search_assembly: bool = False,\n'
+              '    force_available_tools: Optional[set[str]] = None,\n'
+              ') -> List[Dict[str, Any]]:\n',
+          )
+          replace_once(
+              "model_tools.py",
+              '    # Ask the registry for schemas (only returns tools whose check_fn passes)\n'
+              '    filtered_tools = registry.get_definitions(tools_to_include, quiet=quiet_mode)\n',
+              '    # Ask the registry for schemas. Session-surface capabilities can\n'
+              '    # bypass reachability check_fn filtering for selected schemas only;\n'
+              '    # disabled/unselected tools are never re-added.\n'
+              '    forced = set(force_available_tools or ()) & tools_to_include\n'
+              '    filtered_tools = registry.get_definitions(\n'
+              '        tools_to_include, quiet=quiet_mode, force_available=forced\n'
+              '    )\n',
+          )
+
+          test = r'''"""Workstation Browser schema capability is owned by the Desktop session."""
+
+import pytest
+
+import model_tools
+from gateway.session_context import clear_session_vars, set_session_vars
+from tools import browser_workstation
+from tools.registry import registry
+
+TARGET = "browser_navigate"
+
+
+def _tool_names(platform: str, source: str) -> set[str]:
+    tokens = set_session_vars(
+        platform=platform,
+        source=source,
+        session_id=f"schema-{platform}",
+    )
+    try:
+        return {
+            item["function"]["name"]
+            for item in model_tools.get_tool_definitions(
+                enabled_toolsets=["browser"],
+                quiet_mode=True,
+                skip_tool_search_assembly=True,
+            )
+        }
+    finally:
+        clear_session_vars(tokens)
+
+
+@pytest.fixture(autouse=True)
+def clean_schema_cache(monkeypatch):
+    monkeypatch.delenv("HERMES_DESKTOP", raising=False)
+    monkeypatch.setenv("HERMES_WORKSTATION_BROWSER", "1")
+    monkeypatch.setattr(
+        browser_workstation,
+        "_browser_config",
+        lambda: {"enabled": True, "routing_enabled": True},
+    )
+    model_tools._clear_tool_defs_cache()
+    yield
+    model_tools._clear_tool_defs_cache()
+
+
+def test_desktop_surface_preserves_browser_schema_when_probe_is_false(monkeypatch):
+    entry = registry.get_entry(TARGET)
+    assert entry is not None
+    monkeypatch.setattr(entry, "check_fn", lambda: False)
+    monkeypatch.setattr(model_tools, "validate_toolset", lambda name: name == "browser")
+    monkeypatch.setattr(
+        model_tools,
+        "resolve_toolset",
+        lambda name: [TARGET] if name == "browser" else [],
+    )
+
+    assert TARGET in _tool_names("desktop", "desktop")
+
+
+def test_desktop_schema_cache_does_not_leak_into_tui(monkeypatch):
+    entry = registry.get_entry(TARGET)
+    assert entry is not None
+    monkeypatch.setattr(entry, "check_fn", lambda: False)
+    monkeypatch.setattr(model_tools, "validate_toolset", lambda name: name == "browser")
+    monkeypatch.setattr(
+        model_tools,
+        "resolve_toolset",
+        lambda name: [TARGET] if name == "browser" else [],
+    )
+
+    # Same requested toolsets and same registry generation: only the session
+    # surface changes. The outer schema cache must therefore include the forced
+    # surface-capability fingerprint.
+    assert TARGET in _tool_names("desktop", "desktop")
+    assert TARGET not in _tool_names("tui", "tui")
+
+
+def test_process_desktop_env_does_not_grant_tui_browser_capability(monkeypatch):
+    monkeypatch.setenv("HERMES_DESKTOP", "1")
+    tokens = set_session_vars(platform="tui", source="tui", session_id="schema-tui-env")
+    try:
+        assert browser_workstation.workstation_schema_tools_for_current_session() == set()
+    finally:
+        clear_session_vars(tokens)
+
+
+def test_desktop_source_grants_capability_without_process_env():
+    tokens = set_session_vars(
+        platform="desktop",
+        source="desktop",
+        session_id="schema-desktop-no-env",
+    )
+    try:
+        tools = browser_workstation.workstation_schema_tools_for_current_session()
+        assert TARGET in tools
+        assert "browser_snapshot" in tools
+        assert "browser_exec" not in tools
+    finally:
+        clear_session_vars(tokens)
+'''
+          Path("tests/tui_gateway/test_workstation_browser_schema_capability.py").write_text(
+              test, encoding="utf-8"
+          )
+          PY
+
+      - name: Remove temporary patch workflow and commit candidate
+        shell: bash
+        run: |
+          git rm .github/workflows/impl3-session-capability-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/registry.py tools/browser_workstation.py model_tools.py tests/tui_gateway/test_workstation_browser_schema_capability.py
+          git commit -m "feat(workstation): make browser schema a desktop session capability"
+          git push origin HEAD:validation/impl3-browser-session-capability
