@@ -49,11 +49,29 @@ $env:VIRTUAL_ENV = $VenvRoot
 $env:HERMES_PYTHON = $VenvPython
 $env:PATH = "$VenvScripts;$env:PATH"
 
+# Upstream Hermes dev mode exposes the renderer over CDP on 127.0.0.1:9222 by
+# default for diagnostic scripts. Workstation's embedded Browser does NOT need
+# that TCP debugger: it controls its WebContents directly through Electron's
+# webContents.debugger API. Disable the external renderer debugger unless the
+# developer explicitly opted into a port, avoiding collisions with Chrome,
+# another Hermes dev instance, Browser tooling, or a stale process.
+if (-not $env:HERMES_DESKTOP_CDP_PORT) {
+  $env:HERMES_DESKTOP_CDP_PORT = "off"
+  $WorkstationDisabledRendererCdp = $true
+} else {
+  $WorkstationDisabledRendererCdp = $false
+}
+
 Push-Location $Root
 try {
   Write-Host "Starting Hermes Desktop with Workstation Browser..." -ForegroundColor Cyan
   Write-Host "Python runtime: $VenvPython"
   Write-Host "Node runtime:   $nodeVersion"
+  if ($WorkstationDisabledRendererCdp) {
+    Write-Host "Renderer CDP:   off (Workstation default; internal Browser CDP remains enabled)"
+  } else {
+    Write-Host "Renderer CDP:   $env:HERMES_DESKTOP_CDP_PORT (explicit override)"
+  }
   Write-Host ""
   Write-Host "Keep this terminal open while Hermes Desktop is running." -ForegroundColor DarkGray
   Write-Host "To stop the dev server later, press Ctrl+C once and answer Y/S if Windows asks to terminate the batch job." -ForegroundColor DarkGray
