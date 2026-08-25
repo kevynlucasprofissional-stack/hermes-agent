@@ -1,6 +1,6 @@
 # Workstation Known Issues
 
-This file records observed/reproduced gaps and the evidence boundary around them. A listed symptom is **not** permission to assume a root cause; verify current `main` before changing code.
+This file records observed/reproduced gaps and the evidence boundary around them. A listed symptom is **not** permission to assume a root cause; verify current `main` and any explicitly named candidate before changing code.
 
 ## KI-002 — Preview and Workstation Browser are separate browser lanes
 
@@ -10,11 +10,17 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Target invariant:** Workstation-mode Preview compatibility and Browser Hub/Chat Browser View reference one BrowserTask/live page.
 
-## KI-003 — Logical tabs and task mappings do not survive restart
+**Implementation 4 status:** unchanged. The BrowserTask lifecycle candidate deliberately does not collapse Preview into the Workstation runtime yet.
 
-**Observed:** the Chromium profile persists but the runtime's logical tab/task maps are memory-only, so restarting Desktop loses those tabs/mappings.
+## KI-003 — Complete logical BrowserSessionState does not survive restart
 
-**Target invariant:** safe, versioned BrowserSessionState restores logical metadata separately from Chromium profile/auth state.
+**Observed on current `main`:** the Chromium profile persists but logical tab/task maps are memory-only, so restarting Desktop loses those mappings.
+
+**Implementation 4 candidate:** safe BrowserTask metadata is now versioned and atomically persisted. Restored tasks are normalized to `parked` and lazily receive one replacement page when used. This narrows the original gap, but it does **not** yet persist the complete browser session model: ordinary/manual tab ordering, active generic tab, richer URL/title restoration, controller/session/run/Kanban linkage, and all host state remain incomplete.
+
+**Important boundary:** a `WebContentsView` and its JavaScript heap are process-local. Restart recovery means logical BrowserTask restoration plus controlled page recreation/reconnection, not serialization/resurrection of the same renderer object.
+
+**Remaining target invariant:** a safe, versioned BrowserSessionState restores all intended logical metadata separately from Chromium profile/auth state, with explicit recovery semantics for any process-local page objects.
 
 ## KI-004 — Native browser surface can overlap another Desktop pane
 
@@ -24,11 +30,15 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Target invariant:** one live `WebContentsView` host at a time plus an explicit host/viewport ownership contract; validate resize, maximize/restore, sidebar/pane changes, and host transfer.
 
-## KI-005 — BrowserTask lifecycle is implicit
+**Implementation 4 status:** lifecycle semantics now make a later single-host transfer contract easier to express, but Chat/Hub/Preview host unification is not implemented here. This issue remains open.
 
-**Observed:** `ownerTaskId`, `taskTabs`, parking, and attach/detach exist, but there is no complete first-class `show`/`hide`/`park`/`destroy` contract. A hidden page can remain alive while the agent lacks a semantic operation to re-expose the same task without navigating again.
+## KI-005 — BrowserTask lifecycle is implicit on current `main`
 
-**Target invariant:** hide and park preserve the page/task, show rehosts the same page, destroy is explicit.
+**Observed on current `main`:** `ownerTaskId`, `taskTabs`, parking, and attach/detach exist, but there is no complete first-class `show`/`hide`/`park`/`destroy` contract. A hidden page can remain alive while the agent lacks a semantic operation to re-expose the same task without navigating again.
+
+**Implementation 4 candidate resolution:** PR #9 introduces a first-class BrowserTask lifecycle around the existing `taskTabs`/`ownerTaskId` ownership primitives. `hide` and `park` preserve a live page, `show` re-exposes it, repeated task creation is idempotent, missing pages recover under the same logical task, and `destroyTask` is explicit. Focused lifecycle and runtime-adapter regression tests were added.
+
+**Acceptance boundary:** keep this issue open until one final PR #9 head has the focused BrowserTask gate recorded and the required real Windows Desktop lifecycle smoke passes. Automated mocks/typechecks alone are not sufficient evidence for the native behavior claim. When accepted, move this item to Resolved regression classes with the exact candidate SHA/run/smoke evidence.
 
 ## KI-006 — Broad Windows Desktop suites contain pre-existing portability/test failures
 
@@ -36,7 +46,7 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Causality status:** **not caused by Implementation 2 based on controlled A/B evidence.** Exact `main` base `a894464ba7f0f455cea28ca56a33a6b178b0a9af` and canonical-source candidate `9fd19c6ef73dc80ae9301eb983dbf2fdda7d6ef1` were run with the same Windows/Node commands. Baseline diagnostic `32815134750` and candidate diagnostic `32815214866` both fail the same UI test because the `../routes` mock in `src/app/contrib/surfaces.test.tsx` does not export `BROWSER_ROUTE`. Both platform diagnostics also share the same structural failure classes around POSIX permission bits, Windows path normalization/8.3 aliases, SSH ControlPath/Include assumptions, POSIX virtualenv layout, Darwin staging, and PowerShell handoff timing. Runner flake can change the raw failure count without changing those shared categories.
 
-**Current policy:** keep the broad workflow red while these failures exist. UI and platform suites run independently and a final aggregator preserves failure if either is red, so one failure does not hide the other.
+**Current policy:** keep the broad workflow red while these failures exist. The UI and platform suites run independently and a final aggregator preserves failure if either is red, so one failure does not hide the other. Implementation 4 additionally exposes its BrowserTask regression files as a separate named outcome in the same Windows job; a green focused BrowserTask step does not convert the broad red gate into a pass.
 
 **Required action:** fix the underlying Windows portability/test assumptions in a separate, scoped implementation with baseline regression tests. Do not weaken or delete those suites merely to make Workstation CI green.
 
