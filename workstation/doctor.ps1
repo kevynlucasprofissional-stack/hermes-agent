@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Continue"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$VenvRoot = Join-Path $Root ".venv"
+$VenvPython = Join-Path $VenvRoot "Scripts\python.exe"
 
 Write-Host "Hermes Workstation Doctor" -ForegroundColor Cyan
 Write-Host "Root: $Root"
@@ -15,8 +17,14 @@ function Show-CommandVersion {
       Write-Host ("[MISSING] {0}" -f $Name) -ForegroundColor Yellow
       return
     }
-    $out = & $Name @CommandArgs 2>&1 | Select-Object -First 1
+
+    # Capture the native exit code BEFORE piping/selecting output. Windows
+    # PowerShell 5.1 can otherwise leave LASTEXITCODE at -1 for a successful
+    # native command that participates in a PowerShell pipeline.
+    $raw = & $Name @CommandArgs 2>&1
     $exitCode = $LASTEXITCODE
+    $out = $raw | Select-Object -First 1
+
     if ($exitCode -eq 0) {
       Write-Host ("[OK] {0}: {1}" -f $Name, $out) -ForegroundColor Green
     } else {
@@ -29,10 +37,10 @@ function Show-CommandVersion {
 
 function Test-PythonCandidate($Command, $Prefix) {
   try {
-    $probeArgs = @()
-    $probeArgs += $Prefix
-    $probeArgs += @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
-    $out = & $Command @probeArgs 2>$null
+    $args = @()
+    $args += $Prefix
+    $args += @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
+    $out = & $Command @args 2>$null
     if ($LASTEXITCODE -ne 0 -or -not $out) { return $null }
     return [pscustomobject]@{
       Command = $Command
@@ -82,12 +90,28 @@ Show-CommandVersion -Name "npm" -CommandArgs @("--version")
 
 $Python = Resolve-Python
 if ($Python) {
-  Write-Host ("[OK] Python: {0} {1} ({2})" -f $Python.Command, ($Python.Prefix -join ' '), $Python.Version) -ForegroundColor Green
+  Write-Host ("[OK] Bootstrap Python: {0} {1} ({2})" -f $Python.Command, ($Python.Prefix -join ' '), $Python.Version) -ForegroundColor Green
   if ($Python.Version -ge [version]"3.14.0") {
-    Write-Host "[WARN] Python 3.14 can run Workstation bootstrap scripts, but Hermes dependency installation currently requires <3.14." -ForegroundColor Yellow
+    Write-Host "[WARN] Python 3.14 can run bootstrap scripts, but Hermes dependency installation requires <3.14." -ForegroundColor Yellow
   }
 } else {
-  Write-Host "[MISSING] Python. Install Python 3.13, 3.12, or 3.11." -ForegroundColor Yellow
+  Write-Host "[MISSING] Bootstrap Python. Install Python 3.13, 3.12, or 3.11." -ForegroundColor Yellow
+}
+
+if (Test-Path $VenvPython) {
+  try {
+    $venvVersion = (& $VenvPython -c "import sys; print(sys.version.split()[0])" 2>$null | Select-Object -Last 1)
+    $importProbe = & $VenvPython -c "import hermes_cli; print('ok')" 2>$null
+    if ($LASTEXITCODE -eq 0 -and $importProbe) {
+      Write-Host ("[OK] Workstation .venv: {0} ({1})" -f $VenvPython, $venvVersion) -ForegroundColor Green
+    } else {
+      Write-Host "[FAIL] Workstation .venv exists but cannot import hermes_cli." -ForegroundColor Red
+    }
+  } catch {
+    Write-Host ("[FAIL] Workstation .venv: {0}" -f $_.Exception.Message) -ForegroundColor Red
+  }
+} else {
+  Write-Host "[WARN] Workstation .venv is not installed yet. Run workstation\install.cmd -InstallDependencies." -ForegroundColor Yellow
 }
 
 try {
@@ -96,9 +120,12 @@ try {
     $nodeVersion = [version]$nodeRaw
     $minimumNode = [version]"22.22.0"
     if ($nodeVersion -lt $minimumNode) {
-      Write-Host ("[WARN] Node {0} is below Hermes Desktop minimum {1}. The repo .nvmrc currently selects Node 26." -f $nodeVersion, $minimumNode) -ForegroundColor Yellow
+      Write-Host ("[WARN] Node {0} is below Hermes Desktop minimum {1}." -f $nodeVersion, $minimumNode) -ForegroundColor Yellow
     } else {
       Write-Host ("[OK] Node satisfies Desktop minimum: {0}" -f $nodeVersion) -ForegroundColor Green
+      if ($nodeVersion.Major -ne 26) {
+        Write-Host ("[WARN] Repository .nvmrc selects Node 26; current Node is {0}. CI validates on Node 26." -f $nodeVersion) -ForegroundColor Yellow
+      }
     }
   }
 } catch {
