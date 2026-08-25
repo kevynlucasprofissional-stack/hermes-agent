@@ -88,31 +88,35 @@ if (-not (Test-Path (Join-Path $Root ".git"))) {
   Write-Host "[WARN] .git was not found at the Hermes repository root. Base-version verification will be limited." -ForegroundColor Yellow
 }
 
+$CompatScript = Join-Path $PSScriptRoot "scripts\fix_electron_compat.py"
 $IntegrationScript = Join-Path $PSScriptRoot "scripts\apply_core_integration.py"
 $LockScript = Join-Path $PSScriptRoot "scripts\validate_lock.py"
 $LicenseScript = Join-Path $PSScriptRoot "scripts\verify_licenses.py"
+
+Write-Host "[1/5] Normalizing Electron compatibility..." -ForegroundColor Cyan
+Invoke-HermesPython -Arguments @($CompatScript, "--root", $Root)
 
 # Validate everything we can before mutating Hermes core. The previous bootstrap
 # applied immediately; if a later anchor failed, the working tree could be left
 # partially patched.
 if (-not $SkipCorePatch) {
-  Write-Host "[1/4] Validating Hermes integration anchors..." -ForegroundColor Cyan
+  Write-Host "[2/5] Validating Hermes integration anchors..." -ForegroundColor Cyan
   Invoke-HermesPython -Arguments @($IntegrationScript, "--root", $Root, "--check")
 } else {
-  Write-Host "[1/4] Core patch skipped by request." -ForegroundColor Yellow
+  Write-Host "[2/5] Core patch skipped by request." -ForegroundColor Yellow
 }
 
-Write-Host "[2/4] Validating Workstation component lock..." -ForegroundColor Cyan
+Write-Host "[3/5] Validating Workstation component lock..." -ForegroundColor Cyan
 Invoke-HermesPython -Arguments @($LockScript)
 
-Write-Host "[3/4] Validating third-party license policy..." -ForegroundColor Cyan
+Write-Host "[4/5] Validating third-party license policy..." -ForegroundColor Cyan
 Invoke-HermesPython -Arguments @($LicenseScript)
 
 if (-not $SkipCorePatch) {
-  Write-Host "[4/4] Applying Hermes Workstation core integration..." -ForegroundColor Cyan
+  Write-Host "[5/5] Applying Hermes Workstation core integration..." -ForegroundColor Cyan
   Invoke-HermesPython -Arguments @($IntegrationScript, "--root", $Root)
 } else {
-  Write-Host "[4/4] Core integration not modified." -ForegroundColor Yellow
+  Write-Host "[5/5] Core integration not modified." -ForegroundColor Yellow
 }
 
 if ($InstallDependencies) {
