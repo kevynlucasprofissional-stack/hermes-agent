@@ -1,0 +1,74 @@
+name: Impl2 Baseline UI Platform Diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/impl2-baseline-ui-platform.yml"
+
+jobs:
+  baseline-desktop-gates:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+      - name: Install Node workspaces
+        run: npm ci
+
+      - name: Desktop typecheck baseline
+        run: npm run typecheck --workspace apps/desktop
+
+      - name: Desktop UI tests diagnostic
+        id: ui
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          cmd /d /s /c "npm run test:ui --workspace apps/desktop > ui-test.log 2>&1"
+          $code = $LASTEXITCODE
+          Write-Host "=== UI diagnostic summary (exit $code) ==="
+          Get-Content ui-test.log |
+            Select-String -Pattern 'FAIL|failed|AssertionError|Test Files|Tests|Error:|❯|×' |
+            Select-Object -Last 220 |
+            ForEach-Object { Write-Host $_.Line }
+          if ($code -ne 0) { exit $code }
+
+      - name: Browser runtime Electron tests diagnostic
+        id: platform
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          cmd /d /s /c "npm run test:desktop:platforms --workspace apps/desktop > platform-test.log 2>&1"
+          $code = $LASTEXITCODE
+          Write-Host "=== Electron/platform diagnostic summary (exit $code) ==="
+          Get-Content platform-test.log |
+            Select-String -Pattern 'FAIL|failed|AssertionError|Test Files|Tests|Error:|❯|×' |
+            Select-Object -Last 220 |
+            ForEach-Object { Write-Host $_.Line }
+          if ($code -ne 0) { exit $code }
+
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: impl2-baseline-desktop-gates
+          path: |
+            ui-test.log
+            platform-test.log
+          if-no-files-found: warn
+
+      - name: Preserve diagnostic gate result
+        if: always()
+        shell: pwsh
+        run: |
+          $ui = "${{ steps.ui.outcome }}"
+          $platform = "${{ steps.platform.outcome }}"
+          Write-Host "UI outcome: $ui"
+          Write-Host "Electron/platform outcome: $platform"
+          if ($ui -ne "success" -or $platform -ne "success") {
+            throw "One or more baseline Desktop gates failed; see diagnostic summaries/artifact."
+          }
