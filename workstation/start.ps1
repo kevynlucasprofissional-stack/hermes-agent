@@ -7,6 +7,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $InstallScript = Join-Path $PSScriptRoot "install.ps1"
+$VenvRoot = Join-Path $Root ".venv"
+$VenvScripts = Join-Path $VenvRoot "Scripts"
+$VenvPython = Join-Path $VenvScripts "python.exe"
 
 if ($SkipPatch) {
   & $InstallScript -SkipCorePatch
@@ -31,12 +34,34 @@ if ($nodeVersion -lt $minimumNode) {
   throw "Node $nodeVersion is below the Hermes Desktop minimum $minimumNode. Use the repository .nvmrc (Node 26) and retry."
 }
 
+if (-not (Test-Path $VenvPython)) {
+  throw "Hermes Workstation Python environment is missing: $VenvPython. Run workstation\install.cmd -InstallDependencies first."
+}
+
+& $VenvPython -c "import hermes_cli, sys; print(sys.executable)" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  throw "Hermes Workstation .venv exists but cannot import hermes_cli. Rerun workstation\install.cmd -InstallDependencies."
+}
+
+# Put the repo-local Hermes runtime first so Desktop backend discovery resolves
+# this checkout's hermes.exe/python instead of a global Python installation.
+$env:VIRTUAL_ENV = $VenvRoot
+$env:HERMES_PYTHON = $VenvPython
+$env:PATH = "$VenvScripts;$env:PATH"
+
 Push-Location $Root
 try {
   Write-Host "Starting Hermes Desktop with Workstation Browser..." -ForegroundColor Cyan
+  Write-Host "Python runtime: $VenvPython"
+  Write-Host "Node runtime:   $nodeVersion"
+  Write-Host ""
+  Write-Host "Keep this terminal open while Hermes Desktop is running." -ForegroundColor DarkGray
+  Write-Host "To stop the dev server later, press Ctrl+C once and answer Y/S if Windows asks to terminate the batch job." -ForegroundColor DarkGray
+  Write-Host ""
+
   & npm run dev --workspace apps/desktop
   if ($LASTEXITCODE -ne 0) {
-    throw "Hermes Desktop exited with code $LASTEXITCODE."
+    throw "Hermes Desktop exited with code ${LASTEXITCODE}."
   }
 }
 finally {
