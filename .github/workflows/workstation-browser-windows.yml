@@ -18,6 +18,7 @@ on:
       - "apps/desktop/src/plugins/kanban/plugin.tsx"
       - "apps/desktop/package.json"
       - "package-lock.json"
+      - ".github/workflows/workstation-browser-windows.yml"
 
 jobs:
   desktop-typecheck:
@@ -33,12 +34,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Normalize Electron compatibility
-        run: python workstation/scripts/fix_electron_compat.py --root .
-      - name: Apply Workstation core integration
-        run: python workstation/scripts/apply_core_integration.py --root .
-      - name: Install Node workspaces
-        run: npm ci
+      - name: Validate committed Workstation integration
+        run: python workstation/scripts/apply_core_integration.py --root . --check
+      - name: Install Workstation from committed source
+        shell: cmd
+        run: workstation\install.cmd
+      - name: Assert install kept checkout clean
+        shell: pwsh
+        run: |
+          $dirty = @(git status --porcelain=v1 --untracked-files=all)
+          if ($dirty.Count -ne 0) {
+            $dirty | Write-Host
+            throw "Workstation install changed the committed checkout."
+          }
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
       - name: Desktop UI tests

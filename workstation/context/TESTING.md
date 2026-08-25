@@ -13,7 +13,7 @@ Use the smallest focused gate first, then expand only after it passes:
 5. **Desktop typecheck/build gates** — ensure changed contracts compile across renderer/preload/main boundaries.
 6. **Windows Desktop E2E/smoke** — required for claims that depend on real Electron/Windows composition, restart, profile persistence, or native view geometry.
 
-Do not replace an executable behavior test with a test that greps `.py`, `.ts`, or `.tsx` source text. Follow the root `AGENTS.md` testing rules.
+Do not replace an executable behavior test with a test that greps `.py`, `.ts`, or `.tsx` source text. Follow the root `AGENTS.md` testing rules. Source-shape tests are acceptable only for build/bootstrap policy (for example proving that an installer does not invoke a mutator); they are not substitutes for runtime behavior tests.
 
 ## Existing Workstation gates
 
@@ -21,14 +21,17 @@ Do not replace an executable behavior test with a test that greps `.py`, `.ts`, 
   - component lock validation;
   - third-party license validation;
   - `workstation/tests/`;
-  - downstream integration-anchor check.
+  - downstream integration-anchor check in read-only `--check` mode.
 - `Workstation Browser Windows`
   - Node/Python setup;
+  - read-only committed-integration validation;
+  - normal `workstation\\install.cmd` execution;
+  - a clean-checkout assertion after install;
   - Desktop typecheck;
   - Desktop UI tests;
   - Desktop platform/Electron tests.
 
-The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run.
+The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run. A clean clone followed by normal install must remain clean according to `git status`, apart from deliberately ignored artifacts such as `.venv`, `node_modules`, caches, and runtime state outside the checkout.
 
 ## Required browser-foundation invariants
 
