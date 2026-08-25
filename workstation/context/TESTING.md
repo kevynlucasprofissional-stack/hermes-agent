@@ -38,6 +38,20 @@ Do not replace an executable behavior test with a test that greps `.py`, `.ts`, 
   - proves a process-global `HERMES_DESKTOP` flag cannot grant TUI capability;
   - proves Desktop source identity is sufficient without that process env flag;
   - proves the forced Workstation set stays narrow (`browser_exec` is not promoted).
+- `apps/desktop/electron/workstation-browser-task.test.ts`
+  - pure BrowserTask lifecycle/persistence contract;
+  - proves `hide` and `park` preserve the same page and current URL;
+  - proves `destroy` is explicit;
+  - proves only one logical record exists per task;
+  - proves switching the visible task parks the previous task semantically;
+  - proves malformed/duplicate persisted metadata is pruned;
+  - proves restart restoration is parked and page recovery is lazy.
+- `apps/desktop/electron/workstation-browser-runtime-task.test.ts`
+  - exercises the lifecycle adapter against the real `WorkstationBrowserRuntime` with Electron mocked, without Browserless/network access;
+  - proves `ownerTaskId` is idempotent in the Chromium tab primitive;
+  - proves hide/park/show retain the same `WebContents` and URL within one process;
+  - proves explicit task destroy closes the owned page;
+  - proves restart restores task metadata first and creates one task-owned page only when shown again.
 
 The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run. A clean clone followed by normal install must remain clean according to `git status`, apart from deliberately ignored artifacts such as `.venv`, `node_modules`, caches, and runtime state outside the checkout.
 
@@ -48,6 +62,20 @@ The UI and platform/Electron steps are intentionally independent after typecheck
 A GUI/browser surface capability must be tested as a **session contract**, not by mutating a process-global environment variable and observing a single process-wide cache. Focused tests should bind `gateway.session_context`, exercise schema assembly with reachability forced false, and then switch surface identity within the same process to prove cache isolation.
 
 The forced-schema path may only preserve a schema that is already selected by the active toolsets; it must never re-add a disabled/unselected tool. Runtime health, recovery, bound-task fail-closed behavior, and fallback policy remain execution-time responsibilities and need their own tests.
+
+## BrowserTask lifecycle test policy
+
+BrowserTask tests must distinguish **logical task persistence** from **process-local page identity**:
+
+- within one Electron process, `create -> hide -> show` and `create -> park -> show` must retain the same live page object and current URL;
+- `hide`/`park` must not close the `WebContents`;
+- an explicit `destroyTask` is the operation that removes the task and closes its owned page;
+- repeated creation for the same `taskId` must not allocate a second live page;
+- if a page crashes/disappears while the logical task remains, recovery may create exactly one replacement and must record that recovery;
+- after Desktop process restart, task metadata must restore as parked before any page is recreated; showing/using that task may lazily recreate one page under the same `taskId`;
+- tests must never claim that a JavaScript heap or `WebContents` object itself survives a process restart.
+
+Use the pure lifecycle test first, then the runtime-adapter test, then the Windows Desktop gate. Browserless/network access is unnecessary for these lifecycle invariants.
 
 ## Baseline comparison for pre-existing failures
 
@@ -88,6 +116,8 @@ For behavior Electron automation cannot reliably prove, record a reproducible sm
 8. restart Desktop and verify logical tabs/task mappings restore;
 9. separately verify compatible login state persists through the dedicated Chromium profile;
 10. exercise controller loss for a bound task and verify fail-closed behavior.
+
+Implementation 4's narrower lifecycle smoke may be recorded before the Chat/Hub surfaces exist, but it must at minimum prove on a real Windows Desktop process that a task-owned page can be created/navigated, hidden or parked, re-exposed without a replacement navigation, explicitly destroyed, and logically restored after restart. Missing later-surface steps must remain listed as future work rather than being marked passed by the narrower smoke.
 
 Record the exact commit SHA, Windows/Node/Python versions, commands/workflow run, observed result, and any limitation. A manual pass on an unidentifiable build is not durable evidence.
 
