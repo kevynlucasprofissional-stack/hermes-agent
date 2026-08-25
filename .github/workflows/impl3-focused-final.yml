@@ -1,0 +1,31 @@
+name: Impl3 focused final
+
+on:
+  pull_request:
+    paths:
+      - "model_tools.py"
+      - "tools/registry.py"
+      - "tools/browser_workstation.py"
+      - "tests/tui_gateway/test_workstation_browser_schema_capability.py"
+      - ".github/workflows/impl3-focused-final.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  schema-capability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        with:
+          version: "0.9.28"
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+      - name: Install test environment
+        run: uv sync --locked --python 3.11 --extra dev
+      - name: Run Implementation 3 regression contract
+        run: uv run python -m pytest -q tests/tui_gateway/test_workstation_browser_schema_capability.py
+      - name: Compile touched modules
+        run: uv run python -m py_compile model_tools.py tools/registry.py tools/browser_workstation.py tests/tui_gateway/test_workstation_browser_schema_capability.py
