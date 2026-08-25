@@ -5,25 +5,34 @@ Write-Host "Hermes Workstation Doctor" -ForegroundColor Cyan
 Write-Host "Root: $Root"
 Write-Host ""
 
-function Show-CommandVersion($Name, $Args) {
+function Show-CommandVersion {
+  param(
+    [Parameter(Mandatory = $true)][string]$Name,
+    [string[]]$CommandArgs = @()
+  )
   try {
-    $out = & $Name $Args 2>&1 | Select-Object -First 1
-    if ($LASTEXITCODE -eq 0) {
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+      Write-Host ("[MISSING] {0}" -f $Name) -ForegroundColor Yellow
+      return
+    }
+    $out = & $Name @CommandArgs 2>&1 | Select-Object -First 1
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -eq 0) {
       Write-Host ("[OK] {0}: {1}" -f $Name, $out) -ForegroundColor Green
     } else {
-      Write-Host ("[FAIL] {0}: exit {1}" -f $Name, $LASTEXITCODE) -ForegroundColor Red
+      Write-Host ("[FAIL] {0}: exit {1}" -f $Name, $exitCode) -ForegroundColor Red
     }
   } catch {
-    Write-Host ("[MISSING] {0}" -f $Name) -ForegroundColor Yellow
+    Write-Host ("[FAIL] {0}: {1}" -f $Name, $_.Exception.Message) -ForegroundColor Red
   }
 }
 
 function Test-PythonCandidate($Command, $Prefix) {
   try {
-    $args = @()
-    $args += $Prefix
-    $args += @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
-    $out = & $Command @args 2>$null
+    $probeArgs = @()
+    $probeArgs += $Prefix
+    $probeArgs += @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
+    $out = & $Command @probeArgs 2>$null
     if ($LASTEXITCODE -ne 0 -or -not $out) { return $null }
     return [pscustomobject]@{
       Command = $Command
@@ -57,19 +66,19 @@ function Invoke-PythonCheck($Python, $Script, $Arguments) {
     Write-Host ("[FAIL] {0}: Python unavailable" -f (Split-Path $Script -Leaf)) -ForegroundColor Red
     return
   }
-  $args = @()
-  $args += $Python.Prefix
-  $args += $Script
-  $args += $Arguments
-  & $Python.Command @args
+  $pythonArgs = @()
+  $pythonArgs += $Python.Prefix
+  $pythonArgs += $Script
+  $pythonArgs += $Arguments
+  & $Python.Command @pythonArgs
   if ($LASTEXITCODE -ne 0) {
     Write-Host ("[FAIL] {0}: exit {1}" -f (Split-Path $Script -Leaf), $LASTEXITCODE) -ForegroundColor Red
   }
 }
 
-Show-CommandVersion "git" "--version"
-Show-CommandVersion "node" "--version"
-Show-CommandVersion "npm" "--version"
+Show-CommandVersion -Name "git" -CommandArgs @("--version")
+Show-CommandVersion -Name "node" -CommandArgs @("--version")
+Show-CommandVersion -Name "npm" -CommandArgs @("--version")
 
 $Python = Resolve-Python
 if ($Python) {
