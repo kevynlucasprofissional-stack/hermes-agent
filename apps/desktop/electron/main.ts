@@ -30,6 +30,8 @@ import {
   systemPreferences
 } from 'electron'
 
+import './workstation-browser-runtime'
+
 import { classifyActiveRuntime } from './active-runtime-state'
 import { destroyKeepaliveAgents, downloadAgentFor, jsonAgentFor, withRetry } from './api-transport'
 import { stopBackendChild as stopBackendChildImpl, stopBackendTreesForUpdate } from './backend-child'

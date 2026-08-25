@@ -488,6 +488,13 @@ browser:
   # Inactivity timeout in seconds - browser sessions are automatically closed
   # after this period of no activity between agent loops (default: 120 = 2 minutes)
   inactivity_timeout: 120
+  # Hermes Workstation embedded Chromium. When routing_enabled is false,
+  # browser_* tools use only the internal persistent browser and fail closed
+  # if the Desktop controller is unavailable.
+  workstation:
+    enabled: true
+    routing_enabled: true
+    fail_closed_after_binding: true
   # Let an authenticated browser extension register as the controller for an
   # existing Hermes session. Disabled by default. Local API registration also
   # requires the API server bearer key to be configured.

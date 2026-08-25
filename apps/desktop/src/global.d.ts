@@ -1,5 +1,6 @@
 import type { GatewayWsUrlResult } from '@hermes/shared'
 import type { TranslucencyState } from '@hermes/shared/translucency'
+import type { WorkstationBrowserBridge } from './app/browser/types'
 
 import type { WakeIndicatorState } from './lib/wake-indicator'
 import type {
@@ -15,6 +16,7 @@ export {}
 declare global {
   interface Window {
     hermesDesktop: {
+      workstationBrowser: WorkstationBrowserBridge
       // Resolve a backend connection. Omit `profile` (or pass the primary) for
       // the window's backend; pass a named profile to lazily spawn/reuse that
       // profile's backend from the pool.
