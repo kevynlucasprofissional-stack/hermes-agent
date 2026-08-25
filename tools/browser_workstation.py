@@ -76,6 +76,42 @@ def workstation_browser_enabled() -> bool:
     return bool(_browser_config().get("enabled", True))
 
 
+_WORKSTATION_SCHEMA_TOOLS = frozenset({
+    "browser_navigate",
+    "browser_snapshot",
+    "browser_click",
+    "browser_type",
+    "browser_scroll",
+    "browser_back",
+    "browser_press",
+    "browser_get_images",
+    "browser_vision",
+    "browser_console",
+})
+
+
+def workstation_schema_tools_for_current_session() -> set[str]:
+    """Schemas structurally owned by a Desktop/Workstation session.
+
+    Surface capability belongs to the session source, not to a 200 ms
+    controller health probe. Returning these names does *not* claim the
+    controller is reachable; workstation_routed_browser_handler() keeps
+    the authoritative health/recovery/fail-closed decision at dispatch.
+    """
+    if not workstation_browser_enabled():
+        return set()
+    try:
+        from gateway.session_context import get_session_env
+    except Exception:
+        return set()
+    source = str(get_session_env("HERMES_SESSION_SOURCE", "") or "").strip().lower()
+    platform = str(get_session_env("HERMES_SESSION_PLATFORM", "") or "").strip().lower()
+    surface = source or platform
+    if surface != "desktop":
+        return set()
+    return set(_WORKSTATION_SCHEMA_TOOLS)
+
+
 def workstation_routing_enabled() -> bool:
     """Whether an unbound task may fall back to legacy browser backends."""
     if not _bool_env("HERMES_WORKSTATION_BROWSER_ROUTING", True):

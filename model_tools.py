@@ -320,6 +320,19 @@ def _clear_tool_defs_cache() -> None:
         _tool_defs_cache.clear()
 
 
+def _session_force_available_tools() -> frozenset[str]:
+    """Return schemas guaranteed by the current client surface.
+
+    This decision is intentionally outside registry check_fn: one gateway
+    process serves many session sources, while check_fn probes are cached.
+    """
+    try:
+        from tools.browser_workstation import workstation_schema_tools_for_current_session
+        return frozenset(workstation_schema_tools_for_current_session())
+    except Exception:
+        return frozenset()
+
+
 def get_tool_definitions(
     enabled_toolsets: Optional[List[str]] = None,
     disabled_toolsets: Optional[List[str]] = None,
@@ -352,6 +365,7 @@ def get_tool_definitions(
     # user-visible config edits that affect dynamic schemas (execute_code
     # mode, discord action allowlist, etc.) without needing an explicit
     # invalidate hook on every config-writer.
+    force_available_tools = _session_force_available_tools()
     cache_key = None
     if quiet_mode:
         try:
@@ -374,6 +388,7 @@ def get_tool_definitions(
                 _is_delegated_child_context(),
                 _is_dispatcher_owned_worker(),
                 profile_scope,
+                force_available_tools,
             )
         with _tool_defs_cache_lock:
             cached = _tool_defs_cache.get(cache_key) if cache_key is not None else None
@@ -386,8 +401,13 @@ def get_tool_definitions(
             # schemas are treated as read-only by all known callers.
             return list(cached)
 
-    result = _compute_tool_definitions(enabled_toolsets, disabled_toolsets, quiet_mode,
-                                       skip_tool_search_assembly=skip_tool_search_assembly)
+    result = _compute_tool_definitions(
+        enabled_toolsets,
+        disabled_toolsets,
+        quiet_mode,
+        skip_tool_search_assembly=skip_tool_search_assembly,
+        force_available_tools=force_available_tools,
+    )
     if quiet_mode and cache_key is not None:
         # Cache the freshly-computed list, but hand callers a shallow copy so
         # downstream mutations (e.g. run_agent appending memory/LCM tool
@@ -419,6 +439,7 @@ def _compute_tool_definitions(
     disabled_toolsets: Optional[List[str]] = None,
     quiet_mode: bool = False,
     skip_tool_search_assembly: bool = False,
+    force_available_tools: Optional[set[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Uncached implementation of :func:`get_tool_definitions`."""
     # Determine which tool names the caller wants
@@ -506,8 +527,13 @@ def _compute_tool_definitions(
     # needed; plugins respect enabled_toolsets / disabled_toolsets like any
     # other toolset.
 
-    # Ask the registry for schemas (only returns tools whose check_fn passes)
-    filtered_tools = registry.get_definitions(tools_to_include, quiet=quiet_mode)
+    # Ask the registry for schemas. Session-surface capabilities can
+    # bypass reachability check_fn filtering for selected schemas only;
+    # disabled/unselected tools are never re-added.
+    forced = set(force_available_tools or ()) & tools_to_include
+    filtered_tools = registry.get_definitions(
+        tools_to_include, quiet=quiet_mode, force_available=forced
+    )
 
     # The set of tool names that actually passed check_fn filtering.
     # Use this (not tools_to_include) for any downstream schema that references

@@ -1041,7 +1041,12 @@ class ToolRegistry:
     # Schema retrieval
     # ------------------------------------------------------------------
 
-    def get_definitions(self, tool_names: Set[str], quiet: bool = False) -> List[dict]:
+    def get_definitions(
+        self,
+        tool_names: Set[str],
+        quiet: bool = False,
+        force_available: Optional[Set[str]] = None,
+    ) -> List[dict]:
         """Return OpenAI-format tool schemas for the requested tool names.
 
         Only tools whose ``check_fn()`` returns True (or have no check_fn)
@@ -1053,6 +1058,12 @@ class ToolRegistry:
         flush on every call.
         """
         result = []
+        # Session/surface owners may explicitly preserve a schema after
+        # deciding capability outside check_fn. This is intentionally a
+        # per-call input: it is never stored in the process-wide check_fn
+        # cache, and runtime dispatch still performs its own health/recovery
+        # checks. See Workstation Browser session capability.
+        forced = set(force_available or ())
         # Per-call cache on top of the 30 s TTL — handles repeat probes of the
         # same check_fn within one definitions pass without re-reading the
         # TTL clock.
@@ -1062,7 +1073,7 @@ class ToolRegistry:
             entry = entries_by_name.get(name)
             if not entry:
                 continue
-            if entry.check_fn:
+            if entry.check_fn and name not in forced:
                 if entry.check_fn not in check_results:
                     check_results[entry.check_fn] = _check_fn_cached(entry.check_fn)
                 if not check_results[entry.check_fn]:
