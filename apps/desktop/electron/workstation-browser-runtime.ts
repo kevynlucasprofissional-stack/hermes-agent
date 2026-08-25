@@ -481,14 +481,8 @@ export class WorkstationBrowserRuntime {
     this.removeChildView(entry)
     if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === tabId) this.taskTabs.delete(entry.ownerTaskId)
 
-    try {
+    if (!entry.view.webContents.isDestroyed()) {
       entry.view.webContents.close()
-    } catch {
-      try {
-        entry.view.webContents.destroy()
-      } catch {
-        // Already gone.
-      }
     }
     this.entries.delete(tabId)
 

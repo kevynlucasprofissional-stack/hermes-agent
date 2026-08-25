@@ -5422,6 +5422,10 @@ from tools.browser_extension_router import (
     extension_controller_available,
     routed_browser_handler,
 )
+from tools.browser_workstation import (
+    workstation_controller_available,
+    workstation_routed_browser_handler,
+)
 
 _BROWSER_SCHEMA_MAP = {s["name"]: s for s in BROWSER_TOOL_SCHEMAS}
 
@@ -5434,9 +5438,24 @@ def _browser_router_kw(kw: dict) -> dict:
     }
 
 
+def _workstation_or_legacy(action: str, args: dict, kw: dict, fallback):
+    """Prefer the embedded Hermes Browser; preserve legacy fallback for unbound tasks."""
+    return workstation_routed_browser_handler(
+        action,
+        args,
+        fallback=fallback,
+        task_id=kw.get("task_id"),
+        session_id=kw.get("session_id"),
+    )
+
+
 def check_browser_routed_requirements(action: str = "browser_snapshot") -> bool:
     """Availability gate for tools that can use either browser backend."""
-    return check_browser_requirements() or extension_controller_available(action)
+    return (
+        check_browser_requirements()
+        or extension_controller_available(action)
+        or workstation_controller_available()
+    )
 
 
 def check_browser_navigate_requirements() -> bool:
@@ -5471,11 +5490,16 @@ registry.register(
     name="browser_navigate",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_navigate"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_navigate",
         args,
-        fallback=lambda: browser_navigate(url=args.get("url", ""), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_navigate",
+            args,
+            fallback=lambda: browser_navigate(url=args.get("url", ""), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_navigate_requirements,
     emoji="🌐",
@@ -5484,12 +5508,17 @@ registry.register(
     name="browser_snapshot",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_snapshot"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_snapshot",
         args,
-        fallback=lambda: browser_snapshot(
+        kw,
+        lambda: routed_browser_handler(
+            "browser_snapshot",
+            args,
+            fallback=lambda: browser_snapshot(
             full=args.get("full", False), task_id=kw.get("task_id"), user_task=kw.get("user_task")),
-        **_browser_router_kw(kw),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_snapshot_requirements,
     emoji="📸",
@@ -5498,11 +5527,16 @@ registry.register(
     name="browser_click",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_click"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_click",
         args,
-        fallback=lambda: browser_click(ref=args.get("ref", ""), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_click",
+            args,
+            fallback=lambda: browser_click(ref=args.get("ref", ""), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_click_requirements,
     emoji="👆",
@@ -5511,11 +5545,16 @@ registry.register(
     name="browser_type",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_type"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_type",
         args,
-        fallback=lambda: browser_type(ref=args.get("ref", ""), text=args.get("text", ""), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_type",
+            args,
+            fallback=lambda: browser_type(ref=args.get("ref", ""), text=args.get("text", ""), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_type_requirements,
     emoji="⌨️",
@@ -5524,11 +5563,16 @@ registry.register(
     name="browser_scroll",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_scroll"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_scroll",
         args,
-        fallback=lambda: browser_scroll(direction=args.get("direction", "down"), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_scroll",
+            args,
+            fallback=lambda: browser_scroll(direction=args.get("direction", "down"), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_scroll_requirements,
     emoji="📜",
@@ -5537,11 +5581,16 @@ registry.register(
     name="browser_back",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_back"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_back",
         args,
-        fallback=lambda: browser_back(task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_back",
+            args,
+            fallback=lambda: browser_back(task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_back_requirements,
     emoji="◀️",
@@ -5550,11 +5599,16 @@ registry.register(
     name="browser_press",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_press"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_press",
         args,
-        fallback=lambda: browser_press(key=args.get("key", ""), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_press",
+            args,
+            fallback=lambda: browser_press(key=args.get("key", ""), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
     check_fn=check_browser_press_requirements,
     emoji="⌨️",
@@ -5564,38 +5618,53 @@ registry.register(
     name="browser_get_images",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_get_images"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_get_images",
         args,
-        fallback=lambda: browser_get_images(task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_get_images",
+            args,
+            fallback=lambda: browser_get_images(task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
-    check_fn=check_browser_requirements,
+    check_fn=lambda: check_browser_routed_requirements("browser_get_images"),
     emoji="🖼️",
 )
 registry.register(
     name="browser_vision",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_vision"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_vision",
         args,
-        fallback=lambda: browser_vision(question=args.get("question", ""), annotate=args.get("annotate", False), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_vision",
+            args,
+            fallback=lambda: browser_vision(question=args.get("question", ""), annotate=args.get("annotate", False), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
-    check_fn=check_browser_vision_requirements,
+    check_fn=lambda: check_browser_vision_requirements() or workstation_controller_available(),
     emoji="👁️",
 )
 registry.register(
     name="browser_console",
     toolset="browser",
     schema=_BROWSER_SCHEMA_MAP["browser_console"],
-    handler=lambda args, **kw: routed_browser_handler(
+    handler=lambda args, **kw: _workstation_or_legacy(
         "browser_console",
         args,
-        fallback=lambda: browser_console(clear=args.get("clear", False), expression=args.get("expression"), task_id=kw.get("task_id")),
-        **_browser_router_kw(kw),
+        kw,
+        lambda: routed_browser_handler(
+            "browser_console",
+            args,
+            fallback=lambda: browser_console(clear=args.get("clear", False), expression=args.get("expression"), task_id=kw.get("task_id")),
+            **_browser_router_kw(kw),
+        ),
     ),
-    check_fn=check_browser_requirements,
+    check_fn=lambda: check_browser_routed_requirements("browser_console"),
     emoji="🖥️",
 )

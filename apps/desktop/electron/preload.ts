@@ -11,6 +11,33 @@ const translucencySupport = ipcRenderer.sendSync('hermes:translucency:support')
 const hudNativeDrag = ipcRenderer.sendSync('hermes:hud:native-drag') === true
 
 contextBridge.exposeInMainWorld('hermesDesktop', {
+  workstationBrowser: {
+    status: () => ipcRenderer.invoke('hermes:workstation-browser:status'),
+    ensure: () => ipcRenderer.invoke('hermes:workstation-browser:ensure'),
+    newTab: target => ipcRenderer.invoke('hermes:workstation-browser:new-tab', target),
+    activateTab: tabId => ipcRenderer.invoke('hermes:workstation-browser:activate-tab', tabId),
+    closeTab: tabId => ipcRenderer.invoke('hermes:workstation-browser:close-tab', tabId),
+    navigate: target => ipcRenderer.invoke('hermes:workstation-browser:navigate', target),
+    back: () => ipcRenderer.invoke('hermes:workstation-browser:back'),
+    forward: () => ipcRenderer.invoke('hermes:workstation-browser:forward'),
+    reload: () => ipcRenderer.invoke('hermes:workstation-browser:reload'),
+    stop: () => ipcRenderer.invoke('hermes:workstation-browser:stop'),
+    focus: () => ipcRenderer.invoke('hermes:workstation-browser:focus'),
+    attach: bounds => ipcRenderer.invoke('hermes:workstation-browser:attach', bounds),
+    setBounds: bounds => ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds),
+    detach: () => ipcRenderer.invoke('hermes:workstation-browser:detach'),
+    pause: () => ipcRenderer.invoke('hermes:workstation-browser:pause'),
+    resume: () => ipcRenderer.invoke('hermes:workstation-browser:resume'),
+    takeControl: () => ipcRenderer.invoke('hermes:workstation-browser:take-control'),
+    releaseControl: () => ipcRenderer.invoke('hermes:workstation-browser:release-control'),
+    cleanupCache: force => ipcRenderer.invoke('hermes:workstation-browser:cleanup-cache', force),
+    onState: callback => {
+      const listener = (_event, state) => callback(state)
+      ipcRenderer.on('hermes:workstation-browser:state', listener)
+
+      return () => ipcRenderer.removeListener('hermes:workstation-browser:state', listener)
+    }
+  },
   glassSupported: translucencySupport?.glass === true,
   translucencySupported: translucencySupport?.translucency === true,
   getConnection: profile => ipcRenderer.invoke('hermes:connection', profile),

@@ -136,6 +136,7 @@ import { $sidebarSessionRankIds } from '@/store/sidebar-sort'
 import {
   type AppView,
   ARTIFACTS_ROUTE,
+  BROWSER_ROUTE,
   CRON_ROUTE,
   MESSAGING_ROUTE,
   SIDEBAR_NAV_AREA,
@@ -193,6 +194,12 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
     icon: props => <Codicon name="robot" {...props} />,
     action: 'new-session',
     keybindActionId: 'session.new'
+  },
+  {
+    id: 'browser',
+    label: 'Browser',
+    icon: props => <Codicon name="globe" {...props} />,
+    route: BROWSER_ROUTE
   },
   {
     id: 'skills',
@@ -1538,7 +1545,7 @@ export function ChatSidebar({
                 // right-click for the directional "Open in split" submenu.
                 return (
                   <SidebarMenuItem key={item.id}>
-                    {isNewSession || item.route ? (
+                    {isNewSession || (item.route && item.id !== 'browser') ? (
                       <ContextMenu>
                         <ContextMenuTrigger asChild>{button}</ContextMenuTrigger>
                         <ContextMenuContent aria-label={s.nav[item.id] ?? item.label}>
