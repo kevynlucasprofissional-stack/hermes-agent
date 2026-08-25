@@ -28,19 +28,42 @@ state.
 10. **Upstream delta stays visible.** Every core change is documented in
     `UPSTREAM_DELTA.md`.
 
-## Apply the initial integration
+## Windows bootstrap
 
-From the root of your clean Hermes fork:
+From the root of the Hermes fork, use the `.cmd` launchers. They start Windows
+PowerShell with `-ExecutionPolicy Bypass`, so the first run does not depend on
+the machine's script execution policy:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\workstation\install.ps1
+```bat
+workstation\install.cmd
+workstation\doctor.cmd
 ```
 
-For development:
+When you are ready to install the full Python and Node development dependencies:
+
+```bat
+workstation\install.cmd -InstallDependencies
+```
+
+Then start Desktop development with:
+
+```bat
+workstation\start.cmd
+```
+
+The PowerShell entrypoints remain available when needed explicitly:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\workstation\start.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\workstation\install.ps1
 ```
+
+The installer selects an available Python 3.13/3.12/3.11 through the Windows
+`py` launcher when possible, validates every core patch anchor before writing,
+and checks native-command exit codes. Dependency installation requires Hermes'
+current Python range `>=3.11,<3.14` and Desktop requires Node `>=22.22.0` (the
+repository `.nvmrc` selects Node 26).
+
+## Browser integration
 
 The initial patch provides a functional in-app Chromium Browser surface **and**
 a loopback-authenticated controller used by Hermes `browser_*` tools. Internal
