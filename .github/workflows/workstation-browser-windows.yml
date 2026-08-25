@@ -6,7 +6,7 @@ on:
     paths:
       - "apps/desktop/electron/workstation-browser-runtime.ts"
       - "apps/desktop/electron/workstation-browser-task.ts"
-      - "apps/desktop/electron/workstation-browser-task.test.ts"
+      - "apps/desktop/electron/workstation-browser-task*.test.ts"
       - "apps/desktop/src/app/browser/**"
       - "workstation/**"
       - "tools/browser_workstation.py"
