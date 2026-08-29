@@ -60,16 +60,22 @@ The smoke proved on real Electron/Chromium:
 
 The native-smoke investigation also established that earlier V9 timeouts were harness defects: on this exact environment ESM top-level `await app.whenReady()` stalled, while non-blocking `app.whenReady().then(...)` reached readiness. The product runtime already uses the non-blocking pattern, so no BrowserTask product fix was required.
 
-## Partially implemented / future work
+## Partially implemented
 
-Implementation 4 does **not** complete the later browser product architecture:
+Implementation 4 narrows several browser-state gaps but does not complete the broader browser product architecture:
 
-- complete BrowserSessionState for ordinary/manual tab ordering, active generic tab, richer URL/title restoration, and controller/session/run/Kanban linkage;
-- Browser Hub groupings and contextual Chat Browser View;
-- one-host transfer contract for moving the same live `WebContentsView` between Chat and Browser Hub;
-- Preview compatibility that reuses the same BrowserTask/runtime instead of maintaining a separate browsing lane;
-- full Chat ↔ Browser Hub ↔ Preview resize/host-transfer E2E;
-- complete session/run/Kanban/controller linkage for BrowserTask metadata.
+- BrowserTask metadata persists, but complete BrowserSessionState for ordinary/manual tab ordering, active generic tab, richer URL/title restoration, and controller/session/run/Kanban linkage is still incomplete.
+- BrowserTask metadata has host/session/control linkage fields, but full live integration of those fields with Hermes SessionDB, Kanban, run orchestration, and controller recovery is not yet complete.
+- The existing Browser route remains a conventional browser surface rather than the future Browser Hub.
+
+## Not implemented yet
+
+- Browser Hub groupings and contextual Chat Browser View.
+- One-host transfer contract for moving the same live `WebContentsView` between Chat and Browser Hub.
+- Preview compatibility that reuses the same BrowserTask/runtime instead of maintaining a separate browsing lane.
+- Full Chat ↔ Browser Hub ↔ Preview resize/host-transfer E2E.
+- Complete BrowserSessionState for all intended logical tabs/task linkage.
+- Complete session/run/Kanban/controller linkage for BrowserTask metadata.
 
 These remain future implementations and must not be inferred as complete from the narrower Implementation 4 smoke.
 
@@ -87,10 +93,12 @@ During the candidate cycle:
 
 - focused BrowserTask lifecycle tests passed;
 - runtime-adapter tests passed;
-- Workstation CI passed;
+- Workstation CI passed before the documentation-only closure changes;
 - Docker validation passed;
 - Desktop typecheck and committed-source/install/checkout-clean Windows steps passed;
 - broad Windows Desktop UI/platform suites retained the documented KI-006 baseline failure classes and therefore remained red rather than being weakened or hidden.
+
+A documentation-only finalization commit temporarily made Workstation CI red because `CURRENT_STATE.md` lost the contractually tested `## Partially implemented` / `## Not implemented yet` headings. That documentation regression was identified directly by `workstation/tests/test_context_docs.py` and corrected without touching product code.
 
 After final documentation closure, automated gates must be observed on the exact final PR head. Native evidence may be carried from `d8acc752...` only if Git comparison proves that the relevant product code and executed H-004 probe are unchanged after that smoke.
 
@@ -100,8 +108,7 @@ Implementation 4 is **technically accepted but not yet promoted**.
 
 Remaining promotion steps:
 
-1. finalize canonical documentation and `UPSTREAM_DELTA.md`;
-2. prove the final head differs from the H-004 smoke SHA only in documentation for the relevant behavior/probe paths;
-3. observe relevant automated gates on the exact final head and preserve KI-006 classification without masking failures;
-4. perform final PR audit;
-5. mark PR #9 ready and merge only if all gates remain satisfied.
+1. prove the final head differs from the H-004 smoke SHA only in documentation for the relevant behavior/probe paths;
+2. observe relevant automated gates on the exact final head and preserve KI-006 classification without masking failures;
+3. perform final PR audit;
+4. mark PR #9 ready and merge only if all gates remain satisfied.
