@@ -79,6 +79,14 @@ Implementation 4 narrows several browser-state gaps but does not complete the br
 
 These remain future implementations and must not be inferred as complete from the narrower Implementation 4 smoke.
 
+## Manual validation already observed
+
+Historical bootstrap validation proved that the Desktop application and dedicated Browser route can open and navigate, but it also exposed Preview/Browser lane divergence and incomplete logical restart state; those observations remain context, not proof of later lifecycle implementations.
+
+For Implementation 4 specifically, the durable manual/native evidence is the H-004 real Windows/Electron smoke recorded above. It supersedes the earlier “native smoke missing” status for the narrow BrowserTask lifecycle contract while deliberately leaving later Chat/Hub/Preview host-transfer validation open.
+
+Manual/native evidence and automated regression coverage remain complementary: H-004 proves the real Electron lifecycle behavior, while the pure/runtime-adapter tests protect the contract in CI.
+
 ## Known bugs / gaps
 
 See [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md). The main remaining browser gaps after Implementation 4 are duplicate Preview/Browser lanes, incomplete BrowserSessionState, host ownership/composition, missing Chat/Hub shared-host surfaces, and pre-existing Windows portability/test assumptions in broad Desktop suites.
@@ -98,7 +106,7 @@ During the candidate cycle:
 - Desktop typecheck and committed-source/install/checkout-clean Windows steps passed;
 - broad Windows Desktop UI/platform suites retained the documented KI-006 baseline failure classes and therefore remained red rather than being weakened or hidden.
 
-A documentation-only finalization commit temporarily made Workstation CI red because `CURRENT_STATE.md` lost the contractually tested `## Partially implemented` / `## Not implemented yet` headings. That documentation regression was identified directly by `workstation/tests/test_context_docs.py` and corrected without touching product code.
+During documentation closure, Workstation CI exposed the context-document structural contract: `CURRENT_STATE.md` must preserve separate `Working now`, `Partially implemented`, `Not implemented yet`, `Manual validation already observed`, and `Latest automated validation state` sections. Those headings are now restored without changing product behavior or weakening the contract test.
 
 After final documentation closure, automated gates must be observed on the exact final PR head. Native evidence may be carried from `d8acc752...` only if Git comparison proves that the relevant product code and executed H-004 probe are unchanged after that smoke.
 
