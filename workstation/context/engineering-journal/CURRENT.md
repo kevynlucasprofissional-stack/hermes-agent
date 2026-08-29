@@ -118,6 +118,16 @@ Classification: **ACTIVE — REGISTERED BEFORE EXECUTION**
 
 Experiment: `probes/h004-native-browser-task-smoke.mjs`.
 
+Probe implementation checkpoint:
+- probe is versioned on the milestone branch;
+- outer Node probe syntax was checked successfully before publication;
+- probe rejects execution if `apps/desktop/electron` changed after the registered code-bearing ancestor, preventing stale evidence;
+- probe uses Node child-process orchestration, a valid temporary Electron app, CommonJS bundle output, and non-blocking `app.whenReady().then(...)`;
+- probe imports the real Workstation runtime only after `H004_READY`, then records `H004_RUNTIME_IMPORTED` before lifecycle operations;
+- no product source file is modified by the probe.
+
+Execution status: **PENDING PHYSICAL WINDOWS RUN**.
+
 Scope rule: a failure before `H004_RUNTIME_IMPORTED` is a probe/bootstrap failure; a failure after product runtime entry must be localized before deciding whether it is product or probe.
 
 ## Experiment / failure ledger
