@@ -4,13 +4,15 @@ Last updated: 2026-08-29
 Active track: Implementation 4 — BrowserTask lifecycle native Windows acceptance
 Repository: `kevynlucasprofissional-stack/hermes-agent`
 Milestone branch: `impl4-browser-task-lifecycle`
-Last code-bearing candidate SHA observed before journal commits: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
+Code-bearing BrowserTask candidate ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
 Base `main`: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`
 PR: #9 — `feat(workstation): formalize BrowserTask lifecycle` (open, draft)
 
+> Journal/probe commits after `1ac0e0a9...` are validation-memory/tooling commits only unless this file explicitly records a later code-bearing candidate. Always verify the live PR head before an experiment.
+
 ## Objective
 
-Close the remaining real-Windows acceptance boundary for Implementation 4 without expanding into Browser Hub, Chat Browser View, Preview unification, complete BrowserSessionState, or other Implementation 5+ work.
+Close the remaining real-Windows acceptance boundary for Implementation 4 without expanding into Browser Hub, Chat Browser View, Preview unification, complete BrowserSessionState, or Implementation 5+ work.
 
 Required native lifecycle contract:
 
@@ -18,7 +20,7 @@ Required native lifecycle contract:
 
 ## Current evidence model
 
-### Already supported by automated/current-head evidence
+### Already supported
 
 - BrowserTask pure lifecycle tests pass.
 - Runtime adapter tests pass with Electron mocked.
@@ -26,99 +28,127 @@ Required native lifecycle contract:
 - Renderer crash recovery is logically covered.
 - Active-task destruction / remaining-task logical activation is covered.
 - BrowserTask persistence excludes page URLs and page-scoped secrets.
-- Workstation CI and Docker validation are green on the code-bearing candidate.
+- Workstation CI and Docker validation were green on the code-bearing candidate.
 - Broad Windows suites retain documented baseline failures; they must not be hidden or weakened.
+- Bare Electron 40.10.2 reaches `ready` on the target Windows machine.
+- In the exact target environment, ESM top-level `await app.whenReady()` stalls while ESM `app.whenReady().then(...)` reaches readiness.
 
 ### Still required
 
-A real Electron/Chromium Windows lifecycle smoke. Mocked `WebContents` / `WebContentsView` are insufficient.
+A real Electron/Chromium Windows BrowserTask lifecycle smoke using a bootstrap path that does not block Electron readiness.
 
 ## Hypothesis ledger
 
-### H-001 — BrowserTask lifecycle caused the native smoke timeout
+### H-001 — BrowserTask lifecycle caused the V9 native-smoke timeout
 
 Origin: first native harness attempts.
 
-Expected if true:
-- Electron reaches app readiness;
-- BrowserTask runtime executes;
-- timeout/error occurs during `createTask`, `showTask`, navigation, hide/park/show, destroy, or restart logic.
-
 Refuting evidence:
-- V9 printed `HARNESS_BOOT` but never printed `HARNESS_READY`;
-- the BrowserTask runtime import happened only after `await app.whenReady()` in that harness.
+- V9 printed `HARNESS_BOOT` but never `HARNESS_READY`;
+- BrowserTask runtime import occurred only after `await app.whenReady()`.
 
 Classification: **REFUTED**
 
-Conclusion: the observed V9 timeout occurred before BrowserTask code executed. Do not modify Implementation 4 product code in response to that timeout.
+Conclusion: the timeout happened before BrowserTask product code executed. Do not modify Implementation 4 product code in response to V9.
 
-### H-002 — Electron 40.10.2 / Windows environment cannot reach `app.ready`
-
-Origin: V9 stopped between `HARNESS_BOOT` and `HARNESS_READY`.
+### H-002 — Electron 40.10.2 / Windows cannot reach `app.ready`
 
 Experiment: bare Electron CommonJS probe with no Hermes, BrowserTask, Workstation runtime, esbuild, ESM, HTTP server, or WebContentsView.
 
 Observed evidence:
-- branch/head/origin all matched `1ac0e0a9...` at execution time;
+- target branch/head were correct;
 - inherited `ELECTRON_*` variables: none;
-- Electron executable: workspace Electron 40.10.2;
-- probe exit code: 0;
-- probe classification: `H-002 CLASSIFICATION: REFUTADA`;
-- bare Electron reached readiness and could create a real BrowserWindow.
+- workspace Electron 40.10.2;
+- exit code 0;
+- bare Electron reached readiness and created a real BrowserWindow.
 
 Classification: **REFUTED**
 
-Conclusion: Windows/Electron readiness works in a minimal CommonJS app. The V9 stall is specific to the harness/bootstrap path.
+Conclusion: general Windows/Electron startup is healthy.
 
-### H-003 — V9 deadlocks because an ESM main entry uses top-level `await app.whenReady()`
+### H-003 — V9 readiness stall is caused by top-level `await app.whenReady()` in its ESM main path
 
-Origin: difference between V9 and the successful H-002 bare probe plus Electron lifecycle semantics.
+Origin: V9 stalled between `HARNESS_BOOT` and `HARNESS_READY`; H-002 proved general Electron readiness works.
 
-Why plausible:
-- V9 uses an ESM `main.mjs` bundle and performs top-level `await app.whenReady()`;
-- H-002 uses CommonJS and `app.whenReady().then(...)` and succeeds;
-- Electron documents that `ready` is emitted only after the main process has run its first event-loop tick;
-- Electron's ESM documentation highlights distinct asynchronous main-entry semantics before `ready`;
-- ecosystem reports exist warning about top-level-await / ready deadlocks in Electron ESM main bundles.
+Confirming experiment: `probes/h003-esm-ready.mjs`, two ESM mini-apps differing materially only in readiness control flow.
 
-Evidence that would support it:
-- on the same Electron executable, an ESM mini-app with top-level `await app.whenReady()` stalls, while an otherwise equivalent ESM mini-app using `app.whenReady().then(...)` reaches ready.
+Observed on Windows 10.0.26200 / Electron 40.10.2:
+- TLA case: `H003_TLA_BOOT`, then `H003_TLA_INTERNAL_TIMEOUT`; exit 3;
+- `.then(...)` case: `H003_THEN_BOOT` → `H003_THEN_READY` → BrowserWindow created → PASS; exit 0;
+- result matrix: TLA fail / THEN pass;
+- probe classification: `VALIDATED`.
 
-Evidence that would refute it:
-- both ESM forms reach ready under the same environment, or the `.then(...)` form stalls identically.
+Attempted refutation:
+- Electron supports ESM main processes generally;
+- the problem is therefore not “ESM is unsupported”;
+- the paired control proves the material discriminator is the blocking readiness pattern in this exact environment, not ESM alone.
 
-Classification: **ACTIVE / NOT YET VALIDATED**
+Classification: **VALIDATED**
 
-Next discriminating experiment: one two-case bare Electron probe comparing ESM-TLA vs ESM-callback with no Hermes imports.
+Conclusion: V9 was a harness bootstrap defect. The Workstation runtime itself already uses the non-blocking `void app.whenReady().then(...)` pattern, so no product fix is justified by this failure.
+
+Practical implication:
+- native validation harnesses must never use top-level `await app.whenReady()` in this Windows/Electron path;
+- use non-blocking readiness registration and explicit boundary markers.
+
+### H-004 — With the validated readiness bootstrap, the real BrowserTask lifecycle satisfies the Implementation 4 acceptance contract
+
+Origin: H-003 removed the harness blocker and leaves the original native lifecycle question unanswered.
+
+Expected confirming evidence:
+1. `H004_BOOT` and `H004_READY` occur before runtime operations;
+2. real `WorkstationBrowserRuntime` imports and uses real Electron `WebContentsView`;
+3. one BrowserTask owns one real task page;
+4. hide/show and park/show preserve taskId, task-owned tab ID, WebContents identity/id, URL and renderer sentinel;
+5. explicit `destroyTask` destroys the prior WebContents and leaves no task-owned entry;
+6. two distinct Electron PIDs prove a real restart;
+7. restart restores the same logical task as parked/restored with zero eager task pages;
+8. first show lazily creates exactly one task page and sets recovery to recreated;
+9. persisted BrowserTask structural state contains neither page URL secret nor renderer/typed secret.
+
+Evidence that refutes or reformulates H-004:
+- any lifecycle invariant fails after `H004_READY` and `H004_RUNTIME_IMPORTED`;
+- task page duplicates;
+- page replacement on hide/show or park/show;
+- destroy leaves ownership/page alive;
+- restart loses logical task identity or eagerly duplicates pages;
+- secret leakage into BrowserTask structural state.
+
+Classification: **ACTIVE — REGISTERED BEFORE EXECUTION**
+
+Experiment: `probes/h004-native-browser-task-smoke.mjs`.
+
+Scope rule: a failure before `H004_RUNTIME_IMPORTED` is a probe/bootstrap failure; a failure after product runtime entry must be localized before deciding whether it is product or probe.
 
 ## Experiment / failure ledger
 
 | ID | Attempt / fingerprint | What happened | Classification | Anti-repeat lesson |
 |---|---|---|---|---|
-| E-001 | PowerShell interpolation with `$code:` / `$ExpectedBranch:` | ParserError before test execution | Harness defect | Use `${name}:` when a variable is immediately followed by `:` in double-quoted PowerShell strings. |
-| E-002 | Assume Electron/esbuild binaries live at root `node_modules/.bin` | Dependency discovery failed although `npm ci` succeeded | Harness defect | Resolve workspace-owned executables from `apps/desktop` first; inspect package ownership before hard-coding paths. |
-| E-003 | PowerShell function parameter named `$Args` | Native executable arguments were swallowed; tools printed usage | Harness defect | Never shadow PowerShell automatic `$Args`; use an explicit name such as `$CommandArgs`. |
-| E-004 | `$ErrorActionPreference='Stop'` + native stderr pipeline | Normal esbuild stderr became `NativeCommandError` | Harness defect | Do not interpret native stderr as process failure; gate on process exit code. |
-| E-005 | `Start-Process` exit-code handling under Windows PowerShell 5.1 | Successful esbuild run produced unusable/null exit code | Harness defect | Prefer Node `child_process.spawn` for native orchestration and timeouts in this validation path. |
-| E-006 | Direct Electron invocation with arbitrary bundled `.mjs` | Process started but did not prove app entry semantics | Harness design defect | Invoke a valid temporary Electron app directory with `package.json` + `main` entry. |
-| E-007 | V9 valid Electron mini-app + top-level `await app.whenReady()` | `HARNESS_BOOT` printed; `HARNESS_READY` never printed; 45s timeout | Investigation evidence | Do not attribute this to BrowserTask; runtime import had not executed. Test ESM readiness semantics independently first. |
-| E-008 | H-002 bare CommonJS Electron readiness probe | Exit 0; bare Electron reaches ready; no inherited `ELECTRON_*` vars | Investigation evidence | General Electron/Windows startup is not the blocker; narrow investigation to V9 bootstrap differences. |
+| E-001 | PowerShell interpolation with `$code:` / `$ExpectedBranch:` | ParserError before test | Harness defect | Use `${name}:` when `:` follows an interpolated PowerShell variable. |
+| E-002 | Assume Electron/esbuild at root `.bin` | Dependency discovery failed despite `npm ci` | Harness defect | Inspect workspace ownership before hard-coding executable paths. |
+| E-003 | PowerShell parameter `$Args` | Arguments swallowed; tools printed usage | Harness defect | Never shadow automatic `$Args`. |
+| E-004 | native stderr + `$ErrorActionPreference='Stop'` | Normal esbuild stderr became `NativeCommandError` | Harness defect | stderr is not failure; gate on exit status. |
+| E-005 | `Start-Process` exit code on Windows PowerShell 5.1 | successful run exposed unusable/null exit status | Harness defect | Prefer Node `child_process` for native orchestration. |
+| E-006 | arbitrary bundled `.mjs` as Electron target | launch did not prove valid app-entry semantics | Harness defect | Use a valid Electron app directory (`package.json` + main). |
+| E-007 | V9 + top-level `await app.whenReady()` | boot marker printed; ready marker never printed; timeout | Harness defect | Never attribute pre-runtime timeout to BrowserTask. |
+| E-008 | H-002 bare CommonJS readiness | ready + BrowserWindow succeeded | Control evidence | General Electron/Windows startup is healthy. |
+| E-009 | H-003 ESM paired control | TLA fails; `.then(...)` passes | Root-cause evidence | In this target environment, register readiness non-blockingly; do not top-level-await it. |
 
-## Stable anti-patterns discovered
+## Stable anti-patterns / rules learned
 
 1. Do not change product code because a validation harness failed before reaching the product boundary.
-2. Instrument boundary markers before attributing a timeout to the subsystem under test.
-3. For native tools on Windows, prefer one orchestration layer with explicit exit-code and timeout semantics; avoid stacking PowerShell pipelines, `.cmd` shims, and `Start-Process` unless required.
-4. Before writing a new runner, compare it against the smallest known-good control and vary one material factor at a time.
-5. A successful build only proves the harness compiled; it does not prove Electron executed the intended path.
-6. A process launch only proves the executable started; require explicit markers for boot, ready, subsystem entry, and lifecycle milestones.
-7. Never repeat an experiment unless the changed assumption/input is recorded here.
+2. Instrument explicit markers at process boot, Electron ready, product import and each lifecycle milestone.
+3. Prefer one orchestration layer with explicit timeout/exit semantics; on Windows this track uses Node `child_process`, not stacked PowerShell wrappers.
+4. Compare against a smallest known-good control and vary one material factor at a time.
+5. Build success proves compilation only; process launch proves launch only; require behavior evidence.
+6. Do not use top-level `await app.whenReady()` in native Workstation validation harnesses on the current Windows/Electron target.
+7. Never repeat an experiment unless the material changed input/assumption is recorded here first.
+8. Never call `close-tab` or UI X equivalent to `destroyTask`; explicit BrowserTask destruction must be tested through `destroyTask`.
+9. Do not use Task Manager PID disappearance as the canonical destroy invariant; use WebContents destruction + ownership/state evidence.
 
-## Native-smoke evidence requirements once bootstrap is solved
+## Native-smoke acceptance details
 
 ### A — Live identity
-
-For one BrowserTask in one Electron process:
 - same `taskId`;
 - same task-owned tab ID;
 - same real `WebContents` / `webContents.id` across hide/show and park/show;
@@ -127,43 +157,41 @@ For one BrowserTask in one Electron process:
 - exactly one page owns the task.
 
 ### B — Explicit destroy
-
 - `destroyTask(taskId)` succeeds;
-- previous real WebContents is destroyed;
+- prior real WebContents is destroyed;
 - task removed from lifecycle metadata;
 - zero remaining entries own the task;
-- no replacement page is created automatically.
+- no replacement page appears.
 
 ### C — Real restart
-
-Use two distinct Electron OS processes sharing only the intended persistent Workstation state root:
-- process 1 persists logical task metadata and exits;
-- process 2 restores same `taskId` as `parked` / `recoveryState: restored` with no eager live page;
-- first show/use lazily creates exactly one new page for same task;
-- `recoveryState` becomes `recreated`;
+- two distinct Electron OS PIDs;
+- process 1 persists logical metadata and exits;
+- process 2 restores same taskId as `parked` / `recoveryState: restored` with zero eager live task pages;
+- first show lazily creates exactly one new page for same task;
+- recovery becomes `recreated`;
 - never claim WebContents identity or renderer JS heap survives restart.
 
 ## Promotion boundary
 
 Implementation 4 remains **NOT PROMOTED** until:
-
-1. native Windows lifecycle smoke passes on the final PR head;
+1. H-004/native Windows lifecycle smoke passes on the final code-bearing behavior;
 2. code/docs are frozen;
-3. `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, `TESTING.md` as needed, and especially `UPSTREAM_DELTA.md` reflect the final state;
+3. canonical docs and especially `UPSTREAM_DELTA.md` reflect final state;
 4. relevant gates are rerun on the exact final SHA;
-5. final audit finds no material known issue inside Implementation 4 scope;
+5. final audit finds no material issue inside Implementation 4 scope;
 6. only then PR #9 is marked ready and merged.
 
-## Update protocol
+## Continuous update protocol
 
-Before the next experiment:
-- add its hypothesis/experiment ID above;
-- record confirming and refuting evidence in advance.
+Before an experiment:
+- register hypothesis/experiment ID;
+- state confirming and refuting evidence;
+- identify the product boundary marker.
 
-Immediately after the experiment:
-- record exact observed output/error fingerprint;
-- classify the hypothesis;
-- record the practical implication;
+Immediately after:
+- record exact output/error fingerprint;
+- classify hypothesis;
+- record practical implication;
 - identify the next materially relevant hypothesis.
 
-No experiment is considered complete until this file has been updated.
+No experiment is complete until this file is updated. A checkpoint is never permission to stop; it is memory for the next action.
