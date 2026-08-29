@@ -16,7 +16,8 @@ Before changing Workstation code, read these documents in order:
 8. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work.
 9. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
 10. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced or observed problems whose causes must not be guessed.
-11. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
+11. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger and anti-repeat memory for ongoing Workstation investigations. Read it before creating a new validation harness or repeating an experiment.
+12. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
 
 After this read-order, inspect the **current `main` implementation and its tests** for the subsystem you intend to change. Documentation is intent and state; code on `main` is the source of truth for implementation details.
 
@@ -33,6 +34,14 @@ A coding agent must be able to answer these questions before editing Workstation
 
 If any answer is unclear, inspect the implementation and tests before writing code. Do not infer missing behavior from filenames, old plans, or previous conversation state.
 
+## Continuous engineering journal
+
+For an active Workstation investigation, the agent must keep `engineering-journal/CURRENT.md` synchronized with evidence as work proceeds.
+
+Before executing a new experiment, register the hypothesis/experiment and its confirming/refuting evidence. After execution, record the exact observed result and classification before moving to the next hypothesis. Do not repeat a failed approach unless a material input changed and that change is recorded.
+
+This journal is deliberately operational and may change frequently. Settled product truth must still be promoted into the canonical context documents rather than living only in the journal.
+
 ## Maintenance
 
-Update these context documents when the corresponding fact changes. Keep them concise and refer to the canonical detailed document instead of copying it. `CURRENT_STATE.md` and `KNOWN_ISSUES.md` are expected to evolve most frequently; architectural decisions should change only when a deliberate replacement decision is recorded.
+Update these context documents when the corresponding fact changes. Keep them concise and refer to the canonical detailed document instead of copying it. `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, and `engineering-journal/CURRENT.md` are expected to evolve most frequently; architectural decisions should change only when a deliberate replacement decision is recorded.
