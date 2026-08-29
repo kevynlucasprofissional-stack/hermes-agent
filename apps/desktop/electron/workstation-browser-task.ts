@@ -238,7 +238,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
   destroyTask(taskId: string): boolean {
     const task = this.tasks.get(taskId)
     if (!task) return false
-    const page = this.livePage(taskId)
+    // Explicit destroy owns cleanup even when the page is already crashed.
+    // Bindings may still need to remove a stale task -> page association.
+    const page = this.bindings.pageForTask(taskId)
     if (page) this.bindings.destroyPage(taskId, page)
     this.tasks.delete(taskId)
     this.persist()

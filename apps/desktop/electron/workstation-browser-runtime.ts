@@ -548,17 +548,10 @@ export class WorkstationBrowserRuntime {
     const entry = this.entries.get(tabId)
     if (!entry) return this.state()
 
-    if (this.activeTabId === tabId && this.attached) this.detachActiveView(false)
-    this.removeChildView(entry)
-    if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === tabId) this.taskTabs.delete(entry.ownerTaskId)
+    const wasActive = this.activeTabId === tabId
+    this.discardEntry(entry)
 
-    if (!entry.view.webContents.isDestroyed()) {
-      entry.view.webContents.close()
-    }
-    this.entries.delete(tabId)
-
-    if (this.activeTabId === tabId) {
-      this.activeTabId = null
+    if (wasActive) {
       const replacement = this.entries.values().next().value as BrowserEntry | undefined
       if (replacement) this.activateTab(replacement.id)
     }
@@ -865,7 +858,7 @@ export class WorkstationBrowserRuntime {
           return entry
         },
         pageForTask: taskId => this.rawEntryForTask(taskId, false),
-        pageIsAlive: entry => !entry.view.webContents.isDestroyed(),
+        pageIsAlive: entry => !entry.crashed && !entry.view.webContents.isDestroyed(),
         showPage: (_taskId, entry, context) => {
           if (entry.id !== this.activeTabId) this.activateTab(entry.id)
           this.attach(context.window, context.bounds)
@@ -911,7 +904,8 @@ export class WorkstationBrowserRuntime {
     }
 
     const entry = this.rawEntryForTask(taskId, create)
-    if (entry) lifecycle.parkTask(taskId)
+    const visible = entry?.id === this.activeTabId && this.attached
+    if (entry && !visible) lifecycle.parkTask(taskId)
     return entry
   }
 
@@ -919,11 +913,13 @@ export class WorkstationBrowserRuntime {
     const mapped = this.taskTabs.get(taskId)
     if (mapped) {
       const entry = this.entries.get(mapped)
-      if (entry && !entry.view.webContents.isDestroyed()) {
+      if (entry && !entry.crashed && !entry.view.webContents.isDestroyed()) {
         if (entry.id !== this.activeTabId || !this.attached) this.parkEntry(entry)
         return entry
       }
-      this.taskTabs.delete(taskId)
+      if (entry) this.discardEntry(entry)
+      else this.taskTabs.delete(taskId)
+      if (!create) this.emitState()
     }
     if (!create) return null
     this.createTab('about:blank', !this.activeTabId, taskId)
@@ -1126,6 +1122,18 @@ export class WorkstationBrowserRuntime {
 
   private activeEntry(): BrowserEntry | null {
     return this.activeTabId ? this.entries.get(this.activeTabId) ?? null : null
+  }
+
+  private discardEntry(entry: BrowserEntry): void {
+    const wasActive = this.activeTabId === entry.id
+    if (wasActive && this.attached) this.detachActiveView(false)
+    this.removeChildView(entry)
+    if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === entry.id) {
+      this.taskTabs.delete(entry.ownerTaskId)
+    }
+    this.entries.delete(entry.id)
+    if (wasActive) this.activeTabId = null
+    if (!entry.view.webContents.isDestroyed()) entry.view.webContents.close()
   }
 
   private tabState(entry: BrowserEntry): WorkstationBrowserTabState {

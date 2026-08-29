@@ -153,6 +153,21 @@ test('hide never destroys the page; destroy is explicit and removes the task', (
   assert.equal(lifecycle.destroyTask('task-a'), false)
 })
 
+test('explicit destroy removes a stale crashed page binding', () => {
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings)
+
+  lifecycle.createTask({ taskId: 'task-a' })
+  const crashed = browser.pages.get('task-a')
+  assert.ok(crashed)
+  crashed.destroyed = true
+
+  assert.equal(lifecycle.destroyTask('task-a'), true)
+  assert.equal(browser.destroyCount(), 1)
+  assert.equal(browser.pages.has('task-a'), false)
+  assert.equal(lifecycle.task('task-a'), null)
+})
+
 test('one task owns exactly one live page across repeated create/show operations', () => {
   const browser = fakeBrowser()
   const lifecycle = new BrowserTaskLifecycle(browser.bindings)

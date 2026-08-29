@@ -79,8 +79,24 @@ const electron = vi.hoisted(() => {
 
     reload(): void {}
     stop(): void {}
-    async executeJavaScript(): Promise<unknown> { return {} }
+    async executeJavaScript(source: string): Promise<unknown> {
+      if (source.includes('__hermesWorkstationRefs')) {
+        return {
+          url: this.url,
+          title: this.title,
+          text: '',
+          totalTextChars: 0,
+          truncated: false,
+          elements: []
+        }
+      }
+      return {}
+    }
     async capturePage(): Promise<{ toPNG: () => Uint8Array }> { return { toPNG: () => new Uint8Array() } }
+
+    simulateRenderProcessGone(): void {
+      this.emit('render-process-gone', {}, { reason: 'crashed' })
+    }
   }
 
   class FakeWebContentsView {
@@ -222,6 +238,90 @@ test('runtime BrowserTask hide/park/show preserves one WebContents and its URL',
   assert.equal(runtime.destroyTask('task-a'), true)
   assert.equal(contents.isDestroyed(), true)
   assert.equal(runtime.listTasks().length, 0)
+
+  await runtime.destroy()
+})
+
+test('controller actions preserve a visible task through Take Control and Release Control', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const window = hostWindow()
+  const bounds = { x: 20, y: 80, width: 1000, height: 700 }
+
+  runtime.createTask({ taskId: 'task-a' })
+  const tab = runtime.state().tabs.find(candidate => candidate.ownerTaskId === 'task-a')
+  assert.ok(tab)
+  const contents = runtime.getWebContents(tab.id)
+  assert.ok(contents)
+  runtime.showTask('task-a', window as never, bounds)
+
+  const executeControlRequest = (
+    runtime as unknown as {
+      executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>
+    }
+  ).executeControlRequest.bind(runtime)
+
+  runtime.takeControl()
+  await executeControlRequest({ action: 'browser_snapshot', task_id: 'task-a', arguments: {} })
+  assert.equal(runtime.state().controlOwner, 'human')
+  assert.equal(runtime.state().attached, true)
+  assert.equal(runtime.listTasks()[0]?.status, 'visible')
+  assert.equal(runtime.getWebContents(tab.id), contents)
+
+  runtime.releaseControl()
+  await executeControlRequest({
+    action: 'browser_navigate',
+    task_id: 'task-a',
+    arguments: { url: 'https://example.test/agent' }
+  })
+  assert.equal(runtime.state().controlOwner, 'agent')
+  assert.equal(runtime.state().attached, true)
+  assert.equal(runtime.listTasks()[0]?.status, 'visible')
+  assert.equal(runtime.getWebContents(tab.id), contents)
+
+  await runtime.destroy()
+})
+
+test('runtime replaces one crashed BrowserTask page and preserves logical ownership', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+
+  runtime.createTask({ taskId: 'task-a' })
+  const firstTab = runtime.state().tabs.find(candidate => candidate.ownerTaskId === 'task-a')
+  assert.ok(firstTab)
+  const crashed = runtime.getWebContents(firstTab.id) as unknown as InstanceType<typeof electron.FakeWebContents>
+  assert.ok(crashed)
+  crashed.simulateRenderProcessGone()
+
+  const recovered = runtime.createTask({ taskId: 'task-a' })
+  const owned = runtime.state().tabs.filter(candidate => candidate.ownerTaskId === 'task-a')
+  assert.equal(recovered.recoveryState, 'recreated')
+  assert.equal(owned.length, 1)
+  assert.notEqual(owned[0].id, firstTab.id)
+  assert.notEqual(runtime.getWebContents(owned[0].id), crashed)
+  assert.equal(crashed.isDestroyed(), true)
+
+  await runtime.destroy()
+})
+
+test('destroying the active BrowserTask activates the remaining isolated task page', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+
+  runtime.createTask({ taskId: 'task-a' })
+  runtime.createTask({ taskId: 'task-b' })
+  const taskA = runtime.state().tabs.find(candidate => candidate.ownerTaskId === 'task-a')
+  const taskB = runtime.state().tabs.find(candidate => candidate.ownerTaskId === 'task-b')
+  assert.ok(taskA)
+  assert.ok(taskB)
+  runtime.activateTab(taskA.id)
+
+  assert.equal(runtime.destroyTask('task-a'), true)
+  const state = runtime.state()
+  assert.equal(state.tabs.some(candidate => candidate.ownerTaskId === 'task-a'), false)
+  assert.equal(state.tabs.filter(candidate => candidate.ownerTaskId === 'task-b').length, 1)
+  assert.equal(state.activeTabId, taskB.id)
+  assert.equal(runtime.listTasks().map(task => task.taskId).join(','), 'task-b')
 
   await runtime.destroy()
 })
