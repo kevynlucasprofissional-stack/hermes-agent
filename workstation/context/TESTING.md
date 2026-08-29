@@ -10,117 +10,173 @@ Use the smallest focused gate first, then expand only after it passes:
 2. **Workstation contracts** — `workstation/tests/` for Python-side routing/config/integration contracts.
 3. **Desktop UI tests** — renderer behavior through Vitest/React tests when UI state or actions change.
 4. **Desktop platform tests** — Electron/main-process behavior for `WebContentsView`, BrowserRuntime, host ownership, persistence, and IPC contracts.
-5. **Desktop typecheck/build gates** — ensure changed contracts compile across renderer/preload/main boundaries.
-6. **Windows Desktop E2E/smoke** — required for claims that depend on real Electron/Windows composition, restart, profile persistence, or native view geometry.
+5. **Desktop typecheck/build gates** — compile changed contracts across renderer/preload/main boundaries.
+6. **Windows Desktop E2E/smoke** — required for claims depending on real Electron/Windows composition, restart, profile persistence, or native view behavior.
 
-Do not replace an executable behavior test with a test that greps `.py`, `.ts`, or `.tsx` source text. Follow the root `AGENTS.md` testing rules. Source-shape tests are acceptable only for build/bootstrap policy (for example proving that an installer does not invoke a mutator); they are not substitutes for runtime behavior tests.
+Do not replace executable behavior tests with source greps. Source-shape tests are acceptable for bootstrap/build policy but are not substitutes for runtime behavior.
 
 ## Existing Workstation gates
 
-- `Workstation CI`
-  - component lock validation;
-  - third-party license validation;
-  - `workstation/tests/`;
-  - downstream integration-anchor check in read-only `--check` mode.
-- `Workstation Browser Windows`
-  - Node/Python setup;
-  - read-only committed-integration validation;
-  - normal `workstation\\install.cmd` execution;
-  - a clean-checkout assertion after install;
-  - Desktop typecheck;
-  - Desktop UI tests;
-  - Desktop platform/Electron tests;
-  - a final outcome aggregator that keeps the job red if either broad Desktop suite fails.
-- `tests/tui_gateway/test_workstation_browser_schema_capability.py`
-  - focused regression gate for Desktop Browser schema ownership;
-  - proves Desktop capability survives a false reachability probe;
-  - proves Desktop tool-definition cache state cannot leak into TUI;
-  - proves a process-global `HERMES_DESKTOP` flag cannot grant TUI capability;
-  - proves Desktop source identity is sufficient without that process env flag;
-  - proves the forced Workstation set stays narrow (`browser_exec` is not promoted).
-- `apps/desktop/electron/workstation-browser-task.test.ts`
-  - pure BrowserTask lifecycle/persistence contract;
-  - proves `hide` and `park` preserve the same page and current URL;
-  - proves `destroy` is explicit;
-  - proves only one logical record exists per task;
-  - proves switching the visible task parks the previous task semantically;
-  - proves malformed/duplicate persisted metadata is pruned;
-  - proves restart restoration is parked and page recovery is lazy.
-- `apps/desktop/electron/workstation-browser-runtime-task.test.ts`
-  - exercises the lifecycle adapter against the real `WorkstationBrowserRuntime` with Electron mocked, without Browserless/network access;
-  - proves `ownerTaskId` is idempotent in the Chromium tab primitive;
-  - proves hide/park/show retain the same `WebContents` and URL within one process;
-  - proves explicit task destroy closes the owned page;
-  - proves restart restores task metadata first and creates one task-owned page only when shown again.
+### `Workstation CI`
 
-The Windows workflow must test the **committed tree**. Migration/patch helpers must not repair source before these tests run. A clean clone followed by normal install must remain clean according to `git status`, apart from deliberately ignored artifacts such as `.venv`, `node_modules`, caches, and runtime state outside the checkout.
+- component lock validation;
+- third-party license validation;
+- `workstation/tests/`;
+- downstream integration-anchor check in read-only `--check` mode.
 
-The UI and platform/Electron steps are intentionally independent after typecheck: each may record a failed outcome while allowing the other suite to run, then the final aggregator fails the job if either outcome is not `success`. This is **diagnostic non-masking**, not failure tolerance; no coverage is disabled and a red suite still makes the workflow red.
+### `Workstation Browser Windows`
 
-## Session-scoped capability test policy
+- Node/Python setup;
+- read-only committed-integration validation;
+- normal `workstation\\install.cmd` execution;
+- clean-checkout assertion after install;
+- Desktop typecheck;
+- focused BrowserTask lifecycle/runtime step;
+- Desktop UI tests;
+- Desktop platform/Electron tests;
+- final aggregator that remains red if a scoped or broad required outcome is red.
 
-A GUI/browser surface capability must be tested as a **session contract**, not by mutating a process-global environment variable and observing a single process-wide cache. Focused tests should bind `gateway.session_context`, exercise schema assembly with reachability forced false, and then switch surface identity within the same process to prove cache isolation.
+The UI and platform steps may continue after failure only so both outcomes are observable. This is diagnostic non-masking, not failure tolerance.
 
-The forced-schema path may only preserve a schema that is already selected by the active toolsets; it must never re-add a disabled/unselected tool. Runtime health, recovery, bound-task fail-closed behavior, and fallback policy remain execution-time responsibilities and need their own tests.
+### Desktop Browser schema capability
 
-## BrowserTask lifecycle test policy
+`tests/tui_gateway/test_workstation_browser_schema_capability.py` proves:
+
+- Desktop capability survives a false controller reachability probe;
+- Desktop tool-definition cache state cannot leak into TUI;
+- process-global `HERMES_DESKTOP` cannot grant TUI capability;
+- Desktop source identity is sufficient without that env flag;
+- the forced Workstation set remains narrow (`browser_exec` is not promoted).
+
+### BrowserTask pure lifecycle
+
+`apps/desktop/electron/workstation-browser-task.test.ts` proves:
+
+- hide and park preserve the logical live page;
+- destroy is explicit;
+- one logical record exists per task;
+- switching the visible task parks the previous task;
+- malformed/duplicate persisted metadata is pruned;
+- restart restoration is parked and page recovery is lazy;
+- persisted task structure excludes page-scoped secret content.
+
+### BrowserTask runtime adapter
+
+`apps/desktop/electron/workstation-browser-runtime-task.test.ts` exercises the real `WorkstationBrowserRuntime` with Electron mocked and proves:
+
+- `ownerTaskId` is idempotent in the Chromium tab primitive;
+- hide/park/show retain the same WebContents and URL within one process;
+- explicit task destroy closes the owned page;
+- restart restores logical metadata first and creates one page only when shown again;
+- renderer crash recovery creates one replacement page under the same task.
+
+## BrowserTask lifecycle policy
 
 BrowserTask tests must distinguish **logical task persistence** from **process-local page identity**:
 
-- within one Electron process, `create -> hide -> show` and `create -> park -> show` must retain the same live page object and current URL;
-- `hide`/`park` must not close the `WebContents`;
-- an explicit `destroyTask` is the operation that removes the task and closes its owned page;
-- repeated creation for the same `taskId` must not allocate a second live page;
-- if a page crashes/disappears while the logical task remains, recovery may create exactly one replacement and must record that recovery;
-- after Desktop process restart, task metadata must restore as parked before any page is recreated; showing/using that task may lazily recreate one page under the same `taskId`;
-- tests must never claim that a JavaScript heap or `WebContents` object itself survives a process restart.
+- within one Electron process, `create -> hide -> show` and `create -> park -> show` retain the same live page object and current URL;
+- `hide`/`park` do not close the WebContents;
+- `destroyTask` is the operation that removes the task and closes its owned page;
+- repeated creation for the same `taskId` does not allocate a second page;
+- if a page crashes/disappears while the logical task remains, recovery may create exactly one replacement and records that recovery;
+- after Desktop process restart, metadata restores as parked before any page is recreated; showing/using the task may lazily recreate one page under the same task id;
+- tests never claim that renderer JavaScript heap or a WebContents object survives process restart.
 
-Use the pure lifecycle test first, then the runtime-adapter test, then the Windows Desktop gate. Browserless/network access is unnecessary for these lifecycle invariants.
+Use the pure lifecycle test first, then the runtime-adapter test, then the real Windows smoke.
+
+## Implementation 4 real Windows acceptance evidence
+
+The required narrow native smoke is versioned at:
+
+`workstation/context/engineering-journal/probes/h004-native-browser-task-smoke.mjs`
+
+Validated execution:
+
+- repository head: `d8acc752133b125b9619cbc7fe09199f1283a22b`;
+- code-bearing BrowserTask ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`;
+- Windows: `10.0.26200`;
+- Electron: `40.10.2`;
+- outer Node: `v24.14.1`;
+- Electron Node: `24.15.0`.
+
+Observed native markers:
+
+- `H004_READY` before product import;
+- `H004_RUNTIME_IMPORTED` before lifecycle operations;
+- `H004_LIVE_DESTROY_PASS`;
+- `H004_RESTART_PASS`;
+- `H004_CLASSIFICATION=VALIDATED`.
+
+The smoke used real `BrowserWindow`, real `WebContentsView`, real renderer execution, and two distinct Electron OS processes. It proved:
+
+1. same task id, task-owned tab id, WebContents identity/id, URL and renderer sentinel across hide/show and park/show;
+2. exactly one page owned the task throughout the live lifecycle;
+3. explicit `destroyTask` destroyed the page and removed logical/page ownership without automatic replacement;
+4. restart restored the same logical task as parked/restored with zero eager pages;
+5. first show after restart created exactly one page and recorded `recreated`;
+6. BrowserTask structural persistence excluded the test page URL secret and renderer secret.
+
+This smoke is sufficient for the **Implementation 4 lifecycle boundary only**. It does not validate future Chat Browser View, Browser Hub, Preview unification, host transfer/resize, complete BrowserSessionState, or complete SessionDB/Kanban/run linkage.
+
+### Native smoke carry-forward rule
+
+A native smoke may be associated with a later final documentation-only head without rerunning the physical Electron test only when all of the following are proven:
+
+1. the smoke SHA and final head are in a direct ancestry relationship;
+2. Git comparison shows no change in the product files whose behavior was exercised;
+3. the executed smoke probe itself is unchanged;
+4. changes after the smoke are documentation-only and cannot affect runtime/bootstrap/dependency resolution;
+5. automated gates are observed on the exact final head;
+6. the equivalence is recorded in the final evidence/report.
+
+If any runtime, dependency, workflow, probe, or product path changes after the smoke, rerun the native smoke on the new head.
+
+## Native validation harness policy
+
+The Implementation 4 investigation produced reusable harness lessons that are now regression knowledge:
+
+- instrument explicit markers for process boot, Electron readiness, product import, and each lifecycle boundary;
+- do not attribute a timeout to product code before the product-entry marker occurs;
+- use Node `child_process` for Windows native orchestration in this path instead of stacking PowerShell native pipelines and `.cmd` wrappers;
+- gate process success on exit status, not stderr output;
+- use a valid temporary Electron application entry;
+- on the current Windows/Electron 40.10.2 target, do not block module evaluation with top-level `await app.whenReady()`; the paired H-003 control proved `.then(...)` reaches readiness while TLA stalls in that environment;
+- once a versioned probe exists, reuse/improve it instead of reconstructing ad hoc runners.
+
+Operational history is kept in `engineering-journal/CURRENT.md`.
 
 ## Baseline comparison for pre-existing failures
 
-When a broad gate is already red on `main` and blocks causality for a narrowly scoped change, reproduce the exact `main` base and the candidate with the same OS image, toolchain, dependency install, and commands. Compare failure signatures rather than only failure counts. A baseline/candidate A/B may establish that a failure is pre-existing and that the scoped change is non-regressive, but it must not be described as a green broad gate.
+When a broad gate is already red on `main` and blocks causality for a narrowly scoped change, reproduce the exact main base and candidate with the same OS/toolchain/install/commands. Compare failure signatures rather than failure counts.
 
-Record the base SHA, candidate SHA, run IDs, failing files/tests or error classes, and any runner-only flake. Keep the permanent gate red until the underlying issue is fixed; do not add allowlists that silently convert known failures into success unless a separately justified test architecture explicitly requires it.
+A baseline/candidate A/B may establish that a failure is pre-existing and that the scoped change is non-regressive, but it must not be described as a green broad gate. Keep the permanent gate red until its underlying issue is fixed.
+
+For the current Windows baseline see KI-006 in `KNOWN_ISSUES.md`.
 
 ## Required browser-foundation invariants
 
-As the corresponding implementation lands, tests must establish these relationships rather than freeze incidental values:
+As corresponding implementations land, tests must establish relationships rather than freeze incidental values:
 
-- a GUI/Desktop session receives its browser surface capability independently of process env identity;
-- controller reachability affects execution/recovery, not whether the valid session surface is known to the model;
-- a BrowserTask can hide/show/park/focus without creating a replacement live page;
+- GUI/Desktop browser surface capability is session-scoped;
+- controller reachability affects execution/recovery, not whether a valid session surface is known;
+- BrowserTask can hide/show/park without replacing a live page;
 - destroy is explicit and different from hide;
 - task-bound controller loss is fail-closed;
 - routing-disabled stays internal-only;
-- Chat Browser View and Browser Hub reference the same BrowserTask/runtime;
+- future Chat Browser View and Browser Hub reference the same BrowserTask/runtime;
 - only one host owns the live `WebContentsView` at a time;
-- host transfer/resize updates bounds without overlap;
+- future host transfer/resize does not overlap;
 - multiple BrowserTasks remain isolated;
-- BrowserSessionState restoration preserves safe logical metadata without storing credentials;
-- Chromium profile persistence is tested separately from logical tab/task restoration;
-- Preview compatibility in Workstation mode does not create a second independent browser lane;
-- `web_search` remains available for factual non-UI research while explicit visible/authenticated browser work exposes the Workstation Browser contract.
+- BrowserSessionState restoration preserves safe logical metadata without credentials;
+- Chromium profile persistence is tested separately from logical task/session restoration;
+- future Preview compatibility in Workstation mode does not create an independent duplicate lane.
 
-## Manual Windows smoke evidence
+## Later full browser-foundation smoke
 
-For behavior Electron automation cannot reliably prove, record a reproducible smoke procedure and result. The browser foundation's final smoke must cover at least:
+The final broader browser foundation, after later surfaces exist, must also cover Chat Browser View ↔ Browser Hub shared task/page behavior, human control, resize/maximize/restore, second-task isolation, profile login persistence, controller-loss fail-closed behavior, and Preview compatibility.
 
-1. start a cleanly installed Desktop build;
-2. start a browser task from Chat;
-3. observe the same task in Chat Browser View and Browser Hub;
-4. interact through agent control, then Take Control as a human on the same page;
-5. hide and reopen without a new navigation;
-6. switch Chat ↔ Browser Hub and resize/maximize/restore without native-view overlap;
-7. create a second task and verify isolation;
-8. restart Desktop and verify logical tabs/task mappings restore;
-9. separately verify compatible login state persists through the dedicated Chromium profile;
-10. exercise controller loss for a bound task and verify fail-closed behavior.
-
-Implementation 4's narrower lifecycle smoke may be recorded before the Chat/Hub surfaces exist, but it must at minimum prove on a real Windows Desktop process that a task-owned page can be created/navigated, hidden or parked, re-exposed without a replacement navigation, explicitly destroyed, and logically restored after restart. Missing later-surface steps must remain listed as future work rather than being marked passed by the narrower smoke.
-
-Record the exact commit SHA, Windows/Node/Python versions, commands/workflow run, observed result, and any limitation. A manual pass on an unidentifiable build is not durable evidence.
+Those later steps must remain future work; the narrower Implementation 4 pass must not be used to mark them complete.
 
 ## Failure policy
 
-A red gate is investigated, not disabled. If a pre-existing failure blocks validation, reproduce it, identify whether it is in scope, and either fix it in the narrowest appropriate implementation or record why a different existing gate provides sufficient proof for the scoped change. Never make CI green by deleting coverage for the behavior being changed, and never turn a baseline-equivalent failure into a claimed pass.
+A red gate is investigated, not disabled. Never make CI green by deleting coverage, weakening a valid expectation, or turning a baseline-equivalent failure into a claimed pass. Record what failed, establish causality, and use the smallest test that corresponds to the actual risk.
