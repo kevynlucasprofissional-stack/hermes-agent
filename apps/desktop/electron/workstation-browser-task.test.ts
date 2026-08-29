@@ -254,6 +254,36 @@ test('restart preserves metadata, normalizes it to parked, and lazily recreates 
   assert.equal(afterBrowser.pageCount(), 1)
 })
 
+test('persistence excludes page URLs and page-scoped secrets', () => {
+  const stateFile = tempStateFile()
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings, new BrowserTaskFilePersistence(stateFile))
+
+  lifecycle.createTask({ taskId: 'task-a' })
+  const page = browser.pages.get('task-a') as FakePage & { typedSecret?: string }
+  assert.ok(page)
+  page.url = 'https://example.test/account?access_token=page-secret'
+  page.typedSecret = 'typed-password-secret'
+  lifecycle.parkTask('task-a')
+
+  const persisted = fs.readFileSync(stateFile, 'utf-8')
+  assert.equal(persisted.includes('page-secret'), false)
+  assert.equal(persisted.includes('typed-password-secret'), false)
+  assert.deepEqual(Object.keys(JSON.parse(persisted).tasks[0]).sort(), [
+    'controlHost',
+    'createdAt',
+    'leaseState',
+    'localConnection',
+    'panelHost',
+    'parked',
+    'recoveryState',
+    'sessionHost',
+    'status',
+    'taskId',
+    'updatedAt'
+  ])
+})
+
 test('persistence prunes invalid and duplicate task metadata on restore', () => {
   const stateFile = tempStateFile()
   fs.writeFileSync(
