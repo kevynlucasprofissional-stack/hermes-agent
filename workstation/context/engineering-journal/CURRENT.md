@@ -74,33 +74,26 @@ The rule is not “never change architecture.” The rule is: **a replacement de
 
 ## Cross-track findings imported from prior investigations
 
-These findings came from the broader Hermes/Workstation investigation history and are kept here so the same reasoning errors are not repeated in later implementations.
-
 ### CT-001 — Preview is not proof of the Workstation Browser
 
 A real Desktop smoke was once reported as “Workstation Browser interno” after the agent called `open_preview` and `read_preview`. That was a **false-positive identity claim**.
 
 What that test actually proved:
-
 - the Desktop Preview surface could navigate/render/read the page;
 - Electron/Preview was functioning.
 
 What it did **not** prove:
-
 - `browser_navigate` existed in the session schema;
 - `browser_snapshot` existed in the session schema;
 - the Workstation `BrowserRuntime` handled the action;
 - a BrowserTask was created/bound;
 - Preview and Browser were the same page/runtime.
 
-A later test explicitly required `browser_navigate` + `browser_snapshot` and prohibited substitutes. Those native tools were absent, and the correct behavior was to report that absence rather than silently substitute Preview.
-
 **Anti-repeat rule:** acceptance criteria that name a tool/runtime must be proven by the **exact tool invocation and execution boundary**, not by visually similar output. A successful substitute is evidence for the substitute only.
 
 ### CT-002 — Real Desktop tool exposure can fail before BrowserTask
 
 A later real-environment investigation established this before-state:
-
 - the Capabilities UI showed **Browser Automation = ON**;
 - `coding_context = auto`;
 - `agent.disabled_toolsets = []`;
@@ -122,26 +115,13 @@ Capabilities UI
   → BrowserTask/runtime
 ```
 
-At the point captured by that investigation, the discrepancy existed **before BrowserTask**. Plausible explanations included optimistic UI state, wrong profile/scope persistence, or UI/backend reading different state, but those explanations were hypotheses until individually demonstrated.
-
-**Anti-repeat rule:** do not modify `createTask`, `showTask`, `hideTask`, `parkTask`, `destroyTask`, or BrowserTask persistence to fix a failure that occurs before the model receives `browser_*` tools.
-
-**Important scope distinction:** H-004 below directly validates the real Electron BrowserTask runtime and lifecycle. CT-002 concerns the higher-level **Hermes session/toolset path**. A direct runtime smoke can validate BrowserTask while the Chat/session tool-exposure path still requires its own regression evidence before anyone claims the full `Chat → browser_* → BrowserTask` chain is proven.
-
-Before a future full-path Chat/Desktop claim, prove in order:
-
-1. the selected profile/toolset state persists correctly;
-2. effective resolution includes `browser` where intended;
-3. a new Desktop session schema contains the required `browser_*` tools;
-4. the exact `browser_navigate` and `browser_snapshot` calls execute through the intended Workstation route;
-5. only then use that path as evidence for Chat-driven BrowserTask behavior.
+**Anti-repeat rule:** do not modify BrowserTask lifecycle/persistence to fix a failure that occurs before the model receives `browser_*` tools.
 
 ### CT-003 — Automated lifecycle tests and native lifecycle evidence are different claims
 
-At one point `CREATE → NAVIGATE → HIDE → SHOW → PARK → SHOW → DESTROY → RESTART` was interpreted through unit/runtime-adapter tests. Those tests were valuable, but passing mocks did not prove a real `WebContentsView`, native Windows process restart, or renderer identity behavior.
+Passing pure or mocked tests did not prove a real `WebContentsView`, native Windows process restart, or renderer identity behavior.
 
 The distinction is now explicit:
-
 - pure tests prove lifecycle logic/serialization;
 - mocked runtime tests prove adapter contracts;
 - build/typecheck proves compilation;
@@ -152,76 +132,39 @@ The distinction is now explicit:
 
 ### CT-004 — CI must test committed source, not an auto-repaired checkout
 
-An earlier Workstation install path could mutate/repair tracked source before validation. That creates a dangerous false green: the test harness can hide a missing downstream integration by fixing it before testing it.
+An earlier Workstation install path could mutate/repair tracked source before validation, creating a false-green risk.
 
-The durable policy is:
-
+Durable policy:
 - committed downstream source is canonical;
-- normal install validates integration in read-only/check mode;
-- installer/runtime state lives outside tracked source where appropriate;
+- normal install validates integration read-only;
+- runtime state lives outside tracked source where appropriate;
 - install must not dirty the checkout;
 - migration/rebase helpers are separate from normal validation.
 
-**Anti-repeat rule:** a validator that first repairs the thing being validated cannot prove the committed tree was correct.
-
 ### CT-005 — A red broad Windows gate needs causality, not storytelling
 
-Broad Desktop suites exposed Windows portability/test assumptions that pre-existed some Workstation changes. The correct response was not to call every red a regression, nor to dismiss every red as baseline.
-
 Durable method:
-
-1. reproduce the exact base and candidate;
+1. reproduce exact base and candidate;
 2. same OS/toolchain/dependency install/commands;
 3. compare failure **signatures/classes**, not only counts;
-4. keep scoped outcomes independently visible so one suite does not mask another;
-5. preserve a final red aggregator when any required broad suite is red;
-6. never delete/allowlist coverage merely to manufacture green.
-
-A baseline-equivalent failure can establish non-causality for a scoped change. It does **not** turn the broad gate into a pass.
+4. keep scoped outcomes independently visible;
+5. preserve final red when any required broad suite is red;
+6. never delete/allowlist coverage to manufacture green.
 
 ### CT-006 — GUI/browser surface identity belongs to the session
 
-Implementation 3 corrected a deeper modeling mistake: whether a Desktop/GUI session should know a surface is a property of the **session/platform contract**, not of `HERMES_DESKTOP` or another process-global environment proxy.
-
-Likewise:
-
-- controller reachability answers “can execution happen now?”;
-- it must not answer “does this valid Desktop surface exist?”;
-- process-wide cached `check_fn` results must not encode per-session surface identity;
-- tool-definition caching must include the relevant session-surface capability so Desktop results cannot leak into TUI/CLI.
-
-**Anti-repeat rule:** always ask which identity/scope owns a fact — process, profile, Hermes session, BrowserTask, renderer/view, or runtime health — before choosing where to store/cache/gate it.
+Implementation 3 established:
+- GUI/Desktop surface identity is session/platform state, not a process-global env proxy;
+- controller reachability is execution state, not surface existence;
+- tool-definition caching must include session-surface capability to avoid Desktop↔TUI leakage.
 
 ### CT-007 — Old BrowserClaw experiments are historical motivation, not the current architecture
 
-Earlier BrowserClaw automation demonstrated useful capabilities but also exposed the operational problems that motivated deeper Workstation integration: external browser identity, context recovery, unclear continuation state, and brittle separation between the agent's task and the browser session.
-
-Treat those experiments as evidence for product requirements and failure modes, not as a reason to reintroduce BrowserClaw as the primary Workstation browser after the internal-runtime decision.
-
-For long-running autonomous work, the workflow itself should define:
-
-- objective/completion condition;
-- current state/checkpoint;
-- next materially relevant action;
-- evidence required to call the task complete;
-- recovery/abort conditions.
-
-For an assigned multi-step objective, “there is no new user message” is not itself a completion condition. Continue until the objective is satisfied or a real blocking boundary is reached, while recording checkpoints instead of turning checkpoints into stop points.
+Earlier BrowserClaw experiments inform requirements/failure modes; they are not permission to reintroduce BrowserClaw as the primary Workstation browser after the internal-runtime decision.
 
 ## Long-term product north star — context, not current scope
 
-The broader automation plans explain why this browser foundation matters. The intended direction is Hermes as a persistent **execution/orchestration layer** for recurring work: reports, task/Kanban analysis and organization, browser workflows, reusable agent profiles, and other repeatable processes.
-
-The durable workflow-design lessons from those plans are:
-
-- define the user-facing workflow before choosing architecture;
-- modularize reusable capabilities as skills/contracts rather than one giant prompt;
-- make workflows increasingly deterministic where possible;
-- each workflow should define prerequisites, inputs, procedure, per-step validation, expected result, known failures, recovery/abort behavior, and evidence;
-- separate execution state from domain state;
-- the more deterministic the operational procedure becomes, the less it depends on an expensive model improvising every step.
-
-This is the **north star**, not permission for scope creep. During the browser-foundation phase, do not jump ahead into complete Kanban automation, Execution Reports, LAN/mobile, Browser Memory, Perception Engine V2, Browser4, Lightpanda, or domain-specific agent workflows before the foundation gates in the roadmap are satisfied.
+The broader direction is Hermes as a persistent execution/orchestration layer for recurring work. This remains a north star, not permission for scope creep into full Kanban automation, Execution Reports, LAN/mobile, Browser Memory, Perception Engine V2, Browser4, Lightpanda, or domain workflows before browser-foundation gates are satisfied.
 
 ## Objective
 
@@ -235,22 +178,20 @@ Required native lifecycle contract:
 
 The Implementation 4 BrowserTask lifecycle contract is **technically validated** on real Windows/Electron/Chromium.
 
-Native evidence was produced by `probes/h004-native-browser-task-smoke.mjs` at repository head `d8acc752133b125b9619cbc7fe09199f1283a22b`, with the BrowserTask product code still byte-equivalent to the registered code-bearing ancestor `1ac0e0a9...`.
+Native evidence was produced by `probes/h004-native-browser-task-smoke.mjs` at repository head `d8acc752133b125b9619cbc7fe09199f1283a22b`, with BrowserTask product code byte-equivalent to registered code-bearing ancestor `1ac0e0a9...`.
 
-Observed environment:
-- Windows release: `10.0.26200`;
-- outer Node: `v24.14.1`;
-- Electron: `40.10.2`;
-- Electron embedded Node: `24.15.0`.
+Environment:
+- Windows release `10.0.26200`;
+- outer Node `v24.14.1`;
+- Electron `40.10.2`;
+- Electron embedded Node `24.15.0`.
 
-Observed native result:
+Result:
 - `H004_LIVE_DESTROY_PASS`;
 - `H004_RESTART_PASS`;
 - `H004_CLASSIFICATION=VALIDATED`.
 
-No product fix was required by the native investigation. The repeated pre-H004 failures were validation-harness defects, not BrowserTask defects.
-
-Promotion is still a separate integration step: canonical docs must be finalized, the final PR head must be proven code-equivalent to the smoke SHA for the relevant product/probe paths, automated gates must be observed on the final head, and the PR must pass one last audit before merge.
+No product fix was required by the native investigation. Pre-H004 failures were validation-harness defects, not BrowserTask defects.
 
 ## Hypothesis ledger
 
@@ -258,23 +199,13 @@ Promotion is still a separate integration step: canonical docs must be finalized
 
 Classification: **REFUTED**.
 
-Evidence:
-- V9 printed `HARNESS_BOOT` but never `HARNESS_READY`;
-- BrowserTask runtime import occurred only after `await app.whenReady()`.
-
-Conclusion: the timeout happened before BrowserTask product code executed.
+Evidence: V9 printed `HARNESS_BOOT` but never `HARNESS_READY`; product runtime import had not occurred.
 
 ### H-002 — Electron 40.10.2 / Windows cannot reach `app.ready`
 
 Classification: **REFUTED**.
 
-Evidence:
-- bare Electron CommonJS probe ran on the target machine;
-- inherited `ELECTRON_*` variables: none;
-- workspace Electron 40.10.2 reached ready and created a real BrowserWindow;
-- exit code 0.
-
-Conclusion: general Windows/Electron startup is healthy.
+Evidence: bare Electron readiness probe reached ready and created a BrowserWindow with exit code 0.
 
 ### H-003 — V9 readiness stall is caused by top-level `await app.whenReady()` in its ESM main path
 
@@ -282,12 +213,11 @@ Classification: **VALIDATED**.
 
 Experiment: `probes/h003-esm-ready.mjs`.
 
-Paired-control evidence on the exact target environment:
-- TLA case: `H003_TLA_BOOT` → `H003_TLA_INTERNAL_TIMEOUT`; exit 3;
-- `.then(...)` case: `H003_THEN_BOOT` → `H003_THEN_READY` → BrowserWindow → PASS; exit 0;
-- classification: `H003_CLASSIFICATION=VALIDATED`.
+Evidence:
+- TLA case: boot → internal timeout; exit 3;
+- `.then(...)` case: boot → ready → BrowserWindow → PASS; exit 0.
 
-Conclusion: V9 was a harness bootstrap defect. The Workstation runtime already uses non-blocking `void app.whenReady().then(...)`, so no product fix was justified.
+Conclusion: V9 was a harness bootstrap defect. Product runtime already uses non-blocking readiness registration.
 
 ### H-004 — With the validated readiness bootstrap, the real BrowserTask lifecycle satisfies the Implementation 4 acceptance contract
 
@@ -298,52 +228,63 @@ Experiment: `probes/h004-native-browser-task-smoke.mjs`.
 #### A — live page identity
 
 Observed:
-- task: `impl4-h004-live-task`;
-- tab id remained `a27236b9-4aaf-4adc-9556-7ee14f5c4274`;
-- real `webContentsId` remained `3`;
-- owner page count remained exactly `1`;
-- URL remained the same through hide/show and park/show;
-- renderer sentinel remained the same through hide/show and park/show;
-- `hideTask` changed logical status to `hidden` without destroying the page;
-- `parkTask` changed logical status to `parked` without destroying the page;
-- re-exposure did not perform replacement navigation.
-
-Result: `H004_LIVE_DESTROY_PASS` after the destroy phase.
+- task `impl4-h004-live-task`;
+- tab id stayed `a27236b9-4aaf-4adc-9556-7ee14f5c4274`;
+- real `webContentsId` stayed `3`;
+- owner page count stayed `1`;
+- URL and renderer sentinel survived hide/show and park/show;
+- hide produced logical `hidden` without destroying page;
+- park produced logical `parked` without destroying page.
 
 #### B — explicit destroy
 
 Observed:
-- `destroyTask` returned `true`;
-- prior real WebContents reported destroyed;
-- task no longer listed;
-- remaining task-owned tabs: `0`;
-- no replacement page appeared.
-
-Result: PASS.
+- `destroyTask` returned true;
+- prior WebContents destroyed;
+- task not listed;
+- zero remaining task-owned tabs;
+- no automatic replacement page.
 
 #### C — real process restart / logical recovery
 
 Process 1:
 - PID `30968`;
-- task `impl4-h004-restart-task` persisted as `parked` / `fresh` before exit;
-- structural state path was under the isolated temporary Workstation root;
-- URL secret and renderer secret were absent from BrowserTask structural persistence.
+- task persisted as `parked` / `fresh`;
+- structural persistence contained neither page URL secret nor renderer secret.
 
 Process 2:
-- PID `37440` (different OS process);
-- same logical task restored as `parked` / `recoveryState: restored`;
-- task-owned page count before first show: `0`;
-- first show created exactly one task-owned page;
-- same logical task id retained;
-- `recoveryState` became `recreated`;
-- resulting `ownerTaskId` matched `impl4-h004-restart-task`.
+- PID `37440`;
+- same task restored `parked` / `restored`;
+- zero eager task pages before show;
+- first show created exactly one task page;
+- same task id retained;
+- recovery became `recreated`.
 
-Result:
-- `H004_RESTART_PASS`;
-- `H004_CLASSIFICATION=VALIDATED`;
-- conclusion emitted by probe: real Electron BrowserTask lifecycle passed live identity, explicit destroy, real restart, lazy logical recovery, and structural secret-isolation checks.
+Practical conclusion: **Implementation 4 native lifecycle acceptance behavior is proven.**
 
-Practical conclusion: **Implementation 4's native lifecycle acceptance behavior is proven.**
+### H-005 — Final Workstation CI red after documentation closure represented a BrowserTask/product regression
+
+Origin: final-head `Workstation CI` run `33265646758` failed after H-004 and documentation closure.
+
+Expected if product regression:
+- failing contract would involve BrowserTask/runtime behavior, integration anchors, or code paths affected by Implementation 4.
+
+Refuting evidence:
+- `core-patch-dry-run` passed;
+- 23/24 Workstation contract tests passed;
+- the sole failure was `test_context_separates_current_state_from_target_and_known_issues`;
+- failure fingerprint: missing literal heading `## Not implemented yet` in `CURRENT_STATE.md` after a documentation rewrite combined the tested sections.
+
+Classification: **REFUTED AS PRODUCT REGRESSION / VALIDATED AS DOCUMENTATION CONTRACT REGRESSION**.
+
+Correction:
+- restore separate canonical headings `## Partially implemented` and `## Not implemented yet`;
+- do not weaken the test.
+
+Anti-repeat implication:
+- canonical documentation has executable contracts too;
+- before restructuring canonical headings/sections, inspect `workstation/tests/test_context_docs.py` and related context contract tests;
+- a documentation-only change is still capable of failing CI and must go through the same verification loop.
 
 ## Experiment / failure ledger
 
@@ -354,78 +295,80 @@ Practical conclusion: **Implementation 4's native lifecycle acceptance behavior 
 | E-003 | PowerShell parameter `$Args` | Arguments swallowed; tools printed usage | Harness defect | Never shadow automatic `$Args`. |
 | E-004 | native stderr + `$ErrorActionPreference='Stop'` | Normal esbuild stderr became `NativeCommandError` | Harness defect | stderr is not failure; gate on exit status. |
 | E-005 | `Start-Process` exit code on Windows PowerShell 5.1 | successful run exposed unusable/null exit status | Harness defect | Prefer Node `child_process` for native orchestration. |
-| E-006 | arbitrary bundled `.mjs` as Electron target | launch did not prove valid app-entry semantics | Harness defect | Use a valid Electron app directory (`package.json` + main). |
-| E-007 | V9 + top-level `await app.whenReady()` | boot marker printed; ready marker never printed; timeout | Harness defect | Never attribute pre-runtime timeout to BrowserTask. |
+| E-006 | arbitrary bundled `.mjs` as Electron target | launch did not prove valid app-entry semantics | Harness defect | Use a valid Electron app directory. |
+| E-007 | V9 + top-level `await app.whenReady()` | boot marker printed; ready marker never printed | Harness defect | Never attribute pre-runtime timeout to BrowserTask. |
 | E-008 | H-002 bare CommonJS readiness | ready + BrowserWindow succeeded | Control evidence | General Electron/Windows startup is healthy. |
 | E-009 | H-003 ESM paired control | TLA fails; `.then(...)` passes | Root-cause evidence | Register readiness non-blockingly on this Windows/Electron path. |
-| E-010 | H-004 real BrowserTask lifecycle | live identity, explicit destroy, two-process restart, lazy recovery and secret isolation all pass | Acceptance evidence | Use this versioned probe for future regression reproduction; do not reconstruct ad hoc runners. |
-| E-011 | `open_preview`/`read_preview` described as Workstation Browser validation | visually successful page was the Preview lane, not proof of `browser_*`/BrowserTask | False-positive validation | Tool/runtime identity must come from the actual call/result boundary, not narrative or visual similarity. |
-| E-012 | exact `browser_navigate` + `browser_snapshot` requested while absent | correct run stopped instead of substituting Preview/Computer Use/web search | Correct fail-closed test behavior | When acceptance names an exact capability, absence is a result; do not substitute and call it passed. |
-| E-013 | hypothesis that coding focus removed Browser | real environment showed `coding_context=auto` | Refuted hypothesis | Record refutations explicitly; do not preserve a plausible explanation after direct configuration evidence contradicts it. |
-| E-014 | Capabilities UI ON while persisted/resolved CLI toolsets lacked `browser` | new Desktop session lacked native browser tools | Cross-layer integration discrepancy; root cause not proven in captured evidence | Trace UI → API → profile persistence → resolution → session schema before changing downstream runtime behavior. |
-| E-015 | lifecycle unit/adapter tests treated as if they were the requested native smoke | mocks passed but native Electron restart/page identity remained unproven at that time | Evidence-boundary error | Match each claim to the lowest layer that can actually observe it; H-004 later supplied native proof. |
-| E-016 | normal installer repaired tracked integration before validation | mutated checkout could hide missing committed integration | Resolved validation-design defect | Test the committed tree; keep migration/repair paths separate and assert checkout cleanliness. |
-| E-017 | broad Windows red status interpreted without exact baseline causality | candidate and base shared failure classes; runner counts could differ | Causality/diagnostic lesson | Use controlled A/B and failure signatures; baseline-equivalent red is still red. |
-| E-018 | GUI surface capability tied to process env/reachability/cache | valid Desktop tool surface could disappear or leak across session types | Resolved ownership-model defect | Surface identity is session-scoped; reachability is execution state; process-wide cache cannot encode per-session identity. |
+| E-010 | H-004 real BrowserTask lifecycle | live identity, explicit destroy, two-process restart, lazy recovery, secret isolation all pass | Acceptance evidence | Reuse the versioned probe; do not reconstruct ad hoc runners. |
+| E-011 | Preview described as Workstation Browser validation | visually successful page was wrong lane | False-positive validation | Exact tool/runtime boundary, not visual similarity, proves identity. |
+| E-012 | exact `browser_navigate` + `browser_snapshot` requested while absent | test correctly stopped rather than substituting | Correct fail-closed behavior | Capability absence is a result; do not substitute and call it passed. |
+| E-013 | coding focus blamed for Browser absence | environment showed `coding_context=auto` | Refuted hypothesis | Remove plausible explanations after direct contradiction. |
+| E-014 | Capabilities UI ON but resolved CLI toolsets lacked `browser` | new Desktop session lacked tools | Cross-layer discrepancy | Trace UI → API → persistence → resolution → schema before changing runtime. |
+| E-015 | unit/adapter lifecycle tests treated as native smoke | mocks could not prove native restart/page identity | Evidence-boundary error | Match claim to observing layer; H-004 later supplied native proof. |
+| E-016 | installer repaired source before validation | mutated checkout could hide missing committed integration | Resolved validation-design defect | Test committed tree; keep repair/migration separate. |
+| E-017 | broad Windows red interpreted without exact baseline | base/candidate shared failure classes | Causality lesson | Controlled A/B + signatures; baseline-equivalent red remains red. |
+| E-018 | GUI capability tied to process env/reachability/cache | Desktop surface could disappear/leak across session types | Resolved ownership-model defect | Session-scoped surface identity; runtime reachability is execution state. |
+| E-019 | documentation rewrite removed tested canonical heading | Workstation CI failed 1/24 although product code unchanged | Documentation contract regression | Inspect context-doc tests before restructuring canonical docs; documentation-only commits still require CI. |
 
 ## Stable anti-patterns / rules learned
 
 1. Do not change product code because a validation harness failed before reaching the product boundary.
 2. Instrument explicit markers at process boot, Electron ready, product import and each lifecycle milestone.
-3. Prefer one orchestration layer with explicit timeout/exit semantics; on Windows this track uses Node `child_process`, not stacked PowerShell wrappers.
+3. Prefer one orchestration layer with explicit timeout/exit semantics; on Windows use Node `child_process`, not stacked PowerShell wrappers.
 4. Compare against a smallest known-good control and vary one material factor at a time.
 5. Build success proves compilation only; process launch proves launch only; require behavior evidence.
 6. Do not use top-level `await app.whenReady()` in native Workstation validation harnesses on the current Windows/Electron target.
 7. Never repeat an experiment unless the materially changed input/assumption is recorded here first.
-8. Never call `close-tab` or a UI X equivalent to `destroyTask`; explicit BrowserTask destruction is tested through `destroyTask`.
+8. Never call `close-tab` or UI X equivalent to `destroyTask`; test explicit task destruction directly.
 9. Do not use Task Manager PID disappearance as the canonical destroy invariant; use WebContents destruction + ownership/state evidence.
-10. Once a reusable regression probe exists, improve that probe rather than creating an untracked replacement unless the old probe cannot represent the new hypothesis.
-11. A smoke result may be carried to a later documentation-only SHA only after a Git comparison proves that the relevant product code and the executed probe are unchanged; record that equivalence explicitly.
-12. Do not infer tool/runtime identity from where content appeared on screen. Inspect the exact tool invocation, route/backend, returned runtime/task/tab identifiers, and product boundary.
-13. Do not substitute Preview, web search, Browser Use, Computer Use, or another browser lane when a test explicitly requires Workstation `browser_*`; report capability absence instead.
-14. Never confuse Preview with the Workstation Browser while they remain separate lanes. `open_preview`/`read_preview`/`drive_preview` are compatibility/UI contracts, not evidence of BrowserTask unless/until the architecture actually routes them onto the unified runtime.
-15. Before fixing a symptom, locate the first broken boundary in the chain. A BrowserTask change cannot repair a tool that never entered the session schema.
-16. Always label statements as observed fact, hypothesis, inference, or proven cause. A plausible hypothesis must be removed/reclassified when contradicted by evidence.
-17. Typecheck, unit tests, mocked runtime tests, native smoke, and full E2E are different evidence classes. Never promote one into another by wording.
-18. A UI toggle is not proof that backend configuration persisted. Read the API/config/profile and the consumer's resolved state.
-19. Session-scoped capability, process-scoped environment, BrowserTask-scoped identity, profile-scoped browser state, and renderer-scoped page state are different lifetimes. Name the owner before storing, caching, or restoring state.
-20. Do not create parallel SessionDB/Kanban/Memory/browser state/control planes to make integration easier. Extend existing owners and preserve one source of truth.
-21. Do not “sync” two independently navigated browser pages to imitate a shared BrowserTask. Fix ownership/hosting so there is one live semantic page.
-22. Profile persistence and BrowserSessionState are different. Cookies/localStorage/IndexedDB belong to the browser profile; safe logical task/tab metadata belongs to Workstation state; renderer object identity never survives process restart.
-23. Bound BrowserTasks fail closed. Do not silently fail over to a runtime with different page/auth state after binding.
-24. Never allow installation/CI to auto-heal tracked source before validation. The committed tree is what must be proven.
-25. A broad pre-existing red gate is investigated with controlled baseline/candidate evidence; it is never hidden, disabled, or relabeled green.
-26. Keep diagnostic suites independent enough that one failure does not prevent collecting evidence from another, but preserve a final failing outcome when any required suite fails.
-27. Prefer extending existing primitives (`taskTabs`, `ownerTaskId`, Hermes Sessions/Kanban/Memory/tool registry) over inventing a second abstraction that owns the same state.
-28. Do not reopen superseded architecture debates merely because an older context recommended them. Verify the latest canonical decision and the material evidence that would be needed to replace it.
-29. One implementation/hypothesis cycle at a time: reproduce/define the gap → isolate responsibility → smallest complete change → focused validation → corrections in loop → regressions → exact-SHA gates → documentation → only then next implementation.
-30. In TDD corrective work, RED must fail for the intended reason; GREEN is the smallest fix; REFACTOR comes only after green. Do not refactor while the causal test is still red.
-31. A checkpoint is memory, not a stop condition. Continue the assigned investigation/implementation until the objective is resolved or a genuine blocking boundary is demonstrated.
-32. Before claiming a full Workstation browser path, separately prove configuration persistence, session schema exposure, exact tool execution, BrowserTask behavior, host/view unification, restart recovery, and profile persistence. Passing one does not imply the others.
+10. Once a reusable regression probe exists, improve that probe rather than creating an untracked replacement unless necessary.
+11. Carry native smoke to a later documentation-only SHA only after Git proves relevant product/probe code unchanged.
+12. Do not infer tool/runtime identity from screen location; inspect actual invocation/route/runtime identifiers.
+13. Do not substitute Preview/web search/other browser lane when acceptance explicitly requires Workstation `browser_*`.
+14. Never confuse Preview with Workstation Browser while separate lanes remain.
+15. Locate the first broken boundary before fixing downstream components.
+16. Label statements observed fact / hypothesis / inference / proven cause; reclassify when contradicted.
+17. Typecheck, unit, mocked runtime, native smoke, and full E2E are distinct evidence classes.
+18. A UI toggle is not proof backend configuration persisted.
+19. Session, process, BrowserTask, profile, and renderer state have different owners/lifetimes; name owner before storing/caching/restoring.
+20. Do not create parallel SessionDB/Kanban/Memory/browser state/control planes.
+21. Do not synchronize duplicate browser pages by URL to imitate a shared BrowserTask; fix ownership.
+22. Profile persistence and BrowserSessionState are different; renderer object identity never survives process restart.
+23. Bound BrowserTasks fail closed; do not silently switch to a different stateful runtime.
+24. Never allow install/CI to auto-heal tracked source before validation.
+25. Broad pre-existing red requires controlled baseline/candidate evidence and remains red until fixed.
+26. Keep diagnostic suites independent enough to collect evidence, while preserving final failure when required suites fail.
+27. Prefer extending existing primitives over creating duplicate state owners.
+28. Do not reopen superseded architecture debates without material new evidence.
+29. One implementation/hypothesis cycle at a time: reproduce → isolate → smallest complete change → focused validation → correction → regressions → exact-SHA gates → docs → next.
+30. In TDD corrective work, RED fails for intended reason; GREEN is smallest fix; REFACTOR only after green.
+31. A checkpoint is memory, not a stop condition.
+32. Before claiming a full Workstation browser path, separately prove configuration persistence, session schema exposure, exact tool execution, BrowserTask behavior, host/view unification, restart recovery, and profile persistence.
+33. Canonical documentation is part of the tested product contract. Before renaming/removing required headings, fields, tables, or markers, inspect `workstation/tests` for structural assertions and run the relevant contracts after the edit.
 
 ## Remaining promotion work
 
-1. Update canonical `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, `TESTING.md`, and `UPSTREAM_DELTA.md` with the accepted evidence/boundary.
-2. Freeze documentation/tooling.
-3. Compare the final head against `d8acc752...`; only documentation changes may differ if H-004 evidence is carried forward.
-4. Observe Workstation/Docker/focused Windows outcomes on the exact final head; keep broad KI-006 failures red/classified rather than hidden.
-5. Perform final PR audit for scope, invariants, upstream delta and unresolved material review issues.
-6. Mark PR ready and merge only if all promotion gates are satisfied.
+1. Freeze documentation/tooling after correcting E-019.
+2. Compare the final head against `d8acc752...`; only documentation changes may differ if H-004 evidence is carried forward.
+3. Observe Workstation/Docker/focused Windows outcomes on the exact final head; keep broad KI-006 failures red/classified rather than hidden.
+4. Perform final PR audit for scope, invariants, upstream delta and unresolved material review issues.
+5. Mark PR ready and merge only if all promotion gates are satisfied.
 
 ## Continuous update protocol
 
-Before an experiment:
-- register hypothesis/experiment ID;
-- state confirming and refuting evidence;
+Before an experiment/change:
+- register hypothesis/experiment ID when causal uncertainty exists;
+- state confirming/refuting evidence;
 - identify the product boundary marker;
-- search this journal for the same fingerprint, premise, tool boundary, or already-refuted hypothesis;
+- search this journal for the same fingerprint/premise/already-refuted hypothesis;
+- inspect relevant executable contracts, including documentation contracts, before restructuring tested surfaces;
 - state what material input changed if repeating a prior approach.
 
 Immediately after:
 - record exact output/error fingerprint;
 - classify the hypothesis (`VALIDATED`, `PARTIAL`, `REFORMULATED`, `REFUTED`, `INCONCLUSIVE`);
 - record practical implication;
-- identify the next materially relevant hypothesis/action;
-- promote stable product truth into the appropriate canonical document instead of leaving it only here.
+- identify the next materially relevant action;
+- promote stable product truth into canonical docs instead of leaving it only here.
 
 No experiment is complete until this file is updated. A checkpoint is never permission to stop; it is memory for the next action.
