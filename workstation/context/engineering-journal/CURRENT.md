@@ -1,7 +1,7 @@
 # CURRENT — Workstation Engineering Journal
 
 Last updated: 2026-08-30
-Active track: Implementation 4 — **PROMOTED / RESOLVED**; no Implementation 5 work has started in this journal
+Active track: WP-01 / Implementation 5 — BrowserSessionState core authority and persistence
 Repository: `kevynlucasprofissional-stack/hermes-agent`
 Historical milestone branch: `impl4-browser-task-lifecycle`
 Code-bearing BrowserTask ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
@@ -164,6 +164,405 @@ Earlier BrowserClaw experiments inform requirements/failure modes; they are not 
 ## Long-term product north star — context, not current scope
 
 The broader direction is Hermes as a persistent execution/orchestration layer for recurring work. This remains a north star, not permission for scope creep into full Kanban automation, Execution Reports, LAN/mobile, Browser Memory, Perception Engine V2, Browser4, Lightpanda, or domain workflows before browser-foundation gates are satisfied.
+
+## WP-01 / Implementation 5 objective — active
+
+Complete the canonical BrowserSessionState foundation beyond BrowserTask-only
+metadata while preserving the current live-page owners and avoiding a second
+page store, SessionDB, Kanban, or control plane.
+
+Operational base verification on 2026-08-30:
+
+- the initially checked local `main` ref was stale at
+  `ce78f120e8ed2974d6174e475cc7572afcfe41e0`;
+- after fetching, `origin/main` resolved to the packet base
+  `46a6ef9e257b4add01d6eb7f2a95a82bb433ee89`;
+- branch `wp/codex/browser-session-state-core` was created directly from that
+  verified remote ref without moving local `main`.
+
+Scope boundary: ordinary logical tabs, order, active logical/generic tab, safe
+URL/title metadata, BrowserTask relationship, available identity linkage, and
+explicit recovery metadata/policy. Chat Browser View, Browser Hub, Preview
+unification, host transfer, SessionDB/Gateway semantics, Kanban implementation,
+LAN/Tailscale, Browser Memory, and KI-007 remain out of scope.
+
+### H-007 — BrowserSessionState can be a safe structural projection of existing authorities
+
+Origin: WP-01 requires restart-safe logical browser state beyond the promoted
+BrowserTask metadata, but forbids a second live-page owner.
+
+Hypothesis:
+
+- `entries`, `taskTabs`, and `activeTabId` remain authoritative for live
+  process-local pages, task bindings, ordering, and active page;
+- `BrowserTaskLifecycle` remains authoritative for logical task lifecycle and
+  task identity/linkage metadata;
+- the Chromium profile remains authoritative for browser-managed site/auth
+  state;
+- a versioned BrowserSessionState file can persist only a sanitized structural
+  projection of those owners and restore logical intent without serializing or
+  owning `WebContentsView`, `WebContents`, renderer heap, or process identity.
+
+Experiment (registered before code inspection):
+
+1. trace every mutation/read of `entries`, `taskTabs`, `activeTabId`, and
+   `BrowserTaskLifecycle` on exact `origin/main`;
+2. inspect current persistence, recovery, and BrowserTask regression tests;
+3. classify each field as process-, BrowserTask-, BrowserSessionState-,
+   Hermes-session-, or Chromium-profile-scoped;
+4. derive the smallest persistence/migration seam that writes atomically and
+   reconciles through the existing runtime owners;
+5. define adversarial URL/title inputs whose credentials, secret markers, or
+   sensitive content must fail closed before entering structural JSON.
+
+Confirming evidence:
+
+- no existing durable ordinary-tab owner exists;
+- one snapshot can be built from current owners and restored through their
+  existing mutation paths;
+- task-owned tabs reconcile by `taskTabs`/`ownerTaskId` without duplicate pages;
+- corrupt/unknown versions are ignored safely and atomic replacement preserves
+  the last valid snapshot.
+
+Refuting/reformulating evidence:
+
+- another durable owner already exists for any proposed field;
+- restoration would require a second `WebContentsView` map or independent task
+  binding;
+- raw URL/title persistence cannot be bounded by an explicit safe-metadata
+  policy;
+- any required change crosses SessionDB, Gateway, Kanban, Preview, or host/UI
+  ownership.
+
+Classification: **VALIDATED**.
+
+Observed authority trace on exact base `46a6ef9e257b4add01d6eb7f2a95a82bb433ee89`:
+
+- `WorkstationBrowserRuntime.entries` is the sole process-local live-page map.
+  Its `Map` insertion order is the current tab order, and each `BrowserEntry`
+  exclusively owns one `WebContentsView` plus live loading/crash state.
+- `taskTabs` is the task id → live tab id index; `BrowserEntry.ownerTaskId` is
+  the reciprocal ownership marker. `createTab(..., ownerTaskId)` and
+  `rawEntryForTask()` reconcile stale/destroyed mappings through those two
+  primitives and never allocate a second live page for the same task.
+- `activeTabId` is the sole process-local physical active-tab pointer. Attach,
+  navigation and UI state derive from it; it is cleared when its entry is
+  discarded or destroyed.
+- `BrowserTaskLifecycle.tasks` owns logical BrowserTask status, recovery and
+  available linkage (`panelHost`, `controlHost`, `sessionHost`,
+  `localConnection`, `leaseState`). Its version-1 `browser-tasks.json` is the
+  only durable state on the base, and it deliberately contains no page URL,
+  title, renderer object, or typed/page secret.
+- `session.fromPath(workstationBrowserProfilePath(), { cache: true })` owns the
+  dedicated Chromium profile: cookies, localStorage, IndexedDB, cache and
+  compatible browser authentication. It is not BrowserSessionState.
+- request `session_id` reaches the Desktop controller, but the base runtime does
+  not currently mutate SessionDB/Gateway semantics with it. WP-01 therefore
+  preserves available BrowserTask linkage without inventing missing
+  SessionDB/run/Kanban authority.
+
+Scope classification:
+
+- process-scoped: `WebContentsView`, `WebContents`, renderer heap/process
+  identity, `entries`, `taskTabs`, physical `activeTabId`, loading/crash flags,
+  attach/bounds/control-server handles;
+- BrowserTask-scoped: task id, lifecycle status/parked state, task recovery,
+  task timestamps and available host/session/connection/lease linkage;
+- BrowserSessionState-scoped: logical tab ids, ordinary/task relationship,
+  structural order, active logical/generic tab, sanitized URL/title metadata,
+  and explicit page-recreation policy/status;
+- Hermes-session-scoped: the externally supplied Hermes session identity and
+  its SessionDB/Gateway lineage remain owned outside this runtime; WP-01 only
+  preserves an already-available linkage string inside BrowserTask metadata;
+- Chromium-profile-scoped: site storage, cookies, cache, browser auth and other
+  Chromium-managed data under the dedicated profile path.
+
+Minimal persistence/migration conclusion:
+
+1. introduce one versioned `browser-session.json` containing sanitized logical
+   tab state plus the existing BrowserTask snapshot;
+2. expose a BrowserTask persistence adapter over that same atomic file, so
+   `BrowserTaskLifecycle` remains the in-memory task authority and no second
+   BrowserTask JSON source remains active;
+3. import valid version-1 `browser-tasks.json` only when
+   `browser-session.json` is absent, atomically commit the composite state, then
+   remove the legacy file; never fall back to stale legacy data when a new file
+   exists but is corrupt or from an unknown version;
+4. restore ordinary tabs by recreating new process objects in persisted order,
+   while BrowserTask tabs remain metadata-only recovery hints until the promoted
+   lifecycle lazily recreates exactly one page;
+5. derive every subsequent snapshot from current runtime/lifecycle owners;
+   temporary restart hints contain structural metadata only and never own a
+   page object.
+
+Security conclusion:
+
+- URL metadata is safe only after an explicit allowlist/sanitization step:
+  `about:blank` or HTTP(S), no userinfo, no query/fragment, bounded length, and
+  rejection of credential/secret/session markers or opaque token-like path
+  material;
+- title metadata is safe only after bounded normalization and rejection of
+  controls, URLs/email-like data, secret markers, assignments and opaque
+  token-like material;
+- unsafe URL/title values become `null`/blank recovery metadata; raw values are
+  never copied into structural JSON.
+
+Practical implication: H-007 supports the scoped implementation; it does not
+justify changes to SessionDB, Gateway, Kanban, Preview, UI hosts, LAN, or KI-007.
+
+### H-008 — Composite persistence and owner-driven reconciliation satisfy WP-01
+
+Hypothesis:
+
+- a standalone, pure BrowserSessionState serializer/persistence module plus a
+  narrow runtime adapter can cover ordinary tab/order/active restoration,
+  BrowserTask coexistence, safe metadata and restart reconciliation without
+  changing any current live-page or lifecycle authority;
+- adversarial serialization and runtime restart tests can prove that secret
+  material and Electron process objects never enter the JSON and that task
+  pages remain singular/lazy.
+
+Confirming evidence: focused pure/runtime tests cover ordinary/order/active,
+safe URL/title, unknown/corrupt version, atomic replacement failure, legacy
+migration, BrowserTask coexistence/no duplicates, restart, secret exclusion and
+stale/crashed reconciliation while all promoted BrowserTask regressions remain
+green.
+
+Refuting evidence: duplicate task pages, eager task-page resurrection, loss of
+ordinary order/active state, raw secret markers in JSON, two independently
+writable task files after migration, or any required cross-scope change.
+
+Classification: **ACTIVE — REGISTERED BEFORE PRODUCT CHANGE**.
+
+Product boundary marker: product edits are limited to the Electron runtime,
+BrowserTask persistence seam, a dedicated BrowserSessionState module/tests, and
+the branch-local engineering journal.
+
+#### H-008 experiment 1 — focused pure/runtime gate
+
+Command:
+
+`npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts`
+
+Sandbox result: runner bootstrap failed before tests with `spawn EPERM`; this was
+a sandbox subprocess restriction, not product evidence. The identical command
+was rerun with approved process execution.
+
+Executed result: **24 passed / 4 failed across 3 files**; the new pure
+BrowserSessionState file and promoted pure BrowserTask file both passed. All
+four failures were isolated to the runtime adapter:
+
+1. three restored safe-title assertions received `New Tab` because the fake
+   WebContents emits `did-navigate` before any page title and
+   `updateEntrySafeMetadata()` replaced the persisted safe title with `null`;
+2. same-process crashed BrowserTask recovery reused the pending logical tab id,
+   while the promoted regression requires a visibly new replacement tab/page id
+   after a crash (`assert.notEqual(owned[0].id, firstTab.id)`).
+
+Classification: **PARTIAL / CORRECTIVE**. H-008's composite persistence premise
+is not refuted; the pure security/version/migration/atomic contracts passed.
+The runtime reconciliation needs two narrow corrections.
+
+Material correction registered before change:
+
+- retain a previously safe title while navigation has no non-empty title, but
+  still clear/reject it when a non-empty unsafe title arrives;
+- distinguish restart recovery (`restored` hint may retain its logical tab id)
+  from a same-process stale/crashed page (`stale` hint must allocate a new tab
+  id while reusing only sanitized URL/title metadata and preserving order).
+
+#### H-008 experiment 2 — focused gate after corrective changes
+
+Identical approved command result: **3 test files passed / 28 tests passed / 0
+failed**.
+
+Covered outcomes:
+
+- ordinary tab persistence, ordering and active logical tab restoration;
+- safe URL/title preservation and adversarial userinfo/query/fragment,
+  secret-marker, opaque-token, URL/email-title and process-object exclusion;
+- unknown/corrupt version fail-closed behavior;
+- atomic replacement failure preserving the previous valid snapshot and
+  cleaning the temp file;
+- one-shot legacy BrowserTask migration into the composite file;
+- BrowserTask/ordinary coexistence, lazy restart recovery and no duplicate task
+  pages;
+- unexpected stale ordinary-page reconciliation;
+- all promoted pure/runtime BrowserTask regression tests.
+
+Classification: **VALIDATED AT FOCUSED PURE/RUNTIME LAYER**. Next evidence
+boundary: Desktop TypeScript typecheck/lint and the broader Electron platform
+suite; no native Windows identity claim is added by this mocked runtime gate.
+
+#### H-008 experiment 3 — Desktop typecheck, first pass
+
+Command: `npm run typecheck --workspace apps/desktop`.
+
+Result: **failed with one TypeScript error** at
+`workstation-browser-session-state.ts`: the optional `browserTaskId` property
+was correctly runtime-validated but TypeScript did not preserve narrowing across
+a second property access before `.trim()` (`TS2339: Property 'trim' does not
+exist on type 'unknown'`).
+
+Classification: **STATIC NARROWING DEFECT**. Registered correction: capture the
+unknown property once in a local, validate that local, then trim the narrowed
+value. No runtime/persistence behavior changes.
+
+First correction result: **still failed with the same TS2339**. Capturing the
+property was insufficient because the `null | undefined | unknown` union was
+reintroduced by the ternary expression. Materially changed correction: use an
+explicit `if (rawBrowserTaskId === null) ... else { guard; trim }` branch so the
+custom type predicate narrows inside one control-flow block.
+
+Second correction result: the BrowserTask id occurrence narrowed successfully;
+typecheck then reported the same TS2339 class at the sibling optional
+`activeTabId` ternary. Registered correction: apply the same explicit guarded
+branch to `activeTabId` before another full rerun.
+
+Final typecheck result: **PASS / exit 0** for all three Desktop TypeScript
+configs (`tsc -p .`, `tsconfig.electron.json`, and `tsconfig.e2e.json`, all
+`--noEmit`).
+
+Classification: **STATIC CONTRACT VALIDATED**.
+
+Formatting check result: Prettier reported the four modified TS/test files plus
+unchanged `workstation-browser-task.test.ts`. Classification: **EXPECTED LOCAL
+FORMAT CORRECTION + PRE-EXISTING UNTOUCHED DRIFT**. Only modified files will be
+formatted; the promoted untouched regression file will not receive unrelated
+churn.
+
+Focused ESLint first result: **423 problems (147 errors / 276 warnings)** across
+the two modified legacy runtime files plus the two new files. The output shows
+the legacy runtime/test already violate the current global `curly` and padding
+rules throughout untouched lines; auto-fixing those files would create broad
+out-of-scope churn. The new files also contain fixable import-order,
+curly/padding and one `no-control-regex` issue.
+
+Classification: **MIXED — PRE-EXISTING LEGACY LINT DEBT + NEW-FILE LINT**.
+Registered action: make both new files independently ESLint-clean, then retain
+typecheck/tests as the executable contract for the narrowly modified legacy
+files rather than mass-rewriting them.
+
+New-file lint/format result after scoped fixes:
+
+- `npx eslint electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts`: **PASS / 0 errors / 0 warnings**;
+- `npx prettier --check` for the same files: **PASS**.
+
+The `no-control-regex` occurrence was replaced with explicit code-point checks
+covering C0 plus DEL/C1 controls; the security policy is unchanged.
+
+#### H-008 experiment 4 — post-format focused/typecheck rerun
+
+- focused Electron gate: **3 files passed / 28 tests passed / 0 failed**;
+- Desktop typecheck: **PASS / exit 0** across renderer, Electron and E2E TS
+  configs.
+
+#### H-008 experiment 5 — full Electron/platform suite
+
+Command: `npm run test:desktop:platforms --workspace apps/desktop`.
+
+Final rerun after the active-logical-tab adversary: **12 files failed / 109
+passed / 1 skipped; 33 tests failed / 1694 passed / 5 skipped (1732 total)**.
+
+The three WP-01/BrowserTask files passed inside the full run. Every reported
+failure is outside the changed subsystem and matches a documented KI-006
+Windows class: POSIX permission-bit assertions, Darwin staging mode, Windows
+8.3/realpath normalization, SSH ControlPath/Include assumptions, WSL probe
+timeouts, symlink privileges, Git temp cleanup/timeouts, and PowerShell handoff
+timing. No BrowserSessionState/BrowserTask failure appeared.
+
+Classification: **KI-006 BROAD RED / WP-01 NON-REGRESSIVE AT SCOPED GATE**.
+The broad command remains correctly reported as exit 1; no test was disabled,
+weakened or allowlisted.
+
+#### H-008 experiment 6 — Workstation Python contracts
+
+Required wrapper: `scripts/run_tests.sh workstation/tests`.
+
+Harness resolution evidence:
+
+1. WSL Bash was denied inside the sandbox (`CreateInstance/E_ACCESSDENIED`);
+2. approved WSL execution then found no pytest-capable WSL venv;
+3. the Windows `.venv` also lacked pytest;
+4. a system Windows Python had pytest 9.0.2, but passing it through WSL produced
+   the invalid mixed path `C:\\mnt\\c\\...` before collection;
+5. Git Bash provided the correct MSYS→Windows path translation; its first
+   sandboxed launch was denied a signal pipe, then the identical approved
+   wrapper run executed normally.
+
+Final exact wrapper result: **4 files / 24 tests passed / 0 failed** in 5.9s.
+This includes context-document contracts, bootstrap canonical-source checks,
+Workstation contracts and browser routing/fail-closed tests.
+
+Classification: **WORKSTATION CONTRACTS VALIDATED**. The failed preliminary
+attempts were harness/environment failures before test collection, not product
+failures.
+
+#### H-008 experiment 7 — interleaved ordinary/task ordering adversary
+
+The BrowserTask coexistence test was strengthened to persist order
+`ordinary A → lazy task T → ordinary B` and assert `A → T → B` after T's lazy
+page recreation.
+
+First result: **27 passed / 1 failed**. T was recreated once with correct id,
+URL, title and ownership, but appeared as `A → B → T`.
+
+Root cause evidence: `restoreSessionTabs()` establishes the full restored order
+before iterating, but creation of A called `reconcileRestoredEntryOrder()` while
+the loop had not yet registered T as pending. Seeing zero pending hints, the
+helper cleared the restored order prematurely.
+
+Classification: **VALID ORDERING DEFECT / H-008 CORRECTIVE**. Registered minimal
+fix: never clear the restored-order hint while the outer session restoration is
+active; after the complete loop, retain it only while a lazy/stale structural
+hint remains.
+
+Corrective result: **3 files / 28 tests passed / 0 failed**. The strengthened
+coexistence case now restores `A → T → B`, T is still created lazily through
+`BrowserTaskLifecycle`, and its persisted logical id maps to exactly one live
+page. A final forward-version adversary also proved that an existing
+`BrowserSessionState.version > 1` is neither interpreted nor overwritten and
+never triggers fallback to the stale legacy BrowserTask file; malformed/current
+version state still starts from a fresh sanitized projection.
+
+Classification: **H-008 VALIDATED**. The ordering hint is transient process
+coordination only; `entries`, `taskTabs` and `BrowserEntry.ownerTaskId` remain
+the live page/ownership authorities, while the composite file remains the only
+restart projection.
+
+#### H-008 experiment 8 — active logical BrowserTask without eager page resurrection
+
+Hypothesis: reusing only process-authoritative `activeTabId` during restoration
+would lose a persisted active BrowserTask because its physical page must remain
+lazy. A task-only state would also need a generic live fallback page without
+changing the structural active selection.
+
+Experiment: make a task tab active, persist/restart, assert that no task page is
+alive before `showTask()`, inspect the composite `activeTabId`, then show the
+task twice and inspect id/ownership/page count.
+
+Evidence: the first audit found that the physical fallback could overwrite the
+structural selection. The corrective retains one transient
+`restoredLogicalActiveTabId` only while its lazy tab hint exists. It is not a
+page store: `activeTabId` still owns the physical active `entries` member, and
+any ordinary activation or task materialization consumes the hint.
+
+Final focused result: **3 files / 29 tests passed / 0 failed**. Before
+`showTask()`, zero task pages exist and `browser-session.json.activeTabId`
+retains the task's logical tab id. After `showTask()`, that same id maps to one
+live page and becomes the physical `activeTabId`; the second show remains
+idempotent.
+
+Final static/contract results:
+
+- full Desktop TypeScript typecheck (renderer + Electron + E2E): **passed**;
+- ESLint for both new BrowserSessionState files: **0 errors / 0 warnings**;
+- Prettier check for both new BrowserSessionState files: **passed**;
+- final Workstation wrapper rerun: **4 files / 24 tests passed / 0 failed** in 4.9s.
+
+Classification: **H-008 / WP-01 IMPLEMENTATION VALIDATED**. Native Electron
+restart remains a follow-up risk surface; the present evidence uses the real
+persistence filesystem plus the established mocked Electron runtime contract.
 
 ## Implementation 4 objective — closed
 

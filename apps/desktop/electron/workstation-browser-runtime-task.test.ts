@@ -63,6 +63,11 @@ const electron = vi.hoisted(() => {
       return this.title
     }
 
+    setTitle(title: string): void {
+      this.title = title
+      this.emit('page-title-updated')
+    }
+
     isDestroyed(): boolean {
       return this.destroyed
     }
@@ -170,7 +175,7 @@ vi.mock('electron', () => ({
   WebContentsView: electron.FakeWebContentsView
 }))
 
-import { WorkstationBrowserRuntime } from './workstation-browser-runtime'
+import { WorkstationBrowserRuntime, workstationBrowserSessionStatePath } from './workstation-browser-runtime'
 
 const tempRoots: string[] = []
 afterEach(() => {
@@ -189,6 +194,157 @@ function runtimeHome(): string {
 function hostWindow(): InstanceType<typeof electron.FakeBrowserWindow> {
   return new electron.FakeBrowserWindow()
 }
+
+test('ordinary tabs restore in order with the active logical tab and only safe URL/title metadata', async () => {
+  const home = runtimeHome()
+  const first = new WorkstationBrowserRuntime()
+  const initial = first.ensure().tabs[0]
+  assert.ok(initial)
+  const initialContents = first.getWebContents(initial.id) as unknown as InstanceType<typeof electron.FakeWebContents>
+  assert.ok(initialContents)
+  await initialContents.loadURL('https://example.test/account?access_token=page-secret#fragment-secret')
+  initialContents.setTitle('Access token = title-secret')
+
+  const withSecond = first.createTab('https://docs.example.test/guide?q=ordinary-search', true)
+  const secondTab = withSecond.tabs.at(-1)
+  assert.ok(secondTab)
+  const secondContents = first.getWebContents(secondTab.id) as unknown as InstanceType<typeof electron.FakeWebContents>
+  assert.ok(secondContents)
+  secondContents.setTitle('Example Docs — Guide')
+  assert.equal(first.state().activeTabId, secondTab.id)
+
+  await first.destroy()
+
+  const persisted = fs.readFileSync(path.join(home, 'Runtime', 'browser-session.json'), 'utf-8')
+  assert.equal(persisted.includes('page-secret'), false)
+  assert.equal(persisted.includes('fragment-secret'), false)
+  assert.equal(persisted.includes('title-secret'), false)
+  assert.equal(persisted.includes('ordinary-search'), false)
+  assert.equal(persisted.includes('WebContents'), false)
+
+  const second = new WorkstationBrowserRuntime()
+  const restored = second.ensure()
+  assert.deepEqual(
+    restored.tabs.map(tab => tab.id),
+    [initial.id, secondTab.id]
+  )
+  assert.deepEqual(
+    restored.tabs.map(tab => tab.url),
+    ['https://example.test/account', 'https://docs.example.test/guide']
+  )
+  assert.equal(restored.tabs[0].title, 'New Tab')
+  assert.equal(restored.tabs[1].title, 'Example Docs — Guide')
+  assert.equal(restored.activeTabId, secondTab.id)
+
+  await second.destroy()
+})
+
+test('BrowserTask metadata coexists with ordinary tabs and restores one task page lazily', async () => {
+  runtimeHome()
+  const first = new WorkstationBrowserRuntime()
+  const ordinary = first.ensure().tabs[0]
+  first.createTask({ taskId: 'task-session', sessionHost: 'hermes-session-1' })
+  const taskTab = first.state().tabs.find(tab => tab.ownerTaskId === 'task-session')
+  assert.ok(taskTab)
+  const taskContents = first.getWebContents(taskTab.id) as unknown as InstanceType<typeof electron.FakeWebContents>
+  assert.ok(taskContents)
+  await taskContents.loadURL('https://task.example.test/work?session_id=page-secret')
+  taskContents.setTitle('Task Workspace')
+  const tail = first.createTab('https://tail.example.test/ordinary', false).tabs.at(-1)
+  assert.ok(tail)
+  await first.destroy()
+
+  const second = new WorkstationBrowserRuntime()
+  const beforeShow = second.ensure()
+  assert.deepEqual(
+    beforeShow.tabs.map(tab => tab.id),
+    [ordinary.id, tail.id]
+  )
+  assert.equal(second.listTasks()[0]?.taskId, 'task-session')
+  assert.equal(second.listTasks()[0]?.sessionHost, 'hermes-session-1')
+  assert.equal(
+    beforeShow.tabs.some(tab => tab.ownerTaskId === 'task-session'),
+    false
+  )
+
+  const shown = second.showTask('task-session', hostWindow() as never, { x: 0, y: 0, width: 900, height: 600 })
+  assert.equal(shown.recoveryState, 'recreated')
+  const recovered = second.state().tabs.filter(tab => tab.ownerTaskId === 'task-session')
+  assert.equal(recovered.length, 1)
+  assert.equal(recovered[0].id, taskTab.id)
+  assert.equal(recovered[0].url, 'https://task.example.test/work')
+  assert.equal(recovered[0].title, 'Task Workspace')
+  assert.deepEqual(
+    second.state().tabs.map(tab => tab.id),
+    [ordinary.id, taskTab.id, tail.id]
+  )
+
+  second.showTask('task-session', hostWindow() as never, { x: 0, y: 0, width: 900, height: 600 })
+  assert.equal(second.state().tabs.filter(tab => tab.ownerTaskId === 'task-session').length, 1)
+  await second.destroy()
+})
+
+test('a lazy BrowserTask remains the logical active tab until its page is recreated', async () => {
+  runtimeHome()
+  const first = new WorkstationBrowserRuntime()
+  first.ensure()
+  first.createTask({ taskId: 'task-active' })
+  const taskTab = first.state().tabs.find(tab => tab.ownerTaskId === 'task-active')
+  assert.ok(taskTab)
+  first.activateTab(taskTab.id)
+  await first.destroy()
+
+  const second = new WorkstationBrowserRuntime()
+  const beforeShow = second.ensure()
+  assert.equal(beforeShow.tabs.some(tab => tab.ownerTaskId === 'task-active'), false)
+  assert.equal(JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')).activeTabId, taskTab.id)
+
+  second.showTask('task-active', hostWindow() as never, { x: 0, y: 0, width: 900, height: 600 })
+  const recovered = second.state().tabs.filter(tab => tab.ownerTaskId === 'task-active')
+  assert.equal(recovered.length, 1)
+  assert.equal(recovered[0].id, taskTab.id)
+  assert.equal(second.state().activeTabId, taskTab.id)
+  await second.destroy()
+})
+
+test('an unexpectedly destroyed ordinary entry remains a logical stale tab and reconciles on restart', async () => {
+  runtimeHome()
+  const first = new WorkstationBrowserRuntime()
+  const tab = first.ensure().tabs[0]
+  const contents = first.getWebContents(tab.id) as unknown as InstanceType<typeof electron.FakeWebContents>
+  assert.ok(contents)
+  await contents.loadURL('https://stale.example.test/recover')
+  contents.setTitle('Recoverable Page')
+  contents.close()
+  assert.equal(first.state().tabs.length, 0)
+  await first.destroy()
+
+  const second = new WorkstationBrowserRuntime()
+  const restored = second.ensure()
+  assert.equal(restored.tabs.length, 1)
+  assert.equal(restored.tabs[0].id, tab.id)
+  assert.equal(restored.tabs[0].url, 'https://stale.example.test/recover')
+  assert.equal(restored.tabs[0].title, 'Recoverable Page')
+  await second.destroy()
+})
+
+test('an unknown BrowserSessionState version starts safely without importing stale legacy state', async () => {
+  const home = runtimeHome()
+  fs.mkdirSync(path.dirname(workstationBrowserSessionStatePath()), { recursive: true })
+  fs.writeFileSync(workstationBrowserSessionStatePath(), JSON.stringify({ version: 999, tabs: [] }))
+  fs.writeFileSync(
+    path.join(home, 'Runtime', 'browser-tasks.json'),
+    JSON.stringify({ version: 1, browserTaskCounter: 1, tasks: [{ taskId: 'stale-task' }] })
+  )
+
+  const runtime = new WorkstationBrowserRuntime()
+  const state = runtime.ensure()
+  assert.equal(state.tabs.length, 1)
+  assert.equal(state.tabs[0].url, 'about:blank')
+  assert.deepEqual(runtime.listTasks(), [])
+  await runtime.destroy()
+  assert.equal(JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')).version, 999)
+})
 
 test('ownerTaskId is idempotent at the Chromium tab primitive', async () => {
   runtimeHome()

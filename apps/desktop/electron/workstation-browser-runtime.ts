@@ -29,12 +29,16 @@ import path from 'node:path'
 
 import { app, BrowserWindow, ipcMain, session, WebContentsView, type Session, type WebContents } from 'electron'
 
+import { BrowserTaskLifecycle, type BrowserTask, type BrowserTaskSeed } from './workstation-browser-task'
 import {
-  BrowserTaskFilePersistence,
-  BrowserTaskLifecycle,
-  type BrowserTask,
-  type BrowserTaskSeed
-} from './workstation-browser-task'
+  BrowserSessionStateFilePersistence,
+  safeRestorableUrlMetadata,
+  safeTitleMetadata,
+  type BrowserSessionStateSnapshot,
+  type BrowserSessionTab,
+  type BrowserSessionTabRecoveryReason,
+  type BrowserSessionTabRecoveryState
+} from './workstation-browser-session-state'
 
 const CACHE_CHECK_INTERVAL_MS = 30 * 60 * 1000
 const DEFAULT_CACHE_MAX_MB = 512
@@ -91,6 +95,10 @@ interface BrowserEntry {
   loading: boolean
   crashed: boolean
   ownerTaskId: string | null
+  safeUrl: string | null
+  safeTitle: string | null
+  recoveryState: BrowserSessionTabRecoveryState
+  recoveryReason: BrowserSessionTabRecoveryReason
 }
 
 interface ControlHandle {
@@ -177,6 +185,10 @@ export function workstationBrowserTaskStatePath(): string {
     return path.resolve(process.env.HERMES_WORKSTATION_BROWSER_TASK_FILE.trim())
   }
   return path.join(workstationBasePath(), 'Runtime', 'browser-tasks.json')
+}
+
+export function workstationBrowserSessionStatePath(): string {
+  return path.join(workstationBasePath(), 'Runtime', 'browser-session.json')
 }
 
 function screenshotDirectory(): string {
@@ -423,11 +435,25 @@ export class WorkstationBrowserRuntime {
   private control: ControlHandle | null = null
   private browserTasks: BrowserTaskLifecycle<BrowserEntry, BrowserTaskShowContext> | null = null
   private browserTasksRestored = false
+  private browserSessionState: BrowserSessionStateFilePersistence | null = null
+  private browserSessionStateRestored = false
+  private browserSessionStateRestoring = false
+  private browserSessionPersistenceSuppressed = false
+  private pendingSessionTabs = new Map<string, BrowserSessionTab>()
+  private restoredTabOrder: string[] = []
+  private restoredLogicalActiveTabId: string | null = null
 
   ensure(): WorkstationBrowserState {
     this.ensureSession()
-    this.ensureBrowserTasksRestored()
-    if (!this.activeTabId || !this.entries.has(this.activeTabId)) this.createTab('about:blank', true)
+    this.ensureBrowserSessionStateRestored()
+    if (!this.activeTabId || !this.entries.has(this.activeTabId)) {
+      const restoredLogicalActiveTabId = this.restoredLogicalActiveTabId
+      this.withBrowserSessionProjectionSuppressed(() => this.createTab('about:blank', true))
+      if (restoredLogicalActiveTabId && this.pendingSessionTabs.has(restoredLogicalActiveTabId)) {
+        this.restoredLogicalActiveTabId = restoredLogicalActiveTabId
+      }
+      this.persistBrowserSessionState()
+    }
     void this.refreshCacheSize()
     this.emitState()
     return this.state()
@@ -466,38 +492,62 @@ export class WorkstationBrowserRuntime {
 
   createTask(seed: BrowserTaskSeed = {}): BrowserTask {
     this.ensureSession()
-    this.ensureBrowserTasksRestored()
-    return this.taskLifecycle().createTask(seed)
+    this.ensureBrowserSessionStateRestored()
+    const task = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().createTask(seed))
+    this.persistBrowserSessionState()
+    return task
   }
 
   showTask(taskId: string, window: BrowserWindow, bounds: WorkstationBrowserBounds): BrowserTask {
     this.ensureSession()
-    this.ensureBrowserTasksRestored()
-    return this.taskLifecycle().showTask(taskId, { window, bounds })
+    this.ensureBrowserSessionStateRestored()
+    const task = this.withBrowserSessionProjectionSuppressed(() =>
+      this.taskLifecycle().showTask(taskId, { window, bounds })
+    )
+    this.persistBrowserSessionState()
+    return task
   }
 
   hideTask(taskId: string): BrowserTask {
-    this.ensureBrowserTasksRestored()
-    return this.taskLifecycle().hideTask(taskId)
+    this.ensureBrowserSessionStateRestored()
+    const task = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().hideTask(taskId))
+    this.persistBrowserSessionState()
+    return task
   }
 
   parkTask(taskId: string): BrowserTask {
-    this.ensureBrowserTasksRestored()
-    return this.taskLifecycle().parkTask(taskId)
+    this.ensureBrowserSessionStateRestored()
+    const task = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().parkTask(taskId))
+    this.persistBrowserSessionState()
+    return task
   }
 
   destroyTask(taskId: string): boolean {
-    this.ensureBrowserTasksRestored()
-    return this.taskLifecycle().destroyTask(taskId)
+    this.ensureBrowserSessionStateRestored()
+    const destroyed = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().destroyTask(taskId))
+    if (destroyed) this.removePendingTaskTab(taskId)
+    this.persistBrowserSessionState()
+    return destroyed
   }
 
   listTasks(): BrowserTask[] {
-    this.ensureBrowserTasksRestored()
+    this.ensureBrowserSessionStateRestored()
     return this.taskLifecycle().listTasks()
   }
 
   createTab(target = 'about:blank', activate = true, ownerTaskId: string | null = null): WorkstationBrowserState {
     this.ensureSession()
+    if (!this.browserSessionStateRestoring) this.ensureBrowserSessionStateRestored()
+    return this.createTabEntry(target, activate, ownerTaskId)
+  }
+
+  private createTabEntry(
+    target: string,
+    activate: boolean,
+    ownerTaskId: string | null,
+    restoredTab: BrowserSessionTab | null = null
+  ): WorkstationBrowserState {
+    const url = normalizeWorkstationBrowserTarget(target)
 
     if (ownerTaskId) {
       const mapped = this.taskTabs.get(ownerTaskId)
@@ -505,17 +555,19 @@ export class WorkstationBrowserRuntime {
       if (existing && !existing.view.webContents.isDestroyed()) {
         if (activate) this.activateTab(existing.id)
         else this.parkEntry(existing)
-        const url = normalizeWorkstationBrowserTarget(target)
         if (url !== 'about:blank' && existing.view.webContents.getURL() !== url) {
+          this.updateEntrySafeMetadata(existing, url, existing.view.webContents.getTitle())
           void existing.view.webContents.loadURL(url).catch(error => this.recordError(error))
         }
+        this.persistBrowserSessionState()
         this.emitState()
         return this.state()
       }
       if (mapped) this.taskTabs.delete(ownerTaskId)
     }
 
-    const id = crypto.randomUUID()
+    const requestedId = restoredTab?.id ?? crypto.randomUUID()
+    const id = this.entries.has(requestedId) ? crypto.randomUUID() : requestedId
     const view = new WebContentsView({
       webPreferences: {
         session: this.browserSession!,
@@ -529,17 +581,31 @@ export class WorkstationBrowserRuntime {
 
     view.setBackgroundColor('#111111')
 
-    const entry: BrowserEntry = { id, view, loading: false, crashed: false, ownerTaskId }
+    const safeUrl = restoredTab?.safeUrl ?? safeRestorableUrlMetadata(url)
+    const safeTitle = restoredTab?.safeTitle ?? null
+    const entry: BrowserEntry = {
+      id,
+      view,
+      loading: false,
+      crashed: false,
+      ownerTaskId,
+      safeUrl,
+      safeTitle,
+      recoveryState: restoredTab?.recoveryState ?? 'live',
+      recoveryReason: restoredTab?.recoveryReason ?? (safeUrl !== url ? 'unsafe-metadata' : null)
+    }
     this.entries.set(id, entry)
+    this.pendingSessionTabs.delete(id)
     this.applyFrameRate(entry, false)
     if (ownerTaskId) this.taskTabs.set(ownerTaskId, id)
     this.wireEntry(entry)
 
     if (activate || !this.activeTabId) this.activateTab(id)
 
-    const url = normalizeWorkstationBrowserTarget(target)
     if (url !== 'about:blank') void view.webContents.loadURL(url).catch(error => this.recordError(error))
 
+    this.reconcileRestoredEntryOrder()
+    this.persistBrowserSessionState()
     this.emitState()
     return this.state()
   }
@@ -549,6 +615,7 @@ export class WorkstationBrowserRuntime {
     if (!entry) return this.state()
 
     const wasActive = this.activeTabId === tabId
+    if (entry.ownerTaskId) this.rememberPendingSessionTab(entry, 'stale', 'page-gone')
     this.discardEntry(entry)
 
     if (wasActive) {
@@ -557,6 +624,7 @@ export class WorkstationBrowserRuntime {
     }
 
     if (this.entries.size === 0) this.createTab('about:blank', true)
+    this.persistBrowserSessionState()
     this.emitState()
     return this.state()
   }
@@ -569,7 +637,9 @@ export class WorkstationBrowserRuntime {
     const shouldReattach = this.attached && this.ownerWindow && !this.ownerWindow.isDestroyed() && this.bounds
     if (this.attached) this.detachActiveView(true)
     this.activeTabId = tabId
+    if (!this.browserSessionStateRestoring) this.restoredLogicalActiveTabId = null
     if (shouldReattach && this.ownerWindow && this.bounds) this.attach(this.ownerWindow, this.bounds)
+    this.persistBrowserSessionState()
     this.emitState()
     return this.state()
   }
@@ -772,6 +842,11 @@ export class WorkstationBrowserRuntime {
     if (this.cacheTimer) clearInterval(this.cacheTimer)
     this.cacheTimer = null
     await this.stopControlServer()
+    // Persist the structural projection before Electron begins destroying
+    // process-local WebContents objects. Destruction events during shutdown
+    // must not erase the logical restart state we just committed.
+    this.persistBrowserSessionState()
+    this.browserSessionPersistenceSuppressed = true
     this.detachActiveView(false)
     for (const entry of this.entries.values()) {
       this.removeChildView(entry)
@@ -781,9 +856,9 @@ export class WorkstationBrowserRuntime {
         // Best effort during app shutdown.
       }
     }
-    // App shutdown destroys Chromium process objects, but BrowserTask metadata is
-    // intentionally retained on disk. The next boot restores it as parked and
-    // lazily recreates/reconnects a page only when that task is used again.
+    // App shutdown destroys Chromium process objects, but BrowserSessionState
+    // and BrowserTask metadata remain on disk. Ordinary tabs are recreated from
+    // sanitized metadata; task pages remain lazy under BrowserTaskLifecycle.
     this.entries.clear()
     this.taskTabs.clear()
     this.activeTabId = null
@@ -881,9 +956,18 @@ export class WorkstationBrowserRuntime {
           this.closeTab(entry.id)
         }
       },
-      new BrowserTaskFilePersistence(workstationBrowserTaskStatePath())
+      this.sessionStatePersistence().browserTaskPersistence()
     )
     return this.browserTasks
+  }
+
+  private sessionStatePersistence(): BrowserSessionStateFilePersistence {
+    if (this.browserSessionState) return this.browserSessionState
+    this.browserSessionState = new BrowserSessionStateFilePersistence(
+      workstationBrowserSessionStatePath(),
+      workstationBrowserTaskStatePath()
+    )
+    return this.browserSessionState
   }
 
   private ensureBrowserTasksRestored(): void {
@@ -892,20 +976,62 @@ export class WorkstationBrowserRuntime {
     this.browserTasksRestored = true
   }
 
+  private ensureBrowserSessionStateRestored(): void {
+    if (this.browserSessionStateRestored || this.browserSessionStateRestoring) return
+    this.browserSessionStateRestoring = true
+    this.browserSessionPersistenceSuppressed = true
+    try {
+      const snapshot = this.sessionStatePersistence().load()
+      this.ensureBrowserTasksRestored()
+      if (snapshot) this.restoreSessionTabs(snapshot)
+      this.browserSessionStateRestored = true
+    } finally {
+      this.browserSessionStateRestoring = false
+      this.browserSessionPersistenceSuppressed = false
+    }
+    this.reconcileRestoredEntryOrder()
+    if (this.pendingSessionTabs.size === 0) this.restoredTabOrder = []
+    this.persistBrowserSessionState()
+  }
+
+  private restoreSessionTabs(snapshot: BrowserSessionStateSnapshot): void {
+    this.restoredTabOrder = snapshot.tabs.map(tab => tab.id)
+    this.restoredLogicalActiveTabId = snapshot.activeTabId
+    for (const saved of snapshot.tabs) {
+      const restored: BrowserSessionTab = {
+        ...saved,
+        recoveryState: 'restored',
+        recoveryReason: 'process-restart'
+      }
+      if (saved.browserTaskId) {
+        this.pendingSessionTabs.set(saved.id, restored)
+        continue
+      }
+      this.createTabEntry(saved.safeUrl ?? 'about:blank', false, null, restored)
+    }
+
+    if (snapshot.activeTabId && this.entries.has(snapshot.activeTabId)) {
+      this.activateTab(snapshot.activeTabId)
+      this.restoredLogicalActiveTabId = null
+    }
+    this.reconcileRestoredEntryOrder()
+  }
+
   private entryForTask(taskId: string, create: boolean): BrowserEntry | null {
-    this.ensureBrowserTasksRestored()
+    this.ensureBrowserSessionStateRestored()
     const lifecycle = this.taskLifecycle()
     if (create) {
-      lifecycle.createTask({ taskId })
+      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId }))
     } else if (!lifecycle.task(taskId)) {
       const legacyEntry = this.rawEntryForTask(taskId, false)
       if (!legacyEntry) return null
-      lifecycle.createTask({ taskId })
+      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId }))
     }
 
     const entry = this.rawEntryForTask(taskId, create)
     const visible = entry?.id === this.activeTabId && this.attached
-    if (entry && !visible) lifecycle.parkTask(taskId)
+    if (entry && !visible) this.withBrowserSessionProjectionSuppressed(() => lifecycle.parkTask(taskId))
+    this.persistBrowserSessionState()
     return entry
   }
 
@@ -922,7 +1048,20 @@ export class WorkstationBrowserRuntime {
       if (!create) this.emitState()
     }
     if (!create) return null
-    this.createTab('about:blank', !this.activeTabId, taskId)
+    let restored = this.pendingTabForTask(taskId)
+    if (restored?.recoveryState === 'stale') {
+      const staleId = restored.id
+      const replacementId = crypto.randomUUID()
+      this.pendingSessionTabs.delete(staleId)
+      this.restoredTabOrder = this.restoredTabOrder.map(id => (id === staleId ? replacementId : id))
+      restored = {
+        ...restored,
+        id: replacementId,
+        recoveryState: 'live',
+        recoveryReason: 'page-gone'
+      }
+    }
+    this.createTabEntry(restored?.safeUrl ?? 'about:blank', !this.activeTabId, taskId, restored)
     const id = this.taskTabs.get(taskId)
     const entry = id ? this.entries.get(id) ?? null : null
     if (entry) this.parkEntry(entry)
@@ -1102,19 +1241,30 @@ export class WorkstationBrowserRuntime {
       entry.loading = false
       this.emitState()
     })
-    wc.on('did-navigate', () => this.emitState())
-    wc.on('did-navigate-in-page', () => this.emitState())
-    wc.on('page-title-updated', () => this.emitState())
+    const refreshStructuralMetadata = (): void => {
+      this.updateEntrySafeMetadata(entry, wc.getURL(), wc.getTitle())
+      this.persistBrowserSessionState()
+      this.emitState()
+    }
+    wc.on('did-navigate', refreshStructuralMetadata)
+    wc.on('did-navigate-in-page', refreshStructuralMetadata)
+    wc.on('page-title-updated', refreshStructuralMetadata)
     wc.on('render-process-gone', (_event, details) => {
+      this.updateEntrySafeMetadata(entry, wc.getURL(), wc.getTitle())
       entry.crashed = true
+      entry.recoveryState = 'stale'
+      entry.recoveryReason = 'page-gone'
       this.lastError = `Browser renderer exited: ${details.reason}`
+      this.persistBrowserSessionState()
       this.emitState()
     })
     wc.on('destroyed', () => {
       if (this.entries.get(entry.id) === entry) {
+        this.rememberPendingSessionTab(entry, 'stale', 'page-gone')
         this.entries.delete(entry.id)
         if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === entry.id) this.taskTabs.delete(entry.ownerTaskId)
         if (this.activeTabId === entry.id) this.activeTabId = null
+        this.persistBrowserSessionState()
         this.emitState()
       }
     })
@@ -1126,12 +1276,18 @@ export class WorkstationBrowserRuntime {
 
   private discardEntry(entry: BrowserEntry): void {
     const wasActive = this.activeTabId === entry.id
+    if (entry.ownerTaskId && !this.pendingSessionTabs.has(entry.id)) {
+      this.rememberPendingSessionTab(entry, 'stale', 'page-gone')
+    }
     if (wasActive && this.attached) this.detachActiveView(false)
     this.removeChildView(entry)
     if (entry.ownerTaskId && this.taskTabs.get(entry.ownerTaskId) === entry.id) {
       this.taskTabs.delete(entry.ownerTaskId)
     }
     this.entries.delete(entry.id)
+    if (!this.pendingSessionTabs.has(entry.id)) {
+      this.restoredTabOrder = this.restoredTabOrder.filter(id => id !== entry.id)
+    }
     if (wasActive) this.activeTabId = null
     if (!entry.view.webContents.isDestroyed()) entry.view.webContents.close()
   }
@@ -1154,14 +1310,140 @@ export class WorkstationBrowserRuntime {
     const history = historyState(wc)
     return {
       id: entry.id,
-      title: wc.getTitle() || 'New Tab',
-      url: wc.getURL() || 'about:blank',
+      title: wc.getTitle() || entry.safeTitle || 'New Tab',
+      url: wc.getURL() || entry.safeUrl || 'about:blank',
       active: entry.id === this.activeTabId,
       loading: entry.loading,
       canGoBack: history.canGoBack,
       canGoForward: history.canGoForward,
       crashed: entry.crashed,
       ownerTaskId: entry.ownerTaskId
+    }
+  }
+
+  private updateEntrySafeMetadata(entry: BrowserEntry, rawUrl: string, rawTitle: string): void {
+    const safeUrl = safeRestorableUrlMetadata(rawUrl)
+    const hasTitle = Boolean(rawTitle.trim())
+    const safeTitle = hasTitle ? safeTitleMetadata(rawTitle) : entry.safeTitle
+    const urlWasSanitized = Boolean(rawUrl) && safeUrl !== rawUrl
+    const titleWasRejected = hasTitle && safeTitle === null
+    entry.safeUrl = safeUrl
+    entry.safeTitle = safeTitle
+    entry.recoveryState = entry.crashed ? 'stale' : 'live'
+    entry.recoveryReason = urlWasSanitized || titleWasRejected ? 'unsafe-metadata' : null
+  }
+
+  private sessionTabFromEntry(entry: BrowserEntry): BrowserSessionTab {
+    return {
+      id: entry.id,
+      browserTaskId: entry.ownerTaskId,
+      safeUrl: entry.safeUrl,
+      safeTitle: entry.safeTitle,
+      recoveryPolicy: entry.ownerTaskId
+        ? 'browser-task-lazy'
+        : entry.safeUrl
+          ? 'restore-safe-url'
+          : 'restore-about-blank',
+      recoveryState: entry.recoveryState,
+      recoveryReason: entry.recoveryReason
+    }
+  }
+
+  private rememberPendingSessionTab(
+    entry: BrowserEntry,
+    recoveryState: BrowserSessionTabRecoveryState,
+    recoveryReason: BrowserSessionTabRecoveryReason
+  ): void {
+    const pending = {
+      ...this.sessionTabFromEntry(entry),
+      recoveryState,
+      recoveryReason
+    }
+    this.pendingSessionTabs.set(entry.id, pending)
+    if (!this.restoredTabOrder.includes(entry.id)) this.restoredTabOrder.push(entry.id)
+  }
+
+  private pendingTabForTask(taskId: string): BrowserSessionTab | null {
+    for (const tab of this.pendingSessionTabs.values()) {
+      if (tab.browserTaskId === taskId) return tab
+    }
+    return null
+  }
+
+  private removePendingTaskTab(taskId: string): void {
+    for (const [id, tab] of this.pendingSessionTabs) {
+      if (tab.browserTaskId !== taskId) continue
+      this.pendingSessionTabs.delete(id)
+      this.restoredTabOrder = this.restoredTabOrder.filter(candidate => candidate !== id)
+      if (this.restoredLogicalActiveTabId === id) this.restoredLogicalActiveTabId = null
+    }
+    this.reconcileRestoredEntryOrder()
+  }
+
+  private reconcileRestoredEntryOrder(): void {
+    if (this.restoredTabOrder.length === 0) return
+    const reordered = new Map<string, BrowserEntry>()
+    for (const id of this.restoredTabOrder) {
+      const entry = this.entries.get(id)
+      if (entry) reordered.set(id, entry)
+    }
+    for (const [id, entry] of this.entries) {
+      if (!reordered.has(id)) reordered.set(id, entry)
+    }
+    this.entries = reordered
+    if (this.pendingSessionTabs.size === 0 && !this.browserSessionStateRestoring) this.restoredTabOrder = []
+  }
+
+  private sessionTabsSnapshot(): BrowserSessionTab[] {
+    if (this.pendingSessionTabs.size === 0) {
+      return [...this.entries.values()].map(entry => this.sessionTabFromEntry(entry))
+    }
+
+    const tabs: BrowserSessionTab[] = []
+    const included = new Set<string>()
+    for (const id of this.restoredTabOrder) {
+      const entry = this.entries.get(id)
+      const tab = entry ? this.sessionTabFromEntry(entry) : this.pendingSessionTabs.get(id)
+      if (!tab || included.has(id)) continue
+      tabs.push({ ...tab })
+      included.add(id)
+    }
+    for (const entry of this.entries.values()) {
+      if (included.has(entry.id)) continue
+      tabs.push(this.sessionTabFromEntry(entry))
+      included.add(entry.id)
+    }
+    for (const [id, tab] of this.pendingSessionTabs) {
+      if (included.has(id)) continue
+      tabs.push({ ...tab })
+    }
+    return tabs
+  }
+
+  private persistBrowserSessionState(): void {
+    if (this.browserSessionPersistenceSuppressed || !this.browserSessionStateRestored || !this.browserSessionState)
+      return
+    try {
+      const tabs = this.sessionTabsSnapshot()
+      const logicalActiveTabId =
+        this.restoredLogicalActiveTabId && tabs.some(tab => tab.id === this.restoredLogicalActiveTabId)
+          ? this.restoredLogicalActiveTabId
+          : null
+      const activeTabId =
+        logicalActiveTabId ?? (this.activeTabId && tabs.some(tab => tab.id === this.activeTabId) ? this.activeTabId : null)
+      this.browserSessionState.saveSession(tabs, activeTabId)
+    } catch (error) {
+      this.lastError = `BrowserSessionState persistence failed: ${error instanceof Error ? error.message : String(error)}`
+    }
+  }
+
+  private withBrowserSessionProjectionSuppressed<Result>(operation: () => Result): Result {
+    const previous = this.browserSessionPersistenceSuppressed
+    this.browserSessionPersistenceSuppressed = true
+    try {
+      return operation()
+    } finally {
+      this.browserSessionPersistenceSuppressed = previous
     }
   }
 
