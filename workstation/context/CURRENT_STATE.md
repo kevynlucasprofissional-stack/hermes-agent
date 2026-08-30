@@ -1,8 +1,8 @@
 # Current State
 
-Snapshot date: 2026-08-29. Downstream `main` remains at Implementation 3 (`ce78f120e8ed2974d6174e475cc7572afcfe41e0`). Implementation 4 is on PR #9 / branch `impl4-browser-task-lifecycle` and has now passed its required real-Windows BrowserTask lifecycle smoke. Promotion still depends on final-head automated gates, documentation/upstream-delta closure, and final audit.
+Snapshot date: 2026-08-30. Downstream `main` has promoted Implementation 4 via PR #9. The promotion merge is `fada723f43613e5e0f061cab24445573ac298998`; its parents are the previous Implementation 3 main `ce78f120e8ed2974d6174e475cc7572afcfe41e0` and the accepted PR head `75d10d35d4757496390debf8e4b4f9efb44c5432`.
 
-This file describes **observed implementation state**, not the target architecture. When it disagrees with code on current `main` or an explicitly named candidate branch, inspect the code and update this file.
+This file describes **observed implementation state**, not the target architecture. When it disagrees with code on current `main`, inspect the code and update this file.
 
 ## Working now
 
@@ -17,21 +17,21 @@ On current `main`:
 - The tool-definition cache fingerprints session-surface capability so Desktop schemas do not leak into TUI/CLI.
 - Chromium profile state such as cookies/localStorage/IndexedDB is distinct from Workstation logical browser/task state.
 - Workstation install validates committed integration without rewriting tracked source.
-
-## Implementation 4 candidate — BrowserTask lifecycle
-
-The candidate formalizes BrowserTask without replacing the existing Chromium ownership primitives:
-
-- `BrowserTask` is a first-class logical lifecycle object with `create`, `show`, `hide`, `park`, and explicit `destroy` semantics.
+- BrowserTask is now a first-class logical lifecycle object with `create`, `show`, `hide`, `park`, explicit `destroy`, crash recovery, safe metadata persistence, and logical restart restoration.
 - `taskTabs` plus `BrowserEntry.ownerTaskId` remain the authoritative in-process task → live-page binding; BrowserTask metadata does not create a second page store.
 - Repeated creation for the same `taskId` is idempotent and does not allocate a second live task page.
 - Within one Electron process, `hide` and `park` preserve the task page; later `show` re-exposes the same live `WebContents` and current URL.
-- Showing another BrowserTask parks the previously visible BrowserTask.
-- `destroyTask` is distinct from hide/park and explicitly removes the logical task and closes its owned page.
+- `destroyTask` explicitly removes the logical task and closes its owned page.
 - Missing/crashed task pages may recover with exactly one replacement page while preserving logical task identity and recording `recoveryState: recreated`.
 - Safe BrowserTask metadata is versioned and atomically persisted under the Workstation runtime directory.
 - Restart restores logical task metadata as `parked` / `recoveryState: restored` before any task page is recreated. First use/show lazily creates one replacement page under the same `taskId`.
 - Restart recovery does **not** claim that a process-local `WebContentsView`, renderer JavaScript heap, or object identity survives application restart.
+
+## Implementation 4 — promoted BrowserTask lifecycle
+
+PR #9 (`feat(workstation): formalize BrowserTask lifecycle`) was merged into `main` as `fada723f43613e5e0f061cab24445573ac298998` from accepted head `75d10d35d4757496390debf8e4b4f9efb44c5432`.
+
+The code-bearing BrowserTask implementation remains anchored at `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`. Later commits in the PR were validation-memory, documentation, probes, and repository-process closure; Git comparison established that the final attribution/journal closure after the controlled Windows comparison did not change BrowserTask product/runtime/probe behavior.
 
 ## Native Windows acceptance evidence
 
@@ -77,7 +77,7 @@ Implementation 4 narrows several browser-state gaps but does not complete the br
 - Complete BrowserSessionState for all intended logical tabs/task linkage.
 - Complete session/run/Kanban/controller linkage for BrowserTask metadata.
 
-These remain future implementations and must not be inferred as complete from the narrower Implementation 4 smoke.
+These remain future implementations and must not be inferred as complete from the narrower Implementation 4 acceptance.
 
 ## Manual validation already observed
 
@@ -95,28 +95,38 @@ See [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md). The main remaining browser gaps after 
 
 ## Latest automated validation state
 
-The code-bearing BrowserTask candidate is rooted at `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`. The native smoke above ran on a later head containing only Workstation validation-memory/probe changes after that code-bearing candidate.
+Promotion evidence was closed against the exact final PR head `75d10d35d4757496390debf8e4b4f9efb44c5432`:
 
-During the candidate cycle:
+- `Workstation CI` completed successfully;
+- Docker Build/Test/Publish completed successfully;
+- committed-source validation, normal Workstation install, and checkout-clean assertions passed on Windows;
+- Desktop typecheck passed;
+- focused BrowserTask lifecycle/runtime tests passed;
+- repository contributor-attribution gate passed after the missing author-email mapping was added;
+- the broad Windows Desktop workflow remained red only at its final aggregator, while scoped setup/typecheck/BrowserTask/UI/platform diagnostic steps completed.
 
-- focused BrowserTask lifecycle tests passed;
-- runtime-adapter tests passed;
-- Workstation CI passed before the documentation-only closure changes;
-- Docker validation passed;
-- Desktop typecheck and committed-source/install/checkout-clean Windows steps passed;
-- broad Windows Desktop UI/platform suites retained the documented KI-006 baseline failure classes and therefore remained red rather than being weakened or hidden.
+The broad Windows red was causally classified through a controlled native-Windows side-by-side comparison of baseline `ce78f120e8ed2974d6174e475cc7572afcfe41e0` and candidate `2ffee2335b6aba071e7b63457a047cd9334d4d92`:
 
-During documentation closure, Workstation CI exposed the context-document structural contract: `CURRENT_STATE.md` must preserve separate `Working now`, `Partially implemented`, `Not implemented yet`, `Manual validation already observed`, and `Latest automated validation state` sections. Those headings are now restored without changing product behavior or weakening the contract test.
+- baseline UI legacy: 5 failed files / 11 failed tests;
+- candidate UI legacy: 5 failed files / 9 failed tests;
+- baseline platform/Electron legacy: 11 failed files / 33 failed tests;
+- candidate platform/Electron legacy: 10 failed files / 28 failed tests;
+- every remaining candidate failure matched an identical baseline failure or a variant of the same KI-006 causal class;
+- candidate-specific BrowserTask suite passed 2 files / 16 tests;
+- candidate typecheck passed.
 
-After final documentation closure, automated gates must be observed on the exact final PR head. Native evidence may be carried from `d8acc752...` only if Git comparison proves that the relevant product code and executed H-004 probe are unchanged after that smoke.
+Result: `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`.
+
+The final PR head differs from that controlled candidate only by contributor-attribution mapping plus Workstation engineering-journal material; no BrowserTask product/runtime/probe/workflow/dependency code changed. Therefore the final-head Windows aggregator red carries the established KI-006 classification and is not an Implementation 4 regression.
 
 ## Promotion status
 
-Implementation 4 is **technically accepted but not yet promoted**.
+Implementation 4 is **PROMOTED / RESOLVED**.
 
-Remaining promotion steps:
+- PR #9 final accepted head: `75d10d35d4757496390debf8e4b4f9efb44c5432`.
+- Merge commit on `main`: `fada723f43613e5e0f061cab24445573ac298998`.
+- Previous `main` parent: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`.
+- Native lifecycle acceptance: `H004_CLASSIFICATION=VALIDATED`.
+- Windows baseline classification: `PASS_WITH_KI-006_RED`; KI-006 remains open debt and was not hidden or weakened.
 
-1. prove the final head differs from the H-004 smoke SHA only in documentation for the relevant behavior/probe paths;
-2. observe relevant automated gates on the exact final head and preserve KI-006 classification without masking failures;
-3. perform final PR audit;
-4. mark PR #9 ready and merge only if all gates remain satisfied.
+Implementation 5 and later browser-foundation work may now build on the promoted BrowserTask lifecycle, but must preserve the scope boundaries above.
