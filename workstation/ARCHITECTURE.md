@@ -18,7 +18,7 @@ Internal Browser       extension/agent-browser     browser_exec
 persistent Electron Session
         |
         v
-task binding + controller + journal + safety
+BrowserTask + task binding + controller + journal + safety
 ```
 
 ### Internal Browser
@@ -55,7 +55,60 @@ The product-level browser contract is runtime-neutral:
 Routing is configurable. When routing is disabled, Workstation uses only the
 internal browser.
 
-### Task lifecycle
+### BrowserTask lifecycle
+
+`BrowserTask` is the logical identity of one durable browser job. It is not a
+second tab/page store. For the Electron runtime, the existing `taskTabs` map and
+`BrowserEntry.ownerTaskId` remain authoritative for the process-local binding
+between a task and its live `WebContentsView`.
+
+The lifecycle contract is:
+
+```text
+create(taskId)
+  -> one task-owned live page at most
+
+show(taskId, host/bounds)
+  -> expose that task's existing page
+  -> park a previously visible BrowserTask when necessary
+
+hide(taskId)
+  -> remove the page from the visible host
+  -> keep page/task alive
+
+park(taskId)
+  -> keep the page alive in the background parking strategy
+  -> keep page/task state
+
+destroy(taskId)
+  -> explicit terminal operation
+  -> close/remove the owned live page
+  -> remove BrowserTask metadata
+```
+
+Within one Electron process, `hide -> show` and `park -> show` must retain the
+same live page and current navigation state. Repeating creation for the same
+`taskId` is idempotent and must not allocate a second independently navigated
+page.
+
+BrowserTask metadata is safe structural state, separate from the Chromium
+profile. The candidate state includes identifiers/host linkage, lifecycle
+status, parked state, lease/recovery state, and timestamps. It is versioned and
+written atomically under the Workstation runtime directory.
+
+A `WebContentsView` is process-local. On Desktop restart, Workstation restores
+BrowserTask metadata as parked before creating any task page. When that task is
+used again, the runtime lazily creates/reconnects one page under the same logical
+`taskId` and records recovery. This is not serialization of the previous
+renderer, JavaScript heap, or `WebContents` object. Browser profile-managed state
+(cookies/localStorage/IndexedDB and compatible login state) persists separately.
+
+Future Chat Browser View, Browser Hub, and Workstation-mode Preview compatibility
+must consume this same BrowserTask/BrowserRuntime state. A second UI surface may
+show metadata/thumbnail while another owns the native live page; it must not
+create an independently navigated duplicate for the same BrowserTask.
+
+### Work/Kanban task lifecycle
 
 ```text
 chat request
@@ -63,6 +116,7 @@ chat request
   -> create Hermes Kanban card
   -> bind session/run/card
   -> choose BrowserRuntime if browser capability is needed
+  -> bind/create BrowserTask for durable browser work
   -> journal actions/evidence
   -> create follow-up cards when discovered
   -> execute child only when required for parent
@@ -74,6 +128,9 @@ A discovered task must retain:
 
 `parent_task_id`, `discovered_by`, `reason`, `evidence`,
 `origin_session_id`.
+
+BrowserTask may reference Hermes session/run/card identities, but it does not own
+a second SessionDB, Kanban database, or Memory system.
 
 ### Safety
 
@@ -128,4 +185,6 @@ browser_* tool call
 The controller descriptor contains a random bearer token and loopback URL and is
 written outside the repository with private-file permissions where supported.
 It is never exposed through LAN mode. A successful internal browser action binds
-the task/session to that runtime for the remainder of the process.
+the task/session to that runtime according to Workstation routing policy; a
+bound BrowserTask must not silently fail over to a different browser lane with
+different page/auth state.

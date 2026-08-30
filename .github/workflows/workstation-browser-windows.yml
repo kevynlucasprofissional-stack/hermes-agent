@@ -5,6 +5,8 @@ on:
   pull_request:
     paths:
       - "apps/desktop/electron/workstation-browser-runtime.ts"
+      - "apps/desktop/electron/workstation-browser-task.ts"
+      - "apps/desktop/electron/workstation-browser-*.test.ts"
       - "apps/desktop/src/app/browser/**"
       - "workstation/**"
       - "tools/browser_workstation.py"
@@ -49,6 +51,10 @@ jobs:
           }
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
+      - name: BrowserTask focused lifecycle tests
+        id: browser_task_tests
+        continue-on-error: true
+        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
       - name: Desktop UI tests
         id: desktop_ui_tests
         continue-on-error: true
@@ -61,10 +67,12 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          $browserTask = "${{ steps.browser_task_tests.outcome }}"
           $ui = "${{ steps.desktop_ui_tests.outcome }}"
           $platform = "${{ steps.desktop_platform_tests.outcome }}"
+          Write-Host "BrowserTask focused tests: $browserTask"
           Write-Host "Desktop UI tests: $ui"
           Write-Host "Desktop platform tests: $platform"
-          if ($ui -ne "success" -or $platform -ne "success") {
-            throw "One or more Desktop gates failed. Both suites were allowed to run so one failure does not mask the other."
+          if ($browserTask -ne "success" -or $ui -ne "success" -or $platform -ne "success") {
+            throw "One or more Desktop gates failed. Focused BrowserTask, UI, and platform suites were allowed to run so one failure does not mask the others."
           }
