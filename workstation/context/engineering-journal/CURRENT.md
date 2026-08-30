@@ -1,7 +1,7 @@
 # CURRENT — Workstation Engineering Journal
 
 Last updated: 2026-08-30
-Active track: WP-01 / Implementation 5 — BrowserSessionState core authority and persistence
+Active track: WP-01 / BrowserSessionState candidate — security and crash-recovery correction
 Repository: `kevynlucasprofissional-stack/hermes-agent`
 Historical milestone branch: `impl4-browser-task-lifecycle`
 Code-bearing BrowserTask ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
@@ -165,7 +165,7 @@ Earlier BrowserClaw experiments inform requirements/failure modes; they are not 
 
 The broader direction is Hermes as a persistent execution/orchestration layer for recurring work. This remains a north star, not permission for scope creep into full Kanban automation, Execution Reports, LAN/mobile, Browser Memory, Perception Engine V2, Browser4, Lightpanda, or domain workflows before browser-foundation gates are satisfied.
 
-## WP-01 / Implementation 5 objective — active
+## WP-01 / BrowserSessionState candidate objective — active
 
 Complete the canonical BrowserSessionState foundation beyond BrowserTask-only
 metadata while preserving the current live-page owners and avoiding a second
@@ -185,6 +185,23 @@ URL/title metadata, BrowserTask relationship, available identity linkage, and
 explicit recovery metadata/policy. Chat Browser View, Browser Hub, Preview
 unification, host transfer, SessionDB/Gateway semantics, Kanban implementation,
 LAN/Tailscale, Browser Memory, and KI-007 remain out of scope.
+
+### Candidate acceptance status
+
+- Implementer-focused validation on candidate
+  `9ce769ee54ab6a02cad77a266c87cb05a8cad3f6` passed the scoped
+  BrowserSessionState/BrowserTask tests, Desktop typecheck and Workstation
+  contracts recorded below.
+- Independent verification **blocked** that candidate because arbitrary raw
+  page titles could cross the durable boundary and because the possible
+  `new browserTasks + previous sanitized tab projection` crash snapshots had
+  not been exercised through runtime restart/recovery.
+- The active writer-branch work is a corrective candidate, not an accepted or
+  promoted implementation.
+- Native Electron restart acceptance for the corrected BrowserSessionState
+  candidate remains pending.
+- Promotion is not authorized unless the corrective exact head passes
+  independent verification and the remaining native acceptance boundary.
 
 ### H-007 — BrowserSessionState can be a safe structural projection of existing authorities
 
@@ -560,9 +577,133 @@ Final static/contract results:
 - Prettier check for both new BrowserSessionState files: **passed**;
 - final Workstation wrapper rerun: **4 files / 24 tests passed / 0 failed** in 4.9s.
 
-Classification: **H-008 / WP-01 IMPLEMENTATION VALIDATED**. Native Electron
-restart remains a follow-up risk surface; the present evidence uses the real
-persistence filesystem plus the established mocked Electron runtime contract.
+Classification: **IMPLEMENTER-FOCUSED VALIDATION ONLY / INDEPENDENTLY
+BLOCKED**. These scoped results remain useful evidence, but they did not prove
+the durable-title boundary or material composite-write interruption states.
+Native Electron restart remains pending, and promotion is not authorized.
+
+### H-009 — Durable-title denial and executable composite recovery can correct the candidate narrowly
+
+Origin: independent verification of candidate `9ce769ee...` demonstrated that
+`safeTitleMetadata("Recovery code 482913")` returned the raw recovery code and
+correctly identified that one BrowserTask operation can durably publish new
+BrowserTask metadata before the final tabs/active projection.
+
+Hypothesis:
+
+- durable BrowserSessionState can set every page-controlled title to `null`
+  without weakening the live `WebContents.getTitle()` surface;
+- URL persistence can retain its conservative structural policy while failing
+  closed for explicit recovery/verification/OTP/PIN/magic/one-time credential
+  path semantics;
+- injecting failure through the existing BrowserSessionState filesystem seam
+  can capture the C1 create, C2 recreate/show and C3 destroy intermediate files
+  through the real `WorkstationBrowserRuntime` integration;
+- each possible `new browserTasks + previous sanitized tab projection`
+  snapshot will restart deterministically, preserve at-most-one ownership,
+  remain secret-free and converge to one canonical composite file.
+
+Confirming evidence:
+
+- every raw title, including harmless display text and numeric/customer labels,
+  serializes as `safeTitle: null` while the live runtime still reports its real
+  page title;
+- credential-bearing URL query/fragment/userinfo/JWT/signed material and the
+  explicit authentication path classes never appear in serialized or reloaded
+  state;
+- C1/C2/C3 restart assertions prove logical task uniqueness, lazy page
+  recreation, orphan removal, deterministic active/order reconciliation and a
+  canonical final snapshot.
+
+Refuting evidence:
+
+- any raw page title or forbidden credential material appears in JSON or after
+  reload;
+- a recovered task is duplicated, eagerly materialized, rebound to two pages,
+  resurrected after destroy, or cannot converge after a faulted projection;
+- proving recovery requires a second state owner or transaction framework.
+
+Classification: **ACTIVE — REGISTERED BEFORE CORRECTIVE PRODUCT CHANGE**.
+
+Product boundary marker: edits remain limited to the existing
+BrowserSessionState sanitizer/persistence seam, its runtime injection point,
+focused pure/runtime regressions and this journal. Native Electron restart is
+still a later acceptance layer, not implied by the mocked Electron runtime
+fault tests.
+
+#### H-009 experiment 1 — security boundary and C1/C2/C3 focused gate
+
+Command:
+
+`npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts`
+
+The first sandboxed launch failed before config load with `spawn EPERM`; the
+identical approved command then executed normally.
+
+Result: **3 files / 33 tests passed / 0 failed**.
+
+Observed executable evidence:
+
+- every page-controlled title, including the five credential examples,
+  harmless display text and a customer-number label, became `safeTitle: null`;
+- live fake-WebContents titles remained visible before process teardown, while
+  restored titles fell back to `New Tab`;
+- access-token query, OAuth code, fragment token, userinfo/password, JWT and
+  presigned credential material were absent from serialized and reloaded JSON;
+- explicit recovery/verification/OTP/temporary-PIN/magic-login/one-time path
+  classes failed closed, while `/customers/482913` remained restorable;
+- C1 captured new BrowserTask T plus the previous sanitized ordinary-tab
+  projection, then restored T parked/lazy and materialized exactly one page;
+- C2 captured recreated/visible BrowserTask metadata plus the previous lazy
+  sanitized tab/active projection, then restarted parked/lazy and converged to
+  one task/page binding with deterministic order and active selection;
+- C3 captured durable task removal before the final runtime projection, pruned
+  the orphan relationship during normalization, refused later `showTask(T)` and
+  reconciled the remaining ordinary tab as active.
+
+Classification: **VALIDATED AT FOCUSED PURE/MOCKED-RUNTIME LAYER**. The
+possible `new browserTasks + previous sanitized tab projection` intermediate is
+explicitly accepted and proven recoverable; it is not described as impossible.
+Next evidence boundary: formatting/static checks, full focused
+`workstation-browser` tests, Desktop typecheck and Workstation contracts.
+
+#### H-009 experiment 2 — required corrective validation matrix
+
+Final scoped JavaScript results after formatting:
+
+- BrowserSessionState focused: **1 file / 9 tests passed / 0 failed**;
+- BrowserTask pure: **1 file / 10 tests passed / 0 failed**;
+- Browser runtime-task: **1 file / 14 tests passed / 0 failed**;
+- all focused `workstation-browser` tests together: **3 files / 33 tests
+  passed / 0 failed**;
+- targeted adversarial security regression: **1 passed / 8 skipped** under the
+  title filter;
+- targeted C1/C2/C3 regressions: **3 passed / 11 skipped** under the crash
+  boundary filter.
+
+Static results:
+
+- complete Desktop typecheck (`tsc -p .`, Electron and E2E configs): **PASS /
+  exit 0**;
+- ESLint for the two dedicated BrowserSessionState files: **0 errors / 0
+  warnings**;
+- Prettier check for the two dedicated BrowserSessionState files: **PASS**.
+
+Workstation Python contract result:
+
+- the first exact wrapper attempt correctly refused to run because the local
+  `.venv` lacks pytest;
+- rerunning the same repository wrapper with `HERMES_PYTHON` pointing to the
+  installed pytest-capable Python produced **4 files / 24 tests passed / 0
+  failed** in 6.6s;
+- context-document contracts passed with the corrected candidate/non-promotion
+  terminology.
+
+Classification: **CORRECTIVE CANDIDATE VALIDATED AT REQUESTED AUTOMATED
+LAYERS / NATIVE ELECTRON RESTART STILL PENDING / PROMOTION NOT AUTHORIZED**.
+The delivery commit freezes the exact Git head for independent verification;
+this journal does not treat that delivery action as promotion or native
+acceptance.
 
 ## Implementation 4 objective — closed
 
@@ -732,7 +873,8 @@ Implementation 4 promotion sequence is complete:
 8. merge parents verified: `ce78f120...` + `75d10d35...`;
 9. canonical state/roadmap/known-issues/testing/journal closure is being reconciled in `docs/impl4-promotion-closure` because the pre-merge wording became stale only after promotion.
 
-No Implementation 5 product work belongs in this closure branch.
+No WP-01 / BrowserSessionState candidate work belongs in this historical
+Implementation 4 closure branch.
 
 ## Continuous update protocol
 

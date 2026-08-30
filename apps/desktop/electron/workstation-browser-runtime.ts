@@ -443,6 +443,10 @@ export class WorkstationBrowserRuntime {
   private restoredTabOrder: string[] = []
   private restoredLogicalActiveTabId: string | null = null
 
+  constructor(browserSessionState: BrowserSessionStateFilePersistence | null = null) {
+    this.browserSessionState = browserSessionState
+  }
+
   ensure(): WorkstationBrowserState {
     this.ensureSession()
     this.ensureBrowserSessionStateRestored()
@@ -1323,14 +1327,12 @@ export class WorkstationBrowserRuntime {
 
   private updateEntrySafeMetadata(entry: BrowserEntry, rawUrl: string, rawTitle: string): void {
     const safeUrl = safeRestorableUrlMetadata(rawUrl)
-    const hasTitle = Boolean(rawTitle.trim())
-    const safeTitle = hasTitle ? safeTitleMetadata(rawTitle) : entry.safeTitle
+    const safeTitle = safeTitleMetadata(rawTitle)
     const urlWasSanitized = Boolean(rawUrl) && safeUrl !== rawUrl
-    const titleWasRejected = hasTitle && safeTitle === null
     entry.safeUrl = safeUrl
     entry.safeTitle = safeTitle
     entry.recoveryState = entry.crashed ? 'stale' : 'live'
-    entry.recoveryReason = urlWasSanitized || titleWasRejected ? 'unsafe-metadata' : null
+    entry.recoveryReason = urlWasSanitized ? 'unsafe-metadata' : null
   }
 
   private sessionTabFromEntry(entry: BrowserEntry): BrowserSessionTab {

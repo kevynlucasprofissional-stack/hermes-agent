@@ -78,7 +78,7 @@ function snapshot(tabs: BrowserSessionTab[], browserTasks = browserTaskSnapshot(
   }
 }
 
-test('safe URL metadata strips query/fragment and rejects credential-bearing or opaque paths', () => {
+test('safe URL metadata strips credential data and rejects explicit authentication path classes', () => {
   assert.equal(
     safeRestorableUrlMetadata('https://example.test/account?token=page-secret#session-secret'),
     'https://example.test/account'
@@ -88,16 +88,163 @@ test('safe URL metadata strips query/fragment and rejects credential-bearing or 
   assert.equal(safeRestorableUrlMetadata('https://example.test/reset/client_secret/value'), null)
   assert.equal(safeRestorableUrlMetadata('https://example.test/aBcdEfghIjklMnopQrstuVwxyz123456'), null)
   assert.equal(safeRestorableUrlMetadata('https://example.test/abcdefghijklmnopqrstuvwxyzabcdef'), null)
+  assert.equal(safeRestorableUrlMetadata('https://example.test/recovery/code/482913'), null)
+  assert.equal(safeRestorableUrlMetadata('https://example.test/verification/code/482913'), null)
+  assert.equal(safeRestorableUrlMetadata('https://example.test/otp/482913'), null)
+  assert.equal(safeRestorableUrlMetadata('https://example.test/temporary/pin/482913'), null)
+  assert.equal(safeRestorableUrlMetadata('https://example.test/magic/login/code/482913'), null)
+  assert.equal(safeRestorableUrlMetadata('https://example.test/one-time/credential/482913'), null)
   assert.equal(safeRestorableUrlMetadata('file:///C:/Users/example/secret.txt'), null)
+  assert.equal(
+    safeRestorableUrlMetadata('https://example.test/customers/482913'),
+    'https://example.test/customers/482913'
+  )
 })
 
-test('safe title metadata accepts bounded display text and rejects secret/page-content shapes', () => {
-  assert.equal(safeTitleMetadata('Example Domain — Dashboard'), 'Example Domain — Dashboard')
+test('durable title policy rejects all page-controlled titles without weakening URL identifiers', () => {
+  assert.equal(safeTitleMetadata('Example Domain — Dashboard'), null)
   assert.equal(safeTitleMetadata('Access token = page-secret'), null)
   assert.equal(safeTitleMetadata('OAuth code: 123456'), null)
   assert.equal(safeTitleMetadata('user@example.test — Account'), null)
   assert.equal(safeTitleMetadata('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature123456'), null)
-  assert.equal(safeTitleMetadata(`Title ${'a'.repeat(200)}`), null)
+  assert.equal(safeTitleMetadata('Customer 482913'), null)
+})
+
+test('adversarial credentials and every raw page title stay absent after serialization and reload', () => {
+  const { stateFile } = tempFiles()
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzZXNzaW9uLXNlY3JldCJ9.signatureSecret123456'
+
+  const urlCases = [
+    {
+      id: 'query-access-token',
+      value: 'https://example.test/account?access_token=query-access-token-secret',
+      expected: 'https://example.test/account',
+      forbidden: ['query-access-token-secret']
+    },
+    {
+      id: 'oauth-code',
+      value: 'https://example.test/callback?code=oauth-code-secret',
+      expected: 'https://example.test/callback',
+      forbidden: ['oauth-code-secret']
+    },
+    {
+      id: 'fragment-token',
+      value: 'https://example.test/complete#access_token=fragment-token-secret',
+      expected: 'https://example.test/complete',
+      forbidden: ['fragment-token-secret']
+    },
+    {
+      id: 'userinfo-password',
+      value: 'https://login-user:password-secret@example.test/private',
+      expected: null,
+      forbidden: ['login-user', 'password-secret']
+    },
+    {
+      id: 'jwt',
+      value: `https://example.test/session/${jwt}`,
+      expected: null,
+      forbidden: [jwt]
+    },
+    {
+      id: 'presigned-url',
+      value:
+        'https://bucket.example.test/customers/482913?X-Amz-Credential=presigned-credential-secret&X-Amz-Signature=presigned-signature-secret',
+      expected: 'https://bucket.example.test/customers/482913',
+      forbidden: ['presigned-credential-secret', 'presigned-signature-secret']
+    },
+    {
+      id: 'recovery-path',
+      value: 'https://example.test/recovery/code/482913',
+      expected: null,
+      forbidden: ['/recovery/code/482913']
+    },
+    {
+      id: 'verification-path',
+      value: 'https://example.test/verification/code/482913',
+      expected: null,
+      forbidden: ['/verification/code/482913']
+    },
+    {
+      id: 'otp-path',
+      value: 'https://example.test/otp/482913',
+      expected: null,
+      forbidden: ['/otp/482913']
+    },
+    {
+      id: 'pin-path',
+      value: 'https://example.test/temporary/pin/482913',
+      expected: null,
+      forbidden: ['/temporary/pin/482913']
+    },
+    {
+      id: 'magic-code-path',
+      value: 'https://example.test/magic/login/code/482913',
+      expected: null,
+      forbidden: ['/magic/login/code/482913']
+    }
+  ] as const
+
+  const forbiddenTitles = [
+    'Recovery code 482913',
+    'Verification code 482913',
+    'OTP 482913',
+    'Temporary PIN 482913',
+    'Magic login code 482913'
+  ]
+
+  const deliberatelyNonSecretTitles = ['Example Domain — Dashboard', 'Customer 482913']
+
+  for (const candidate of urlCases) {
+    assert.equal(safeRestorableUrlMetadata(candidate.value), candidate.expected)
+  }
+
+  for (const title of [...forbiddenTitles, ...deliberatelyNonSecretTitles]) {
+    assert.equal(safeTitleMetadata(title), null)
+  }
+
+  const persistence = new BrowserSessionStateFilePersistence(stateFile)
+  persistence.load()
+  persistence.saveSession(
+    [
+      ...urlCases.map(candidate => tab(candidate.id, { safeUrl: candidate.value, safeTitle: null })),
+      ...[...forbiddenTitles, ...deliberatelyNonSecretTitles].map((title, index) =>
+        tab(`title-${index}`, { safeUrl: 'https://example.test/harmless', safeTitle: title })
+      )
+    ],
+    'query-access-token'
+  )
+
+  const serialized = fs.readFileSync(stateFile, 'utf-8')
+
+  for (const candidate of urlCases) {
+    for (const forbidden of candidate.forbidden) {
+      assert.equal(serialized.includes(forbidden), false)
+    }
+  }
+
+  for (const title of [...forbiddenTitles, ...deliberatelyNonSecretTitles]) {
+    assert.equal(serialized.includes(title), false)
+  }
+
+  const reloaded = new BrowserSessionStateFilePersistence(stateFile).load()
+  assert.ok(reloaded)
+  assert.equal(
+    reloaded.tabs.every(candidate => candidate.safeTitle === null),
+    true
+  )
+  const reserialized = JSON.stringify(reloaded)
+
+  for (const candidate of urlCases) {
+    for (const forbidden of candidate.forbidden) {
+      assert.equal(reserialized.includes(forbidden), false)
+    }
+  }
+
+  for (const title of forbiddenTitles) {
+    assert.equal(reserialized.includes(title), false)
+  }
+
+  assert.equal(reloaded.tabs.find(candidate => candidate.id === 'presigned-url')?.safeUrl, urlCases[5].expected)
 })
 
 test('normalization excludes raw secret markers and process-shaped extra fields', () => {

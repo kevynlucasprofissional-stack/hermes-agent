@@ -12,14 +12,15 @@ export const BROWSER_SESSION_STATE_VERSION = 1
 export const MAX_BROWSER_SESSION_TABS = 128
 
 const MAX_SAFE_URL_LENGTH = 2_048
-const MAX_SAFE_TITLE_LENGTH = 160
 
 const SENSITIVE_MARKER =
-  /(?:^|[^a-z0-9])(?:access[\s._-]*token|refresh[\s._-]*token|auth(?:orization)?[\s._-]*(?:code|token)|oauth[\s._-]*code|api[\s._-]*key|client[\s._-]*secret|session[\s._-]*(?:id|key|token)|signed[\s._-]*(?:url|token)|signature|credential|password|passwd|bearer|secret)(?:$|[^a-z0-9])/i
+  /(?:^|[^a-z0-9])(?:access[\s._/-]*token|refresh[\s._/-]*token|auth(?:orization)?[\s._/-]*(?:code|token)|oauth[\s._/-]*code|api[\s._/-]*key|client[\s._/-]*secret|session[\s._/-]*(?:id|key|token)|signed[\s._/-]*(?:url|token)|pre[\s._/-]*signed(?:[\s._/-]*(?:url|request|token|download|upload))?|signature|credential|password|passwd|passcode|bearer|secret)(?:$|[^a-z0-9])/i
+
+const ONE_TIME_AUTHENTICATION_MARKER =
+  /(?:^|[^a-z0-9])(?:recovery[\s._/-]*(?:code|token|key)|verif(?:y|ication)[\s._/-]*(?:code|token)|(?:one[\s._/-]*time|single[\s._/-]*use)[\s._/-]*(?:code|password|passcode|pin|token|credential)|otp|temporary[\s._/-]*(?:pin|code|password|passcode)|magic[\s._/-]*(?:login[\s._/-]*)?(?:code|link|token))(?:$|[^a-z0-9])/i
 
 const JWT_LIKE = /(?:^|[^a-z0-9_-])eyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}(?:$|[^a-z0-9_-])/i
 const OPAQUE_TOKEN = /(?:^|[^a-z0-9_-])[a-z0-9_-]{24,}(?:$|[^a-z0-9_-])/i
-const SAFE_TITLE_CHARACTERS = /^[\p{L}\p{N}\p{M}\p{Zs} .,:;!'"()[\]_+|\-–—]+$/u
 
 export type BrowserSessionTabRecoveryPolicy = 'restore-safe-url' | 'restore-about-blank' | 'browser-task-lazy'
 export type BrowserSessionTabRecoveryState = 'live' | 'restored' | 'stale'
@@ -101,7 +102,12 @@ function decodedForInspection(value: string): string {
 function containsSensitiveMaterial(value: string): boolean {
   const inspected = decodedForInspection(value)
 
-  return SENSITIVE_MARKER.test(inspected) || JWT_LIKE.test(inspected) || OPAQUE_TOKEN.test(inspected)
+  return (
+    SENSITIVE_MARKER.test(inspected) ||
+    ONE_TIME_AUTHENTICATION_MARKER.test(inspected) ||
+    JWT_LIKE.test(inspected) ||
+    OPAQUE_TOKEN.test(inspected)
+  )
 }
 
 /**
@@ -157,35 +163,12 @@ export function safeRestorableUrlMetadata(value: unknown): string | null {
 }
 
 /**
- * Accept only short, display-like titles without URL/credential syntax or
- * opaque token material. Rejection returns null; raw page content is never
- * truncated into the structural state because a truncated secret is still a
- * secret.
+ * Page titles are arbitrary page-controlled content and never cross the
+ * durable BrowserSessionState boundary. Live WebContents titles remain
+ * available from the runtime while the process is alive.
  */
-export function safeTitleMetadata(value: unknown): string | null {
-  if (typeof value !== 'string' || containsControlCharacters(value)) {
-    return null
-  }
-
-  const title = value.normalize('NFKC').replace(/\s+/g, ' ').trim()
-
-  if (!title || title.length > MAX_SAFE_TITLE_LENGTH) {
-    return null
-  }
-
-  if (!SAFE_TITLE_CHARACTERS.test(title)) {
-    return null
-  }
-
-  if (/https?:\/\/|www\./i.test(title) || /[@?&#=%]/.test(title)) {
-    return null
-  }
-
-  if (containsSensitiveMaterial(title)) {
-    return null
-  }
-
-  return title
+export function safeTitleMetadata(_value: unknown): null {
+  return null
 }
 
 function validIdentifier(value: unknown): value is string {
