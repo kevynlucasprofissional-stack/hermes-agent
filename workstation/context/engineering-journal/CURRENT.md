@@ -198,6 +198,7 @@ LAN/Tailscale, Browser Memory, and KI-007 remain out of scope.
   not been exercised through runtime restart/recovery.
 - The active writer-branch work is a corrective candidate, not an accepted or
   promoted implementation.
+- Independent re-verification of the corrected exact head remains pending.
 - Native Electron restart acceptance for the corrected BrowserSessionState
   candidate remains pending.
 - Promotion is not authorized unless the corrective exact head passes
@@ -318,11 +319,16 @@ Security conclusion:
   `about:blank` or HTTP(S), no userinfo, no query/fragment, bounded length, and
   rejection of credential/secret/session markers or opaque token-like path
   material;
-- title metadata is safe only after bounded normalization and rejection of
-  controls, URLs/email-like data, secret markers, assignments and opaque
+- **Historical title conclusion — SUPERSEDED BY H-009 FOR DURABLE TITLES:**
+  title metadata was considered safe after bounded normalization and rejection
+  of controls, URLs/email-like data, secret markers, assignments and opaque
   token-like material;
 - unsafe URL/title values become `null`/blank recovery metadata; raw values are
   never copied into structural JSON.
+
+Current canonical durable-title rule: **Arbitrary page-controlled titles never
+cross BrowserSessionState persistence; `safeTitle` is always `null`. Live
+`WebContents` titles remain available in-process.**
 
 Practical implication: H-007 supports the scoped implementation; it does not
 justify changes to SessionDB, Gateway, Kanban, Preview, UI hosts, LAN, or KI-007.
@@ -355,6 +361,12 @@ Product boundary marker: product edits are limited to the Electron runtime,
 BrowserTask persistence seam, a dedicated BrowserSessionState module/tests, and
 the branch-local engineering journal.
 
+Historical policy qualifier: H-008 ran before the independent durable-title
+blocker and H-009 correction. Its references to safe-title restoration or
+preservation record the then-current candidate behavior, not the canonical
+durable-title contract. The experimental outcomes below remain chronological
+evidence and are not rewritten.
+
 #### H-008 experiment 1 — focused pure/runtime gate
 
 Command:
@@ -369,9 +381,10 @@ Executed result: **24 passed / 4 failed across 3 files**; the new pure
 BrowserSessionState file and promoted pure BrowserTask file both passed. All
 four failures were isolated to the runtime adapter:
 
-1. three restored safe-title assertions received `New Tab` because the fake
-   WebContents emits `did-navigate` before any page title and
-   `updateEntrySafeMetadata()` replaced the persisted safe title with `null`;
+1. three restored safe-title assertions under the historical pre-H-009 policy
+   received `New Tab` because the fake WebContents emits `did-navigate` before
+   any page title and `updateEntrySafeMetadata()` replaced the persisted safe
+   title with `null`;
 2. same-process crashed BrowserTask recovery reused the pending logical tab id,
    while the promoted regression requires a visibly new replacement tab/page id
    after a crash (`assert.notEqual(owned[0].id, firstTab.id)`).
@@ -382,8 +395,9 @@ The runtime reconciliation needs two narrow corrections.
 
 Material correction registered before change:
 
-- retain a previously safe title while navigation has no non-empty title, but
-  still clear/reject it when a non-empty unsafe title arrives;
+- under the historical pre-H-009 policy, retain a previously safe title while
+  navigation has no non-empty title, but still clear/reject it when a non-empty
+  unsafe title arrives;
 - distinguish restart recovery (`restored` hint may retain its logical tab id)
   from a same-process stale/crashed page (`stale` hint must allocate a new tab
   id while reusing only sanitized URL/title metadata and preserving order).
@@ -396,8 +410,9 @@ failed**.
 Covered outcomes:
 
 - ordinary tab persistence, ordering and active logical tab restoration;
-- safe URL/title preservation and adversarial userinfo/query/fragment,
-  secret-marker, opaque-token, URL/email-title and process-object exclusion;
+- historical pre-H-009 safe URL/title preservation and adversarial
+  userinfo/query/fragment, secret-marker, opaque-token, URL/email-title and
+  process-object exclusion;
 - unknown/corrupt version fail-closed behavior;
 - atomic replacement failure preserving the previous valid snapshot and
   cleaning the temp file;
