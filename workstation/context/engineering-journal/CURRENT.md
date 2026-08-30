@@ -1,19 +1,21 @@
 # CURRENT — Workstation Engineering Journal
 
-Last updated: 2026-08-29
-Active track: Implementation 4 — BrowserTask lifecycle promotion closure
+Last updated: 2026-08-30
+Active track: Implementation 4 — **PROMOTED / RESOLVED**; no Implementation 5 work has started in this journal
 Repository: `kevynlucasprofissional-stack/hermes-agent`
-Milestone branch: `impl4-browser-task-lifecycle`
-Code-bearing BrowserTask candidate ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
+Historical milestone branch: `impl4-browser-task-lifecycle`
+Code-bearing BrowserTask ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
 Native-smoke evidence SHA: `d8acc752133b125b9619cbc7fe09199f1283a22b`
-Base `main`: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`
-PR: #9 — `feat(workstation): formalize BrowserTask lifecycle` (open, draft until final promotion gate)
+Accepted PR head: `75d10d35d4757496390debf8e4b4f9efb44c5432`
+Promotion merge on `main`: `fada723f43613e5e0f061cab24445573ac298998`
+Previous `main`: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`
+PR: #9 — `feat(workstation): formalize BrowserTask lifecycle` (**merged**)
 
-> Journal/probe/documentation commits after `1ac0e0a9...` do not change BrowserTask product behavior unless this file explicitly records a later code-bearing candidate. Always verify the live PR head and compare product paths before carrying evidence forward.
+> Journal/probe/documentation commits after `1ac0e0a9...` do not change BrowserTask product behavior unless this file explicitly records a later code-bearing candidate. Always verify live `main` and compare product paths before carrying evidence into a later implementation.
 
 ## Why this journal exists
 
-This file is the Workstation project's durable anti-repeat memory for active engineering. It records not only the current experiment, but the **mistakes, rejected premises, evidence boundaries, and decision lineage** that a future agent must know before proposing another implementation.
+This file is the Workstation project's durable anti-repeat memory for active engineering. It records not only experiments, but the **mistakes, rejected premises, evidence boundaries, and decision lineage** that a future agent must know before proposing another implementation.
 
 The evidence hierarchy is:
 
@@ -58,8 +60,6 @@ The settled product direction is now:
 
 ### Decisions that require new material evidence before reopening
 
-Do not casually restart these debates:
-
 | Old debate | Current settled direction | What would justify reopening it |
 |---|---|---|
 | plugin/separate repo vs fork | thin downstream fork; Workstation first-class | a concrete upstream capability that removes the need for cross-cutting downstream integration, with migration proof |
@@ -70,7 +70,7 @@ Do not casually restart these debates:
 | synchronize Preview and Browser by URL | one BrowserTask/live page, views/hosts | never as a cosmetic synchronization workaround; only a replacement of the ownership model with stronger proof |
 | browser availability from process env | session/platform capability | only if Hermes changes its gateway/session architecture materially and tests prove the new identity model |
 
-The rule is not “never change architecture.” The rule is: **a replacement decision must identify the material new evidence, name the decision it supersedes, define migration, and prove the new behavior.**
+The rule is not “never change architecture.” A replacement decision must identify the material new evidence, name the decision it supersedes, define migration, and prove the new behavior.
 
 ## Cross-track findings imported from prior investigations
 
@@ -93,7 +93,7 @@ What it did **not** prove:
 
 ### CT-002 — Real Desktop tool exposure can fail before BrowserTask
 
-A later real-environment investigation established this before-state:
+A real-environment investigation established this before-state:
 - the Capabilities UI showed **Browser Automation = ON**;
 - `coding_context = auto`;
 - `agent.disabled_toolsets = []`;
@@ -121,7 +121,6 @@ Capabilities UI
 
 Passing pure or mocked tests did not prove a real `WebContentsView`, native Windows process restart, or renderer identity behavior.
 
-The distinction is now explicit:
 - pure tests prove lifecycle logic/serialization;
 - mocked runtime tests prove adapter contracts;
 - build/typecheck proves compilation;
@@ -166,34 +165,15 @@ Earlier BrowserClaw experiments inform requirements/failure modes; they are not 
 
 The broader direction is Hermes as a persistent execution/orchestration layer for recurring work. This remains a north star, not permission for scope creep into full Kanban automation, Execution Reports, LAN/mobile, Browser Memory, Perception Engine V2, Browser4, Lightpanda, or domain workflows before browser-foundation gates are satisfied.
 
-## Objective
-
-Close Implementation 4 with durable evidence for the real Windows lifecycle contract without expanding into Browser Hub, Chat Browser View, Preview unification, complete BrowserSessionState, or Implementation 5+ work.
+## Implementation 4 objective — closed
 
 Required native lifecycle contract:
 
 `create/navigate → hide or park → re-expose without replacement navigation → explicit destroy → real process restart → logical restore/recovery`
 
-## Current conclusion
+Final conclusion: **validated and promoted to `main`**.
 
-The Implementation 4 BrowserTask lifecycle contract is **technically validated** on real Windows/Electron/Chromium.
-
-Native evidence was produced by `probes/h004-native-browser-task-smoke.mjs` at repository head `d8acc752133b125b9619cbc7fe09199f1283a22b`, with BrowserTask product code byte-equivalent to registered code-bearing ancestor `1ac0e0a9...`.
-
-Environment:
-- Windows release `10.0.26200`;
-- outer Node `v24.14.1`;
-- Electron `40.10.2`;
-- Electron embedded Node `24.15.0`.
-
-Result:
-- `H004_LIVE_DESTROY_PASS`;
-- `H004_RESTART_PASS`;
-- `H004_CLASSIFICATION=VALIDATED`.
-
-No product fix was required by the native investigation. Pre-H004 failures were validation-harness defects, not BrowserTask defects.
-
-## Hypothesis ledger
+## Evidence ledger
 
 ### H-001 — BrowserTask lifecycle caused the V9 native-smoke timeout
 
@@ -219,15 +199,13 @@ Evidence:
 
 Conclusion: V9 was a harness bootstrap defect. Product runtime already uses non-blocking readiness registration.
 
-### H-004 — With the validated readiness bootstrap, the real BrowserTask lifecycle satisfies the Implementation 4 acceptance contract
+### H-004 — Real BrowserTask lifecycle satisfies the Implementation 4 acceptance contract
 
 Classification: **VALIDATED**.
 
-Experiment: `probes/h004-native-browser-task-smoke.mjs`.
+Experiment: `probes/h004-native-browser-task-smoke.mjs` at `d8acc752133b125b9619cbc7fe09199f1283a22b`.
 
-#### A — live page identity
-
-Observed:
+Live identity evidence:
 - task `impl4-h004-live-task`;
 - tab id stayed `a27236b9-4aaf-4adc-9556-7ee14f5c4274`;
 - real `webContentsId` stayed `3`;
@@ -236,55 +214,47 @@ Observed:
 - hide produced logical `hidden` without destroying page;
 - park produced logical `parked` without destroying page.
 
-#### B — explicit destroy
-
-Observed:
+Explicit destroy evidence:
 - `destroyTask` returned true;
 - prior WebContents destroyed;
 - task not listed;
 - zero remaining task-owned tabs;
 - no automatic replacement page.
 
-#### C — real process restart / logical recovery
-
-Process 1:
-- PID `30968`;
-- task persisted as `parked` / `fresh`;
-- structural persistence contained neither page URL secret nor renderer secret.
-
-Process 2:
-- PID `37440`;
-- same task restored `parked` / `restored`;
-- zero eager task pages before show;
-- first show created exactly one task page;
-- same task id retained;
-- recovery became `recreated`.
+Real restart evidence:
+- process 1 PID `30968`: task persisted `parked` / `fresh`, structural state excluded page URL secret and renderer secret;
+- process 2 PID `37440`: same task restored `parked` / `restored`, zero eager pages before show, first show created exactly one task page under same task id, recovery became `recreated`.
 
 Practical conclusion: **Implementation 4 native lifecycle acceptance behavior is proven.**
 
-### H-005 — Final Workstation CI red after documentation closure represented a BrowserTask/product regression
-
-Origin: final-head `Workstation CI` run `33265646758` failed after H-004 and documentation closure.
-
-Expected if product regression:
-- failing contract would involve BrowserTask/runtime behavior, integration anchors, or code paths affected by Implementation 4.
-
-Refuting evidence:
-- `core-patch-dry-run` passed;
-- 23/24 Workstation contract tests passed;
-- the sole failure was `test_context_separates_current_state_from_target_and_known_issues`;
-- failure fingerprint: missing literal heading `## Not implemented yet` in `CURRENT_STATE.md` after a documentation rewrite combined the tested sections.
+### H-005 — Documentation-closure Workstation CI red represented a BrowserTask/product regression
 
 Classification: **REFUTED AS PRODUCT REGRESSION / VALIDATED AS DOCUMENTATION CONTRACT REGRESSION**.
 
-Correction:
-- restore separate canonical headings `## Partially implemented` and `## Not implemented yet`;
-- do not weaken the test.
+Evidence:
+- `core-patch-dry-run` passed;
+- 23/24 Workstation contract tests passed;
+- sole failure was `test_context_separates_current_state_from_target_and_known_issues`;
+- fingerprint was missing literal heading `## Not implemented yet` after a documentation rewrite combined tested sections.
 
-Anti-repeat implication:
-- canonical documentation has executable contracts too;
-- before restructuring canonical headings/sections, inspect `workstation/tests/test_context_docs.py` and related context contract tests;
-- a documentation-only change is still capable of failing CI and must go through the same verification loop.
+Correction:
+- separate canonical headings restored;
+- test was not weakened.
+
+### H-006 — Final-head broad Windows red introduced a new Implementation 4 failure class
+
+Classification: **REFUTED BY CONTROLLED EQUIVALENCE**.
+
+Controlled native-Windows A/B:
+- baseline `ce78f120e8ed2974d6174e475cc7572afcfe41e0`;
+- candidate `2ffee2335b6aba071e7b63457a047cd9334d4d92`;
+- result `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`;
+- candidate-specific BrowserTask tests: 2 files / 16 tests passed;
+- candidate had fewer legacy failures than baseline and every remaining failure was identical to baseline or a variant of the same KI-006 causal class.
+
+Final accepted head `75d10d35d4757496390debf8e4b4f9efb44c5432` differed from `2ffee...` only by contributor-attribution mapping and Workstation journal material. No BrowserTask product/runtime/probe/workflow/dependency code changed. On that head, committed integration, install, checkout-clean, typecheck and BrowserTask focused steps passed; only the broad aggregator remained red.
+
+Classification used at promotion: `KI-006_ONLY_BY_CONTROLLED_EQUIVALENCE`.
 
 ## Experiment / failure ledger
 
@@ -309,6 +279,8 @@ Anti-repeat implication:
 | E-017 | broad Windows red interpreted without exact baseline | base/candidate shared failure classes | Causality lesson | Controlled A/B + signatures; baseline-equivalent red remains red. |
 | E-018 | GUI capability tied to process env/reachability/cache | Desktop surface could disappear/leak across session types | Resolved ownership-model defect | Session-scoped surface identity; runtime reachability is execution state. |
 | E-019 | documentation rewrite removed tested canonical heading | Workstation CI failed 1/24 although product code unchanged | Documentation contract regression | Inspect context-doc tests before restructuring canonical docs; documentation-only commits still require CI. |
+| E-020 | contributor email unmapped at final promotion | repository-wide attribution check failed | Process gate, corrected | Merge hygiene is part of promotion; fix the mapping instead of dismissing/bypassing the gate. |
+| E-021 | post-merge canonical docs still said Impl4 was pending | code/GitHub and `CURRENT_STATE`/`ROADMAP` disagreed after merge | Post-promotion documentation defect | Promotion is not complete until canonical state documents reflect the new `main`; correct via a separate docs closure and run context contracts. |
 
 ## Stable anti-patterns / rules learned
 
@@ -345,14 +317,23 @@ Anti-repeat implication:
 31. A checkpoint is memory, not a stop condition.
 32. Before claiming a full Workstation browser path, separately prove configuration persistence, session schema exposure, exact tool execution, BrowserTask behavior, host/view unification, restart recovery, and profile persistence.
 33. Canonical documentation is part of the tested product contract. Before renaming/removing required headings, fields, tables, or markers, inspect `workstation/tests` for structural assertions and run the relevant contracts after the edit.
+34. After a promotion merge, audit state-bearing documents against the new `main`; pre-merge wording such as “candidate”, “pending”, or an old main SHA becomes a real consistency defect once the merge lands.
 
-## Remaining promotion work
+## Promotion closure
 
-1. Freeze documentation/tooling after correcting E-019.
-2. Compare the final head against `d8acc752...`; only documentation changes may differ if H-004 evidence is carried forward.
-3. Observe Workstation/Docker/focused Windows outcomes on the exact final head; keep broad KI-006 failures red/classified rather than hidden.
-4. Perform final PR audit for scope, invariants, upstream delta and unresolved material review issues.
-5. Mark PR ready and merge only if all promotion gates are satisfied.
+Implementation 4 promotion sequence is complete:
+
+1. H-004 real Windows/Electron lifecycle accepted;
+2. controlled Windows baseline comparison classified remaining broad red as KI-006;
+3. final PR head frozen at `75d10d35d4757496390debf8e4b4f9efb44c5432` with no product/runtime/probe change after causal validation;
+4. exact-final-head Workstation CI, Docker, contributor attribution, install/typecheck/focused BrowserTask gates observed;
+5. PR #9 marked ready;
+6. merge executed with expected head SHA;
+7. PR verified merged and `main` verified at `fada723f43613e5e0f061cab24445573ac298998`;
+8. merge parents verified: `ce78f120...` + `75d10d35...`;
+9. canonical state/roadmap/known-issues/testing/journal closure is being reconciled in `docs/impl4-promotion-closure` because the pre-merge wording became stale only after promotion.
+
+No Implementation 5 product work belongs in this closure branch.
 
 ## Continuous update protocol
 
