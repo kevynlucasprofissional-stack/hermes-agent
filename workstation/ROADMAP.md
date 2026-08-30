@@ -13,20 +13,23 @@
 - CI skeleton, lock/license validation and Windows Browser E2E workflow.
 - eval matrix prepared for internal/agent-browser/browser-exec.
 - Desktop Browser schema capability is session-scoped and protected from process-global cache/env leakage.
+- first-class BrowserTask lifecycle promoted by PR #9: `create` / `show` / `hide` / `park` / explicit `destroy`, crash recovery, safe logical persistence and restart restoration.
+- `taskTabs` + `BrowserEntry.ownerTaskId` remain the authoritative live Chromium task→page ownership primitives; no second page store was introduced.
+- one `taskId` is idempotently bound to at most one live task page in a Desktop process.
+- hide/park/show preserve the same live page and current URL while the process remains alive.
+- restart restores safe BrowserTask metadata as parked and lazily recreates exactly one page under the same logical task when needed.
 
-## Implementation 4 candidate — BrowserTask lifecycle
+## Implementation 4 — promoted
 
-PR #9 / `impl4-browser-task-lifecycle` adds the lifecycle foundation that later Chat/Hub composition will consume:
+PR #9 (`feat(workstation): formalize BrowserTask lifecycle`) was promoted to `main` in merge commit `fada723f43613e5e0f061cab24445573ac298998` from accepted head `75d10d35d4757496390debf8e4b4f9efb44c5432`.
 
-- first-class `BrowserTask` metadata and `create` / `show` / `hide` / `park` / explicit `destroy` semantics;
-- existing `taskTabs` + `ownerTaskId` remain the live Chromium ownership primitives rather than introducing a second page store;
-- one `taskId` is idempotently bound to at most one live task page in a Desktop process;
-- hide/park/show preserve the same live page and current URL while the process remains alive;
-- safe versioned BrowserTask metadata is atomically persisted and restored as parked after restart;
-- restart recovery lazily recreates/reconnects one page under the same logical task instead of pretending a process-local `WebContentsView` survived;
-- focused lifecycle and runtime-adapter tests are separated from the already-known broad Windows Desktop failures.
+Acceptance evidence:
+- focused BrowserTask lifecycle/runtime tests passed;
+- real Windows/Electron H-004 smoke validated same-page hide/park re-exposure, explicit destroy, two-process logical restart recovery, exactly-one-page ownership and structural secret isolation;
+- controlled Windows baseline comparison returned `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED` and found no Implementation 4 regression class;
+- exact-final-head Workstation CI and Docker gates passed; the broad Windows aggregator remained red only for the known KI-006 baseline debt.
 
-This candidate is not considered complete or promoted until the focused automated gate is recorded on one final head and the real Windows Desktop lifecycle smoke passes.
+The following work remains intentionally outside Implementation 4.
 
 ## V1 next
 1. Complete BrowserSessionState beyond BrowserTask metadata: ordinary logical tabs, active tab, ordering, safe URL/title metadata, controller/session/run/Kanban identity linkage, and explicit recovery policy.

@@ -131,6 +131,47 @@ A native smoke may be associated with a later final documentation-only head with
 
 If any runtime, dependency, workflow, probe, or product path changes after the smoke, rerun the native smoke on the new head.
 
+## Implementation 4 promotion closure
+
+Implementation 4 was promoted through PR #9 with accepted head `75d10d35d4757496390debf8e4b4f9efb44c5432` and merge commit `fada723f43613e5e0f061cab24445573ac298998`.
+
+### Controlled Windows causality comparison
+
+A native-Windows side-by-side run used the same toolchain/install/commands against:
+
+- baseline: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`;
+- candidate: `2ffee2335b6aba071e7b63457a047cd9334d4d92`.
+
+Observed:
+- baseline UI legacy: 5 failed files / 11 failed tests;
+- candidate UI legacy: 5 failed files / 9 failed tests;
+- baseline platform/Electron legacy: 11 failed files / 33 failed tests;
+- candidate platform/Electron legacy: 10 failed files / 28 failed tests;
+- all remaining candidate failures matched an identical baseline failure or a variant of the same causal class;
+- candidate-specific BrowserTask tests passed 2 files / 16 tests;
+- candidate typecheck passed.
+
+Verdict: `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`.
+
+### Exact-final-head evidence
+
+Git comparison proved that changes from controlled candidate `2ffee...` to accepted head `75d10d35...` were limited to contributor-attribution mapping and Workstation engineering-journal material. BrowserTask product/runtime/probe/workflow/dependency code did not change.
+
+On `75d10d35...`:
+- `Workstation CI` passed;
+- Docker Build/Test/Publish passed;
+- contributor attribution passed after the missing mapping was added;
+- Windows committed-integration validation passed;
+- normal Workstation install passed and kept the checkout clean;
+- Desktop typecheck passed;
+- focused BrowserTask lifecycle tests passed;
+- broad UI/platform diagnostics ran;
+- the final Windows aggregator remained red, preserving KI-006 instead of masking it.
+
+Because no material code changed after the controlled A/B, the final-head Windows red is classified `KI-006_ONLY_BY_CONTROLLED_EQUIVALENCE`, not as a new Implementation 4 regression.
+
+The promotion merge was executed with `expected_head_sha=75d10d35d4757496390debf8e4b4f9efb44c5432`; `main` was then verified at `fada723f43613e5e0f061cab24445573ac298998` with parents `ce78f120e8ed2974d6174e475cc7572afcfe41e0` and `75d10d35d4757496390debf8e4b4f9efb44c5432`.
+
 ## Native validation harness policy
 
 The Implementation 4 investigation produced reusable harness lessons that are now regression knowledge:
