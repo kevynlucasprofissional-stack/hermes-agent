@@ -14,11 +14,9 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 ## KI-003 — Complete logical BrowserSessionState does not survive restart
 
-**Observed on current `main`:** the Chromium profile persists but logical tab/task maps are memory-only, so restarting Desktop loses those mappings.
+**Observed on current `main`:** Chromium profile state persists and promoted BrowserTask metadata now has explicit logical restart semantics, but the **complete** logical browser session still does not survive restart. Ordinary/manual tab ordering, active generic tab, richer URL/title restoration, controller/session/run/Kanban linkage, and all host state remain incomplete.
 
 **Implementation 4 narrowed this gap:** safe BrowserTask metadata is versioned and atomically persisted. Restored tasks normalize to `parked` / `recoveryState: restored` and lazily receive one replacement page when used. Real Windows/Electron smoke validated that behavior.
-
-This does **not** yet persist the complete browser session model: ordinary/manual tab ordering, active generic tab, richer URL/title restoration, controller/session/run/Kanban linkage, and all host state remain incomplete.
 
 **Important boundary:** a `WebContentsView` and its JavaScript heap are process-local. Restart recovery means logical BrowserTask restoration plus controlled page recreation/reconnection, not serialization/resurrection of the same renderer object.
 
@@ -38,7 +36,19 @@ This does **not** yet persist the complete browser session model: ordinary/manua
 
 **Observed:** after the canonical-source installer reached a clean install and passing Desktop typecheck, the broad UI and Electron/platform suites remained red on Windows.
 
-**Causality status:** **not caused by the Workstation canonical-source / BrowserTask changes based on controlled baseline evidence.** Baseline and candidate diagnostics share the same structural failure classes around Windows path/permission assumptions, SSH ControlPath/Include assumptions, POSIX virtualenv layout, Darwin staging, and PowerShell timing. Runner flake can change raw failure counts without changing those classes.
+**Causality status:** **not caused by the Workstation canonical-source / BrowserTask changes based on controlled baseline evidence.** A native-Windows side-by-side comparison used baseline `ce78f120e8ed2974d6174e475cc7572afcfe41e0` and Implementation 4 candidate `2ffee2335b6aba071e7b63457a047cd9334d4d92` under the same Windows/toolchain/install/test conditions.
+
+Observed comparison:
+- baseline UI legacy: 5 failed files / 11 failed tests;
+- candidate UI legacy: 5 failed files / 9 failed tests;
+- baseline platform/Electron legacy: 11 failed files / 33 failed tests;
+- candidate platform/Electron legacy: 10 failed files / 28 failed tests;
+- remaining candidate failures were identical baseline failures or variants of the same causal class around Windows path/permission assumptions, SSH ControlPath/Include assumptions, POSIX virtualenv layout, WSL/bridge timing, staging/file-mode assumptions, and locale-sensitive UI expectations;
+- candidate-specific BrowserTask suite passed 2 files / 16 tests and candidate typecheck passed.
+
+Controlled verdict: `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`.
+
+The accepted PR head `75d10d35d4757496390debf8e4b4f9efb44c5432` changed no BrowserTask product/runtime/probe/workflow/dependency code after that controlled candidate; only contributor-attribution mapping and Workstation journal material were added. Its final Windows workflow again passed committed integration validation, install, checkout-clean, typecheck and focused BrowserTask diagnostics before the final broad aggregator remained red. No new Implementation 4 failure class was introduced.
 
 **Current policy:** keep the broad workflow red while these failures exist. UI and platform suites run independently and a final aggregator preserves failure if either is red. A green focused BrowserTask step does not convert the broad red gate into a pass.
 
@@ -54,11 +64,15 @@ This does **not** yet persist the complete browser session model: ordinary/manua
 
 ## Resolved regression classes
 
-### KI-005 — BrowserTask lifecycle was implicit on current `main`
+### KI-005 — BrowserTask lifecycle was implicit on pre-Implementation-4 `main`
 
 **Original symptom:** `ownerTaskId`, `taskTabs`, parking, and attach/detach existed, but there was no complete first-class `show`/`hide`/`park`/`destroy` BrowserTask contract.
 
-**Resolved candidate behavior:** PR #9 formalizes BrowserTask around the existing `taskTabs`/`BrowserEntry.ownerTaskId` ownership primitives without introducing a second page store. `hide` and `park` preserve a live page, `show` re-exposes it, repeated task creation is idempotent, missing pages recover under the same logical task, and `destroyTask` is explicit.
+**Resolved behavior on current `main`:** PR #9 formalized BrowserTask around the existing `taskTabs`/`BrowserEntry.ownerTaskId` ownership primitives without introducing a second page store. `hide` and `park` preserve a live page, `show` re-exposes it, repeated task creation is idempotent, missing pages recover under the same logical task, and `destroyTask` is explicit.
+
+Promotion:
+- accepted PR head: `75d10d35d4757496390debf8e4b4f9efb44c5432`;
+- merge commit on `main`: `fada723f43613e5e0f061cab24445573ac298998`.
 
 **Automated regression coverage:**
 - `apps/desktop/electron/workstation-browser-task.test.ts`;
@@ -72,7 +86,7 @@ This does **not** yet persist the complete browser session model: ordinary/manua
 
 The native smoke proved same-page identity across hide/show and park/show, explicit destruction, two-process logical restart restoration/recreation, exactly-one-page ownership, and structural secret isolation.
 
-**Carry-forward rule:** the native result may be associated with a later final documentation-only head only after Git comparison proves the relevant Desktop product files and H-004 probe are unchanged. Promotion of the PR is a separate integration gate and does not change the fact that the KI-005 behavior itself is now validated.
+**Carry-forward evidence:** Git comparison established that changes between the native-smoke/code-bearing evidence and the final accepted PR head did not alter the exercised BrowserTask product/runtime/probe behavior. Final-head Workstation CI and focused gates passed; broad Windows red retained only KI-006 baseline debt. KI-005 is therefore closed on promoted `main`.
 
 ### KI-001 — Desktop Browser capability could disappear from the model schema
 
