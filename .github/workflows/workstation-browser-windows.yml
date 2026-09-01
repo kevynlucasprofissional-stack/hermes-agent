@@ -60,8 +60,16 @@ jobs:
             $dirty | Write-Host
             throw "Workstation install changed the committed checkout."
           }
+      - name: Candidate diff check
+        run: git diff --check origin/main...HEAD
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
+      - name: BrowserSessionState ESLint
+        working-directory: apps/desktop
+        run: npx eslint electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts
+      - name: BrowserSessionState Prettier
+        working-directory: apps/desktop
+        run: npx prettier --check electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts
       - name: Browser foundation focused tests
         id: browser_foundation_tests
         continue-on-error: true
