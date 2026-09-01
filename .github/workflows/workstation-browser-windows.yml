@@ -51,10 +51,10 @@ jobs:
           }
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
-      - name: BrowserTask focused lifecycle tests
+      - name: Browser foundation focused tests
         id: browser_task_tests
         continue-on-error: true
-        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
+        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
       - name: Desktop UI tests
         id: desktop_ui_tests
         continue-on-error: true
@@ -70,9 +70,9 @@ jobs:
           $browserTask = "${{ steps.browser_task_tests.outcome }}"
           $ui = "${{ steps.desktop_ui_tests.outcome }}"
           $platform = "${{ steps.desktop_platform_tests.outcome }}"
-          Write-Host "BrowserTask focused tests: $browserTask"
+          Write-Host "Browser foundation focused tests: $browserTask"
           Write-Host "Desktop UI tests: $ui"
           Write-Host "Desktop platform tests: $platform"
           if ($browserTask -ne "success" -or $ui -ne "success" -or $platform -ne "success") {
-            throw "One or more Desktop gates failed. Focused BrowserTask, UI, and platform suites were allowed to run so one failure does not mask the others."
+            throw "One or more Desktop gates failed. Focused Browser foundation, UI, and platform suites were allowed to run so one failure does not mask the others."
           }
