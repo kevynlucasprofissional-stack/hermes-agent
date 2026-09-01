@@ -528,10 +528,19 @@ export class WorkstationBrowserRuntime {
 
   destroyTask(taskId: string): boolean {
     this.ensureBrowserSessionStateRestored()
-    const destroyed = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().destroyTask(taskId))
-    if (destroyed) this.removePendingTaskTab(taskId)
-    this.persistBrowserSessionState()
-    return destroyed
+    try {
+      const destroyed = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().destroyTask(taskId))
+      if (destroyed) this.removePendingTaskTab(taskId)
+      this.persistBrowserSessionState()
+      return destroyed
+    } catch (error) {
+      // BrowserTaskLifecycle applies explicit destroy in process before it
+      // persists the composite snapshot. If durability fails, keep surfacing
+      // that error, but finish the corresponding process-local cleanup so a
+      // later task with the same id cannot inherit stale recovery metadata.
+      if (!this.taskLifecycle().task(taskId)) this.removePendingTaskTab(taskId)
+      throw error
+    }
   }
 
   listTasks(): BrowserTask[] {
