@@ -26,10 +26,11 @@ const PATH_CREDENTIAL_ASSIGNMENT =
   /(?:^|[/;?&#\\])(?:access[._-]*token|refresh[._-]*token|auth(?:orization)?[._-]*(?:code|token)|oauth[._-]*code|api[._-]*key|client[._-]*secret|session(?:[._-]*(?:id|key|token))?|signed[._-]*(?:url|token)|signature|credential|password|passwd|passcode|secret|token|code|pin|otp)(?:=|:)[^/;?&#\\]*/i
 
 // Authentication/recovery routes carrying a short code/token-like value are
-// intentionally not restartable. Ordinary structural numeric identifiers such
-// as `/customers/482913` remain allowed.
+// intentionally not restartable. The route may name the credential in an
+// intermediate segment (`/login/code/12345`, `/magic/link/abcdefgh`). Ordinary
+// structural numeric identifiers such as `/customers/482913` remain allowed.
 const AUTH_ROUTE_VALUE =
-  /(?:^|\/)(?:login|sign[._-]*in|auth|oauth|callback|recovery|recover|reset|verify|verification|otp|mfa|2fa|magic)\/(?:\d{4,}|[a-z0-9_-]{8,})(?:\/|$)/i
+  /(?:^|\/)(?:login|sign[._-]*in|auth|oauth|callback|recovery|recover|reset|verify|verification|otp|mfa|2fa|magic)(?:\/(?:code|token|pin|otp|passcode|password|credential|secret|link|verification))?\/(?:\d{4,}|[a-z0-9_-]{8,})(?:\/|$)/i
 
 const JWT_LIKE = /(?:^|[^a-z0-9_-])eyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}(?:$|[^a-z0-9_-])/i
 const OPAQUE_TOKEN = /(?:^|[^a-z0-9_-])[a-z0-9_-]{24,}(?:$|[^a-z0-9_-])/i
