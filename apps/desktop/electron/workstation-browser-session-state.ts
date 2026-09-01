@@ -35,6 +35,7 @@ const AUTH_ROUTE_VALUE =
 
 const JWT_LIKE = /(?:^|[^a-z0-9_-])eyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}(?:$|[^a-z0-9_-])/i
 const OPAQUE_TOKEN = /(?:^|[^a-z0-9_-])[a-z0-9_-]{24,}(?:$|[^a-z0-9_-])/i
+const PERCENT_ESCAPE = /%([0-9a-f]{2})/gi
 
 export type BrowserSessionTabRecoveryPolicy = 'restore-safe-url' | 'restore-about-blank' | 'browser-task-lazy'
 export type BrowserSessionTabRecoveryState = 'live' | 'restored' | 'stale'
@@ -83,6 +84,18 @@ function containsControlCharacters(value: string): boolean {
   return false
 }
 
+function containsMalformedPercentEncoding(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== '%') continue
+
+    const encodedByte = value.slice(index + 1, index + 3)
+    if (!/^[0-9a-f]{2}$/i.test(encodedByte)) return true
+    index += 2
+  }
+
+  return false
+}
+
 export function emptyBrowserSessionState(now: () => Date = () => new Date()): BrowserSessionStateSnapshot {
   return {
     version: BROWSER_SESSION_STATE_VERSION,
@@ -91,6 +104,12 @@ export function emptyBrowserSessionState(now: () => Date = () => new Date()): Br
     tabs: [],
     browserTasks: browserTaskEmptySnapshot()
   }
+}
+
+function decodePercentEscapesIndividually(value: string): string {
+  return value.replace(PERCENT_ESCAPE, (_match, encodedByte: string) =>
+    String.fromCharCode(Number.parseInt(encodedByte, 16))
+  )
 }
 
 function decodedForInspection(value: string): string | null {
@@ -102,8 +121,10 @@ function decodedForInspection(value: string): string | null {
     try {
       next = decodeURIComponent(decoded)
     } catch {
-      // Malformed or ambiguous percent encoding is not useful restart metadata.
-      return null
+      // A previously valid `%25` may legitimately become a literal `%` after
+      // one layer. Decode any remaining valid byte escapes individually so a
+      // malformed sibling cannot hide credential delimiters from inspection.
+      next = decodePercentEscapesIndividually(decoded)
     }
 
     if (next === decoded) {
@@ -113,13 +134,16 @@ function decodedForInspection(value: string): string | null {
     decoded = next
   }
 
-  // Deeply nested encoding is itself ambiguous. Refuse it unless the configured
-  // bound was sufficient to reach a stable representation.
+  let next: string
   try {
-    if (decodeURIComponent(decoded) !== decoded) {
-      return null
-    }
+    next = decodeURIComponent(decoded)
   } catch {
+    next = decodePercentEscapesIndividually(decoded)
+  }
+
+  // Deeply nested encoding is ambiguous restart metadata. Fail closed unless
+  // the bounded inspection reached a stable representation.
+  if (next !== decoded) {
     return null
   }
 
@@ -182,7 +206,7 @@ export function safeRestorableUrlMetadata(value: unknown): string | null {
       return null
     }
 
-    if (containsSensitiveMaterial(parsed.pathname)) {
+    if (containsMalformedPercentEncoding(parsed.pathname) || containsSensitiveMaterial(parsed.pathname)) {
       return null
     }
 
