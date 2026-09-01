@@ -66,14 +66,14 @@ jobs:
         run: npm run typecheck --workspace apps/desktop
       - name: BrowserSessionState ESLint
         working-directory: apps/desktop
-        run: npx eslint electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts
+        run: npx eslint electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-runtime-resilience.test.ts
       - name: BrowserSessionState Prettier
         working-directory: apps/desktop
-        run: npx prettier --check electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts
+        run: npx prettier --check electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-runtime-resilience.test.ts
       - name: Browser foundation focused tests
         id: browser_foundation_tests
         continue-on-error: true
-        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
+        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-runtime-resilience.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
       - name: Native BrowserSessionState restart and fault smoke
         id: native_browser_session_state
         continue-on-error: true
