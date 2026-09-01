@@ -29,6 +29,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact candidate checkout
+        shell: pwsh
+        run: |
+          $expected = "${{ github.event.pull_request.head.sha || github.sha }}"
+          $actual = (git rev-parse HEAD).Trim()
+          Write-Host "Expected candidate SHA: $expected"
+          Write-Host "Checked out SHA:       $actual"
+          if ($actual -ne $expected) {
+            throw "Windows Browser gate is not running the exact candidate SHA."
+          }
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
@@ -52,9 +63,16 @@ jobs:
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
       - name: Browser foundation focused tests
-        id: browser_task_tests
+        id: browser_foundation_tests
         continue-on-error: true
         run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
+      - name: Native BrowserSessionState restart and fault smoke
+        id: native_browser_session_state
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $env:H010_EXPECTED_SHA = "${{ github.event.pull_request.head.sha || github.sha }}"
+          node workstation/context/engineering-journal/probes/h010-native-browser-session-state-smoke.mjs
       - name: Desktop UI tests
         id: desktop_ui_tests
         continue-on-error: true
@@ -67,12 +85,14 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $browserTask = "${{ steps.browser_task_tests.outcome }}"
+          $browserFoundation = "${{ steps.browser_foundation_tests.outcome }}"
+          $nativeSession = "${{ steps.native_browser_session_state.outcome }}"
           $ui = "${{ steps.desktop_ui_tests.outcome }}"
           $platform = "${{ steps.desktop_platform_tests.outcome }}"
-          Write-Host "Browser foundation focused tests: $browserTask"
+          Write-Host "Browser foundation focused tests: $browserFoundation"
+          Write-Host "Native BrowserSessionState smoke: $nativeSession"
           Write-Host "Desktop UI tests: $ui"
           Write-Host "Desktop platform tests: $platform"
-          if ($browserTask -ne "success" -or $ui -ne "success" -or $platform -ne "success") {
-            throw "One or more Desktop gates failed. Focused Browser foundation, UI, and platform suites were allowed to run so one failure does not mask the others."
+          if ($browserFoundation -ne "success" -or $nativeSession -ne "success" -or $ui -ne "success" -or $platform -ne "success") {
+            throw "One or more Desktop gates failed. Focused Browser foundation, native BrowserSessionState, UI, and platform suites were allowed to run so one failure does not mask the others."
           }
