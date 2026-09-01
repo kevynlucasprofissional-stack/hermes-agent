@@ -296,6 +296,7 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
     'https://example.test/file;pin=12345',
     'https://example.test/file;otp=12345',
     'http://example.test\\?token=12345',
+    'https://example.test/path/%ZZtoken',
     'https://example.test/path/%3Ftoken%3D12345',
     'https://example.test/path/%253Ftoken%253D12345',
     'https://example.test/path/%25253Ftoken%25253D12345',
@@ -319,9 +320,11 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
 
   const ordinaryCustomer = 'https://example.test/customers/482913'
   const ordinaryDocs = 'https://example.test/docs/code-style'
+  const ordinaryPercent = 'https://example.test/discount/50%25'
 
   assert.equal(safeRestorableUrlMetadata(ordinaryCustomer), ordinaryCustomer)
   assert.equal(safeRestorableUrlMetadata(ordinaryDocs), ordinaryDocs)
+  assert.equal(safeRestorableUrlMetadata(ordinaryPercent), ordinaryPercent)
 
   const persistence = new BrowserSessionStateFilePersistence(filePath)
 
@@ -330,7 +333,8 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
     [
       ...rejected.map((value, index) => tab(`rejected-${index}`, value)),
       tab('ordinary-customer', ordinaryCustomer),
-      tab('ordinary-docs', ordinaryDocs)
+      tab('ordinary-docs', ordinaryDocs),
+      tab('ordinary-percent', ordinaryPercent)
     ],
     'ordinary-customer'
   )
@@ -343,6 +347,7 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
 
   assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-customer')?.safeUrl, ordinaryCustomer)
   assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-docs')?.safeUrl, ordinaryDocs)
+  assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-percent')?.safeUrl, ordinaryPercent)
 
   const reloaded = new BrowserSessionStateFilePersistence(filePath).load()
 
@@ -353,4 +358,5 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
 
   assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-customer')?.safeUrl, ordinaryCustomer)
   assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-docs')?.safeUrl, ordinaryDocs)
+  assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-percent')?.safeUrl, ordinaryPercent)
 })
