@@ -279,6 +279,12 @@ test('a pre-rename write failure also retains latest intent without changing the
 
 test('credential-like pathname parameters and parser-confusion URLs fail closed through serialization and reload', () => {
   const filePath = stateFile()
+  let deeplyEncodedCredential = '?token=12345'
+
+  for (let layer = 0; layer < 10; layer += 1) {
+    deeplyEncodedCredential = encodeURIComponent(deeplyEncodedCredential)
+  }
+
   const rejected = [
     'https://example.test/file;session=short_token',
     'https://example.test/file;token=12345',
@@ -292,6 +298,8 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
     'http://example.test\\?token=12345',
     'https://example.test/path/%3Ftoken%3D12345',
     'https://example.test/path/%253Ftoken%253D12345',
+    'https://example.test/path/%25253Ftoken%25253D12345',
+    `https://example.test/path/${deeplyEncodedCredential}`,
     'https://example.test/login/12345',
     'https://example.test/login/code/12345',
     'https://example.test/login/token/abcdefgh',
