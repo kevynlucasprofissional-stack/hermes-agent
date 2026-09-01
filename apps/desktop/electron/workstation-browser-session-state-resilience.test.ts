@@ -293,6 +293,13 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
     'https://example.test/path/%3Ftoken%3D12345',
     'https://example.test/path/%253Ftoken%253D12345',
     'https://example.test/login/12345',
+    'https://example.test/login/code/12345',
+    'https://example.test/login/token/abcdefgh',
+    'https://example.test/oauth/token/abcdefgh',
+    'https://example.test/callback/code/12345',
+    'https://example.test/reset/password/12345678',
+    'https://example.test/verification/pin/482913',
+    'https://example.test/magic/link/abcdefgh',
     'https://example.test/recovery/482913',
     'https://example.test/verify/482913',
     'https://example.test/magic/482913'
