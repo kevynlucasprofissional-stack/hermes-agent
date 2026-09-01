@@ -19,6 +19,18 @@ const SENSITIVE_MARKER =
 const ONE_TIME_AUTHENTICATION_MARKER =
   /(?:^|[^a-z0-9])(?:recovery[\s._/-]*(?:code|token|key)|verif(?:y|ication)[\s._/-]*(?:code|token)|(?:one[\s._/-]*time|single[\s._/-]*use)[\s._/-]*(?:code|password|passcode|pin|token|credential)|otp|temporary[\s._/-]*(?:pin|code|password|passcode)|magic[\s._/-]*(?:login[\s._/-]*)?(?:code|link|token))(?:$|[^a-z0-9])/i
 
+// URL query/hash components are stripped structurally below. This pattern closes
+// the equivalent credential key/value forms when a site or parser encodes them
+// into pathname/matrix syntax instead (for example `;token=...` or `%3Fcode=...`).
+const PATH_CREDENTIAL_ASSIGNMENT =
+  /(?:^|[\/;?&#\\])(?:access[._-]*token|refresh[._-]*token|auth(?:orization)?[._-]*(?:code|token)|oauth[._-]*code|api[._-]*key|client[._-]*secret|session(?:[._-]*(?:id|key|token))?|signed[._-]*(?:url|token)|signature|credential|password|passwd|passcode|secret|token|code|pin|otp)(?:=|:)[^\/;?&#\\]*/i
+
+// Authentication/recovery routes carrying a short code/token-like value are
+// intentionally not restartable. Ordinary structural numeric identifiers such
+// as `/customers/482913` remain allowed.
+const AUTH_ROUTE_VALUE =
+  /(?:^|\/)(?:login|sign[._-]*in|auth|oauth|callback|recovery|recover|reset|verify|verification|otp|mfa|2fa|magic)\/(?:\d{4,}|[a-z0-9_-]{8,})(?:\/|$)/i
+
 const JWT_LIKE = /(?:^|[^a-z0-9_-])eyJ[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}\.[a-z0-9_-]{8,}(?:$|[^a-z0-9_-])/i
 const OPAQUE_TOKEN = /(?:^|[^a-z0-9_-])[a-z0-9_-]{24,}(?:$|[^a-z0-9_-])/i
 
@@ -105,6 +117,8 @@ function containsSensitiveMaterial(value: string): boolean {
   return (
     SENSITIVE_MARKER.test(inspected) ||
     ONE_TIME_AUTHENTICATION_MARKER.test(inspected) ||
+    PATH_CREDENTIAL_ASSIGNMENT.test(inspected) ||
+    AUTH_ROUTE_VALUE.test(inspected) ||
     JWT_LIKE.test(inspected) ||
     OPAQUE_TOKEN.test(inspected)
   )
@@ -115,8 +129,13 @@ function containsSensitiveMaterial(value: string): boolean {
  *
  * The result is deliberately less expressive than the live URL: only
  * about:blank or HTTP(S) is accepted, userinfo is rejected, all query and
- * fragment data is removed, and token/credential-like path material is
- * rejected. The live WebContents URL remains authoritative during the process.
+ * fragment data is removed, and recognizable credential/authentication path
+ * material is rejected. Backslashes are rejected before URL parsing so parser
+ * normalization cannot turn a pseudo-query into durable pathname content.
+ * The live WebContents URL remains authoritative during the process.
+ *
+ * This is intentionally not a universal PII/secret detector. Ordinary
+ * structural identifiers may persist; credential-bearing forms fail closed.
  */
 export function safeRestorableUrlMetadata(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -125,7 +144,7 @@ export function safeRestorableUrlMetadata(value: unknown): string | null {
 
   const raw = value.trim()
 
-  if (!raw || raw.length > MAX_SAFE_URL_LENGTH || containsControlCharacters(raw)) {
+  if (!raw || raw.length > MAX_SAFE_URL_LENGTH || containsControlCharacters(raw) || raw.includes('\\')) {
     return null
   }
 
@@ -345,6 +364,10 @@ function cloneSnapshot(snapshot: BrowserSessionStateSnapshot): BrowserSessionSta
 
 export class BrowserSessionStateFilePersistence {
   private loaded = false
+  // `cached` is the latest accepted in-process projection, not necessarily the
+  // last successfully renamed file. If a disk replacement fails, retaining the
+  // newer normalized projection is what prevents a later successful half-save
+  // from regressing BrowserTask or tab state.
   private cached: BrowserSessionStateSnapshot | null = null
   private preserveUnsupportedVersion = false
   private readonly taskAdapter: BrowserTaskPersistence
@@ -434,13 +457,16 @@ export class BrowserSessionStateFilePersistence {
       throw new Error('Refusing to persist invalid BrowserSessionState')
     }
 
+    // The in-process projection advances before I/O. A failed atomic replacement
+    // therefore leaves disk at the previous complete snapshot while the process
+    // retains its latest accepted intent for the next retry/composite save.
+    this.cached = normalized
+    this.loaded = true
+
     // A newer writer may know fields and semantics this build does not. Keep
     // serving an in-memory structural projection, but never downgrade the
     // on-disk state merely because this process observed it.
     if (this.preserveUnsupportedVersion) {
-      this.cached = normalized
-      this.loaded = true
-
       return cloneSnapshot(normalized)
     }
 
@@ -465,9 +491,6 @@ export class BrowserSessionStateFilePersistence {
     } catch {
       // Best effort on Windows / filesystems without POSIX permissions.
     }
-
-    this.cached = normalized
-    this.loaded = true
 
     return cloneSnapshot(normalized)
   }
