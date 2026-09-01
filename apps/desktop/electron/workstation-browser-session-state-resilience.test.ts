@@ -32,7 +32,7 @@ function tab(id: string, safeUrl = 'about:blank'): BrowserSessionTab {
     browserTaskId: null,
     safeUrl,
     safeTitle: null,
-    recoveryPolicy: safeUrl === 'about:blank' ? 'restore-safe-url' : 'restore-safe-url',
+    recoveryPolicy: 'restore-safe-url',
     recoveryState: 'live',
     recoveryReason: null
   }
@@ -83,6 +83,35 @@ function persistenceWithOneShotRenameFailure(filePath: string): {
     ),
     failNextRename(): void {
       shouldFailNextRename = true
+    }
+  }
+}
+
+function persistenceWithOneShotWriteFailure(filePath: string): {
+  persistence: BrowserSessionStateFilePersistence
+  failNextWrite(): void
+} {
+  let shouldFailNextWrite = false
+  const io = {
+    ...fs,
+    writeFileSync: (...args: Parameters<typeof fs.writeFileSync>) => {
+      if (shouldFailNextWrite) {
+        shouldFailNextWrite = false
+        throw new Error('simulated BrowserSessionState write failure')
+      }
+      return fs.writeFileSync(...args)
+    }
+  }
+
+  return {
+    persistence: new BrowserSessionStateFilePersistence(
+      filePath,
+      null,
+      io,
+      () => new Date('2026-09-01T12:00:00.000Z')
+    ),
+    failNextWrite(): void {
+      shouldFailNextWrite = true
     }
   }
 }
@@ -222,7 +251,29 @@ test('R5 next successful composite write converges disk to the complete latest i
   assert.equal(fresh?.activeTabId, 'ordinary-b')
 })
 
-test('credential-like pathname parameters and parser-confusion URLs fail closed without rejecting ordinary IDs', () => {
+test('a pre-rename write failure also retains latest intent without changing the durable file', () => {
+  const filePath = stateFile()
+  const fault = persistenceWithOneShotWriteFailure(filePath)
+  const tasks = fault.persistence.browserTaskPersistence()
+
+  fault.persistence.load()
+  fault.persistence.saveSession([tab('ordinary-a')], 'ordinary-a')
+  tasks.save(taskSnapshot('parked'))
+  const before = fs.readFileSync(filePath, 'utf-8')
+
+  fault.failNextWrite()
+  assert.throws(() => tasks.save(taskSnapshot('visible')), /simulated BrowserSessionState write failure/)
+  assert.equal(fs.readFileSync(filePath, 'utf-8'), before)
+  assert.equal(new BrowserSessionStateFilePersistence(filePath).load()?.browserTasks.tasks[0]?.status, 'parked')
+
+  fault.persistence.saveSession([tab('ordinary-b')], 'ordinary-b')
+  const fresh = new BrowserSessionStateFilePersistence(filePath).load()
+  assert.equal(fresh?.browserTasks.tasks[0]?.status, 'visible')
+  assert.deepEqual(fresh?.tabs.map(candidate => candidate.id), ['ordinary-b'])
+})
+
+test('credential-like pathname parameters and parser-confusion URLs fail closed through serialization and reload', () => {
+  const filePath = stateFile()
   const rejected = [
     'https://example.test/file;session=short_token',
     'https://example.test/file;token=12345',
@@ -246,9 +297,34 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
     assert.equal(safeRestorableUrlMetadata(value), null, value)
   }
 
-  assert.equal(
-    safeRestorableUrlMetadata('https://example.test/customers/482913'),
-    'https://example.test/customers/482913'
+  const ordinaryCustomer = 'https://example.test/customers/482913'
+  const ordinaryDocs = 'https://example.test/docs/code-style'
+  assert.equal(safeRestorableUrlMetadata(ordinaryCustomer), ordinaryCustomer)
+  assert.equal(safeRestorableUrlMetadata(ordinaryDocs), ordinaryDocs)
+
+  const persistence = new BrowserSessionStateFilePersistence(filePath)
+  persistence.load()
+  persistence.saveSession(
+    [
+      ...rejected.map((value, index) => tab(`rejected-${index}`, value)),
+      tab('ordinary-customer', ordinaryCustomer),
+      tab('ordinary-docs', ordinaryDocs)
+    ],
+    'ordinary-customer'
   )
-  assert.equal(safeRestorableUrlMetadata('https://example.test/docs/code-style'), 'https://example.test/docs/code-style')
+
+  const persisted = readComposite(filePath)
+  for (let index = 0; index < rejected.length; index += 1) {
+    assert.equal(persisted.tabs.find(candidate => candidate.id === `rejected-${index}`)?.safeUrl, null)
+  }
+  assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-customer')?.safeUrl, ordinaryCustomer)
+  assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-docs')?.safeUrl, ordinaryDocs)
+
+  const reloaded = new BrowserSessionStateFilePersistence(filePath).load()
+  assert.ok(reloaded)
+  for (let index = 0; index < rejected.length; index += 1) {
+    assert.equal(reloaded.tabs.find(candidate => candidate.id === `rejected-${index}`)?.safeUrl, null)
+  }
+  assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-customer')?.safeUrl, ordinaryCustomer)
+  assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-docs')?.safeUrl, ordinaryDocs)
 })
