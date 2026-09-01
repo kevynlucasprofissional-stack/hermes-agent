@@ -22,6 +22,7 @@ afterEach(() => {
 
 function stateFile(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-browser-session-resilience-'))
+
   tempRoots.push(root)
   return path.join(root, 'browser-session.json')
 }
@@ -63,6 +64,7 @@ function persistenceWithOneShotRenameFailure(filePath: string): {
   failNextRename(): void
 } {
   let shouldFailNextRename = false
+
   const io = {
     ...fs,
     renameSync: (...args: Parameters<typeof fs.renameSync>) => {
@@ -70,6 +72,7 @@ function persistenceWithOneShotRenameFailure(filePath: string): {
         shouldFailNextRename = false
         throw new Error('simulated atomic rename failure')
       }
+
       fs.renameSync(...args)
     }
   }
@@ -92,6 +95,7 @@ function persistenceWithOneShotWriteFailure(filePath: string): {
   failNextWrite(): void
 } {
   let shouldFailNextWrite = false
+
   const io = {
     ...fs,
     writeFileSync: (...args: Parameters<typeof fs.writeFileSync>) => {
@@ -99,6 +103,7 @@ function persistenceWithOneShotWriteFailure(filePath: string): {
         shouldFailNextWrite = false
         throw new Error('simulated BrowserSessionState write failure')
       }
+
       return fs.writeFileSync(...args)
     }
   }
@@ -299,10 +304,12 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
 
   const ordinaryCustomer = 'https://example.test/customers/482913'
   const ordinaryDocs = 'https://example.test/docs/code-style'
+
   assert.equal(safeRestorableUrlMetadata(ordinaryCustomer), ordinaryCustomer)
   assert.equal(safeRestorableUrlMetadata(ordinaryDocs), ordinaryDocs)
 
   const persistence = new BrowserSessionStateFilePersistence(filePath)
+
   persistence.load()
   persistence.saveSession(
     [
@@ -314,17 +321,21 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
   )
 
   const persisted = readComposite(filePath)
+
   for (let index = 0; index < rejected.length; index += 1) {
     assert.equal(persisted.tabs.find(candidate => candidate.id === `rejected-${index}`)?.safeUrl, null)
   }
+
   assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-customer')?.safeUrl, ordinaryCustomer)
   assert.equal(persisted.tabs.find(candidate => candidate.id === 'ordinary-docs')?.safeUrl, ordinaryDocs)
 
   const reloaded = new BrowserSessionStateFilePersistence(filePath).load()
+
   assert.ok(reloaded)
   for (let index = 0; index < rejected.length; index += 1) {
     assert.equal(reloaded.tabs.find(candidate => candidate.id === `rejected-${index}`)?.safeUrl, null)
   }
+
   assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-customer')?.safeUrl, ordinaryCustomer)
   assert.equal(reloaded.tabs.find(candidate => candidate.id === 'ordinary-docs')?.safeUrl, ordinaryDocs)
 })
