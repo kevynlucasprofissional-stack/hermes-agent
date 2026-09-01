@@ -12,6 +12,7 @@ export const BROWSER_SESSION_STATE_VERSION = 1
 export const MAX_BROWSER_SESSION_TABS = 128
 
 const MAX_SAFE_URL_LENGTH = 2_048
+const MAX_URL_DECODE_ITERATIONS = 8
 
 const SENSITIVE_MARKER =
   /(?:^|[^a-z0-9])(?:access[\s._/-]*token|refresh[\s._/-]*token|auth(?:orization)?[\s._/-]*(?:code|token)|oauth[\s._/-]*code|api[\s._/-]*key|client[\s._/-]*secret|session[\s._/-]*(?:id|key|token)|signed[\s._/-]*(?:url|token)|pre[\s._/-]*signed(?:[\s._/-]*(?:url|request|token|download|upload))?|signature|credential|password|passwd|passcode|bearer|secret)(?:$|[^a-z0-9])/i
@@ -92,21 +93,34 @@ export function emptyBrowserSessionState(now: () => Date = () => new Date()): Br
   }
 }
 
-function decodedForInspection(value: string): string {
+function decodedForInspection(value: string): string | null {
   let decoded = value
 
-  for (let iteration = 0; iteration < 2; iteration += 1) {
+  for (let iteration = 0; iteration < MAX_URL_DECODE_ITERATIONS; iteration += 1) {
+    let next: string
+
     try {
-      const next = decodeURIComponent(decoded)
-
-      if (next === decoded) {
-        break
-      }
-
-      decoded = next
+      next = decodeURIComponent(decoded)
     } catch {
-      break
+      // Malformed or ambiguous percent encoding is not useful restart metadata.
+      return null
     }
+
+    if (next === decoded) {
+      return decoded.normalize('NFKC')
+    }
+
+    decoded = next
+  }
+
+  // Deeply nested encoding is itself ambiguous. Refuse it unless the configured
+  // bound was sufficient to reach a stable representation.
+  try {
+    if (decodeURIComponent(decoded) !== decoded) {
+      return null
+    }
+  } catch {
+    return null
   }
 
   return decoded.normalize('NFKC')
@@ -114,6 +128,10 @@ function decodedForInspection(value: string): string {
 
 function containsSensitiveMaterial(value: string): boolean {
   const inspected = decodedForInspection(value)
+
+  if (inspected === null) {
+    return true
+  }
 
   return (
     SENSITIVE_MARKER.test(inspected) ||
