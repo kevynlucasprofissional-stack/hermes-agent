@@ -23,7 +23,7 @@ const ONE_TIME_AUTHENTICATION_MARKER =
 // the equivalent credential key/value forms when a site or parser encodes them
 // into pathname/matrix syntax instead (for example `;token=...` or `%3Fcode=...`).
 const PATH_CREDENTIAL_ASSIGNMENT =
-  /(?:^|[\/;?&#\\])(?:access[._-]*token|refresh[._-]*token|auth(?:orization)?[._-]*(?:code|token)|oauth[._-]*code|api[._-]*key|client[._-]*secret|session(?:[._-]*(?:id|key|token))?|signed[._-]*(?:url|token)|signature|credential|password|passwd|passcode|secret|token|code|pin|otp)(?:=|:)[^\/;?&#\\]*/i
+  /(?:^|[/;?&#\\])(?:access[._-]*token|refresh[._-]*token|auth(?:orization)?[._-]*(?:code|token)|oauth[._-]*code|api[._-]*key|client[._-]*secret|session(?:[._-]*(?:id|key|token))?|signed[._-]*(?:url|token)|signature|credential|password|passwd|passcode|secret|token|code|pin|otp)(?:=|:)[^/;?&#\\]*/i
 
 // Authentication/recovery routes carrying a short code/token-like value are
 // intentionally not restartable. Ordinary structural numeric identifiers such
