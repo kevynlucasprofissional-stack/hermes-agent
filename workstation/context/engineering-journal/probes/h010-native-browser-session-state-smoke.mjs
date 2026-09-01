@@ -358,6 +358,47 @@ app.whenReady().then(async () => {
     assert(converged.tabs.find((tab: { id: string }) => tab.id === ordinary.id)?.safeUrl === baseUrl + '/after-failure', 'fault mode later session projection missing')
 
     console.log('H010_NATIVE_FAULT_CONVERGENCE_PASS', JSON.stringify({ pid: process.pid, taskId }))
+
+    const destroyTaskId = 'h010-destroy-fault-task'
+    runtime.createTask({ taskId: destroyTaskId })
+    runtime.showTask(destroyTaskId, win, { x: 0, y: 0, width: 900, height: 600 })
+    const destroyTab = runtime.state().tabs.find(tab => tab.ownerTaskId === destroyTaskId)
+    assert(destroyTab, 'destroy fault mode task tab missing')
+    const destroyContents = runtime.getWebContents(destroyTab.id)
+    assert(destroyContents, 'destroy fault mode WebContents missing')
+    await destroyContents.loadURL(baseUrl + '/task-destroy-stale')
+    assert(composite().browserTasks.tasks.some((task: { taskId: string }) => task.taskId === destroyTaskId), 'destroy fault mode seed task not durable')
+
+    failNextRename = true
+    let observedDestroyFailure = false
+    try {
+      runtime.destroyTask(destroyTaskId)
+    } catch (error) {
+      observedDestroyFailure = String(error).includes('H010 simulated native rename failure')
+    }
+    assert(observedDestroyFailure, 'destroy fault mode did not observe injected rename failure')
+    assert(!runtime.listTasks().some(task => task.taskId === destroyTaskId), 'destroy fault mode logical task survived in process')
+    assert(destroyContents.isDestroyed(), 'destroy fault mode prior WebContents survived')
+    assert(composite().browserTasks.tasks.some((task: { taskId: string }) => task.taskId === destroyTaskId), 'destroy fault mode failed rename changed durable file')
+
+    await ordinaryContents.loadURL(baseUrl + '/after-destroy-failure')
+    await sleep(100)
+    const destroyConverged = composite()
+    assert(!destroyConverged.browserTasks.tasks.some((task: { taskId: string }) => task.taskId === destroyTaskId), 'destroy fault mode later session save resurrected deleted task')
+
+    runtime.createTask({ taskId: destroyTaskId })
+    const recreated = runtime.state().tabs.filter(tab => tab.ownerTaskId === destroyTaskId)
+    assert(recreated.length === 1, 'destroy fault mode recreation expected one task page')
+    assert(recreated[0].id !== destroyTab.id, 'destroy fault mode recreation reused destroyed tab id')
+    assert(recreated[0].url === 'about:blank', 'destroy fault mode recreation inherited stale destroyed URL')
+    console.log('H010_NATIVE_DESTROY_FAILURE_CLEANUP_PASS', JSON.stringify({
+      pid: process.pid,
+      taskId: destroyTaskId,
+      destroyedTabId: destroyTab.id,
+      recreatedTabId: recreated[0].id
+    }))
+    runtime.destroyTask(destroyTaskId)
+
     await shutdown(win)
   }
 
@@ -485,7 +526,7 @@ try {
   })
 
   console.log('\nH010_CLASSIFICATION=VALIDATED')
-  console.log('H010_CONCLUSION=Exact-SHA Windows/Electron BrowserSessionState passed two-process restart, lazy task ownership, durable title/URL boundaries, Chromium profile separation, native failed-write convergence, and abrupt restart recovery.')
+  console.log('H010_CONCLUSION=Exact-SHA Windows/Electron BrowserSessionState passed two-process restart, lazy task ownership, durable title/URL boundaries, Chromium profile separation, native failed-write convergence, explicit-destroy failure cleanup, and abrupt restart recovery.')
   process.exitCode = 0
 } catch (error) {
   console.error('\nH010_CLASSIFICATION=FAILED_OR_REFORMULATE')
