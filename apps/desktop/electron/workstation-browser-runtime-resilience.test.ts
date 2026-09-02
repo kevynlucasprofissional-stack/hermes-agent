@@ -229,6 +229,25 @@ function persistedTaskIds(): string[] {
   return composite.browserTasks.tasks.map(task => task.taskId)
 }
 
+function persistedTask(taskId: string): { taskId: string; sessionHost: string | null } | undefined {
+  const composite = JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')) as {
+    browserTasks: { tasks: Array<{ taskId: string; sessionHost: string | null }> }
+  }
+
+  return composite.browserTasks.tasks.find(task => task.taskId === taskId)
+}
+
+function executeControlRequest(
+  runtime: WorkstationBrowserRuntime,
+  request: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  return (
+    runtime as unknown as {
+      executeControlRequest(value: Record<string, unknown>): Promise<Record<string, unknown>>
+    }
+  ).executeControlRequest(request)
+}
+
 async function assertFreshRecreation(
   runtime: WorkstationBrowserRuntime,
   taskId: string,
@@ -310,5 +329,98 @@ test('failed destroy also clears a recovery hint when the task page was already 
   assert.deepEqual(persistedTaskIds(), [taskId])
 
   await assertFreshRecreation(runtime, taskId, originalTab.id)
+  await runtime.destroy()
+})
+
+test('controller-created BrowserTask persists its Hermes session identity and rejects cross-session retargeting', async () => {
+  runtimeHome()
+  const taskId = 'task-session-linked'
+  const first = new WorkstationBrowserRuntime()
+
+  await executeControlRequest(first, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    session_id: 'hermes-session-a',
+    arguments: { url: 'https://example.test/session-a' }
+  })
+
+  assert.equal(first.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+  assert.equal(persistedTask(taskId)?.sessionHost, 'hermes-session-a')
+  await first.destroy()
+
+  const second = new WorkstationBrowserRuntime()
+  second.ensure()
+  assert.equal(second.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+  assert.equal(second.state().tabs.some(tab => tab.ownerTaskId === taskId), false)
+
+  await assert.rejects(
+    () =>
+      executeControlRequest(second, {
+        action: 'browser_navigate',
+        task_id: taskId,
+        session_id: 'hermes-session-b',
+        arguments: { url: 'https://example.test/session-b' }
+      }),
+    /session identity mismatch/
+  )
+  assert.equal(second.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+  assert.equal(second.state().tabs.some(tab => tab.ownerTaskId === taskId), false)
+
+  await executeControlRequest(second, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    session_id: 'hermes-session-a',
+    arguments: { url: 'https://example.test/session-a-restored' }
+  })
+  assert.equal(second.state().tabs.filter(tab => tab.ownerTaskId === taskId).length, 1)
+  assert.equal(persistedTask(taskId)?.sessionHost, 'hermes-session-a')
+  await second.destroy()
+})
+
+test('controller binds an unbound existing BrowserTask once and rejects invalid session identities before mutation', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const taskId = 'task-manual-session-bind'
+
+  runtime.createTask({ taskId })
+  assert.equal(runtime.listTasks().find(task => task.taskId === taskId)?.sessionHost, null)
+
+  await executeControlRequest(runtime, {
+    action: 'browser_snapshot',
+    task_id: taskId,
+    session_id: 'hermes-session-a',
+    arguments: {}
+  })
+  assert.equal(runtime.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+  assert.equal(persistedTask(taskId)?.sessionHost, 'hermes-session-a')
+
+  await assert.rejects(
+    () =>
+      executeControlRequest(runtime, {
+        action: 'browser_snapshot',
+        task_id: taskId,
+        session_id: 'hermes-session-b',
+        arguments: {}
+      }),
+    /session identity mismatch/
+  )
+  assert.equal(runtime.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+
+  const tasksBeforeInvalid = runtime.listTasks().map(task => task.taskId)
+  await assert.rejects(
+    () =>
+      executeControlRequest(runtime, {
+        action: 'browser_navigate',
+        task_id: 'task-invalid-session',
+        session_id: 'bad\nsession',
+        arguments: { url: 'https://example.test/invalid-session' }
+      }),
+    /invalid session identity/
+  )
+  assert.deepEqual(
+    runtime.listTasks().map(task => task.taskId),
+    tasksBeforeInvalid
+  )
+  assert.equal(runtime.state().tabs.some(tab => tab.ownerTaskId === 'task-invalid-session'), false)
   await runtime.destroy()
 })
