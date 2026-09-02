@@ -24,6 +24,7 @@ function stateFile(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-browser-session-resilience-'))
 
   tempRoots.push(root)
+
   return path.join(root, 'browser-session.json')
 }
 
@@ -78,12 +79,7 @@ function persistenceWithOneShotRenameFailure(filePath: string): {
   }
 
   return {
-    persistence: new BrowserSessionStateFilePersistence(
-      filePath,
-      null,
-      io,
-      () => new Date('2026-09-01T12:00:00.000Z')
-    ),
+    persistence: new BrowserSessionStateFilePersistence(filePath, null, io, () => new Date('2026-09-01T12:00:00.000Z')),
     failNextRename(): void {
       shouldFailNextRename = true
     }
@@ -109,12 +105,7 @@ function persistenceWithOneShotWriteFailure(filePath: string): {
   }
 
   return {
-    persistence: new BrowserSessionStateFilePersistence(
-      filePath,
-      null,
-      io,
-      () => new Date('2026-09-01T12:00:00.000Z')
-    ),
+    persistence: new BrowserSessionStateFilePersistence(filePath, null, io, () => new Date('2026-09-01T12:00:00.000Z')),
     failNextWrite(): void {
       shouldFailNextWrite = true
     }
@@ -154,12 +145,18 @@ test('R1 failed BrowserTask write keeps latest intended task state for the next 
 
   const converged = readComposite(filePath)
   assert.equal(converged.browserTasks.tasks[0]?.status, 'visible')
-  assert.deepEqual(converged.tabs.map(candidate => candidate.id), ['ordinary-b'])
+  assert.deepEqual(
+    converged.tabs.map(candidate => candidate.id),
+    ['ordinary-b']
+  )
   assert.equal(converged.activeTabId, 'ordinary-b')
 
   const reloaded = new BrowserSessionStateFilePersistence(filePath).load()
   assert.equal(reloaded?.browserTasks.tasks[0]?.status, 'visible')
-  assert.deepEqual(reloaded?.tabs.map(candidate => candidate.id), ['ordinary-b'])
+  assert.deepEqual(
+    reloaded?.tabs.map(candidate => candidate.id),
+    ['ordinary-b']
+  )
 })
 
 test('R2 failed BrowserTask destroy cannot be resurrected by a later successful session save', () => {
@@ -173,7 +170,10 @@ test('R2 failed BrowserTask destroy cannot be resurrected by a later successful 
 
   fault.failNextRename()
   assert.throws(() => tasks.save(taskSnapshot('parked', [])), /simulated atomic rename failure/)
-  assert.deepEqual(readComposite(filePath).browserTasks.tasks.map(task => task.taskId), ['task-a'])
+  assert.deepEqual(
+    readComposite(filePath).browserTasks.tasks.map(task => task.taskId),
+    ['task-a']
+  )
 
   fault.persistence.saveSession([tab('ordinary-b')], 'ordinary-b')
 
@@ -196,12 +196,18 @@ test('R3 failed session write keeps latest intended tabs for the next successful
     () => fault.persistence.saveSession([tab('ordinary-b', 'https://example.test/b')], 'ordinary-b'),
     /simulated atomic rename failure/
   )
-  assert.deepEqual(readComposite(filePath).tabs.map(candidate => candidate.id), ['ordinary-a'])
+  assert.deepEqual(
+    readComposite(filePath).tabs.map(candidate => candidate.id),
+    ['ordinary-a']
+  )
 
   tasks.save(taskSnapshot('visible'))
 
   const converged = readComposite(filePath)
-  assert.deepEqual(converged.tabs.map(candidate => candidate.id), ['ordinary-b'])
+  assert.deepEqual(
+    converged.tabs.map(candidate => candidate.id),
+    ['ordinary-b']
+  )
   assert.equal(converged.activeTabId, 'ordinary-b')
   assert.equal(converged.browserTasks.tasks[0]?.status, 'visible')
 })
@@ -216,16 +222,20 @@ test('R4 failed replacement leaves the previous complete file and cleans the tem
   const before = fs.readFileSync(filePath, 'utf-8')
 
   fault.failNextRename()
-  assert.throws(() => fault.persistence.saveSession([tab('ordinary-b')], 'ordinary-b'), /simulated atomic rename failure/)
+  assert.throws(
+    () => fault.persistence.saveSession([tab('ordinary-b')], 'ordinary-b'),
+    /simulated atomic rename failure/
+  )
 
   assert.equal(fs.readFileSync(filePath, 'utf-8'), before)
   assert.deepEqual(
     fs.readdirSync(root).filter(name => name.endsWith('.tmp')),
     []
   )
-  assert.deepEqual(new BrowserSessionStateFilePersistence(filePath).load()?.tabs.map(candidate => candidate.id), [
-    'ordinary-a'
-  ])
+  assert.deepEqual(
+    new BrowserSessionStateFilePersistence(filePath).load()?.tabs.map(candidate => candidate.id),
+    ['ordinary-a']
+  )
 })
 
 test('R5 next successful composite write converges disk to the complete latest intended projection', () => {
@@ -252,7 +262,10 @@ test('R5 next successful composite write converges disk to the complete latest i
 
   const fresh = new BrowserSessionStateFilePersistence(filePath).load()
   assert.equal(fresh?.browserTasks.tasks[0]?.status, 'visible')
-  assert.deepEqual(fresh?.tabs.map(candidate => candidate.id), ['ordinary-b'])
+  assert.deepEqual(
+    fresh?.tabs.map(candidate => candidate.id),
+    ['ordinary-b']
+  )
   assert.equal(fresh?.activeTabId, 'ordinary-b')
 })
 
@@ -274,7 +287,10 @@ test('a pre-rename write failure also retains latest intent without changing the
   fault.persistence.saveSession([tab('ordinary-b')], 'ordinary-b')
   const fresh = new BrowserSessionStateFilePersistence(filePath).load()
   assert.equal(fresh?.browserTasks.tasks[0]?.status, 'visible')
-  assert.deepEqual(fresh?.tabs.map(candidate => candidate.id), ['ordinary-b'])
+  assert.deepEqual(
+    fresh?.tabs.map(candidate => candidate.id),
+    ['ordinary-b']
+  )
 })
 
 test('credential-like pathname parameters and parser-confusion URLs fail closed through serialization and reload', () => {
@@ -352,6 +368,7 @@ test('credential-like pathname parameters and parser-confusion URLs fail closed 
   const reloaded = new BrowserSessionStateFilePersistence(filePath).load()
 
   assert.ok(reloaded)
+
   for (let index = 0; index < rejected.length; index += 1) {
     assert.equal(reloaded.tabs.find(candidate => candidate.id === `rejected-${index}`)?.safeUrl, null)
   }

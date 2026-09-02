@@ -31,6 +31,7 @@ const electron = vi.hoisted(() => {
 
       current.push(listener)
       this.listeners.set(event, current)
+
       return this
     }
 
@@ -188,6 +189,7 @@ function runtimeHome(): string {
 
   tempRoots.push(root)
   process.env.HERMES_WORKSTATION_HOME = root
+
   return root
 }
 
@@ -274,6 +276,7 @@ test('failed BrowserTask destroy persistence completes in-memory cleanup before 
   const originalTab = runtime.state().tabs.find(tab => tab.ownerTaskId === taskId)
 
   assert.ok(originalTab)
+
   const originalContents = runtime.getWebContents(originalTab.id) as unknown as InstanceType<
     typeof electron.FakeWebContents
   >
@@ -308,6 +311,7 @@ test('failed destroy also clears a recovery hint when the task page was already 
   const originalTab = runtime.state().tabs.find(tab => tab.ownerTaskId === taskId)
 
   assert.ok(originalTab)
+
   const originalContents = runtime.getWebContents(originalTab.id) as unknown as InstanceType<
     typeof electron.FakeWebContents
   >
@@ -318,8 +322,14 @@ test('failed destroy also clears a recovery hint when the task page was already 
   // Simulate an already-gone renderer/page. BrowserTask remains logical while
   // BrowserSessionState keeps only a stale recovery hint for that page.
   originalContents.close()
-  assert.equal(runtime.state().tabs.some(tab => tab.ownerTaskId === taskId), false)
-  assert.equal(runtime.listTasks().some(task => task.taskId === taskId), true)
+  assert.equal(
+    runtime.state().tabs.some(tab => tab.ownerTaskId === taskId),
+    false
+  )
+  assert.equal(
+    runtime.listTasks().some(task => task.taskId === taskId),
+    true
+  )
   assert.deepEqual(persistedTaskIds(), [taskId])
 
   fault.failNextRename()
@@ -351,7 +361,10 @@ test('controller-created BrowserTask persists its Hermes session identity and re
   const second = new WorkstationBrowserRuntime()
   second.ensure()
   assert.equal(second.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
-  assert.equal(second.state().tabs.some(tab => tab.ownerTaskId === taskId), false)
+  assert.equal(
+    second.state().tabs.some(tab => tab.ownerTaskId === taskId),
+    false
+  )
 
   await assert.rejects(
     () =>
@@ -364,7 +377,10 @@ test('controller-created BrowserTask persists its Hermes session identity and re
     /session identity mismatch/
   )
   assert.equal(second.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
-  assert.equal(second.state().tabs.some(tab => tab.ownerTaskId === taskId), false)
+  assert.equal(
+    second.state().tabs.some(tab => tab.ownerTaskId === taskId),
+    false
+  )
 
   await executeControlRequest(second, {
     action: 'browser_navigate',
@@ -421,7 +437,10 @@ test('controller binds an unbound existing BrowserTask once and rejects invalid 
     runtime.listTasks().map(task => task.taskId),
     tasksBeforeInvalid
   )
-  assert.equal(runtime.state().tabs.some(tab => tab.ownerTaskId === 'task-invalid-session'), false)
+  assert.equal(
+    runtime.state().tabs.some(tab => tab.ownerTaskId === 'task-invalid-session'),
+    false
+  )
   await runtime.destroy()
 })
 

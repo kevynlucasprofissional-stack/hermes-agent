@@ -1,7 +1,7 @@
 # CURRENT — Workstation Engineering Journal
 
-Last updated: 2026-08-30
-Active track: WP-01 / BrowserSessionState candidate — security and crash-recovery correction
+Last updated: 2026-09-02
+Active track: WP-01 / PR #11 BrowserSessionState — final native-gate correction and promotion review
 Repository: `kevynlucasprofissional-stack/hermes-agent`
 Historical milestone branch: `impl4-browser-task-lifecycle`
 Code-bearing BrowserTask ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
@@ -9,7 +9,7 @@ Native-smoke evidence SHA: `d8acc752133b125b9619cbc7fe09199f1283a22b`
 Accepted PR head: `75d10d35d4757496390debf8e4b4f9efb44c5432`
 Promotion merge on `main`: `fada723f43613e5e0f061cab24445573ac298998`
 Previous `main`: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`
-PR: #9 — `feat(workstation): formalize BrowserTask lifecycle` (**merged**)
+PR: #11 — `fix(workstation): stabilize BrowserSessionState persistence` (**draft; active**)
 
 > Journal/probe/documentation commits after `1ac0e0a9...` do not change BrowserTask product behavior unless this file explicitly records a later code-bearing candidate. Always verify live `main` and compare product paths before carrying evidence into a later implementation.
 
@@ -719,6 +719,67 @@ LAYERS / NATIVE ELECTRON RESTART STILL PENDING / PROMOTION NOT AUTHORIZED**.
 The delivery commit freezes the exact Git head for independent verification;
 this journal does not treat that delivery action as promotion or native
 acceptance.
+
+### H-010 — The native profile-cookie failure is a probe lifetime defect
+
+Origin: the `Workstation Browser Windows` run for PR #11 head
+`9177d5a1ebab23d9ce3e5fe9664afbb7fdd43ec5` reached the H010 product path.
+Phase A passed structural persistence, safe metadata and BrowserTask ordering,
+but phase B failed with `phaseB Chromium profile cookie missing`.
+
+The same exact-head run also exposed two independent static issues: Prettier
+reported the two resilience test files, while the focused BrowserSessionState
+suite still passed 5 files / 46 tests. Those formatting failures are mechanical
+and are not evidence about runtime behavior.
+
+Hypothesis registered before changing the probe:
+
+- H010 creates `h010_profile_cookie` without `expirationDate`; Electron therefore
+  treats it as a session cookie, which is not required to survive termination of
+  the Chromium session;
+- the dedicated `session.fromPath(...)` profile may be healthy even though the
+  probe incorrectly asks a session cookie to prove durable profile persistence;
+- setting an explicit future `expirationDate`, verifying the cookie immediately
+  in phase A, flushing storage, and retaining the existing two-process phase-B
+  assertion will test the intended persistent-profile boundary.
+
+Confirming evidence:
+
+- phase A observes the explicitly persistent cookie before shutdown;
+- phase B observes the same cookie from the same Workstation profile path in a
+  different Electron process;
+- the cookie value remains absent from `browser-session.json`;
+- all other H010 phases continue to pass on the exact corrected SHA.
+
+Refuting/reformulating evidence:
+
+- an explicitly persistent cookie is visible in phase A but missing in phase B;
+- the two processes resolve different Workstation browser profile paths;
+- a product shutdown/session-path defect, rather than cookie lifetime, is needed
+  to explain the failure.
+
+Local correction evidence after the change:
+
+- the PR branch was first reconciled with `main` at
+  `ce448d829e95112fd08b21535c7a8426ee866035`, preserving the one-click
+  launcher before any promotion attempt;
+- the five-file Browser foundation selection passed **5 files / 46 tests / 0
+  failed**;
+- complete Desktop typecheck passed;
+- exact BrowserSessionState ESLint selection passed with **0 errors / 0
+  warnings** after mechanical layout cleanup;
+- exact BrowserSessionState Prettier selection passed;
+- `git diff --check` and committed Workstation integration validation passed;
+- this Linux environment cannot supply the repository's pytest-capable Python
+  offline, so the unchanged Python contracts were not represented as a fresh
+  local run. Their existing exact-branch evidence remains recorded above and
+  GitHub CI must independently rerun them.
+
+Classification: **LOCAL CORRECTION VALIDATED / EXACT-SHA WINDOWS H010 PENDING**.
+Product boundary marker: this correction changes only the versioned native probe
+and formatting-only test layout. It does not change BrowserSessionState or
+BrowserTask runtime semantics. A new exact-SHA Windows run is mandatory because
+the native probe itself changes.
 
 ## Implementation 4 objective — closed
 

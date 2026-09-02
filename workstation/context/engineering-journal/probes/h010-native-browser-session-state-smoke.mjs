@@ -232,8 +232,17 @@ app.whenReady().then(async () => {
     await runtime.getSession().cookies.set({
       url: baseUrl + '/',
       name: 'h010_profile_cookie',
-      value: 'h010-profile-synthetic-value'
+      value: 'h010-profile-synthetic-value',
+      // A cookie without expirationDate is a session cookie and is not
+      // required to survive Chromium process shutdown. H010 is proving the
+      // dedicated persistent profile boundary, so use a persistent cookie.
+      expirationDate: Math.floor(Date.now() / 1000) + 4 * 60 * 60
     })
+    const phaseACookies = await runtime.getSession().cookies.get({ name: 'h010_profile_cookie' })
+    assert(
+      phaseACookies.some(cookie => cookie.value === 'h010-profile-synthetic-value'),
+      'phaseA persistent Chromium profile cookie missing before shutdown'
+    )
     if (typeof runtime.getSession().flushStorageData === 'function') {
       await runtime.getSession().flushStorageData()
     }
@@ -462,31 +471,42 @@ app.whenReady().then(async () => {
 `
 
 fs.writeFileSync(harnessTs, harnessSource, 'utf8')
-fs.writeFileSync(packageJson, JSON.stringify({ name: 'hermes-h010-native-browser-session-state', private: true, main: 'main.cjs' }, null, 2), 'utf8')
+fs.writeFileSync(
+  packageJson,
+  JSON.stringify({ name: 'hermes-h010-native-browser-session-state', private: true, main: 'main.cjs' }, null, 2),
+  'utf8'
+)
 
-console.log('H010_PROBE_CONTEXT', JSON.stringify({
-  head,
-  expectedHead,
-  electronExe,
-  esbuildCli,
-  platform: process.platform,
-  osRelease: os.release(),
-  node: process.version
-}))
+console.log(
+  'H010_PROBE_CONTEXT',
+  JSON.stringify({
+    head,
+    expectedHead,
+    electronExe,
+    esbuildCli,
+    platform: process.platform,
+    osRelease: os.release(),
+    node: process.version
+  })
+)
 
 const pageServer = await startLocalPageServer()
 try {
   console.log('\n=== H010_BUILD ===')
-  await run(process.execPath, [
-    esbuildCli,
-    harnessTs,
-    '--bundle',
-    '--platform=node',
-    '--format=cjs',
-    '--target=node20',
-    '--outfile=' + mainCjs,
-    '--external:electron'
-  ], { timeoutMs: 30000 })
+  await run(
+    process.execPath,
+    [
+      esbuildCli,
+      harnessTs,
+      '--bundle',
+      '--platform=node',
+      '--format=cjs',
+      '--target=node20',
+      '--outfile=' + mainCjs,
+      '--external:electron'
+    ],
+    { timeoutMs: 30000 }
+  )
 
   if (!fs.existsSync(mainCjs) || fs.statSync(mainCjs).size < 1000) {
     throw new Error('H010 build returned success but main.cjs is missing or unexpectedly small')
@@ -526,7 +546,9 @@ try {
   })
 
   console.log('\nH010_CLASSIFICATION=VALIDATED')
-  console.log('H010_CONCLUSION=Exact-SHA Windows/Electron BrowserSessionState passed two-process restart, lazy task ownership, durable title/URL boundaries, Chromium profile separation, native failed-write convergence, explicit-destroy failure cleanup, and abrupt restart recovery.')
+  console.log(
+    'H010_CONCLUSION=Exact-SHA Windows/Electron BrowserSessionState passed two-process restart, lazy task ownership, durable title/URL boundaries, Chromium profile separation, native failed-write convergence, explicit-destroy failure cleanup, and abrupt restart recovery.'
+  )
   process.exitCode = 0
 } catch (error) {
   console.error('\nH010_CLASSIFICATION=FAILED_OR_REFORMULATE')
