@@ -183,6 +183,34 @@ test('one task owns exactly one live page across repeated create/show operations
   assert.equal(lifecycle.listTasks().length, 1)
 })
 
+test('session identity binds once, persists, and never creates or retargets a page', () => {
+  const stateFile = tempStateFile()
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings, new BrowserTaskFilePersistence(stateFile))
+
+  lifecycle.createTask({ taskId: 'task-a' })
+  const page = browser.pages.get('task-a')
+  assert.ok(page)
+  const pageCount = browser.pageCount()
+
+  const bound = lifecycle.bindSessionHost('task-a', 'hermes-session-a')
+  assert.equal(bound.sessionHost, 'hermes-session-a')
+  assert.equal(browser.pages.get('task-a'), page)
+  assert.equal(browser.pageCount(), pageCount)
+  assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf-8')).tasks[0]?.sessionHost, 'hermes-session-a')
+
+  const repeated = lifecycle.bindSessionHost('task-a', 'hermes-session-a')
+  assert.equal(repeated.sessionHost, 'hermes-session-a')
+  assert.equal(browser.pages.get('task-a'), page)
+  assert.equal(browser.pageCount(), pageCount)
+
+  assert.throws(() => lifecycle.bindSessionHost('task-a', 'hermes-session-b'), /session identity mismatch/)
+  assert.equal(lifecycle.task('task-a')?.sessionHost, 'hermes-session-a')
+  assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf-8')).tasks[0]?.sessionHost, 'hermes-session-a')
+  assert.equal(browser.pages.get('task-a'), page)
+  assert.equal(browser.pageCount(), pageCount)
+})
+
 test('an existing task recreates one missing page and records recovery', () => {
   const browser = fakeBrowser()
   const lifecycle = new BrowserTaskLifecycle(browser.bindings)
