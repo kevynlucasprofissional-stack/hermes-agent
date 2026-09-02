@@ -424,3 +424,47 @@ test('controller binds an unbound existing BrowserTask once and rejects invalid 
   assert.equal(runtime.state().tabs.some(tab => tab.ownerTaskId === 'task-invalid-session'), false)
   await runtime.destroy()
 })
+
+test('failed session identity persistence remains fail-closed and converges on the next composite write', async () => {
+  const home = runtimeHome()
+  const fault = failNextRenamePersistence(home)
+  const runtime = new WorkstationBrowserRuntime(fault.persistence)
+  const taskId = 'task-session-write-failure'
+
+  runtime.createTask({ taskId })
+  assert.equal(runtime.listTasks().find(task => task.taskId === taskId)?.sessionHost, null)
+  assert.equal(persistedTask(taskId)?.sessionHost, null)
+
+  fault.failNextRename()
+  await assert.rejects(
+    () =>
+      executeControlRequest(runtime, {
+        action: 'browser_snapshot',
+        task_id: taskId,
+        session_id: 'hermes-session-a',
+        arguments: {}
+      }),
+    /simulated BrowserTask destroy persistence failure/
+  )
+
+  // The lifecycle mutation is already the process-local intent even though the
+  // last complete durable snapshot still carries the old unbound value.
+  assert.equal(runtime.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+  assert.equal(persistedTask(taskId)?.sessionHost, null)
+
+  await assert.rejects(
+    () =>
+      executeControlRequest(runtime, {
+        action: 'browser_snapshot',
+        task_id: taskId,
+        session_id: 'hermes-session-b',
+        arguments: {}
+      }),
+    /session identity mismatch/
+  )
+  assert.equal(runtime.listTasks().find(task => task.taskId === taskId)?.sessionHost, 'hermes-session-a')
+
+  await runtime.navigate('https://ordinary.example.test/session-bind-convergence')
+  assert.equal(persistedTask(taskId)?.sessionHost, 'hermes-session-a')
+  await runtime.destroy()
+})
