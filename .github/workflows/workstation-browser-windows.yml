@@ -29,6 +29,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact candidate checkout
+        shell: pwsh
+        run: |
+          $expected = "${{ github.event.pull_request.head.sha || github.sha }}"
+          $actual = (git rev-parse HEAD).Trim()
+          Write-Host "Expected candidate SHA: $expected"
+          Write-Host "Checked out SHA:       $actual"
+          if ($actual -ne $expected) {
+            throw "Windows Browser gate is not running the exact candidate SHA."
+          }
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
@@ -49,12 +60,54 @@ jobs:
             $dirty | Write-Host
             throw "Workstation install changed the committed checkout."
           }
+      - name: Candidate diff check
+        run: git diff --check origin/main...HEAD
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
-      - name: BrowserTask focused lifecycle tests
-        id: browser_task_tests
+      - name: BrowserSessionState ESLint
+        id: browser_session_lint
         continue-on-error: true
-        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
+        working-directory: apps/desktop
+        run: npx eslint electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-runtime-resilience.test.ts
+      - name: BrowserSessionState Prettier
+        id: browser_session_format
+        continue-on-error: true
+        working-directory: apps/desktop
+        run: npx prettier --check electron/workstation-browser-session-state.ts electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-runtime-resilience.test.ts
+      - name: Show BrowserSessionState formatting diff
+        if: steps.browser_session_format.outcome == 'failure'
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          $files = @(
+            "electron/workstation-browser-session-state.ts",
+            "electron/workstation-browser-session-state.test.ts",
+            "electron/workstation-browser-session-state-resilience.test.ts",
+            "electron/workstation-browser-runtime-resilience.test.ts"
+          )
+          foreach ($file in $files) {
+            $formatted = Join-Path $env:RUNNER_TEMP ((Split-Path $file -Leaf) + ".formatted")
+            cmd /d /s /c "npx prettier $file > `"$formatted`""
+            if ($LASTEXITCODE -ne 0) {
+              throw "Prettier failed while rendering $file for diagnostic diff."
+            }
+            git diff --no-index -- $file $formatted
+            if ($LASTEXITCODE -gt 1) {
+              throw "git diff failed while comparing Prettier output for $file."
+            }
+            $global:LASTEXITCODE = 0
+          }
+      - name: Browser foundation focused tests
+        id: browser_foundation_tests
+        continue-on-error: true
+        run: npm run test:desktop:platforms --workspace apps/desktop -- electron/workstation-browser-session-state.test.ts electron/workstation-browser-session-state-resilience.test.ts electron/workstation-browser-runtime-resilience.test.ts electron/workstation-browser-task.test.ts electron/workstation-browser-runtime-task.test.ts
+      - name: Native BrowserSessionState restart and fault smoke
+        id: native_browser_session_state
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $env:H010_EXPECTED_SHA = "${{ github.event.pull_request.head.sha || github.sha }}"
+          node workstation/context/engineering-journal/probes/h010-native-browser-session-state-smoke.mjs
       - name: Desktop UI tests
         id: desktop_ui_tests
         continue-on-error: true
@@ -67,12 +120,18 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $browserTask = "${{ steps.browser_task_tests.outcome }}"
+          $lint = "${{ steps.browser_session_lint.outcome }}"
+          $format = "${{ steps.browser_session_format.outcome }}"
+          $browserFoundation = "${{ steps.browser_foundation_tests.outcome }}"
+          $nativeSession = "${{ steps.native_browser_session_state.outcome }}"
           $ui = "${{ steps.desktop_ui_tests.outcome }}"
           $platform = "${{ steps.desktop_platform_tests.outcome }}"
-          Write-Host "BrowserTask focused tests: $browserTask"
+          Write-Host "BrowserSessionState ESLint: $lint"
+          Write-Host "BrowserSessionState Prettier: $format"
+          Write-Host "Browser foundation focused tests: $browserFoundation"
+          Write-Host "Native BrowserSessionState smoke: $nativeSession"
           Write-Host "Desktop UI tests: $ui"
           Write-Host "Desktop platform tests: $platform"
-          if ($browserTask -ne "success" -or $ui -ne "success" -or $platform -ne "success") {
-            throw "One or more Desktop gates failed. Focused BrowserTask, UI, and platform suites were allowed to run so one failure does not mask the others."
+          if ($lint -ne "success" -or $format -ne "success" -or $browserFoundation -ne "success" -or $nativeSession -ne "success" -or $ui -ne "success" -or $platform -ne "success") {
+            throw "One or more Desktop gates failed. Static BrowserSessionState checks, focused Browser foundation, native BrowserSessionState, UI, and platform suites were all allowed to run so one failure does not mask the others."
           }

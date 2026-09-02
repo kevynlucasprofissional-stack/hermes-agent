@@ -203,6 +203,19 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     return cloneTask(task)
   }
 
+  bindSessionHost(taskId: string, sessionHost: string): BrowserTask {
+    const task = this.requireTask(taskId)
+    if (task.sessionHost && task.sessionHost !== sessionHost) {
+      throw new Error(`BrowserTask session identity mismatch: ${taskId}`)
+    }
+    if (task.sessionHost === sessionHost) return cloneTask(task)
+
+    task.sessionHost = sessionHost
+    task.updatedAt = this.timestamp()
+    this.persist()
+    return cloneTask(task)
+  }
+
   showTask(taskId: string, context: ShowContext): BrowserTask {
     const task = this.requireTask(taskId)
     const timestamp = this.timestamp()
