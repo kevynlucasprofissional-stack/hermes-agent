@@ -48,6 +48,7 @@ const DEFAULT_BROWSER_WIDTH = 1280
 const DEFAULT_BROWSER_HEIGHT = 800
 const CONTROL_FILE_VERSION = 1
 const MAX_CONTROL_BODY_BYTES = 512 * 1024
+const MAX_CONTROLLER_SESSION_ID_CHARS = 256
 const COMPACT_TEXT_CHARS = 8_000
 const FULL_TEXT_CHARS = 24_000
 const COMPACT_ELEMENTS = 120
@@ -279,6 +280,16 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 function authorized(req: IncomingMessage, token: string): boolean {
   return req.headers.authorization === `Bearer ${token}`
+}
+
+function controllerSessionIdentity(value: unknown): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string') throw new Error('invalid session identity')
+  const normalized = value.trim()
+  if (!normalized || normalized.length > MAX_CONTROLLER_SESSION_ID_CHARS || /[\u0000-\u001f\u007f]/.test(value)) {
+    throw new Error('invalid session identity')
+  }
+  return normalized
 }
 
 function atomicWritePrivateJson(filePath: string, value: unknown): void {
@@ -881,19 +892,22 @@ export class WorkstationBrowserRuntime {
     const action = typeof request.action === 'string' ? request.action : ''
     const args = request.arguments && typeof request.arguments === 'object' ? request.arguments as Record<string, unknown> : {}
     const taskId = typeof request.task_id === 'string' && request.task_id.trim() ? request.task_id.trim() : 'default'
+    const sessionHost = controllerSessionIdentity(request.session_id)
 
     if (!action.startsWith('browser_')) throw new Error('unsupported_action')
     const mutating = new Set(['browser_navigate', 'browser_click', 'browser_type', 'browser_scroll', 'browser_back', 'browser_press'])
     if (mutating.has(action)) this.assertAgentControl()
 
+    if (sessionHost) this.bindControllerSessionIdentity(taskId, sessionHost)
+
     if (action === 'browser_navigate') {
-      const entry = this.entryForTask(taskId, true)!
+      const entry = this.entryForTask(taskId, true, sessionHost)!
       const url = normalizeWorkstationBrowserTarget(String(args.url ?? ''))
       await entry.view.webContents.loadURL(url)
       return this.snapshotForEntry(entry, false)
     }
 
-    const entry = this.entryForTask(taskId, false)
+    const entry = this.entryForTask(taskId, false, sessionHost)
     if (!entry) throw new Error('no_bound_browser_tab: call browser_navigate first')
 
     switch (action) {
@@ -933,6 +947,14 @@ export class WorkstationBrowserRuntime {
   private assertAgentControl(): void {
     if (this.paused) throw new Error('Hermes Browser is paused. Resume it before agent actions continue.')
     if (this.controlOwner === 'human') throw new Error('Hermes Browser is under human control. Release Control before agent actions continue.')
+  }
+
+  private bindControllerSessionIdentity(taskId: string, sessionHost: string): void {
+    this.ensureBrowserSessionStateRestored()
+    const lifecycle = this.taskLifecycle()
+    if (!lifecycle.task(taskId)) return
+    this.withBrowserSessionProjectionSuppressed(() => lifecycle.bindSessionHost(taskId, sessionHost))
+    this.persistBrowserSessionState()
   }
 
   private taskLifecycle(): BrowserTaskLifecycle<BrowserEntry, BrowserTaskShowContext> {
@@ -1030,15 +1052,15 @@ export class WorkstationBrowserRuntime {
     this.reconcileRestoredEntryOrder()
   }
 
-  private entryForTask(taskId: string, create: boolean): BrowserEntry | null {
+  private entryForTask(taskId: string, create: boolean, sessionHost: string | null = null): BrowserEntry | null {
     this.ensureBrowserSessionStateRestored()
     const lifecycle = this.taskLifecycle()
     if (create) {
-      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId }))
+      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId, sessionHost }))
     } else if (!lifecycle.task(taskId)) {
       const legacyEntry = this.rawEntryForTask(taskId, false)
       if (!legacyEntry) return null
-      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId }))
+      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId, sessionHost }))
     }
 
     const entry = this.rawEntryForTask(taskId, create)
