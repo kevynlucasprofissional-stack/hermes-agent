@@ -31,6 +31,27 @@ state.
     repo-local `.venv`; Workstation never intentionally mutates the user's
     global Python environment.
 
+## One-click Windows dogfood
+
+For the normal personal/dogfood path, double-click the repository-root launcher:
+
+```text
+START-HERMES-WORKSTATION.bat
+```
+
+It orchestrates the canonical steps in order:
+
+```text
+install → doctor → start
+```
+
+The launcher stops on an installation/start failure and keeps the failure visible.
+After installation succeeds it starts Desktop with `-SkipInstall`, so the same run
+does not execute the dependency installation a second time.
+
+Use the individual commands below when debugging or when you intentionally want
+to run a single phase.
+
 ## Windows bootstrap
 
 From the root of the Hermes fork, use the `.cmd` launchers. They start Windows
@@ -42,15 +63,14 @@ workstation\install.cmd
 workstation\doctor.cmd
 ```
 
-When you are ready to install the full Python and Node development dependencies:
+Dependency installation is the normal installer path. `-InstallDependencies`
+remains accepted for backwards compatibility; `-SkipDependencies` is the explicit
+fast/diagnostic override when dependencies are already prepared and should not be
+touched.
 
-```bat
-workstation\install.cmd -InstallDependencies
-```
-
-This creates/reuses `.venv` at the repository root and installs Hermes there in
-editable mode. `.venv` is already ignored by Git. Node workspaces remain managed
-by `npm ci`.
+The installer creates/reuses `.venv` at the repository root and installs Hermes
+there in editable mode. `.venv` is already ignored by Git. Node workspaces remain
+managed by `npm ci`.
 
 Then start Desktop development with:
 
@@ -61,6 +81,15 @@ workstation\start.cmd
 `start.cmd` prepends `.venv\Scripts` to `PATH` and sets `VIRTUAL_ENV`/
 `HERMES_PYTHON` before starting Electron, so the Desktop resolves this checkout's
 Hermes backend instead of a global Python installation.
+
+The one-click launcher uses the internal orchestration flag:
+
+```bat
+workstation\start.cmd -SkipInstall
+```
+
+Only use `-SkipInstall` after a successful install in the same orchestration or
+when you deliberately know the checkout dependencies are already prepared.
 
 The PowerShell entrypoints remain available when needed explicitly:
 
@@ -83,8 +112,10 @@ backend are fallback lanes only while routing is enabled and the task has not
 bound to the persistent internal browser.
 
 Automatic Kanban promotion/orchestration, LAN settings UI and durable Execution
-Journal persistence are the next integrations. Their contracts and schemas are
-already staged here so those features extend Hermes state instead of creating
-parallel state stores.
+Journal persistence are later integrations. The roadmap now schedules an
+**Integrated Dogfood MVP** after complete BrowserSessionState: minimal real
+vertical slices of those later capabilities are implemented first for continuous
+usage, while the original milestones remain in place for subsequent architectural
+hardening.
 
 See `ARCHITECTURE.md`, `ROADMAP.md`, and `UPSTREAM_DELTA.md`.
