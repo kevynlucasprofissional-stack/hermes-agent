@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-  [switch]$SkipPatch
+  [switch]$SkipPatch,
+  [switch]$SkipInstall
 )
 
 Set-StrictMode -Version Latest
@@ -11,10 +12,12 @@ $VenvRoot = Join-Path $Root ".venv"
 $VenvScripts = Join-Path $VenvRoot "Scripts"
 $VenvPython = Join-Path $VenvScripts "python.exe"
 
-if ($SkipPatch) {
-  & $InstallScript -SkipCorePatch
-} else {
-  & $InstallScript
+if (-not $SkipInstall) {
+  if ($SkipPatch) {
+    & $InstallScript -SkipCorePatch
+  } else {
+    & $InstallScript
+  }
 }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
@@ -35,12 +38,12 @@ if ($nodeVersion -lt $minimumNode) {
 }
 
 if (-not (Test-Path $VenvPython)) {
-  throw "Hermes Workstation Python environment is missing: $VenvPython. Run workstation\install.cmd -InstallDependencies first."
+  throw "Hermes Workstation Python environment is missing: $VenvPython. Run workstation\install.cmd first."
 }
 
 & $VenvPython -c "import hermes_cli, sys; print(sys.executable)" | Out-Null
 if ($LASTEXITCODE -ne 0) {
-  throw "Hermes Workstation .venv exists but cannot import hermes_cli. Rerun workstation\install.cmd -InstallDependencies."
+  throw "Hermes Workstation .venv exists but cannot import hermes_cli. Rerun workstation\install.cmd."
 }
 
 # Put the repo-local Hermes runtime first so Desktop backend discovery resolves

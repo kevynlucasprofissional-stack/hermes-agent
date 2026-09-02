@@ -30,6 +30,24 @@ def test_normal_installer_prepares_isolated_dependencies_by_default() -> None:
     assert "Prepare-RuntimeDirectories" in install
 
 
+def test_one_click_dogfood_launcher_runs_canonical_phases_once() -> None:
+    launcher = read("START-HERMES-WORKSTATION.bat")
+
+    assert 'call "%~dp0workstation\\install.cmd"' in launcher
+    assert 'call "%~dp0workstation\\doctor.cmd"' in launcher
+    assert 'call "%~dp0workstation\\start.cmd" -SkipInstall' in launcher
+    assert "if errorlevel 1 goto :install_failed" in launcher
+    assert "if errorlevel 1 goto :doctor_failed" in launcher
+
+
+def test_start_supports_orchestrated_skip_install_without_changing_default() -> None:
+    start = read("workstation/start.ps1")
+
+    assert "[switch]$SkipInstall" in start
+    assert "if (-not $SkipInstall)" in start
+    assert "& $InstallScript" in start
+
+
 def test_windows_workflow_tests_committed_tree_without_repairing_it() -> None:
     workflow = read(".github/workflows/workstation-browser-windows.yml")
 
