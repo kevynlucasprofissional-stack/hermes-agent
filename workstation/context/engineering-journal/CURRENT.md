@@ -781,6 +781,63 @@ and formatting-only test layout. It does not change BrowserSessionState or
 BrowserTask runtime semantics. A new exact-SHA Windows run is mandatory because
 the native probe itself changes.
 
+Exact-SHA Windows result for `b5910874b27a4bfb4b45485a6438adbfd72cdcfb`:
+
+- checkout identity, clean install, checkout-clean assertion, diff check,
+  typecheck, exact ESLint/Prettier and the 5-file / 46-test focused suite passed;
+- phase A observed the explicitly persistent cookie and completed;
+- phase B, in a different Electron process, observed the same cookie from the
+  same dedicated profile, retained it outside `browser-session.json`, restored
+  ordinary/task ordering and lazily recreated exactly one task page;
+- the original `phaseB Chromium profile cookie missing` failure is therefore
+  **resolved**, validating the session-cookie lifetime diagnosis;
+- H010 then advanced into its independent failed-write/destroy phase. Failed
+  write convergence passed, but the immediate post-`destroyTask` assertion saw
+  the old native `WebContents` before Electron emitted `destroyed`.
+
+Reclassification: **COOKIE HYPOTHESIS VALIDATED / NEW NATIVE TEARDOWN TIMING
+BOUNDARY ISOLATED AS H-011**.
+
+### H-011 — Native `WebContents.close()` completion is asynchronous
+
+Origin: H010 at exact head `b5910874...` failed with
+`destroy fault mode prior WebContents survived` immediately after the runtime
+had removed the BrowserTask and page entry in process.
+
+Hypothesis registered before changing product or probe:
+
+- `discardEntry()` synchronously detaches the view, clears `taskTabs`, removes
+  the `entries` owner and calls Electron `webContents.close()`;
+- real Electron completes `close()` asynchronously and emits `destroyed`, while
+  the focused fake marks itself destroyed synchronously;
+- the native probe's immediate `isDestroyed()` assertion therefore conflates
+  synchronous logical-owner removal with asynchronous Chromium teardown;
+- the correct native contract is: immediately no runtime/task owner remains,
+  then the old `WebContents` reaches `destroyed` within a bounded wait before
+  task-id reuse and fresh-page assertions continue.
+
+Confirming evidence:
+
+- immediately after the failed persistence write, `listTasks()` omits the task
+  and `state().tabs` omits its old tab;
+- the captured native `WebContents` emits/reaches `destroyed` within a short
+  bounded wait;
+- subsequent durable convergence and same-id recreation produce one fresh,
+  blank page with a different tab id;
+- the rest of H010, including abrupt-process restart, remains green.
+
+Refuting/reformulating evidence:
+
+- the runtime still exposes the old task/tab after `destroyTask` returns;
+- native destruction does not complete within the bound;
+- same-id recreation overlaps the old renderer or inherits its URL;
+- a product-side lifecycle change is required to prevent continued page work.
+
+Classification: **ACTIVE — NATIVE TIMING HYPOTHESIS REGISTERED BEFORE CHANGE**.
+Product boundary marker: first correct the probe to observe Electron's
+documented `destroyed` event/state with a bounded wait. Do not weaken immediate
+assertions about logical task/tab ownership or fresh recreation.
+
 ## Implementation 4 objective — closed
 
 Required native lifecycle contract:

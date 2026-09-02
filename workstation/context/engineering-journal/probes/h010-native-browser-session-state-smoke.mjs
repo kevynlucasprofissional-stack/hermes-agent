@@ -149,6 +149,13 @@ function assert(condition: unknown, message: string): asserts condition {
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+async function waitFor(condition: () => boolean, description: string, timeoutMs = 3000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!condition() && Date.now() < deadline) {
+    await sleep(25)
+  }
+  assert(condition(), description + ' did not complete within ' + timeoutMs + 'ms')
+}
 
 console.log('H010_BOOT', JSON.stringify({ pid: process.pid, mode, electron: process.versions.electron }))
 const timer = setTimeout(() => {
@@ -387,7 +394,12 @@ app.whenReady().then(async () => {
     }
     assert(observedDestroyFailure, 'destroy fault mode did not observe injected rename failure')
     assert(!runtime.listTasks().some(task => task.taskId === destroyTaskId), 'destroy fault mode logical task survived in process')
-    assert(destroyContents.isDestroyed(), 'destroy fault mode prior WebContents survived')
+    assert(!runtime.state().tabs.some(tab => tab.id === destroyTab.id), 'destroy fault mode prior tab owner survived in process')
+    assert(runtime.getWebContents(destroyTab.id) === null, 'destroy fault mode runtime still exposes prior WebContents')
+    await waitFor(
+      () => destroyContents.isDestroyed(),
+      'destroy fault mode prior WebContents teardown'
+    )
     assert(composite().browserTasks.tasks.some((task: { taskId: string }) => task.taskId === destroyTaskId), 'destroy fault mode failed rename changed durable file')
 
     await ordinaryContents.loadURL(baseUrl + '/after-destroy-failure')
