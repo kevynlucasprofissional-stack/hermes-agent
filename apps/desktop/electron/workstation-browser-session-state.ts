@@ -86,10 +86,16 @@ function containsControlCharacters(value: string): boolean {
 
 function containsMalformedPercentEncoding(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
-    if (value[index] !== '%') continue
+    if (value[index] !== '%') {
+      continue
+    }
 
     const encodedByte = value.slice(index + 1, index + 3)
-    if (!/^[0-9a-f]{2}$/i.test(encodedByte)) return true
+
+    if (!/^[0-9a-f]{2}$/i.test(encodedByte)) {
+      return true
+    }
+
     index += 2
   }
 
@@ -135,6 +141,7 @@ function decodedForInspection(value: string): string | null {
   }
 
   let next: string
+
   try {
     next = decodeURIComponent(decoded)
   } catch {
