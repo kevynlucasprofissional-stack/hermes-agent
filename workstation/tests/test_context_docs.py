@@ -21,6 +21,7 @@ def test_context_read_order_reaches_canonical_workstation_documents():
         "CURRENT_STATE.md",
         "DECISIONS.md",
         "CONSTRAINTS.md",
+        "MAINLINE_CONSOLIDATION.md",
         "TESTING.md",
         "KNOWN_ISSUES.md",
     }

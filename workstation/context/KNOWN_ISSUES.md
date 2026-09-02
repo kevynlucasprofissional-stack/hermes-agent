@@ -10,17 +10,9 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Target invariant:** Workstation-mode Preview compatibility and Browser Hub/Chat Browser View reference one BrowserTask/live page.
 
-**Implementation 4 status:** unchanged. The BrowserTask lifecycle deliberately does not collapse Preview into the Workstation runtime.
-
-## KI-003 — Complete logical BrowserSessionState does not survive restart
-
-**Observed on current `main`:** Chromium profile state persists and promoted BrowserTask metadata now has explicit logical restart semantics, but the **complete** logical browser session still does not survive restart. Ordinary/manual tab ordering, active generic tab, richer URL/title restoration, controller/session/run/Kanban linkage, and all host state remain incomplete.
-
-**Implementation 4 narrowed this gap:** safe BrowserTask metadata is versioned and atomically persisted. Restored tasks normalize to `parked` / `recoveryState: restored` and lazily receive one replacement page when used. Real Windows/Electron smoke validated that behavior.
-
-**Important boundary:** a `WebContentsView` and its JavaScript heap are process-local. Restart recovery means logical BrowserTask restoration plus controlled page recreation/reconnection, not serialization/resurrection of the same renderer object.
-
-**Remaining target invariant:** a safe, versioned BrowserSessionState restores all intended logical metadata separately from Chromium profile/auth state, with explicit recovery semantics for process-local page objects.
+**Pre-1.5 status:** still open. Promoted BrowserSessionState deliberately does not
+collapse Preview into the Workstation runtime. The V1 #1.5 compatibility slice
+must reuse/refuse duplication before later V1 #4 hardening.
 
 ## KI-004 — Native browser surface can overlap another Desktop pane
 
@@ -30,7 +22,9 @@ This file records observed/reproduced gaps and the evidence boundary around them
 
 **Target invariant:** one live `WebContentsView` host at a time plus an explicit host/viewport ownership contract; validate resize, maximize/restore, sidebar/pane changes, and host transfer.
 
-**Implementation 4 status:** lifecycle semantics now make a later single-host transfer contract easier to express, but Chat/Hub/Preview host unification is not implemented here. This issue remains open.
+**Pre-1.5 status:** BrowserTask lifecycle makes a single-host transfer contract
+possible, but Chat/Hub/Preview host unification is not implemented yet. This
+issue remains open and needs native composition evidence.
 
 ## KI-006 — Broad Windows Desktop suites contain pre-existing portability/test failures
 
@@ -39,6 +33,7 @@ This file records observed/reproduced gaps and the evidence boundary around them
 **Causality status:** **not caused by the Workstation canonical-source / BrowserTask changes based on controlled baseline evidence.** A native-Windows side-by-side comparison used baseline `ce78f120e8ed2974d6174e475cc7572afcfe41e0` and Implementation 4 candidate `2ffee2335b6aba071e7b63457a047cd9334d4d92` under the same Windows/toolchain/install/test conditions.
 
 Observed comparison:
+
 - baseline UI legacy: 5 failed files / 11 failed tests;
 - candidate UI legacy: 5 failed files / 9 failed tests;
 - baseline platform/Electron legacy: 11 failed files / 33 failed tests;
@@ -49,6 +44,14 @@ Observed comparison:
 Controlled verdict: `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`.
 
 The accepted PR head `75d10d35d4757496390debf8e4b4f9efb44c5432` changed no BrowserTask product/runtime/probe/workflow/dependency code after that controlled candidate; only contributor-attribution mapping and Workstation journal material were added. Its final Windows workflow again passed committed integration validation, install, checkout-clean, typecheck and focused BrowserTask diagnostics before the final broad aggregator remained red. No new Implementation 4 failure class was introduced.
+
+On BrowserSessionState accepted head
+`d5be442021ea0c744351622317eef5212219786d`, the scoped static checks,
+5 focused files / 46 tests and H010 native probe all passed. The broad run had
+one UI failure from a missing `BROWSER_ROUTE` test mock and 31 Electron failures
+across unrelated POSIX path/mode/symlink/SSH/platform assumptions. This is the
+current exact-head manifestation of the same KI-006 class, not a
+BrowserSessionState failure.
 
 **Current policy:** keep the broad workflow red while these failures exist. UI and platform suites run independently and a final aggregator preserves failure if either is red. A green focused BrowserTask step does not convert the broad red gate into a pass.
 
@@ -64,6 +67,31 @@ The accepted PR head `75d10d35d4757496390debf8e4b4f9efb44c5432` changed no Brows
 
 ## Resolved regression classes
 
+### KI-003 — Complete logical BrowserSessionState did not survive restart
+
+**Original symptom:** the persistent Chromium profile and BrowserTask-only
+metadata existed, but ordinary logical tab ordering, active selection, safe
+restorable metadata and one composite restart projection were incomplete.
+
+**Resolved behavior:** PR #11 promoted one versioned atomic
+BrowserSessionState containing ordinary/task logical tabs, order, active state,
+sanitized URL/title metadata and the BrowserTask snapshot. It preserves the
+latest intended composite across failed writes, migrates legacy task state once,
+parks restored tasks and lazily recreates exactly one page.
+
+Promotion:
+
+- accepted head: `d5be442021ea0c744351622317eef5212219786d`;
+- merge commit: `e0a99ef3aba6e6d2b65c30cf3c908ee1d49c4d29`;
+- focused evidence: 5 files / 46 tests;
+- native evidence: `H010_CLASSIFICATION=VALIDATED`, including clean and abrupt
+  two-process restart, profile separation, failed-write convergence and
+  explicit-destroy failure cleanup.
+
+**Boundary retained:** a WebContentsView/renderer heap never survives process
+restart. Controller/session/run/card identity expansion and host state belong to
+V1 #1.5/V1 #5, not a second BrowserSessionState owner.
+
 ### KI-005 — BrowserTask lifecycle was implicit on pre-Implementation-4 `main`
 
 **Original symptom:** `ownerTaskId`, `taskTabs`, parking, and attach/detach existed, but there was no complete first-class `show`/`hide`/`park`/`destroy` BrowserTask contract.
@@ -71,15 +99,18 @@ The accepted PR head `75d10d35d4757496390debf8e4b4f9efb44c5432` changed no Brows
 **Resolved behavior on current `main`:** PR #9 formalized BrowserTask around the existing `taskTabs`/`BrowserEntry.ownerTaskId` ownership primitives without introducing a second page store. `hide` and `park` preserve a live page, `show` re-exposes it, repeated task creation is idempotent, missing pages recover under the same logical task, and `destroyTask` is explicit.
 
 Promotion:
+
 - accepted PR head: `75d10d35d4757496390debf8e4b4f9efb44c5432`;
 - merge commit on `main`: `fada723f43613e5e0f061cab24445573ac298998`.
 
 **Automated regression coverage:**
+
 - `apps/desktop/electron/workstation-browser-task.test.ts`;
 - `apps/desktop/electron/workstation-browser-runtime-task.test.ts`;
 - focused BrowserTask step in `Workstation Browser Windows`.
 
 **Real native evidence:** `workstation/context/engineering-journal/probes/h004-native-browser-task-smoke.mjs` ran on Windows `10.0.26200`, Electron `40.10.2`, repository head `d8acc752133b125b9619cbc7fe09199f1283a22b` and emitted:
+
 - `H004_LIVE_DESTROY_PASS`;
 - `H004_RESTART_PASS`;
 - `H004_CLASSIFICATION=VALIDATED`.

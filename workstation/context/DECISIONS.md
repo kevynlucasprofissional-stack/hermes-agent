@@ -52,6 +52,23 @@ Do not make Workstation business logic depend irreversibly on one concrete brows
 
 Installation and CI must validate the source committed in this downstream `main`. Migration/rebase helpers may exist, but normal install/test paths must not silently rewrite tracked source before validation; otherwise a missing integration can be hidden by the test harness itself.
 
+## D-012 — Main is the only milestone handoff line
+
+Accepted product code, required tests/probes/workflows, current state, and the
+decision record must be reachable from `main` before the next milestone starts.
+Temporary validation branches and diagnostic PRs may preserve evidence, but they
+are never implicit dependencies or alternate product lines.
+
+The extraordinary pre-V1 #1.5 Mainline Consolidation Gate inventories and
+classifies the repository's accumulated history. After each later major
+milestone, a smaller Mainline Consolidation Review verifies promotion,
+classifies new lateral work, reconciles canonical documents and confirms that
+the next milestone can branch exclusively from `main`.
+
+Known, causally classified debt may remain open when its scope and evidence are
+explicit. An unclassified material delta, stale active predecessor, or required
+artifact available only on another branch blocks the handoff.
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.

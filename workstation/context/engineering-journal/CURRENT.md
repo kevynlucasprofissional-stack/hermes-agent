@@ -1,7 +1,7 @@
 # CURRENT — Workstation Engineering Journal
 
 Last updated: 2026-09-02
-Active track: WP-01 / PR #11 BrowserSessionState — final native-gate correction and promotion review
+Active track: WP-02 / pre-V1 #1.5 Mainline Consolidation Gate — PASS candidate
 Repository: `kevynlucasprofissional-stack/hermes-agent`
 Historical milestone branch: `impl4-browser-task-lifecycle`
 Code-bearing BrowserTask ancestor: `1ac0e0a9ecaaf1c53ee0f8abfc3d8a1d802cae70`
@@ -9,9 +9,68 @@ Native-smoke evidence SHA: `d8acc752133b125b9619cbc7fe09199f1283a22b`
 Accepted PR head: `75d10d35d4757496390debf8e4b4f9efb44c5432`
 Promotion merge on `main`: `fada723f43613e5e0f061cab24445573ac298998`
 Previous `main`: `ce78f120e8ed2974d6174e475cc7572afcfe41e0`
-PR: #11 — `fix(workstation): stabilize BrowserSessionState persistence` (**draft; active**)
+V1 #1 accepted head: `d5be442021ea0c744351622317eef5212219786d`
+V1 #1 promotion merge: `e0a99ef3aba6e6d2b65c30cf3c908ee1d49c4d29`
+V1 #1.5 sequencing accepted head: `39e51787d2414d0165ae8fa8b47d1f0e5f3e65cd`
+Consolidation audit base: `main@4b04f4c4d2af5620426589529d29b700cfc21fb0`
+Next product track after gate promotion: V1 #1.5 Integrated Dogfood MVP
 
 > Journal/probe/documentation commits after `1ac0e0a9...` do not change BrowserTask product behavior unless this file explicitly records a later code-bearing candidate. Always verify live `main` and compare product paths before carrying evidence into a later implementation.
+
+## WP-02 — Mainline Consolidation Gate
+
+### Preconditions closed
+
+- PR #11 was accepted at exact head `d5be442...` after H010 emitted
+  `H010_CLASSIFICATION=VALIDATED`; it merged as `e0a99ef3...`.
+- PR #12 then merged that promoted main without rewriting either history. Its
+  reconciled head `39e5178...` passed Workstation CI (26 contracts), exact
+  Windows install/checkout-clean/diff/typecheck, 46 focused browser tests and
+  the native H010 step; it merged as `4b04f4c...`.
+- The broad Windows aggregator still reported the classified KI-006 baseline:
+  one missing UI route mock and 31 unrelated POSIX/path/mode/SSH/platform
+  failures. No BrowserSessionState/BrowserTask scoped test failed.
+
+### G-001 — repository-wide disposition audit
+
+**Hypothesis:** after #11/#12 promotion, no accepted product delta remains only
+on a lateral branch; the remaining divergent refs are temporary diagnostics,
+superseded source snapshots or reproducible formatter output.
+
+**Confirming evidence required:** compare every GitHub branch to exact audit-base
+main, inspect unique file/commit scope, close all superseded open PRs, and leave
+zero material `NEEDS INVESTIGATION`.
+
+**Observed result:**
+
+- all ancestor refs classify `ALREADY ON MAIN`;
+- PR #4/#5 diagnostic lines contain historical Windows evidence and obsolete
+  snapshots only;
+- PR #6 source was finalized/promoted by #7; its unique workflow is temporary;
+- PR #8 is workflow-only historical validation;
+- `bot/js-autofix` is one broad mechanical formatter commit and is
+  `REJECTED/DO NOT PROMOTE` wholesale;
+- comments carrying these dispositions were added and PRs #4/#5/#6/#8 were
+  closed;
+- no source/evidence needed for V1 #1.5 remains branch-only.
+
+**Classification:** `VALIDATED`. The complete branch/PR table and checklist are
+canonical in `../MAINLINE_CONSOLIDATION.md`.
+
+### G-002 — canonical-document convergence
+
+**Hypothesis:** promotion is incomplete while canonical documents still say
+BrowserSessionState is a candidate or V1 #1 is next.
+
+**Confirming evidence required:** update current state, decisions, constraints,
+architecture/delta, roadmap, testing, known issues, patch manifest, README and
+journal; protect ordering/disposition with executable contracts.
+
+**Result target:** the gate candidate passes Workstation contracts and exact-tree
+CI, is promoted to main, and V1 #1.5 branches only after that merge.
+
+**Current classification:** `ACTIVE` until the gate candidate is promoted; the
+repository/PR audit itself is complete with zero material unknowns.
 
 ## Why this journal exists
 
@@ -167,11 +226,14 @@ Implementation 3 established:
 
 Earlier BrowserClaw experiments inform requirements/failure modes; they are not permission to reintroduce BrowserClaw as the primary Workstation browser after the internal-runtime decision.
 
-## Long-term product north star — context, not current scope
+## Long-term product north star — governed by the roadmap
 
-The broader direction is Hermes as a persistent execution/orchestration layer for recurring work. This remains a north star, not permission for scope creep into full Kanban automation, Execution Reports, LAN/mobile, Browser Memory, Perception Engine V2, Browser4, Lightpanda, or domain workflows before browser-foundation gates are satisfied.
+The broader direction is Hermes as a persistent execution/orchestration layer
+for recurring work. V1 #1.5 now authorizes only the narrow, executable slices
+listed in the roadmap; it is not permission to claim their later hardening scope
+or to create parallel owners.
 
-## WP-01 / BrowserSessionState candidate objective — active
+## WP-01 / BrowserSessionState objective — resolved and promoted
 
 Complete the canonical BrowserSessionState foundation beyond BrowserTask-only
 metadata while preserving the current live-page owners and avoiding a second
@@ -192,7 +254,7 @@ explicit recovery metadata/policy. Chat Browser View, Browser Hub, Preview
 unification, host transfer, SessionDB/Gateway semantics, Kanban implementation,
 LAN/Tailscale, Browser Memory, and KI-007 remain out of scope.
 
-### Candidate acceptance status
+### Historical candidate acceptance status (superseded by final promotion)
 
 - Implementer-focused validation on candidate
   `9ce769ee54ab6a02cad77a266c87cb05a8cad3f6` passed the scoped
@@ -202,13 +264,11 @@ LAN/Tailscale, Browser Memory, and KI-007 remain out of scope.
   page titles could cross the durable boundary and because the possible
   `new browserTasks + previous sanitized tab projection` crash snapshots had
   not been exercised through runtime restart/recovery.
-- The active writer-branch work is a corrective candidate, not an accepted or
-  promoted implementation.
-- Independent re-verification of the corrected exact head remains pending.
-- Native Electron restart acceptance for the corrected BrowserSessionState
-  candidate remains pending.
-- Promotion is not authorized unless the corrective exact head passes
-  independent verification and the remaining native acceptance boundary.
+- At that checkpoint the writer-branch work was a corrective candidate, not an
+  accepted or promoted implementation.
+- Independent re-verification and native Electron restart acceptance were still
+  pending at that checkpoint; H010 and the final PR #11 promotion below
+  supersede those temporary blockers.
 
 ### H-007 — BrowserSessionState can be a safe structural projection of existing authorities
 
@@ -598,10 +658,11 @@ Final static/contract results:
 - Prettier check for both new BrowserSessionState files: **passed**;
 - final Workstation wrapper rerun: **4 files / 24 tests passed / 0 failed** in 4.9s.
 
-Classification: **IMPLEMENTER-FOCUSED VALIDATION ONLY / INDEPENDENTLY
-BLOCKED**. These scoped results remain useful evidence, but they did not prove
+Historical classification at that candidate: **IMPLEMENTER-FOCUSED VALIDATION
+ONLY / INDEPENDENTLY BLOCKED**. These scoped results remain useful evidence, but they did not prove
 the durable-title boundary or material composite-write interruption states.
-Native Electron restart remains pending, and promotion is not authorized.
+Native Electron restart was still pending and promotion was not authorized at
+that point; the later H010 final result supersedes this state.
 
 ### H-009 — Durable-title denial and executable composite recovery can correct the candidate narrowly
 
@@ -720,8 +781,9 @@ Workstation Python contract result:
 - context-document contracts passed with the corrected candidate/non-promotion
   terminology.
 
-Classification: **CORRECTIVE CANDIDATE VALIDATED AT REQUESTED AUTOMATED
-LAYERS / NATIVE ELECTRON RESTART STILL PENDING / PROMOTION NOT AUTHORIZED**.
+Historical classification at that candidate: **CORRECTIVE CANDIDATE VALIDATED
+AT REQUESTED AUTOMATED LAYERS / NATIVE ELECTRON RESTART PENDING / PROMOTION NOT
+AUTHORIZED**.
 The delivery commit freezes the exact Git head for independent verification;
 this journal does not treat that delivery action as promotion or native
 acceptance.
@@ -884,9 +946,19 @@ Refuting/reformulating evidence:
 - phase B cannot restore the durable task/tab projection;
 - a product persistence change is required before phase B can pass.
 
-Classification: **ACTIVE — HARNESS EXIT-CODE HYPOTHESIS REGISTERED BEFORE
-CHANGE**. Product boundary marker: do not change BrowserSessionState or runtime
-logic for this failure; change only the native probe's final process exit.
+Final exact-SHA result at `d5be442021ea0c744351622317eef5212219786d`:
+
+- abrupt phase A emitted `H010_ABRUPT_PHASE1_DURABLE` and exited with the
+  allowed non-zero sentinel;
+- abrupt phase B ran under a distinct PID and emitted
+  `H010_ABRUPT_RESTART_PASS`;
+- clean restart, profile separation, failed-write convergence and
+  explicit-destroy cleanup remained green;
+- the probe emitted `H010_CLASSIFICATION=VALIDATED`.
+
+Classification: **VALIDATED / HARNESS DEFECT CORRECTED**. No
+BrowserSessionState product change was required for H-012. PR #11 then promoted
+the exact head as merge `e0a99ef3aba6e6d2b65c30cf3c908ee1d49c4d29`.
 
 ## Implementation 4 objective — closed
 

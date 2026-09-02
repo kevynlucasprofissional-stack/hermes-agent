@@ -92,9 +92,10 @@ same live page and current navigation state. Repeating creation for the same
 page.
 
 BrowserTask metadata is safe structural state, separate from the Chromium
-profile. The candidate state includes identifiers/host linkage, lifecycle
-status, parked state, lease/recovery state, and timestamps. It is versioned and
-written atomically under the Workstation runtime directory.
+profile. The promoted composite BrowserSessionState includes identifiers/host
+linkage, lifecycle status, parked state, lease/recovery state and timestamps
+alongside ordinary/task logical tabs, order and active selection. It is
+versioned and written atomically under the Workstation runtime directory.
 
 A `WebContentsView` is process-local. On Desktop restart, Workstation restores
 BrowserTask metadata as parked before creating any task page. When that task is
@@ -103,8 +104,8 @@ used again, the runtime lazily creates/reconnects one page under the same logica
 renderer, JavaScript heap, or `WebContents` object. Browser profile-managed state
 (cookies/localStorage/IndexedDB and compatible login state) persists separately.
 
-Future Chat Browser View, Browser Hub, and Workstation-mode Preview compatibility
-must consume this same BrowserTask/BrowserRuntime state. A second UI surface may
+The V1 #1.5 Chat Browser View, Browser Hub, and Workstation-mode Preview
+compatibility slices must consume this same BrowserTask/BrowserRuntime state. A second UI surface may
 show metadata/thumbnail while another owns the native live page; it must not
 create an independently navigated duplicate for the same BrowserTask.
 

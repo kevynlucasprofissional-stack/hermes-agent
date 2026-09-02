@@ -45,4 +45,23 @@ These constraints apply to Workstation changes in addition to the repository-wid
 
 ## Scope boundary for the browser-foundation phase
 
-Do not use browser-foundation work as an excuse to implement the later Kanban automation layer, full execution reports, LAN/QR/Tailscale access, Browser Memory, Perception Engine V2, Browser4, or Lightpanda. Those features depend on a proven unified Browser foundation.
+V1 #1 BrowserSessionState is promoted and the pre-1.5 Mainline Consolidation
+Gate is the required handoff. V1 #1.5 may now implement narrow, real vertical
+slices of later Kanban, journal/report, LAN/Tailscale, memory/perception/drift,
+extension and Lightpanda capabilities only within the explicit MVP boundaries
+in `ROADMAP.md`.
+
+MVP does not relax ownership or safety: every slice must use the existing Hermes
+owner, preserve one-live-page and bound-task fail-closed behavior, be opt-in
+when exposure or runtime maturity requires it, and have an executable behavior
+contract. The original numbered milestones remain open for hardening.
+
+## Mainline handoff
+
+- New milestone work branches from current `main`, never from a retained
+  diagnostic/validation ref.
+- Do not merge a formatter/bot branch wholesale; reproduce a required scoped
+  formatting change on the active branch.
+- Close or formally classify superseded PRs before the next milestone.
+- Run the Mainline Consolidation Review after every major milestone and keep the
+  full pre-1.5 ledger in `context/MAINLINE_CONSOLIDATION.md`.

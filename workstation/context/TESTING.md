@@ -31,12 +31,28 @@ Do not replace executable behavior tests with source greps. Source-shape tests a
 - normal `workstation\\install.cmd` execution;
 - clean-checkout assertion after install;
 - Desktop typecheck;
-- focused BrowserTask lifecycle/runtime step;
+- BrowserSessionState lint/format;
+- focused BrowserSessionState resilience plus BrowserTask lifecycle/runtime step;
+- H010 native clean/fault/abrupt restart probe;
 - Desktop UI tests;
 - Desktop platform/Electron tests;
 - final aggregator that remains red if a scoped or broad required outcome is red.
 
 The UI and platform steps may continue after failure only so both outcomes are observable. This is diagnostic non-masking, not failure tolerance.
+
+### Mainline Consolidation contracts
+
+`workstation/tests/test_mainline_consolidation.py` protects the extraordinary
+pre-1.5 gate record:
+
+- all PRs #1–#12 and every branch observed at the audit base have a disposition;
+- no material `NEEDS INVESTIGATION` remains;
+- D-012 and the recurring Mainline Consolidation Review are canonical;
+- roadmap order is BrowserSessionState → Gate → V1 #1.5 → V1 #2 hardening;
+- promoted BrowserSessionState evidence is not described as pending.
+
+The test protects the durable record; GitHub live state is still inspected and
+recorded during an actual gate/review rather than mocked by source assertions.
 
 ### Desktop Browser schema capability
 
@@ -69,6 +85,50 @@ The UI and platform steps may continue after failure only so both outcomes are o
 - explicit task destroy closes the owned page;
 - restart restores logical metadata first and creates one page only when shown again;
 - renderer crash recovery creates one replacement page under the same task.
+
+### BrowserSessionState composite and resilience
+
+`workstation-browser-session-state.test.ts`,
+`workstation-browser-session-state-resilience.test.ts`, and
+`workstation-browser-runtime-resilience.test.ts` prove:
+
+- ordinary/task logical tab order and active selection round-trip without live
+  page objects;
+- safe URL/title metadata excludes credentials and suspicious path/query forms;
+- BrowserTask metadata shares one composite persistence file and legacy state
+  migrates once;
+- malformed/newer state fails safely;
+- atomic replacement never exposes partial JSON;
+- after a failed task or session write, a later successful write converges both
+  halves to the latest intended in-process projection;
+- failed explicit destroy cannot be resurrected by a later session save;
+- runtime cleanup converges even when the persistence boundary throws.
+
+## V1 #1 real Windows acceptance evidence
+
+The promoted probe is versioned at:
+
+`workstation/context/engineering-journal/probes/h010-native-browser-session-state-smoke.mjs`
+
+Validated exact head:
+
+- repository head: `d5be442021ea0c744351622317eef5212219786d`;
+- Windows: `10.0.26100`;
+- Electron: `40.10.2`;
+- outer Node: `v26.8.1`.
+
+Observed markers include:
+
+- `H010_PHASE_A_PASS` and `H010_PHASE_B_PASS`;
+- `H010_NATIVE_FAULT_CONVERGENCE_PASS`;
+- `H010_NATIVE_DESTROY_FAILURE_CLEANUP_PASS`;
+- `H010_ABRUPT_PHASE1_DURABLE` and `H010_ABRUPT_RESTART_PASS`;
+- `H010_CLASSIFICATION=VALIDATED`.
+
+The probe used distinct Electron PIDs for restart, real WebContentsView/profile
+behavior, a forced persistence failure seam and an abrupt non-clean first
+process exit. It proved lazy exactly-one-page task recovery and profile/state
+separation; it did not prove any later Chat/Hub/Preview or Kanban feature.
 
 ## BrowserTask lifecycle policy
 
@@ -143,6 +203,7 @@ A native-Windows side-by-side run used the same toolchain/install/commands again
 - candidate: `2ffee2335b6aba071e7b63457a047cd9334d4d92`.
 
 Observed:
+
 - baseline UI legacy: 5 failed files / 11 failed tests;
 - candidate UI legacy: 5 failed files / 9 failed tests;
 - baseline platform/Electron legacy: 11 failed files / 33 failed tests;
@@ -158,6 +219,7 @@ Verdict: `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`.
 Git comparison proved that changes from controlled candidate `2ffee...` to accepted head `75d10d35...` were limited to contributor-attribution mapping and Workstation engineering-journal material. BrowserTask product/runtime/probe/workflow/dependency code did not change.
 
 On `75d10d35...`:
+
 - `Workstation CI` passed;
 - Docker Build/Test/Publish passed;
 - contributor attribution passed after the missing mapping was added;
