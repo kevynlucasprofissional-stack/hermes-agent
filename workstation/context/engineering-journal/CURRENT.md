@@ -60,15 +60,15 @@ The settled product direction is now:
 
 ### Decisions that require new material evidence before reopening
 
-| Old debate | Current settled direction | What would justify reopening it |
-|---|---|---|
-| plugin/separate repo vs fork | thin downstream fork; Workstation first-class | a concrete upstream capability that removes the need for cross-cutting downstream integration, with migration proof |
-| external browser vs internal browser | internal Electron Chromium is primary | measured inability of Electron runtime to satisfy a required invariant that a specialist runtime demonstrably solves |
-| BrowserOS vs agent-browser as the core | neither is the primary Workstation runtime | changed product requirements or benchmark evidence, not familiarity/preference |
-| separate WebUI | official Hermes Desktop/Dashboard remain UI/state surfaces | a specific unmet product requirement that cannot be added without duplicating state/control planes |
-| second Kanban/SessionDB/Memory | reuse Hermes-owned systems | only an explicit replacement architecture that supersedes the canonical decisions and includes migration/tests |
-| synchronize Preview and Browser by URL | one BrowserTask/live page, views/hosts | never as a cosmetic synchronization workaround; only a replacement of the ownership model with stronger proof |
-| browser availability from process env | session/platform capability | only if Hermes changes its gateway/session architecture materially and tests prove the new identity model |
+| Old debate                             | Current settled direction                                  | What would justify reopening it                                                                                      |
+| -------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| plugin/separate repo vs fork           | thin downstream fork; Workstation first-class              | a concrete upstream capability that removes the need for cross-cutting downstream integration, with migration proof  |
+| external browser vs internal browser   | internal Electron Chromium is primary                      | measured inability of Electron runtime to satisfy a required invariant that a specialist runtime demonstrably solves |
+| BrowserOS vs agent-browser as the core | neither is the primary Workstation runtime                 | changed product requirements or benchmark evidence, not familiarity/preference                                       |
+| separate WebUI                         | official Hermes Desktop/Dashboard remain UI/state surfaces | a specific unmet product requirement that cannot be added without duplicating state/control planes                   |
+| second Kanban/SessionDB/Memory         | reuse Hermes-owned systems                                 | only an explicit replacement architecture that supersedes the canonical decisions and includes migration/tests       |
+| synchronize Preview and Browser by URL | one BrowserTask/live page, views/hosts                     | never as a cosmetic synchronization workaround; only a replacement of the ownership model with stronger proof        |
+| browser availability from process env  | session/platform capability                                | only if Hermes changes its gateway/session architecture materially and tests prove the new identity model            |
 
 The rule is not “never change architecture.” A replacement decision must identify the material new evidence, name the decision it supersedes, define migration, and prove the new behavior.
 
@@ -79,10 +79,12 @@ The rule is not “never change architecture.” A replacement decision must ide
 A real Desktop smoke was once reported as “Workstation Browser interno” after the agent called `open_preview` and `read_preview`. That was a **false-positive identity claim**.
 
 What that test actually proved:
+
 - the Desktop Preview surface could navigate/render/read the page;
 - Electron/Preview was functioning.
 
 What it did **not** prove:
+
 - `browser_navigate` existed in the session schema;
 - `browser_snapshot` existed in the session schema;
 - the Workstation `BrowserRuntime` handled the action;
@@ -94,6 +96,7 @@ What it did **not** prove:
 ### CT-002 — Real Desktop tool exposure can fail before BrowserTask
 
 A real-environment investigation established this before-state:
+
 - the Capabilities UI showed **Browser Automation = ON**;
 - `coding_context = auto`;
 - `agent.disabled_toolsets = []`;
@@ -134,6 +137,7 @@ Passing pure or mocked tests did not prove a real `WebContentsView`, native Wind
 An earlier Workstation install path could mutate/repair tracked source before validation, creating a false-green risk.
 
 Durable policy:
+
 - committed downstream source is canonical;
 - normal install validates integration read-only;
 - runtime state lives outside tracked source where appropriate;
@@ -143,6 +147,7 @@ Durable policy:
 ### CT-005 — A red broad Windows gate needs causality, not storytelling
 
 Durable method:
+
 1. reproduce exact base and candidate;
 2. same OS/toolchain/dependency install/commands;
 3. compare failure **signatures/classes**, not only counts;
@@ -153,6 +158,7 @@ Durable method:
 ### CT-006 — GUI/browser surface identity belongs to the session
 
 Implementation 3 established:
+
 - GUI/Desktop surface identity is session/platform state, not a process-global env proxy;
 - controller reachability is execution state, not surface existence;
 - tool-definition caching must include session-surface capability to avoid Desktop↔TUI leakage.
@@ -838,6 +844,50 @@ Product boundary marker: first correct the probe to observe Electron's
 documented `destroyed` event/state with a bounded wait. Do not weaken immediate
 assertions about logical task/tab ownership or fresh recreation.
 
+Native result at exact head `ad905ddee902efc7d66db76220f44e963030843b`:
+
+- immediate logical task/tab removal passed;
+- bounded native `WebContents` teardown passed;
+- durable convergence and same-id fresh recreation passed;
+- H-011 is therefore **VALIDATED**;
+- the probe then exposed a separate harness exit-code issue in abrupt phase A,
+  isolated below as H-012.
+
+### H-012 — Electron `process.exit()` return overwrote the abrupt exit code
+
+Origin: H010 at exact head `ad905dde...` emitted
+`H010_ABRUPT_PHASE1_DURABLE` and then unexpectedly emitted
+`H010_MODE_PASS abrupt1`; the parent observed exit code `0` instead of the
+allowed sentinel `17`.
+
+Hypothesis registered before changing the probe:
+
+- Electron's Windows main-process `process.exit(17)` shim initiated exit but
+  returned control to the async ready callback;
+- the common success tail then executed `app.exit(0)`, replacing the intended
+  abrupt sentinel with a normal success code;
+- persisted BrowserSessionState had already passed its pre-termination checks,
+  so this is an orchestration/exit-code defect after the product boundary;
+- selecting the final exit code exactly once through `app.exit(...)`, without
+  calling `runtime.destroy()`, should preserve the abrupt-state experiment.
+
+Confirming evidence:
+
+- abrupt phase A exits with code `17` after its durable marker;
+- abrupt phase B starts under a different PID, restores the ordinary logical
+  tab and parked BrowserTask, lazily creates exactly one task page, and passes;
+- full H010 reaches `H010_CLASSIFICATION=VALIDATED`.
+
+Refuting/reformulating evidence:
+
+- phase A still exits `0`, times out, or performs the runtime's clean destroy;
+- phase B cannot restore the durable task/tab projection;
+- a product persistence change is required before phase B can pass.
+
+Classification: **ACTIVE — HARNESS EXIT-CODE HYPOTHESIS REGISTERED BEFORE
+CHANGE**. Product boundary marker: do not change BrowserSessionState or runtime
+logic for this failure; change only the native probe's final process exit.
+
 ## Implementation 4 objective — closed
 
 Required native lifecycle contract:
@@ -867,6 +917,7 @@ Classification: **VALIDATED**.
 Experiment: `probes/h003-esm-ready.mjs`.
 
 Evidence:
+
 - TLA case: boot → internal timeout; exit 3;
 - `.then(...)` case: boot → ready → BrowserWindow → PASS; exit 0.
 
@@ -879,6 +930,7 @@ Classification: **VALIDATED**.
 Experiment: `probes/h004-native-browser-task-smoke.mjs` at `d8acc752133b125b9619cbc7fe09199f1283a22b`.
 
 Live identity evidence:
+
 - task `impl4-h004-live-task`;
 - tab id stayed `a27236b9-4aaf-4adc-9556-7ee14f5c4274`;
 - real `webContentsId` stayed `3`;
@@ -888,6 +940,7 @@ Live identity evidence:
 - park produced logical `parked` without destroying page.
 
 Explicit destroy evidence:
+
 - `destroyTask` returned true;
 - prior WebContents destroyed;
 - task not listed;
@@ -895,6 +948,7 @@ Explicit destroy evidence:
 - no automatic replacement page.
 
 Real restart evidence:
+
 - process 1 PID `30968`: task persisted `parked` / `fresh`, structural state excluded page URL secret and renderer secret;
 - process 2 PID `37440`: same task restored `parked` / `restored`, zero eager pages before show, first show created exactly one task page under same task id, recovery became `recreated`.
 
@@ -905,12 +959,14 @@ Practical conclusion: **Implementation 4 native lifecycle acceptance behavior is
 Classification: **REFUTED AS PRODUCT REGRESSION / VALIDATED AS DOCUMENTATION CONTRACT REGRESSION**.
 
 Evidence:
+
 - `core-patch-dry-run` passed;
 - 23/24 Workstation contract tests passed;
 - sole failure was `test_context_separates_current_state_from_target_and_known_issues`;
 - fingerprint was missing literal heading `## Not implemented yet` after a documentation rewrite combined tested sections.
 
 Correction:
+
 - separate canonical headings restored;
 - test was not weakened.
 
@@ -919,6 +975,7 @@ Correction:
 Classification: **REFUTED BY CONTROLLED EQUIVALENCE**.
 
 Controlled native-Windows A/B:
+
 - baseline `ce78f120e8ed2974d6174e475cc7572afcfe41e0`;
 - candidate `2ffee2335b6aba071e7b63457a047cd9334d4d92`;
 - result `WINDOWS_BASELINE_COMPARISON=PASS_WITH_KI-006_RED`;
@@ -931,29 +988,29 @@ Classification used at promotion: `KI-006_ONLY_BY_CONTROLLED_EQUIVALENCE`.
 
 ## Experiment / failure ledger
 
-| ID | Attempt / fingerprint | What happened | Classification | Anti-repeat lesson |
-|---|---|---|---|---|
-| E-001 | PowerShell interpolation with `$code:` / `$ExpectedBranch:` | ParserError before test | Harness defect | Use `${name}:` when `:` follows an interpolated PowerShell variable. |
-| E-002 | Assume Electron/esbuild at root `.bin` | Dependency discovery failed despite `npm ci` | Harness defect | Inspect workspace ownership before hard-coding executable paths. |
-| E-003 | PowerShell parameter `$Args` | Arguments swallowed; tools printed usage | Harness defect | Never shadow automatic `$Args`. |
-| E-004 | native stderr + `$ErrorActionPreference='Stop'` | Normal esbuild stderr became `NativeCommandError` | Harness defect | stderr is not failure; gate on exit status. |
-| E-005 | `Start-Process` exit code on Windows PowerShell 5.1 | successful run exposed unusable/null exit status | Harness defect | Prefer Node `child_process` for native orchestration. |
-| E-006 | arbitrary bundled `.mjs` as Electron target | launch did not prove valid app-entry semantics | Harness defect | Use a valid Electron app directory. |
-| E-007 | V9 + top-level `await app.whenReady()` | boot marker printed; ready marker never printed | Harness defect | Never attribute pre-runtime timeout to BrowserTask. |
-| E-008 | H-002 bare CommonJS readiness | ready + BrowserWindow succeeded | Control evidence | General Electron/Windows startup is healthy. |
-| E-009 | H-003 ESM paired control | TLA fails; `.then(...)` passes | Root-cause evidence | Register readiness non-blockingly on this Windows/Electron path. |
-| E-010 | H-004 real BrowserTask lifecycle | live identity, explicit destroy, two-process restart, lazy recovery, secret isolation all pass | Acceptance evidence | Reuse the versioned probe; do not reconstruct ad hoc runners. |
-| E-011 | Preview described as Workstation Browser validation | visually successful page was wrong lane | False-positive validation | Exact tool/runtime boundary, not visual similarity, proves identity. |
-| E-012 | exact `browser_navigate` + `browser_snapshot` requested while absent | test correctly stopped rather than substituting | Correct fail-closed behavior | Capability absence is a result; do not substitute and call it passed. |
-| E-013 | coding focus blamed for Browser absence | environment showed `coding_context=auto` | Refuted hypothesis | Remove plausible explanations after direct contradiction. |
-| E-014 | Capabilities UI ON but resolved CLI toolsets lacked `browser` | new Desktop session lacked tools | Cross-layer discrepancy | Trace UI → API → persistence → resolution → schema before changing runtime. |
-| E-015 | unit/adapter lifecycle tests treated as native smoke | mocks could not prove native restart/page identity | Evidence-boundary error | Match claim to observing layer; H-004 later supplied native proof. |
-| E-016 | installer repaired source before validation | mutated checkout could hide missing committed integration | Resolved validation-design defect | Test committed tree; keep repair/migration separate. |
-| E-017 | broad Windows red interpreted without exact baseline | base/candidate shared failure classes | Causality lesson | Controlled A/B + signatures; baseline-equivalent red remains red. |
-| E-018 | GUI capability tied to process env/reachability/cache | Desktop surface could disappear/leak across session types | Resolved ownership-model defect | Session-scoped surface identity; runtime reachability is execution state. |
-| E-019 | documentation rewrite removed tested canonical heading | Workstation CI failed 1/24 although product code unchanged | Documentation contract regression | Inspect context-doc tests before restructuring canonical docs; documentation-only commits still require CI. |
-| E-020 | contributor email unmapped at final promotion | repository-wide attribution check failed | Process gate, corrected | Merge hygiene is part of promotion; fix the mapping instead of dismissing/bypassing the gate. |
-| E-021 | post-merge canonical docs still said Impl4 was pending | code/GitHub and `CURRENT_STATE`/`ROADMAP` disagreed after merge | Post-promotion documentation defect | Promotion is not complete until canonical state documents reflect the new `main`; correct via a separate docs closure and run context contracts. |
+| ID    | Attempt / fingerprint                                                | What happened                                                                                  | Classification                      | Anti-repeat lesson                                                                                                                               |
+| ----- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| E-001 | PowerShell interpolation with `$code:` / `$ExpectedBranch:`          | ParserError before test                                                                        | Harness defect                      | Use `${name}:` when `:` follows an interpolated PowerShell variable.                                                                             |
+| E-002 | Assume Electron/esbuild at root `.bin`                               | Dependency discovery failed despite `npm ci`                                                   | Harness defect                      | Inspect workspace ownership before hard-coding executable paths.                                                                                 |
+| E-003 | PowerShell parameter `$Args`                                         | Arguments swallowed; tools printed usage                                                       | Harness defect                      | Never shadow automatic `$Args`.                                                                                                                  |
+| E-004 | native stderr + `$ErrorActionPreference='Stop'`                      | Normal esbuild stderr became `NativeCommandError`                                              | Harness defect                      | stderr is not failure; gate on exit status.                                                                                                      |
+| E-005 | `Start-Process` exit code on Windows PowerShell 5.1                  | successful run exposed unusable/null exit status                                               | Harness defect                      | Prefer Node `child_process` for native orchestration.                                                                                            |
+| E-006 | arbitrary bundled `.mjs` as Electron target                          | launch did not prove valid app-entry semantics                                                 | Harness defect                      | Use a valid Electron app directory.                                                                                                              |
+| E-007 | V9 + top-level `await app.whenReady()`                               | boot marker printed; ready marker never printed                                                | Harness defect                      | Never attribute pre-runtime timeout to BrowserTask.                                                                                              |
+| E-008 | H-002 bare CommonJS readiness                                        | ready + BrowserWindow succeeded                                                                | Control evidence                    | General Electron/Windows startup is healthy.                                                                                                     |
+| E-009 | H-003 ESM paired control                                             | TLA fails; `.then(...)` passes                                                                 | Root-cause evidence                 | Register readiness non-blockingly on this Windows/Electron path.                                                                                 |
+| E-010 | H-004 real BrowserTask lifecycle                                     | live identity, explicit destroy, two-process restart, lazy recovery, secret isolation all pass | Acceptance evidence                 | Reuse the versioned probe; do not reconstruct ad hoc runners.                                                                                    |
+| E-011 | Preview described as Workstation Browser validation                  | visually successful page was wrong lane                                                        | False-positive validation           | Exact tool/runtime boundary, not visual similarity, proves identity.                                                                             |
+| E-012 | exact `browser_navigate` + `browser_snapshot` requested while absent | test correctly stopped rather than substituting                                                | Correct fail-closed behavior        | Capability absence is a result; do not substitute and call it passed.                                                                            |
+| E-013 | coding focus blamed for Browser absence                              | environment showed `coding_context=auto`                                                       | Refuted hypothesis                  | Remove plausible explanations after direct contradiction.                                                                                        |
+| E-014 | Capabilities UI ON but resolved CLI toolsets lacked `browser`        | new Desktop session lacked tools                                                               | Cross-layer discrepancy             | Trace UI → API → persistence → resolution → schema before changing runtime.                                                                      |
+| E-015 | unit/adapter lifecycle tests treated as native smoke                 | mocks could not prove native restart/page identity                                             | Evidence-boundary error             | Match claim to observing layer; H-004 later supplied native proof.                                                                               |
+| E-016 | installer repaired source before validation                          | mutated checkout could hide missing committed integration                                      | Resolved validation-design defect   | Test committed tree; keep repair/migration separate.                                                                                             |
+| E-017 | broad Windows red interpreted without exact baseline                 | base/candidate shared failure classes                                                          | Causality lesson                    | Controlled A/B + signatures; baseline-equivalent red remains red.                                                                                |
+| E-018 | GUI capability tied to process env/reachability/cache                | Desktop surface could disappear/leak across session types                                      | Resolved ownership-model defect     | Session-scoped surface identity; runtime reachability is execution state.                                                                        |
+| E-019 | documentation rewrite removed tested canonical heading               | Workstation CI failed 1/24 although product code unchanged                                     | Documentation contract regression   | Inspect context-doc tests before restructuring canonical docs; documentation-only commits still require CI.                                      |
+| E-020 | contributor email unmapped at final promotion                        | repository-wide attribution check failed                                                       | Process gate, corrected             | Merge hygiene is part of promotion; fix the mapping instead of dismissing/bypassing the gate.                                                    |
+| E-021 | post-merge canonical docs still said Impl4 was pending               | code/GitHub and `CURRENT_STATE`/`ROADMAP` disagreed after merge                                | Post-promotion documentation defect | Promotion is not complete until canonical state documents reflect the new `main`; correct via a separate docs closure and run context contracts. |
 
 ## Stable anti-patterns / rules learned
 
@@ -1012,6 +1069,7 @@ Implementation 4 closure branch.
 ## Continuous update protocol
 
 Before an experiment/change:
+
 - register hypothesis/experiment ID when causal uncertainty exists;
 - state confirming/refuting evidence;
 - identify the product boundary marker;
@@ -1020,6 +1078,7 @@ Before an experiment/change:
 - state what material input changed if repeating a prior approach.
 
 Immediately after:
+
 - record exact output/error fingerprint;
 - classify the hypothesis (`VALIDATED`, `PARTIAL`, `REFORMULATED`, `REFUTED`, `INCONCLUSIVE`);
 - record practical implication;

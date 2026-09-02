@@ -435,8 +435,6 @@ app.whenReady().then(async () => {
     assert(saved.browserTasks.tasks.some((task: { taskId: string }) => task.taskId === taskId), 'abrupt1 task not durable before termination')
     fs.writeFileSync(path.join(home, 'h010-abrupt1.json'), JSON.stringify({ pid: process.pid, taskId, ordinaryId: ordinary.id }, null, 2), 'utf8')
     console.log('H010_ABRUPT_PHASE1_DURABLE', JSON.stringify({ pid: process.pid, taskId }))
-    clearTimeout(timer)
-    process.exit(17)
   }
 
   async function abrupt2() {
@@ -463,7 +461,10 @@ app.whenReady().then(async () => {
     else throw new Error('unknown H010_MODE ' + mode)
     clearTimeout(timer)
     console.log('H010_MODE_PASS ' + mode)
-    app.exit(0)
+    // Electron's process.exit shim may return control to this callback on
+    // Windows. Select the final code exactly once through app.exit so the
+    // abrupt phase cannot be accidentally overwritten by the normal 0 path.
+    app.exit(mode === 'abrupt1' ? 17 : 0)
   } catch (error) {
     clearTimeout(timer)
     console.error('H010_PRODUCT_PATH_FAIL', JSON.stringify({
