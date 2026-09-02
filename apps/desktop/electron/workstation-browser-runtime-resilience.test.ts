@@ -35,7 +35,9 @@ const electron = vi.hoisted(() => {
     }
 
     private emit(event: string, ...args: unknown[]): void {
-      for (const listener of this.listeners.get(event) ?? []) listener(...args)
+      for (const listener of this.listeners.get(event) ?? []) {
+        listener(...args)
+      }
     }
 
     setWindowOpenHandler(): void {}
@@ -69,7 +71,10 @@ const electron = vi.hoisted(() => {
     }
 
     close(): void {
-      if (this.destroyed) return
+      if (this.destroyed) {
+        return
+      }
+
       this.destroyed = true
       this.emit('destroyed')
     }
@@ -105,7 +110,9 @@ const electron = vi.hoisted(() => {
     readonly contentView = {
       children: [] as FakeWebContentsView[],
       addChildView: (view: FakeWebContentsView) => {
-        if (!this.contentView.children.includes(view)) this.contentView.children.push(view)
+        if (!this.contentView.children.includes(view)) {
+          this.contentView.children.push(view)
+        }
       },
       removeChildView: (view: FakeWebContentsView) => {
         this.contentView.children = this.contentView.children.filter(candidate => candidate !== view)
@@ -170,7 +177,10 @@ const tempRoots: string[] = []
 afterEach(() => {
   delete process.env.HERMES_WORKSTATION_HOME
   electron.windows.splice(0)
-  for (const root of tempRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true })
+
+  for (const root of tempRoots.splice(0)) {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })
 
 function runtimeHome(): string {
