@@ -198,3 +198,196 @@ The LAN, Tailscale, external-extension, memory/perception/drift and Lightpanda M
 - provenance-aware compact perception engine inspired by Lattice.
 - drift diagnosis and governed adaptation.
 - Lightpanda runtime for ultra-light headless tasks.
+
+## Strategic direction — Hermes Workstation as an agentic work control plane
+
+The Workstation should evolve beyond a browser-integrated Hermes distribution into a **personal control plane for agentic work**: one product surface where the user, Hermes, specialist worker agents, browser runtimes and host-system capabilities share canonical task/session identity, policy, evidence and recovery semantics.
+
+This direction is **not part of the V1 #1.5 scope** and does not change the current Windows-first sequencing. It is a post-V2 architectural horizon that must build on the existing Hermes owners rather than introduce a second SessionDB, Kanban, Memory, approval system, scheduler or browser-routing control plane.
+
+A target shape is:
+
+```text
+User
+  ↓
+Hermes Workstation
+  ├─ Chat / Tasks / Browser / Memory / Journal / Reports
+  ↓
+Hermes — primary conductor/orchestrator
+  ↓
+Agent Runtime / Worker Registry
+  ├─ Hermes workers
+  ├─ Codex
+  ├─ Claude Code
+  ├─ Antigravity
+  ├─ OpenCode
+  └─ other compatible harnesses
+  ↓
+Policy + Approvals + Recovery
+  ↓
+Capability adapters
+  ├─ Workstation Browser
+  ├─ filesystem / processes / apps / clipboard / downloads
+  ├─ Git / GitHub / development tools
+  ├─ notifications / system events / health
+  └─ host-specific desktop/system operations
+  ↓
+Windows first; Linux/Omarchy and other hosts later
+```
+
+The important boundary is that Hermes remains the canonical orchestrator and existing Hermes state owners remain authoritative. Worker agents and host capability providers are replaceable execution surfaces, not new product control planes.
+
+## V2.5 — Agent Runtime + System Capability Control Plane
+
+### Agent Runtime / Worker Registry
+
+Introduce a Workstation-level abstraction for specialist agent harnesses without replacing Hermes as the primary conductor.
+
+- Normalize discovery, installation/readiness, invocation, task handoff, cancellation and health across compatible worker agents.
+- Allow Hermes to delegate a bounded subtask to a worker such as Codex, Claude Code, Antigravity, OpenCode or another compatible harness while retaining the canonical Hermes task/session/card lineage.
+- Record which worker/model executed each delegated step in the existing execution evidence/reporting path.
+- Keep worker-specific flags and invocation details behind adapters rather than leaking them into Workstation business logic.
+- Prefer existing Hermes subagent/plugin/CLI/service-gated extension paths before adding any new permanent core model-tool schema.
+- Treat a future “default worker” as a user preference, not as a replacement for Hermes orchestration.
+
+### System Capability Layer
+
+Generalize the current browser capability pattern into a safe host-capability boundary for operations that agents need outside the browser.
+
+Candidate capability domains include:
+
+- filesystem and workspace operations;
+- process/application launch, focus and health;
+- clipboard and download handoff;
+- Git and development-environment operations;
+- desktop notifications and user-attention requests;
+- machine diagnostics and recoverable configuration changes.
+
+The capability layer should expose deterministic, inspectable operations to agents while keeping intelligence/planning in Hermes. It must prefer CLI + skill, plugin, MCP or other narrow extension surfaces over growth of the permanent core tool schema.
+
+**K-Tools-Neo is a candidate research/external capability provider for this layer**, especially for Windows automation and reusable deterministic utilities. It must not become an implicit hard dependency or a second Workstation control plane: first define the generic capability contract, then adapt K-Tools-Neo or other providers behind it when useful.
+
+### System Event → Hermes Task pipeline
+
+Add the inverse direction of automation: the machine can surface meaningful events back into the canonical Hermes task model.
+
+Initial event classes to evaluate include:
+
+- process/application crash;
+- build/test completion or failure;
+- download/upload completion;
+- repository/CI state change;
+- browser/controller health transition;
+- long-running local job completion;
+- user-attention-required system state.
+
+An event may wake, enrich or create a Hermes/Kanban task only through existing ownership and policy. Event producers do not own a second scheduler or task database. Every automatic transition must retain provenance, reason and evidence sufficient to explain why the task changed state.
+
+### Scoped autonomy / Policy Engine
+
+Evolve beyond blanket “auto approve / yolo” execution toward explicit scoped autonomy.
+
+The policy boundary should be able to classify a requested action into outcomes such as:
+
+```text
+allow
+sandbox / constrain
+require human confirmation
+deny
+```
+
+Policy may consider task identity, capability, host, workspace, side-effect class and current human/agent control ownership. Existing Hermes approvals remain authoritative for sensitive actions; Workstation policy refines and scopes autonomy rather than bypassing those gates.
+
+Desired properties:
+
+- least privilege per task/capability;
+- explicit side-effect boundaries;
+- auditable reason for allow/confirm/deny decisions;
+- rollback or recovery path where the underlying operation supports one;
+- no reliance on model trust alone as the security mechanism.
+
+### Agent Control Center / observability
+
+Extend the live task rail into a local control surface for agent execution health and resource usage.
+
+Potential views include:
+
+- active/waiting/background/recent tasks;
+- which agent/runtime currently owns an execution step;
+- token/model/cost or quota information where the provider exposes it;
+- local runtime health and reconnect state;
+- execution evidence and completion lineage.
+
+Any external usage/telemetry collection remains opt-in under repository policy. Prefer local records and provider-authorized data over introducing outbound analytics.
+
+### V2.5 exit direction
+
+V2.5 is successful when one canonical Hermes task can delegate a bounded subtask to a replaceable worker agent, invoke a deterministic non-browser host capability through a generic adapter, apply scoped policy/approval, and persist the resulting lineage/evidence without creating duplicate state owners.
+
+## V3 — Cross-platform Agentic Workstation
+
+V3 turns the Workstation control plane into a host-portable product rather than a Windows-specific automation shell. Windows remains the first-class baseline established in V1/V2; Linux support is added through explicit host adapters with the same Hermes task/policy semantics.
+
+### Omarchy as Linux reference host
+
+Treat Omarchy as an architectural benchmark and a high-value Linux integration target, not as a mandatory base distribution.
+
+Relevant Omarchy patterns to track/adapt conceptually include:
+
+- a system-level notion of a default/available coding agent;
+- a normalized launcher over heterogeneous agent CLIs;
+- OS skills that teach multiple harnesses how to operate the host safely;
+- deterministic CLI surfaces for desktop/system configuration;
+- host events that can be handed to an agent, such as crash diagnosis;
+- local agent usage/health observability.
+
+A future Omarchy adapter should prefer its public CLI/config/skill contracts instead of distro-specific file hacking. The Workstation must remain usable on Windows and other supported hosts; Omarchy is a reference backend, not the product boundary.
+
+### Cross-platform host adapters
+
+Define a common host contract and implement it incrementally for:
+
+- Windows — canonical first implementation and regression baseline;
+- Linux/Omarchy — first Linux reference integration;
+- other Linux/macOS hosts only after the generic contract proves portable.
+
+Host adapters should normalize capability discovery, application/process operations, filesystem/workspace boundaries, notifications, health and supported system events while preserving host-native security and privilege models.
+
+### Agentic Desktop Reference Tracking
+
+Maintain a lightweight architectural benchmark against relevant agentic-development environments and harnesses, including at minimum:
+
+- Omarchy;
+- Hermes upstream;
+- OpenHands;
+- OpenCode;
+- Claude Code;
+- Codex;
+- Antigravity;
+- BrowserOS and other relevant agent-first desktop/browser projects.
+
+The purpose is not feature parity. For each material development, ask:
+
+1. Which underlying agent/workstation problem did the project solve?
+2. Does Hermes Workstation have the same problem?
+3. Can the concept be expressed through existing Hermes owners and Workstation contracts?
+4. Does adopting it reduce user friction without creating a duplicate control plane or unsafe autonomy path?
+
+Reference projects inform design; their code is incorporated only when license, ownership, maintenance and upstream-delta rules permit it.
+
+### V3 target experience
+
+The long-horizon product should make the host feel like an execution substrate behind the same Hermes Workstation control plane:
+
+```text
+one user request
+  → canonical Hermes task/session/card
+  → Hermes plans/orchestrates
+  → optional specialist worker executes a bounded subtask
+  → Browser and/or host capability adapters act under scoped policy
+  → system events can wake or enrich the same task
+  → journal/evidence/recovery stay attached to the canonical lineage
+  → the same semantic workflow can run on supported Windows or Linux hosts
+```
+
+The V3 portability criterion is semantic rather than implementation-identical: supported hosts may use different native mechanisms, but task identity, policy, approvals, evidence, recovery and user-facing Workstation behavior must preserve the same product contract.
