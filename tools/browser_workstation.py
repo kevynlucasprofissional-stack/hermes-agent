@@ -113,10 +113,18 @@ def workstation_schema_tools_for_current_session() -> set[str]:
 
 
 def workstation_routing_enabled() -> bool:
-    """Whether an unbound task may fall back to legacy browser backends."""
-    if not _bool_env("HERMES_WORKSTATION_BROWSER_ROUTING", True):
-        return False
-    return bool(_browser_config().get("routing_enabled", True))
+    """Whether an unbound task may fall back to legacy browser backends.
+
+    Hermes Workstation operates with its internal embedded Chromium as its sole
+    browser. Fallback to upstream/legacy backends (agent-browser/Playwright) is
+    disabled by default so that Workstation sessions never unintentionally spawn
+    external browser processes. Set HERMES_WORKSTATION_BROWSER_ROUTING=1 or
+    browser.workstation.routing_enabled: true to explicitly re-enable fallback.
+    """
+    raw_env = os.getenv("HERMES_WORKSTATION_BROWSER_ROUTING")
+    if raw_env is not None:
+        return raw_env.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(_browser_config().get("routing_enabled", False))
 
 
 def _workstation_home() -> Path:
@@ -371,8 +379,9 @@ def workstation_routed_browser_handler(
     if not available:
         if bound or not workstation_routing_enabled():
             raise WorkstationBrowserUnavailable(
-                "Hermes Browser is unavailable for a task bound to its persistent session. "
-                "The task fails closed; restore/restart Hermes Desktop and retry instead of switching browsers."
+                "Hermes Workstation Browser controller is unavailable. "
+                "Hermes Workstation is configured to fail closed and never fall back to external legacy browser processes. "
+                "Please start or restart Hermes Desktop via START-HERMES-WORKSTATION.bat to ensure the integrated browser runtime is active."
             )
         return fallback()
 

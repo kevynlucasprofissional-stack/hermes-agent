@@ -2160,7 +2160,7 @@ atexit.register(_stop_browser_cleanup_thread)
 BROWSER_TOOL_SCHEMAS = [
     {
         "name": "browser_navigate",
-        "description": "Navigate to a URL in the browser. Initializes the session and loads the page. Must be called before other browser tools. For simple information retrieval, prefer web_search or web_extract (faster, cheaper). For plain-text endpoints — URLs ending in .md, .txt, .json, .yaml, .yml, .csv, .xml, raw.githubusercontent.com, or any documented API endpoint — prefer curl via the terminal tool or web_extract; the browser stack is overkill and much slower for these. Use browser tools when you need to interact with a page (click, fill forms, dynamic content). Returns a compact page snapshot with interactive elements and ref IDs — no need to call browser_snapshot separately after navigating.",
+        "description": "Navigate to a URL in the browser (controls the Hermes Workstation Browser / Browser Hub in Desktop mode). Initializes or switches the active browser tab in the Workstation Browser Hub / Chat View and loads the page. Must be called before other browser interaction tools. Use this tool whenever the user asks to open a site, browse the web, or enter the Browser Hub (e.g. 'entra no browser hub e abre o trello', 'abra example.com'). Returns a compact page snapshot with interactive elements and ref IDs (@e1, @e2) — no need to call browser_snapshot separately after navigating. For simple static read-only text retrieval where no browser session is needed, web_search or web_extract may also be used.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -2174,7 +2174,7 @@ BROWSER_TOOL_SCHEMAS = [
     },
     {
         "name": "browser_snapshot",
-        "description": "Get a text-based snapshot of the current page's accessibility tree. Returns interactive elements with ref IDs (like @e1, @e2) for browser_click and browser_type. full=false (default): compact view with interactive elements. full=true: complete page content. Snapshots over 15000 chars are truncated or LLM-summarized; when that happens the complete snapshot is saved to a file and the output includes its path so you can page through the rest with read_file. Requires browser_navigate first. Note: browser_navigate already returns a compact snapshot — use this to refresh after interactions that change the page, or with full=true for complete content.",
+        "description": "Get a text-based snapshot of the current page's accessibility tree in the browser (Hermes Workstation Browser in Desktop mode). Returns interactive elements with ref IDs (like @e1, @e2) for browser_click and browser_type. full=false (default): compact view with interactive elements. full=true: complete page content. Snapshots over 15000 chars are truncated or LLM-summarized. Use this to inspect or refresh state on the currently open page in the Workstation Browser.",
         "parameters": {
             "type": "object",
             "properties": {

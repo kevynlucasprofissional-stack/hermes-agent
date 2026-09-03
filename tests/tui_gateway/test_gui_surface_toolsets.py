@@ -27,6 +27,7 @@ GUI_TOOLS = {
     "read_preview",
     "read_terminal",
     "read_window_below",
+    "apply_layout",
     "react_to_message",
     "setup_mcp",
     "tour",

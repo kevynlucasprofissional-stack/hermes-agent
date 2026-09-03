@@ -149,6 +149,20 @@ def test_internal_only_mode_fails_closed_when_controller_missing(tmp_path, monke
         )
 
 
+def test_unbound_task_defaults_to_fail_closed_when_routing_env_unset(tmp_path, monkeypatch):
+    missing = tmp_path / "missing.json"
+    monkeypatch.setenv("HERMES_WORKSTATION_BROWSER_CONTROL_FILE", str(missing))
+    monkeypatch.setenv("HERMES_WORKSTATION_BROWSER", "1")
+    monkeypatch.delenv("HERMES_WORKSTATION_BROWSER_ROUTING", raising=False)
+    bw._LAST_HEALTH_AT = 0.0
+    bw.clear_workstation_task_binding("new-task")
+    with pytest.raises(bw.WorkstationBrowserUnavailable):
+        bw.workstation_routed_browser_handler(
+            "browser_snapshot", {}, fallback=lambda: "legacy", task_id="new-task"
+        )
+
+
+
 def test_any_successful_internal_action_binds_task(controller):
     _server, control = controller
     bw.workstation_routed_browser_handler(

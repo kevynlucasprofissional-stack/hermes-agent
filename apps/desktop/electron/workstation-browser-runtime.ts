@@ -955,7 +955,20 @@ export class WorkstationBrowserRuntime {
       return this.snapshotForEntry(entry, false)
     }
 
-    const entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
+    let entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
+    if (!entry) {
+      if (this.pendingTabForTask(taskId)) {
+        entry = this.entryForTask(taskId, true, sessionHost, kanbanCardId, runId)
+      }
+      if (!entry && this.activeTabId) {
+        const active = this.entries.get(this.activeTabId)
+        if (active && !active.view.webContents.isDestroyed() && !active.crashed) {
+          this.taskTabs.set(taskId, active.id)
+          active.ownerTaskId = taskId
+          entry = active
+        }
+      }
+    }
     if (!entry) throw new Error('no_bound_browser_tab: call browser_navigate first')
 
     switch (action) {
