@@ -168,6 +168,15 @@ PR #12 exact reconciled head `39e5178...`:
 - local Python execution was unavailable because the present `.venv` does not
   contain pytest; CI supplied the canonical Python evidence.
 
+Mainline Gate candidate `872cbc5...`:
+
+- integration anchors, lockfile and license policy passed;
+- **29 Workstation contracts passed**;
+- exact Windows install and checkout-clean, diff, complete Desktop typecheck,
+  BrowserSessionState static checks, 46 focused tests and H010 passed;
+- only documentation and Workstation document contracts differ from the audit
+  base, so existing H010 product evidence remains within its proven boundary.
+
 ## Promotion status
 
 - Implementation 4 BrowserTask: **PROMOTED / RESOLVED** through PR #9.

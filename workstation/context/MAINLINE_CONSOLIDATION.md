@@ -15,6 +15,7 @@ later major milestones.
   `39e51787d2414d0165ae8fa8b47d1f0e5f3e65cd`;
 - sequencing/launcher promotion merge:
   `4b04f4c4d2af5620426589529d29b700cfc21fb0`;
+- gate evidence head: `872cbc57ce919ca505650da4a7593fc73f4276bb`;
 - material `NEEDS INVESTIGATION`: **0**;
 - open predecessor or historical diagnostic PRs after closure: **0**.
 
@@ -83,6 +84,25 @@ longer describe Implementation 4 or BrowserSessionState as pending:
 - executable document contracts protect this gate record and ordering.
 
 No source or evidence needed by V1 #1.5 exists only on a lateral branch.
+
+## Gate-candidate evidence
+
+On exact candidate `872cbc57ce919ca505650da4a7593fc73f4276bb`:
+
+- Workstation integration anchors, component lock and license policy passed;
+- all **29 Workstation contracts passed**, including the three new mainline
+  consolidation contracts;
+- normal Windows install passed and left the checkout clean;
+- candidate diff and complete Desktop typecheck passed;
+- BrowserSessionState lint/format, 5-file / 46-test focused foundation and the
+  native H010 step passed;
+- local `git diff --check`, integration validation, targeted Markdown Prettier
+  and seven direct document-contract checks passed;
+- the canonical local Python runner correctly refused the pytest-less local
+  environment; the 29-test GitHub run is the authoritative Python evidence.
+
+The unchanged broad UI/Electron diagnostics continue after these scoped gates
+and retain the KI-006 classification. They are not represented as green.
 
 ## Gate checklist
 

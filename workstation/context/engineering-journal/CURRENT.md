@@ -66,11 +66,19 @@ BrowserSessionState is a candidate or V1 #1 is next.
 architecture/delta, roadmap, testing, known issues, patch manifest, README and
 journal; protect ordering/disposition with executable contracts.
 
-**Result target:** the gate candidate passes Workstation contracts and exact-tree
-CI, is promoted to main, and V1 #1.5 branches only after that merge.
+**Observed candidate result at `872cbc57ce919ca505650da4a7593fc73f4276bb`:**
 
-**Current classification:** `ACTIVE` until the gate candidate is promoted; the
-repository/PR audit itself is complete with zero material unknowns.
+- integration anchors, component lock and license policy passed;
+- 29/29 Workstation contracts passed;
+- Windows install/checkout-clean/diff/typecheck passed;
+- BrowserSessionState lint/format, 5 files / 46 focused tests and native H010
+  passed;
+- local diff, integration, Markdown formatting and direct document-contract
+  checks passed; the local canonical Python runner correctly refused because
+  its `.venv` lacks pytest, so GitHub CI supplies that evidence.
+
+**Classification:** `VALIDATED / READY TO PROMOTE`. V1 #1.5 may branch only
+after this gate candidate is merged into `main`.
 
 ## Why this journal exists
 
