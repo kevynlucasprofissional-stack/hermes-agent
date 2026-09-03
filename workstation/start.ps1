@@ -51,6 +51,7 @@ if ($LASTEXITCODE -ne 0) {
 $env:VIRTUAL_ENV = $VenvRoot
 $env:HERMES_PYTHON = $VenvPython
 $env:PATH = "$VenvScripts;$env:PATH"
+$env:HERMES_WORKSTATION_BROWSER = "1"
 
 # Upstream Hermes dev mode exposes the renderer over CDP on 127.0.0.1:9222 by
 # default for diagnostic scripts. Workstation's embedded Browser does NOT need
