@@ -23,9 +23,16 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     reload: () => ipcRenderer.invoke('hermes:workstation-browser:reload'),
     stop: () => ipcRenderer.invoke('hermes:workstation-browser:stop'),
     focus: () => ipcRenderer.invoke('hermes:workstation-browser:focus'),
-    attach: bounds => ipcRenderer.invoke('hermes:workstation-browser:attach', bounds),
+    attach: (bounds, host) => ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host),
     setBounds: bounds => ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds),
     detach: () => ipcRenderer.invoke('hermes:workstation-browser:detach'),
+    transferViewport: (targetHost, bounds) =>
+      ipcRenderer.invoke('hermes:workstation-browser:transfer-viewport', targetHost, bounds),
+    listTasks: () => ipcRenderer.invoke('hermes:workstation-browser:list-tasks'),
+    showTask: (taskId, bounds, host) =>
+      ipcRenderer.invoke('hermes:workstation-browser:show-task', taskId, bounds, host),
+    hideTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:hide-task', taskId),
+    parkTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:park-task', taskId),
     pause: () => ipcRenderer.invoke('hermes:workstation-browser:pause'),
     resume: () => ipcRenderer.invoke('hermes:workstation-browser:resume'),
     takeControl: () => ipcRenderer.invoke('hermes:workstation-browser:take-control'),

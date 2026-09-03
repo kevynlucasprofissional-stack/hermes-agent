@@ -1,15 +1,27 @@
 import { type ChangeEvent, type FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { openWorkstationBrowserPreview } from '@/store/preview'
 
-import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from './types'
+import { TaskRail } from './task-rail'
+import type { BrowserTask, WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from './types'
+
+function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
+  try {
+    return useNavigate()
+  } catch {
+    return null
+  }
+}
 
 const EMPTY_STATE: WorkstationBrowserState = {
   runtime: 'electron-chromium',
   ready: false,
   attached: false,
+  viewportHost: null,
   backgroundCapable: true,
   paused: false,
   controlOwner: 'agent',
@@ -18,6 +30,8 @@ const EMPTY_STATE: WorkstationBrowserState = {
   cacheBytes: null,
   activeTabId: null,
   tabs: [],
+  tasks: [],
+  downloads: [],
   lastError: null
 }
 
@@ -77,13 +91,54 @@ export function BrowserView() {
     [bridge]
   )
 
+  const navigate = useOptionalNavigate()
+
   const publishBounds = useCallback(
     async (attach = false) => {
       if (!bridge || !hostRef.current) return
       const rect = hostRef.current.getBoundingClientRect()
       if (rect.width < 1 || rect.height < 1) return
       const bounds = rectToBounds(rect)
-      setState(await (attach ? bridge.attach(bounds) : bridge.setBounds(bounds)))
+      setState(await (attach ? bridge.attach(bounds, 'hub') : bridge.setBounds(bounds)))
+    },
+    [bridge]
+  )
+
+  const transferToHub = useCallback(async () => {
+    if (!bridge || !hostRef.current) return
+    const rect = hostRef.current.getBoundingClientRect()
+    if (rect.width < 1 || rect.height < 1) return
+    const bounds = rectToBounds(rect)
+    setState(await bridge.transferViewport('hub', bounds))
+  }, [bridge])
+
+  const transferToChat = useCallback(() => {
+    openWorkstationBrowserPreview()
+    if (navigate) navigate('/')
+  }, [navigate])
+
+  const handleSelectTask = useCallback(
+    async (task: BrowserTask) => {
+      if (!bridge || !hostRef.current) return
+      const rect = hostRef.current.getBoundingClientRect()
+      const bounds = rectToBounds(rect)
+      await bridge.showTask(task.taskId, bounds, 'hub')
+    },
+    [bridge]
+  )
+
+  const handleParkTask = useCallback(
+    async (taskId: string) => {
+      if (!bridge) return
+      await bridge.parkTask(taskId)
+    },
+    [bridge]
+  )
+
+  const handleHideTask = useCallback(
+    async (taskId: string) => {
+      if (!bridge) return
+      await bridge.hideTask(taskId)
     },
     [bridge]
   )
@@ -292,6 +347,10 @@ export function BrowserView() {
               Take Control
             </Button>
           )}
+          <Button onClick={transferToChat} size="sm" title="Transfer Viewport to Chat Right Rail" variant="ghost">
+            <Codicon name="comment-discussion" />
+            Move to Chat
+          </Button>
           <span className="ml-auto hidden font-mono text-[10px] text-(--ui-text-quaternary) lg:block">
             Electron Chromium · persistent profile · cache {cacheLabel(state.cacheBytes)}
           </span>
@@ -304,17 +363,35 @@ export function BrowserView() {
         </div>
       )}
 
-      <div className="relative min-h-0 flex-1 bg-black">
-        {/* The Electron main process places the active WebContentsView exactly
-            over this rectangle. The native view is deliberately outside the
-            React tree so it survives route changes and can keep running in the
-            background. */}
-        <div className="absolute inset-0" ref={hostRef} />
-        {!state.ready && (
-          <div className="absolute inset-0 grid place-items-center text-xs text-(--ui-text-tertiary)">
-            Starting Hermes Browser…
-          </div>
-        )}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <TaskRail
+          activeTaskId={activeTab?.ownerTaskId}
+          onHideTask={taskId => void handleHideTask(taskId)}
+          onParkTask={taskId => void handleParkTask(taskId)}
+          onSelectTask={task => void handleSelectTask(task)}
+          tasks={state.tasks}
+        />
+
+        <div className="relative min-h-0 flex-1 bg-black">
+          {/* The Electron main process places the active WebContentsView exactly
+              over this rectangle. The native view is deliberately outside the
+              React tree so it survives route changes and can keep running in the
+              background. */}
+          <div className="absolute inset-0" ref={hostRef} />
+          {state.attached && state.viewportHost && state.viewportHost !== 'hub' && (
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/90 px-3 py-1.5 text-xs font-medium text-black">
+              <span>Live viewport is currently active in Chat ({state.viewportHost})</span>
+              <Button onClick={() => void transferToHub()} size="xs" variant="secondary">
+                Bring Viewport to Hub
+              </Button>
+            </div>
+          )}
+          {!state.ready && (
+            <div className="absolute inset-0 grid place-items-center text-xs text-(--ui-text-tertiary)">
+              Starting Hermes Browser…
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )

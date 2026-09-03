@@ -75,10 +75,21 @@ export interface WorkstationBrowserTabState {
   ownerTaskId: string | null
 }
 
+export interface WorkstationDownloadItem {
+  id: string
+  filename: string
+  savePath: string
+  totalBytes: number
+  receivedBytes: number
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted'
+  url: string
+}
+
 export interface WorkstationBrowserState {
   runtime: 'electron-chromium'
   ready: boolean
   attached: boolean
+  viewportHost: 'hub' | 'chat' | string | null
   backgroundCapable: true
   paused: boolean
   controlOwner: WorkstationBrowserControlOwner
@@ -87,6 +98,8 @@ export interface WorkstationBrowserState {
   cacheBytes: number | null
   activeTabId: string | null
   tabs: WorkstationBrowserTabState[]
+  tasks: BrowserTask[]
+  downloads: WorkstationDownloadItem[]
   lastError: string | null
 }
 
@@ -114,6 +127,9 @@ interface BrowserControlRequest {
   arguments?: unknown
   task_id?: unknown
   session_id?: unknown
+  kanban_card_id?: unknown
+  card_id?: unknown
+  run_id?: unknown
 }
 
 interface PageInventory {
@@ -135,6 +151,7 @@ interface PageInventory {
 interface BrowserTaskShowContext {
   window: BrowserWindow
   bounds: WorkstationBrowserBounds
+  host?: string
 }
 
 function delay(ms: number): Promise<void> {
@@ -292,6 +309,16 @@ function controllerSessionIdentity(value: unknown): string | null {
   return normalized
 }
 
+function controllerBoundedIdentity(value: unknown, name: string): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string') throw new Error(`invalid ${name}`)
+  const normalized = value.trim()
+  if (!normalized || normalized.length > MAX_CONTROLLER_SESSION_ID_CHARS || /[\u0000-\u001f\u007f]/.test(value)) {
+    throw new Error(`invalid ${name}`)
+  }
+  return normalized
+}
+
 function atomicWritePrivateJson(filePath: string, value: unknown): void {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
   const temp = `${filePath}.${process.pid}.tmp`
@@ -437,6 +464,7 @@ export class WorkstationBrowserRuntime {
   private activeTabId: string | null = null
   private ownerWindow: BrowserWindow | null = null
   private attached = false
+  private viewportHost: 'hub' | 'chat' | string | null = null
   private bounds: WorkstationBrowserBounds | null = null
   private paused = false
   private controlOwner: WorkstationBrowserControlOwner = 'agent'
@@ -444,6 +472,7 @@ export class WorkstationBrowserRuntime {
   private cacheBytes: number | null = null
   private cacheTimer: NodeJS.Timeout | null = null
   private control: ControlHandle | null = null
+  private downloads: WorkstationDownloadItem[] = []
   private browserTasks: BrowserTaskLifecycle<BrowserEntry, BrowserTaskShowContext> | null = null
   private browserTasksRestored = false
   private browserSessionState: BrowserSessionStateFilePersistence | null = null
@@ -479,6 +508,7 @@ export class WorkstationBrowserRuntime {
       runtime: 'electron-chromium',
       ready: this.browserSession !== null,
       attached: this.attached,
+      viewportHost: this.attached ? this.viewportHost : null,
       backgroundCapable: true,
       paused: this.paused,
       controlOwner: this.controlOwner,
@@ -487,6 +517,8 @@ export class WorkstationBrowserRuntime {
       cacheBytes: this.cacheBytes,
       activeTabId: this.activeTabId,
       tabs: Array.from(this.entries.values()).map(entry => this.tabState(entry)),
+      tasks: this.listTasks(),
+      downloads: [...this.downloads],
       lastError: this.lastError
     }
   }
@@ -513,11 +545,11 @@ export class WorkstationBrowserRuntime {
     return task
   }
 
-  showTask(taskId: string, window: BrowserWindow, bounds: WorkstationBrowserBounds): BrowserTask {
+  showTask(taskId: string, window: BrowserWindow, bounds: WorkstationBrowserBounds, host = 'hub'): BrowserTask {
     this.ensureSession()
     this.ensureBrowserSessionStateRestored()
     const task = this.withBrowserSessionProjectionSuppressed(() =>
-      this.taskLifecycle().showTask(taskId, { window, bounds })
+      this.taskLifecycle().showTask(taskId, { window, bounds, host })
     )
     this.persistBrowserSessionState()
     return task
@@ -704,7 +736,7 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
-  attach(window: BrowserWindow, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
+  attach(window: BrowserWindow, rawBounds: WorkstationBrowserBounds, host: 'hub' | 'chat' | string = 'hub'): WorkstationBrowserState {
     this.ensure()
     const entry = this.activeEntry()
     if (!entry) return this.state()
@@ -714,6 +746,7 @@ export class WorkstationBrowserRuntime {
     if (this.ownerWindow && this.ownerWindow !== window && this.attached) this.detachActiveView(false)
     this.ownerWindow = window
     this.bounds = bounds
+    this.viewportHost = host
     this.ensureChildView(window, entry.view)
     entry.view.setBounds(bounds)
     this.applyFrameRate(entry, true)
@@ -741,8 +774,18 @@ export class WorkstationBrowserRuntime {
   detach(window?: BrowserWindow | null): WorkstationBrowserState {
     if (window && this.ownerWindow && window !== this.ownerWindow) return this.state()
     this.detachActiveView(true)
+    this.viewportHost = null
     this.emitState()
     return this.state()
+  }
+
+  transferViewport(window: BrowserWindow, targetHost: 'hub' | 'chat' | string, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
+    const bounds = this.validBounds(rawBounds)
+    if (!bounds) return this.state()
+    if (this.attached) {
+      this.detachActiveView(false)
+    }
+    return this.attach(window, bounds, targetHost)
   }
 
   async pause(): Promise<WorkstationBrowserState> {
@@ -886,6 +929,7 @@ export class WorkstationBrowserRuntime {
     this.entries.clear()
     this.taskTabs.clear()
     this.activeTabId = null
+    this.viewportHost = null
   }
 
   private async executeControlRequest(request: BrowserControlRequest): Promise<Record<string, unknown>> {
@@ -893,21 +937,25 @@ export class WorkstationBrowserRuntime {
     const args = request.arguments && typeof request.arguments === 'object' ? request.arguments as Record<string, unknown> : {}
     const taskId = typeof request.task_id === 'string' && request.task_id.trim() ? request.task_id.trim() : 'default'
     const sessionHost = controllerSessionIdentity(request.session_id)
+    const kanbanCardId = controllerBoundedIdentity(request.kanban_card_id ?? request.card_id, 'kanban card identity')
+    const runId = controllerBoundedIdentity(request.run_id, 'run identity')
 
     if (!action.startsWith('browser_')) throw new Error('unsupported_action')
     const mutating = new Set(['browser_navigate', 'browser_click', 'browser_type', 'browser_scroll', 'browser_back', 'browser_press'])
     if (mutating.has(action)) this.assertAgentControl()
 
-    if (sessionHost) this.bindControllerSessionIdentity(taskId, sessionHost)
+    if (sessionHost || kanbanCardId || runId) {
+      this.bindControllerSessionIdentity(taskId, sessionHost, kanbanCardId, runId)
+    }
 
     if (action === 'browser_navigate') {
-      const entry = this.entryForTask(taskId, true, sessionHost)!
+      const entry = this.entryForTask(taskId, true, sessionHost, kanbanCardId, runId)!
       const url = normalizeWorkstationBrowserTarget(String(args.url ?? ''))
       await entry.view.webContents.loadURL(url)
       return this.snapshotForEntry(entry, false)
     }
 
-    const entry = this.entryForTask(taskId, false, sessionHost)
+    const entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
     if (!entry) throw new Error('no_bound_browser_tab: call browser_navigate first')
 
     switch (action) {
@@ -949,11 +997,20 @@ export class WorkstationBrowserRuntime {
     if (this.controlOwner === 'human') throw new Error('Hermes Browser is under human control. Release Control before agent actions continue.')
   }
 
-  private bindControllerSessionIdentity(taskId: string, sessionHost: string): void {
+  private bindControllerSessionIdentity(
+    taskId: string,
+    sessionHost?: string | null,
+    kanbanCardId?: string | null,
+    runId?: string | null
+  ): void {
     this.ensureBrowserSessionStateRestored()
     const lifecycle = this.taskLifecycle()
     if (!lifecycle.task(taskId)) return
-    this.withBrowserSessionProjectionSuppressed(() => lifecycle.bindSessionHost(taskId, sessionHost))
+    this.withBrowserSessionProjectionSuppressed(() => {
+      if (sessionHost) lifecycle.bindSessionHost(taskId, sessionHost)
+      if (kanbanCardId) lifecycle.bindKanbanCard(taskId, kanbanCardId)
+      if (runId) lifecycle.bindRun(taskId, runId)
+    })
     this.persistBrowserSessionState()
   }
 
@@ -971,7 +1028,7 @@ export class WorkstationBrowserRuntime {
         pageIsAlive: entry => !entry.crashed && !entry.view.webContents.isDestroyed(),
         showPage: (_taskId, entry, context) => {
           if (entry.id !== this.activeTabId) this.activateTab(entry.id)
-          this.attach(context.window, context.bounds)
+          this.attach(context.window, context.bounds, context.host ?? 'hub')
         },
         hidePage: (_taskId, entry) => {
           this.removeChildView(entry)
@@ -1052,15 +1109,25 @@ export class WorkstationBrowserRuntime {
     this.reconcileRestoredEntryOrder()
   }
 
-  private entryForTask(taskId: string, create: boolean, sessionHost: string | null = null): BrowserEntry | null {
+  private entryForTask(
+    taskId: string,
+    create: boolean,
+    sessionHost: string | null = null,
+    kanbanCardId: string | null = null,
+    runId: string | null = null
+  ): BrowserEntry | null {
     this.ensureBrowserSessionStateRestored()
     const lifecycle = this.taskLifecycle()
     if (create) {
-      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId, sessionHost }))
+      this.withBrowserSessionProjectionSuppressed(() =>
+        lifecycle.createTask({ taskId, sessionHost, kanbanCardId, runId })
+      )
     } else if (!lifecycle.task(taskId)) {
       const legacyEntry = this.rawEntryForTask(taskId, false)
       if (!legacyEntry) return null
-      this.withBrowserSessionProjectionSuppressed(() => lifecycle.createTask({ taskId, sessionHost }))
+      this.withBrowserSessionProjectionSuppressed(() =>
+        lifecycle.createTask({ taskId, sessionHost, kanbanCardId, runId })
+      )
     }
 
     const entry = this.rawEntryForTask(taskId, create)
@@ -1241,6 +1308,37 @@ export class WorkstationBrowserRuntime {
     const profilePath = workstationBrowserProfilePath()
     fs.mkdirSync(profilePath, { recursive: true })
     this.browserSession = session.fromPath(profilePath, { cache: true })
+    this.browserSession.on?.('will-download', (_event: unknown, item: any) => {
+      const filename = typeof item.getFilename === 'function' ? item.getFilename() : 'download'
+      const downloadInfo: WorkstationDownloadItem = {
+        id: `${Date.now()}-${filename}`,
+        filename,
+        savePath: typeof item.getSavePath === 'function' ? item.getSavePath() : '',
+        totalBytes: typeof item.getTotalBytes === 'function' ? item.getTotalBytes() : 0,
+        receivedBytes: 0,
+        state: 'progressing',
+        url: typeof item.getURL === 'function' ? item.getURL() : ''
+      }
+      this.downloads.unshift(downloadInfo)
+      if (this.downloads.length > 20) this.downloads.pop()
+      this.emitState()
+
+      item.on?.('updated', (_evt: unknown, state: string) => {
+        downloadInfo.receivedBytes = typeof item.getReceivedBytes === 'function' ? item.getReceivedBytes() : downloadInfo.receivedBytes
+        downloadInfo.savePath = typeof item.getSavePath === 'function' ? item.getSavePath() : downloadInfo.savePath
+        if (state === 'interrupted') {
+          downloadInfo.state = 'interrupted'
+        }
+        this.emitState()
+      })
+
+      item.once?.('done', (_evt: unknown, state: string) => {
+        downloadInfo.state = state === 'completed' ? 'completed' : 'cancelled'
+        downloadInfo.savePath = typeof item.getSavePath === 'function' ? item.getSavePath() : downloadInfo.savePath
+        downloadInfo.receivedBytes = typeof item.getReceivedBytes === 'function' ? item.getReceivedBytes() : downloadInfo.receivedBytes
+        this.emitState()
+      })
+    })
     this.cacheTimer = setInterval(() => {
       void this.cleanupCache(false).catch(error => this.recordError(error))
     }, CACHE_CHECK_INTERVAL_MS)
@@ -1611,14 +1709,42 @@ function registerIpc(): void {
   ipcMain.handle('hermes:workstation-browser:reload', () => getWorkstationBrowserRuntime().reload())
   ipcMain.handle('hermes:workstation-browser:stop', () => getWorkstationBrowserRuntime().stop())
   ipcMain.handle('hermes:workstation-browser:focus', () => getWorkstationBrowserRuntime().focus())
-  ipcMain.handle('hermes:workstation-browser:attach', (event, bounds) =>
-    getWorkstationBrowserRuntime().attach(senderWindow(event), bounds as WorkstationBrowserBounds)
+  ipcMain.handle('hermes:workstation-browser:attach', (event, bounds, host) =>
+    getWorkstationBrowserRuntime().attach(
+      senderWindow(event),
+      bounds as WorkstationBrowserBounds,
+      typeof host === 'string' ? host : 'hub'
+    )
   )
   ipcMain.handle('hermes:workstation-browser:set-bounds', (event, bounds) =>
     getWorkstationBrowserRuntime().setBounds(senderWindow(event), bounds as WorkstationBrowserBounds)
   )
   ipcMain.handle('hermes:workstation-browser:detach', event =>
     getWorkstationBrowserRuntime().detach(senderWindow(event))
+  )
+  ipcMain.handle('hermes:workstation-browser:transfer-viewport', (event, targetHost, bounds) =>
+    getWorkstationBrowserRuntime().transferViewport(
+      senderWindow(event),
+      typeof targetHost === 'string' ? targetHost : 'hub',
+      bounds as WorkstationBrowserBounds
+    )
+  )
+  ipcMain.handle('hermes:workstation-browser:list-tasks', () =>
+    getWorkstationBrowserRuntime().listTasks()
+  )
+  ipcMain.handle('hermes:workstation-browser:show-task', (event, taskId, bounds, host) =>
+    getWorkstationBrowserRuntime().showTask(
+      String(taskId ?? ''),
+      senderWindow(event),
+      bounds as WorkstationBrowserBounds,
+      typeof host === 'string' ? host : 'hub'
+    )
+  )
+  ipcMain.handle('hermes:workstation-browser:hide-task', (_event, taskId) =>
+    getWorkstationBrowserRuntime().hideTask(String(taskId ?? ''))
+  )
+  ipcMain.handle('hermes:workstation-browser:park-task', (_event, taskId) =>
+    getWorkstationBrowserRuntime().parkTask(String(taskId ?? ''))
   )
   ipcMain.handle('hermes:workstation-browser:pause', () => getWorkstationBrowserRuntime().pause())
   ipcMain.handle('hermes:workstation-browser:resume', () => getWorkstationBrowserRuntime().resume())

@@ -235,6 +235,19 @@ export function openBrowserTab() {
   openPreview(existing?.target ?? { kind: 'url', label: 'Browser', source: 'about:blank', url: 'about:blank' })
 }
 
+/**
+ * Open or re-front the Workstation Browser tab. Reuses the single live
+ * Workstation Chromium instance rather than launching an isolated guest webview.
+ */
+export function openWorkstationBrowserPreview() {
+  openPreview({
+    kind: 'url',
+    label: 'Workstation Browser',
+    source: 'workstation-browser',
+    url: 'workstation:browser'
+  })
+}
+
 export function closeRightRailTab(tabId: string) {
   const current = $previewTabs.get()
   const index = current.findIndex(tab => tab.id === tabId)

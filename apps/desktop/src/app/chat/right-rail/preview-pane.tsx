@@ -5,9 +5,11 @@ import './preview-mind'
 import { useStore } from '@nanostores/react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router'
 
 import { openGuestContextMenu } from '@/app/context-menu/store'
 import { PanelEmpty } from '@/app/overlays/panel'
+import { BROWSER_ROUTE } from '@/app/routes'
 import { Tip } from '@/components/ui/tooltip'
 import { type Translations, useI18n } from '@/i18n'
 import { isDesktopFsRemoteMode } from '@/lib/desktop-fs'
@@ -22,6 +24,15 @@ import { $previewServerRestart, failPreviewServerRestart, type PreviewTarget } f
 
 import { ArtifactPreview } from './preview-artifact'
 import { PreviewBrowserBar } from './preview-browser-bar'
+import { WorkstationBrowserPane } from './workstation-browser-pane'
+
+function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
+  try {
+    return useNavigate()
+  } catch {
+    return null
+  }
+}
 import {
   clampConsoleHeight,
   compactUrl,
@@ -196,7 +207,22 @@ function PreviewLoadError({
   )
 }
 
-export function PreviewPane({ embedded = false, onRestartServer, reloadRequest = 0, tabId, target }: PreviewPaneProps) {
+export function PreviewPane(props: PreviewPaneProps) {
+  const navigate = useOptionalNavigate()
+  const isWorkstation = props.target.source === 'workstation-browser' || props.target.url.startsWith('workstation:')
+
+  if (isWorkstation) {
+    return (
+      <aside className="relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-transparent text-muted-foreground">
+        <WorkstationBrowserPane onPopOut={navigate ? () => navigate(BROWSER_ROUTE) : undefined} />
+      </aside>
+    )
+  }
+
+  return <StandardPreviewPane {...props} />
+}
+
+function StandardPreviewPane({ embedded = false, onRestartServer, reloadRequest = 0, tabId, target }: PreviewPaneProps) {
   const { t } = useI18n()
   const copy = t.preview.web
   // The console store belongs to the TAB, not this render: the toggles live on
