@@ -143,6 +143,22 @@ export function BrowserView() {
     [bridge]
   )
 
+  const handleDestroyTask = useCallback(
+    async (taskId: string) => {
+      if (!bridge) return
+      await bridge.destroyTask(taskId)
+    },
+    [bridge]
+  )
+
+  const handleClearParked = useCallback(
+    async () => {
+      if (!bridge) return
+      await bridge.clearParkedTasks()
+    },
+    [bridge]
+  )
+
   useEffect(() => {
     if (!bridge) return
 
@@ -241,13 +257,23 @@ export function BrowserView() {
                 )}
                 <span className="min-w-0 flex-1 truncate">{shortTitle(tab)}</span>
                 <span
-                  className="rounded p-0.5 opacity-0 hover:bg-(--ui-control-hover-background) group-hover:opacity-100"
+                  className="rounded p-0.5 text-(--ui-text-quaternary) hover:bg-(--ui-control-hover-background) hover:text-foreground opacity-60 group-hover:opacity-100 transition-opacity"
                   onClick={(event: MouseEvent<HTMLSpanElement>) => {
                     event.stopPropagation()
-                    void run(() => bridge.closeTab(tab.id))
+                    void run(async () => {
+                      if (tab.ownerTaskId) {
+                        try {
+                          await bridge.destroyTask(tab.ownerTaskId)
+                        } catch {
+                          // Best effort task cleanup.
+                        }
+                      }
+                      return bridge.closeTab(tab.id)
+                    })
                   }}
                   role="button"
                   tabIndex={0}
+                  title="Close tab"
                 >
                   <Codicon name="close" size="0.7rem" />
                 </span>
@@ -368,6 +394,8 @@ export function BrowserView() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <TaskRail
           activeTaskId={activeTab?.ownerTaskId}
+          onClearParked={() => void handleClearParked()}
+          onDestroyTask={taskId => void handleDestroyTask(taskId)}
           onHideTask={taskId => void handleHideTask(taskId)}
           onParkTask={taskId => void handleParkTask(taskId)}
           onSelectTask={task => void handleSelectTask(task)}

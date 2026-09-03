@@ -573,8 +573,12 @@ export class WorkstationBrowserRuntime {
     this.ensureBrowserSessionStateRestored()
     try {
       const destroyed = this.withBrowserSessionProjectionSuppressed(() => this.taskLifecycle().destroyTask(taskId))
-      if (destroyed) this.removePendingTaskTab(taskId)
+      if (destroyed) {
+        this.removePendingTaskTab(taskId)
+        this.taskTabs.delete(taskId)
+      }
       this.persistBrowserSessionState()
+      this.emitState()
       return destroyed
     } catch (error) {
       // BrowserTaskLifecycle applies explicit destroy in process before it
@@ -582,8 +586,24 @@ export class WorkstationBrowserRuntime {
       // that error, but finish the corresponding process-local cleanup so a
       // later task with the same id cannot inherit stale recovery metadata.
       if (!this.taskLifecycle().task(taskId)) this.removePendingTaskTab(taskId)
+      this.emitState()
       throw error
     }
+  }
+
+  clearParkedTasks(): number {
+    this.ensureBrowserSessionStateRestored()
+    const parked = this.taskLifecycle().listTasks().filter(task => task.status === 'parked')
+    let count = 0
+    for (const task of parked) {
+      try {
+        if (this.destroyTask(task.taskId)) count++
+      } catch {
+        // Individual destroy failures do not stop bulk clearing.
+      }
+    }
+    this.emitState()
+    return count
   }
 
   listTasks(): BrowserTask[] {
@@ -1771,6 +1791,12 @@ function registerIpc(): void {
   )
   ipcMain.handle('hermes:workstation-browser:park-task', (_event, taskId) =>
     getWorkstationBrowserRuntime().parkTask(String(taskId ?? ''))
+  )
+  ipcMain.handle('hermes:workstation-browser:destroy-task', (_event, taskId) =>
+    getWorkstationBrowserRuntime().destroyTask(String(taskId ?? ''))
+  )
+  ipcMain.handle('hermes:workstation-browser:clear-parked-tasks', () =>
+    getWorkstationBrowserRuntime().clearParkedTasks()
   )
   ipcMain.handle('hermes:workstation-browser:pause', () => getWorkstationBrowserRuntime().pause())
   ipcMain.handle('hermes:workstation-browser:resume', () => getWorkstationBrowserRuntime().resume())

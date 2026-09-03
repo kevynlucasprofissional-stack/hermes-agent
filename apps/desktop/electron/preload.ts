@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
       ipcRenderer.invoke('hermes:workstation-browser:show-task', taskId, bounds, host),
     hideTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:hide-task', taskId),
     parkTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:park-task', taskId),
+    destroyTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:destroy-task', taskId),
+    clearParkedTasks: () => ipcRenderer.invoke('hermes:workstation-browser:clear-parked-tasks'),
     pause: () => ipcRenderer.invoke('hermes:workstation-browser:pause'),
     resume: () => ipcRenderer.invoke('hermes:workstation-browser:resume'),
     takeControl: () => ipcRenderer.invoke('hermes:workstation-browser:take-control'),

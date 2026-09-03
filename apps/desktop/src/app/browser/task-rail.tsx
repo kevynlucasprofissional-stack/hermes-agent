@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -12,6 +12,8 @@ export interface TaskRailProps {
   onSelectTask?: (task: BrowserTask) => void
   onParkTask?: (taskId: string) => void
   onHideTask?: (taskId: string) => void
+  onDestroyTask?: (taskId: string) => void
+  onClearParked?: () => void
   className?: string
 }
 
@@ -53,6 +55,8 @@ export function TaskRail({
   onSelectTask,
   onParkTask,
   onHideTask,
+  onDestroyTask,
+  onClearParked,
   className
 }: TaskRailProps) {
   const [collapsed, setCollapsed] = useState(false)
@@ -76,7 +80,7 @@ export function TaskRail({
     }
 
     return [
-      { id: 'active', title: 'Active', icon: 'play', tasks: active },
+      { id: 'active', title: 'Active', icon: 'eye', tasks: active },
       { id: 'waiting-for-human', title: 'Waiting for Human', icon: 'person', tasks: waiting },
       { id: 'background', title: 'Background', icon: 'history', tasks: background },
       { id: 'recent', title: 'Recent', icon: 'check-all', tasks: recent }
@@ -110,15 +114,30 @@ export function TaskRail({
     >
       <div className="flex h-9 items-center justify-between border-b border-(--ui-stroke-tertiary) px-2.5">
         <span className="font-semibold text-(--ui-text-secondary)">Task Rail ({tasks.length})</span>
-        <Button
-          aria-label="Collapse Task Rail"
-          onClick={() => setCollapsed(true)}
-          size="icon-xs"
-          title="Collapse Task Rail"
-          variant="ghost"
-        >
-          <Codicon name="layout-sidebar-left" size="0.75rem" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {tasks.some(t => t.status === 'parked' || t.status === 'hidden') && onClearParked && (
+            <Button
+              aria-label="Clear Parked Tasks"
+              className="h-6 px-1.5 text-[10px] text-(--ui-text-tertiary) hover:bg-red-500/10 hover:text-red-300"
+              onClick={onClearParked}
+              size="xs"
+              title="Clear all parked/inactive tasks"
+              variant="ghost"
+            >
+              <Codicon name="clear-all" size="0.7rem" />
+              Clear
+            </Button>
+          )}
+          <Button
+            aria-label="Collapse Task Rail"
+            onClick={() => setCollapsed(true)}
+            size="icon-xs"
+            title="Collapse Task Rail"
+            variant="ghost"
+          >
+            <Codicon name="layout-sidebar-left" size="0.75rem" />
+          </Button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2 space-y-3">
@@ -199,6 +218,17 @@ export function TaskRail({
                           >
                             <Codicon name="eye-closed" size="0.7rem" />
                             Hide
+                          </Button>
+                        )}
+                        {onDestroyTask && (
+                          <Button
+                            className="ml-auto text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            onClick={() => onDestroyTask(task.taskId)}
+                            size="xs"
+                            title="Close and delete task"
+                            variant="ghost"
+                          >
+                            <Codicon name="trash" size="0.7rem" />
                           </Button>
                         )}
                       </div>
