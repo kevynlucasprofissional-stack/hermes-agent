@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
-import { openWorkstationBrowserPreview } from '@/store/preview'
+import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
+import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
 
 import { TaskRail } from './task-rail'
 import type { BrowserTask, WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from './types'
@@ -77,6 +78,24 @@ export function BrowserView() {
       setAddress(activeTab.url === 'about:blank' ? '' : activeTab.url)
     }
   }, [activeTab?.url])
+
+  useEffect(() => {
+    // When viewing Browser Hub (/browser), the full-screen browser is active.
+    // The Right Rail must automatically close so it doesn't duplicate the browser.
+    const stashedTabs = $previewTabs.get()
+    const stashedActiveId = $rightRailActiveTabId.get()
+    if (stashedTabs.length > 0) {
+      closeRightRail()
+    }
+
+    return () => {
+      // When leaving Browser Hub to return to Chat, restore the Right Rail if it was previously open
+      if (stashedTabs.length > 0 && $previewTabs.get().length === 0) {
+        $previewTabs.set(stashedTabs)
+        if (stashedActiveId) selectRightRailTab(stashedActiveId)
+      }
+    }
+  }, [])
 
   const run = useCallback(
     async (fn: () => Promise<WorkstationBrowserState>) => {

@@ -710,11 +710,21 @@ export class WorkstationBrowserRuntime {
     if (!entry) throw new Error(`Unknown Hermes Browser tab: ${tabId}`)
     if (this.activeTabId === tabId) return this.state()
 
-    const shouldReattach = this.attached && this.ownerWindow && !this.ownerWindow.isDestroyed() && this.bounds
-    if (this.attached) this.detachActiveView(true)
+    const wasAttached = this.attached && this.ownerWindow && !this.ownerWindow.isDestroyed() && this.bounds
+    if (this.attached) this.detachActiveView(false)
     this.activeTabId = tabId
     if (!this.browserSessionStateRestoring) this.restoredLogicalActiveTabId = null
-    if (shouldReattach && this.ownerWindow && this.bounds) this.attach(this.ownerWindow, this.bounds)
+    if (wasAttached && this.ownerWindow && this.bounds) {
+      this.ensureChildView(this.ownerWindow, entry.view)
+      entry.view.setBounds(this.bounds)
+      this.applyFrameRate(entry, true)
+      try {
+        entry.view.webContents.focus()
+      } catch {
+        // View may have crashed between checks.
+      }
+      this.attached = true
+    }
     this.persistBrowserSessionState()
     this.emitState()
     return this.state()
@@ -800,12 +810,10 @@ export class WorkstationBrowserRuntime {
   }
 
   transferViewport(window: BrowserWindow, targetHost: 'hub' | 'chat' | string, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
-    const bounds = this.validBounds(window, rawBounds)
-    if (!bounds) return this.state()
     if (this.attached) {
       this.detachActiveView(false)
     }
-    return this.attach(window, bounds, targetHost)
+    return this.attach(window, rawBounds, targetHost)
   }
 
   async pause(): Promise<WorkstationBrowserState> {
@@ -972,10 +980,16 @@ export class WorkstationBrowserRuntime {
       const entry = this.entryForTask(taskId, true, sessionHost, kanbanCardId, runId)!
       const url = normalizeWorkstationBrowserTarget(String(args.url ?? ''))
       await entry.view.webContents.loadURL(url)
+      this.activateTab(entry.id)
+      for (const [id, candidate] of this.entries.entries()) {
+        if (id !== entry.id && !candidate.ownerTaskId && (candidate.safeUrl === 'about:blank' || !candidate.safeUrl)) {
+          this.closeTab(id)
+        }
+      }
       try {
         for (const win of BrowserWindow.getAllWindows()) {
           if (!win.isDestroyed() && win.webContents) {
-            win.webContents.send('hermes:workstation-browser:open-chat-preview', { url, taskId })
+            win.webContents.send('hermes:workstation-browser:open-chat-preview', { url, taskId, tabId: entry.id })
           }
         }
       } catch {
@@ -999,6 +1013,9 @@ export class WorkstationBrowserRuntime {
       }
     }
     if (!entry) throw new Error('no_bound_browser_tab: call browser_navigate first')
+    if (this.activeTabId !== entry.id) {
+      this.activateTab(entry.id)
+    }
 
     switch (action) {
       case 'browser_snapshot':
