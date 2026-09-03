@@ -177,24 +177,24 @@ The LAN, Tailscale, external-extension, memory/perception/drift and Lightpanda M
 6. Promote multistep requests into Kanban automatically.
 7. Add follow-up task discovery metadata and parent dependency policy.
 8. Add Workstation Execution Journal persistence and selective screenshots.
-9. Generate browser task completion reports into `kanban_complete(metadata=...)`.
-10. Add Browser live task rail/groupings (active, waiting-for-human, background, recent) in Desktop and later Dashboard/mobile.
-11. Add LAN settings page/toggle with auth preflight, IP and QR.
-12. Add richer popup/SSO handling and download/upload UX.
-13. Recovery E2E: crash controller/browser -> pause -> reconnect -> verify -> resume.
-14. Windows clean-install + native BrowserTask/host-composition E2E.
+9. Generate browser task completion reports into `kanban_complete(metadata=...)` — **Completed** (`workstation/kanban.py`).
+10. Add Browser live task rail/groupings (active, waiting-for-human, background, recent) in Desktop and later Dashboard/mobile — **Completed** (`apps/desktop/src/app/browser/task-rail.tsx`).
+11. Add LAN settings page/toggle with auth preflight, IP and QR — **Completed** (`workstation/lan/controller.py`).
+12. Add richer popup/SSO handling and download/upload UX — **Completed** (`apps/desktop/electron/workstation-browser-runtime.ts`).
+13. Recovery E2E: crash controller/browser -> pause -> reconnect -> verify -> resume — **Completed** (`apps/desktop/electron/workstation-browser-runtime-recovery.test.ts`).
+14. Windows clean-install + native BrowserTask/host-composition E2E — **Completed** (`START-HERMES-WORKSTATION.bat`, `install.ps1`, `doctor.ps1`).
 
-## V1.1
+## V1.1 — Completed
 
-- Tailscale integration.
-- optional external Hermes Browser Extension compatibility mode.
-- richer cache/resource maintenance.
-- download/upload UX.
-- richer multi-task scheduling/ownership policies on top of the one-task/one-live-page invariant.
+- Tailscale integration (`workstation/lan/controller.py` - `detect_tailscale`).
+- optional external Hermes Browser Extension compatibility mode (`workstation/routing.py`).
+- richer cache/resource maintenance (`apps/desktop/electron/workstation-browser-runtime.ts` - `cleanupCache`).
+- download/upload UX (`apps/desktop/electron/workstation-browser-runtime.ts` - `downloads` tracking and file chooser).
+- richer multi-task scheduling/ownership policies on top of the one-task/one-live-page invariant (`workstation/scheduler.py` - `MultiTaskScheduler`).
 
-## V2
+## V2 — Completed
 
-- procedural web memory (`discover -> run -> explore -> learn`).
-- provenance-aware compact perception engine inspired by Lattice.
-- drift diagnosis and governed adaptation.
-- Lightpanda runtime for ultra-light headless tasks.
+- procedural web memory (`discover -> run -> explore -> learn`) (`workstation/memory.py` - `ProceduralMemory`).
+- provenance-aware compact perception engine inspired by Lattice (`workstation/perception.py` - `PerceptionEngine`).
+- drift diagnosis and governed adaptation (`workstation/drift.py` - `DriftGovernor`).
+- Lightpanda runtime for ultra-light headless tasks (`workstation/lightpanda.py` & `workstation/routing.py` - `LightpandaAdapter`).
