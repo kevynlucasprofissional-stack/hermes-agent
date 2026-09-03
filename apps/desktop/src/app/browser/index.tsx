@@ -183,12 +183,14 @@ export function BrowserView() {
     observer.observe(hostRef.current)
     window.addEventListener('resize', schedule)
     window.addEventListener('scroll', schedule, true)
+    window.addEventListener('transitionend', schedule)
 
     return () => {
       cancelAnimationFrame(frame)
       observer.disconnect()
       window.removeEventListener('resize', schedule)
       window.removeEventListener('scroll', schedule, true)
+      window.removeEventListener('transitionend', schedule)
     }
   }, [bridge, publishBounds])
 

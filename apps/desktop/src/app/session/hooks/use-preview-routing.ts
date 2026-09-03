@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 
 import { gatewayEventCompletedFileDiff } from '@/lib/gateway-events'
 import { normalizeOrLocalPreviewTarget } from '@/lib/local-preview'
@@ -10,6 +10,7 @@ import {
   closeRightRail,
   completePreviewServerRestart,
   openPreview,
+  openWorkstationBrowserPreview,
   progressPreviewServerRestart,
   requestPreviewReload
 } from '@/store/preview'
@@ -162,6 +163,13 @@ export function usePreviewRouting({ baseHandleGatewayEvent, currentCwd, requestG
         }
       }
 
+      if (event.type === 'workstation.browser.open') {
+        if (!event.session_id || sessionIsOnScreen(event.session_id)) {
+          openWorkstationBrowserPreview()
+        }
+        return
+      }
+
       if (event.session_id && event.session_id !== $focusedRuntimeId.get()) {
         return
       }
@@ -175,6 +183,14 @@ export function usePreviewRouting({ baseHandleGatewayEvent, currentCwd, requestG
     },
     [baseHandleGatewayEvent, currentCwd]
   )
+
+  useEffect(() => {
+    const bridge = window.hermesDesktop?.workstationBrowser
+    if (!bridge?.onOpenChatPreview) return
+    return bridge.onOpenChatPreview(() => {
+      openWorkstationBrowserPreview()
+    })
+  }, [])
 
   return { handleDesktopGatewayEvent, restartPreviewServer }
 }

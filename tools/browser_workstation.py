@@ -353,6 +353,12 @@ def _dispatch(
     # fails closed even after an agent-process restart/reconnect that resumes an
     # existing Desktop tab with snapshot/read before another navigate.
     _bind(key)
+    if action == "browser_navigate":
+        try:
+            from tools import desktop_ui
+            desktop_ui.emit("workstation.browser.open", {"url": str(args.get("url") or ""), "task_id": key})
+        except Exception:
+            pass
     if isinstance(result, str):
         return result
     return json.dumps(result, ensure_ascii=False)

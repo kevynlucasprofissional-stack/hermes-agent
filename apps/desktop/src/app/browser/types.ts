@@ -92,4 +92,5 @@ export interface WorkstationBrowserBridge {
   releaseControl: () => Promise<WorkstationBrowserState>
   cleanupCache: (force?: boolean) => Promise<WorkstationBrowserState>
   onState: (callback: (state: WorkstationBrowserState) => void) => () => void
+  onOpenChatPreview?: (callback: (data: { url: string; taskId?: string }) => void) => () => void
 }

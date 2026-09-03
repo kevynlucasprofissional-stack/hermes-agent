@@ -128,11 +128,13 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     const observer = new ResizeObserver(schedule)
     observer.observe(hostRef.current)
     window.addEventListener('resize', schedule)
+    window.addEventListener('transitionend', schedule)
 
     return () => {
       cancelAnimationFrame(frame)
       observer.disconnect()
       window.removeEventListener('resize', schedule)
+      window.removeEventListener('transitionend', schedule)
     }
   }, [bridge, publishBounds])
 

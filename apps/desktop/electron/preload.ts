@@ -43,6 +43,12 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
       ipcRenderer.on('hermes:workstation-browser:state', listener)
 
       return () => ipcRenderer.removeListener('hermes:workstation-browser:state', listener)
+    },
+    onOpenChatPreview: callback => {
+      const listener = (_event, data) => callback(data)
+      ipcRenderer.on('hermes:workstation-browser:open-chat-preview', listener)
+
+      return () => ipcRenderer.removeListener('hermes:workstation-browser:open-chat-preview', listener)
     }
   },
   glassSupported: translucencySupport?.glass === true,

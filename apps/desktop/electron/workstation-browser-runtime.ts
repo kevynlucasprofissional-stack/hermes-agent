@@ -740,7 +740,7 @@ export class WorkstationBrowserRuntime {
     this.ensure()
     const entry = this.activeEntry()
     if (!entry) return this.state()
-    const bounds = this.validBounds(rawBounds)
+    const bounds = this.validBounds(window, rawBounds)
     if (!bounds) return this.state()
 
     if (this.ownerWindow && this.ownerWindow !== window && this.attached) this.detachActiveView(false)
@@ -761,7 +761,7 @@ export class WorkstationBrowserRuntime {
   }
 
   setBounds(window: BrowserWindow, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
-    const bounds = this.validBounds(rawBounds)
+    const bounds = this.validBounds(window, rawBounds)
     if (!bounds) return this.state()
     this.bounds = bounds
     if (this.attached && this.ownerWindow === window) {
@@ -780,7 +780,7 @@ export class WorkstationBrowserRuntime {
   }
 
   transferViewport(window: BrowserWindow, targetHost: 'hub' | 'chat' | string, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
-    const bounds = this.validBounds(rawBounds)
+    const bounds = this.validBounds(window, rawBounds)
     if (!bounds) return this.state()
     if (this.attached) {
       this.detachActiveView(false)
@@ -952,6 +952,15 @@ export class WorkstationBrowserRuntime {
       const entry = this.entryForTask(taskId, true, sessionHost, kanbanCardId, runId)!
       const url = normalizeWorkstationBrowserTarget(String(args.url ?? ''))
       await entry.view.webContents.loadURL(url)
+      try {
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (!win.isDestroyed() && win.webContents) {
+            win.webContents.send('hermes:workstation-browser:open-chat-preview', { url, taskId })
+          }
+        }
+      } catch {
+        // Notification is best-effort.
+      }
       return this.snapshotForEntry(entry, false)
     }
 
@@ -1655,14 +1664,18 @@ export class WorkstationBrowserRuntime {
     this.attached = false
   }
 
-  private validBounds(bounds: WorkstationBrowserBounds): WorkstationBrowserBounds | null {
+  private validBounds(window: BrowserWindow | null, bounds: WorkstationBrowserBounds): WorkstationBrowserBounds | null {
     const finite = [bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite)
     if (!finite || bounds.width < 1 || bounds.height < 1) return null
+    const zoom =
+      window && !window.isDestroyed() && window.webContents && typeof window.webContents.zoomFactor === 'number'
+        ? window.webContents.zoomFactor
+        : 1
     return {
-      x: Math.max(0, Math.round(bounds.x)),
-      y: Math.max(0, Math.round(bounds.y)),
-      width: Math.max(1, Math.round(bounds.width)),
-      height: Math.max(1, Math.round(bounds.height))
+      x: Math.max(0, Math.round(bounds.x * zoom)),
+      y: Math.max(0, Math.round(bounds.y * zoom)),
+      width: Math.max(1, Math.round(bounds.width * zoom)),
+      height: Math.max(1, Math.round(bounds.height * zoom))
     }
   }
 
