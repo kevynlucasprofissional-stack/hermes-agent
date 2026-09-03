@@ -8,16 +8,17 @@ Before changing Workstation code, read these documents in order:
 
 1. [`../../AGENTS.md`](../../AGENTS.md) — repository-wide engineering rules and invariants.
 2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
-3. [`DECISIONS.md`](DECISIONS.md) — settled downstream architecture decisions.
-4. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable boundaries and security/maintenance constraints.
-5. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — Workstation runtime architecture and distribution model.
-6. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model, and tracked downstream delta.
-7. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership and use of internal/external components.
-8. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work.
-9. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
-10. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced or observed problems whose causes must not be guessed.
-11. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger and anti-repeat memory for ongoing Workstation investigations. Read it before creating a new validation harness or repeating an experiment.
-12. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
+3. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — the pre-1.5 gate result, complete PR/branch disposition ledger, and recurring post-milestone review rule.
+4. [`DECISIONS.md`](DECISIONS.md) — settled downstream architecture decisions.
+5. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable boundaries and security/maintenance constraints.
+6. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — Workstation runtime architecture and distribution model.
+7. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model, and tracked downstream delta.
+8. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership and use of internal/external components.
+9. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work.
+10. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
+11. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced or observed problems whose causes must not be guessed.
+12. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger and anti-repeat memory for ongoing Workstation investigations. Read it before creating a new validation harness or repeating an experiment.
+13. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
 
 After this read-order, inspect the **current `main` implementation and its tests** for the subsystem you intend to change. Documentation is intent and state; code on `main` is the source of truth for implementation details.
 
@@ -44,4 +45,4 @@ This journal is deliberately operational and may change frequently. Settled prod
 
 ## Maintenance
 
-Update these context documents when the corresponding fact changes. Keep them concise and refer to the canonical detailed document instead of copying it. `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, and `engineering-journal/CURRENT.md` are expected to evolve most frequently; architectural decisions should change only when a deliberate replacement decision is recorded.
+Update these context documents when the corresponding fact changes. Keep them concise and refer to the canonical detailed document instead of copying it. `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, and `engineering-journal/CURRENT.md` are expected to evolve most frequently; architectural decisions should change only when a deliberate replacement decision is recorded. After each major milestone, perform and record the proportional Mainline Consolidation Review defined in `MAINLINE_CONSOLIDATION.md` before branching the next milestone.

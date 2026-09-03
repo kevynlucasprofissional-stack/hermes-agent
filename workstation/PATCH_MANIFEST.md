@@ -4,9 +4,16 @@
 **Expected Hermes base:** `057dcdf236f8a6a26721c10fcc6ccb72726e272a`  
 **Target:** Windows 11 first; portable architecture for Linux/macOS.
 
-## How this patch is applied
+## How this downstream source is used
 
-Extract this ZIP **directly into the root** of the clean `hermes-agent` fork, then run:
+The integrated files are committed in this downstream fork. From the repository
+root, use the one-click launcher:
+
+```text
+START-HERMES-WORKSTATION.bat
+```
+
+or run the phases individually:
 
 ```powershell
 .\workstation\install.ps1
@@ -14,9 +21,11 @@ Extract this ZIP **directly into the root** of the clean `hermes-agent` fork, th
 .\workstation\start.ps1
 ```
 
-`install.ps1` applies nine small, anchor-validated changes to Hermes core. It is
-idempotent: running it again does not duplicate integration code. The complete
-downstream delta is documented in `UPSTREAM_DELTA.md`.
+Normal `install.ps1` validates the committed integration in read-only mode,
+prepares isolated dependencies/runtime directories, and fails if the checkout
+changes. It does not apply or repair core patches. Migration helpers remain
+explicit maintainer tools only. The complete downstream delta is documented in
+`UPSTREAM_DELTA.md`.
 
 ## Functional in this foundation
 
@@ -39,11 +48,20 @@ downstream delta is documented in `UPSTREAM_DELTA.md`.
 - stable/edge component pinning, upstream strategy, license policy and CI workflows;
 - task/report/event schemas, routing/safety/health contracts, procedural-memory and perception interfaces;
 - eval matrix scaffold for internal Chromium, extension, agent-browser and browser_exec lanes.
+- first-class BrowserTask lifecycle with one-live-page ownership, explicit
+  destroy, parking, crash recovery and logical restart restoration;
+- composite BrowserSessionState for ordinary/task logical tabs, order, active
+  state, sanitized metadata, atomic convergence and lazy task recovery;
+- repository-root one-click install → doctor → start dogfood flow;
+- pre-V1 #1.5 Mainline Consolidation Gate and recurring review contract.
 
 ## Intentionally staged for the next implementation cycles
 
-These contracts exist now but the end-to-end product behavior is **not** claimed complete yet:
+These are the active V1 #1.5 slices; their end-to-end behavior is **not**
+claimed complete merely because interfaces or roadmap entries exist:
 
+- shared Chat Browser View / Browser Hub hosting and Preview compatibility;
+- persistent controller/session/run/card binding and task rail/multi-task UX;
 - automatic promotion of every asynchronous/multistep user request into Hermes Kanban;
 - automatic follow-up card creation/execution orchestration from browser discoveries;
 - durable Execution Journal storage, selective screenshot retention and final report persistence;
@@ -57,21 +75,15 @@ No second task/session/memory database is introduced: future work must extend He
 
 ## Validation performed before packaging
 
-Offline clean-tree release simulation:
+Latest promoted evidence:
 
-- core integration anchor validation: PASS;
-- apply + second idempotent apply: PASS;
-- lockfile validation: PASS;
-- third-party license policy: PASS;
-- Workstation Python tests: **15 passed**;
-- Python `py_compile` / `compileall`: PASS;
-- YAML/JSON parsing: PASS;
-- strict isolated TypeScript check for `workstation-browser-runtime.ts`: PASS;
-- strict isolated TypeScript check for Browser React surface/types: PASS;
-- syntax transpile for all `.ts/.tsx` files touched by integration: PASS;
-- declaration-file parse: PASS.
-
-The complete Desktop workspace typecheck with Electron 40 dependencies could not be
-executed in the packaging environment because npm registry access returned `EAI_AGAIN`.
-`.github/workflows/workstation-browser-windows.yml` performs `npm ci`, full Desktop
-typecheck and Desktop test suites on Windows with the repository's `.nvmrc` Node version.
+- read-only core integration anchors, lockfile and license policy: PASS;
+- Workstation Python contracts on PR #12: **26 passed**;
+- normal Windows install kept the committed checkout clean;
+- complete Desktop workspace typecheck: PASS;
+- BrowserSessionState lint/format: PASS;
+- focused Browser foundation: **5 files / 46 tests passed**;
+- native Windows/Electron H010 on accepted PR #11 head:
+  `H010_CLASSIFICATION=VALIDATED`;
+- broad Windows UI/Electron suites remain red in the classified KI-006 baseline
+  and are not described as green.

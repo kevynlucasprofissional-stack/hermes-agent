@@ -105,17 +105,28 @@ repository `.nvmrc` selects Node 26; CI validates with Node 26).
 
 ## Browser integration
 
-The initial patch provides a functional in-app Chromium Browser surface **and**
-a loopback-authenticated controller used by Hermes `browser_*` tools. Internal
-Chromium is the first browser lane; the official extension router and legacy
-backend are fallback lanes only while routing is enabled and the task has not
-bound to the persistent internal browser.
+The integrated source provides a functional in-app Chromium Browser surface
+**and** a loopback-authenticated controller used by Hermes `browser_*` tools.
+Internal Chromium is the first browser lane; the official extension router and
+legacy backend are fallback lanes only while routing is enabled and the task has
+not bound to the persistent internal browser.
 
-Automatic Kanban promotion/orchestration, LAN settings UI and durable Execution
-Journal persistence are later integrations. The roadmap now schedules an
-**Integrated Dogfood MVP** after complete BrowserSessionState: minimal real
-vertical slices of those later capabilities are implemented first for continuous
-usage, while the original milestones remain in place for subsequent architectural
-hardening.
+V1 #1 BrowserSessionState is promoted. It persists one atomic, versioned safe
+structural projection for ordinary/task logical tabs, ordering, active state and
+BrowserTask linkage while the dedicated Chromium profile separately owns
+cookies/localStorage/IndexedDB. Exact-head H010 Windows/Electron evidence covers
+clean and abrupt two-process restart, lazy one-page task recovery and failed-write
+convergence.
 
-See `ARCHITECTURE.md`, `ROADMAP.md`, and `UPSTREAM_DELTA.md`.
+The extraordinary pre-1.5 Mainline Consolidation Gate is PASS: predecessor PRs
+are merged, historical diagnostics are closed/classified, and the full ledger is
+in `context/MAINLINE_CONSOLIDATION.md`. V1 #1.5 is therefore the next
+implementation track and must branch only from `main`.
+
+Automatic Kanban promotion/orchestration, shared Chat/Hub hosting, LAN settings,
+Execution Journal, memory/perception/drift and specialist runtime paths remain
+unimplemented until their real 1.5 slices land. The original numbered milestones
+remain in place for later architectural hardening.
+
+See `ARCHITECTURE.md`, `ROADMAP.md`, `UPSTREAM_DELTA.md`, and
+`context/MAINLINE_CONSOLIDATION.md`.
