@@ -12,6 +12,8 @@ export interface BrowserTask {
   panelHost: string | null
   controlHost: string | null
   sessionHost: string | null
+  kanbanCardId: string | null
+  runId: string | null
   localConnection: string | null
   status: BrowserTaskStatus
   leaseState: string | null
@@ -31,6 +33,8 @@ export interface BrowserTaskSeed {
   panelHost?: string | null
   controlHost?: string | null
   sessionHost?: string | null
+  kanbanCardId?: string | null
+  runId?: string | null
   localConnection?: string | null
   leaseState?: string | null
 }
@@ -78,6 +82,8 @@ function parsePersistedTask(value: unknown): BrowserTask | null {
   if (!validNullableText(task.panelHost) || !validNullableText(task.controlHost)) return null
   if (!validNullableText(task.sessionHost) || !validNullableText(task.localConnection)) return null
   if (!validNullableText(task.leaseState) || typeof task.parked !== 'boolean') return null
+  if (task.kanbanCardId !== undefined && !validNullableText(task.kanbanCardId)) return null
+  if (task.runId !== undefined && !validNullableText(task.runId)) return null
 
   return {
     taskId: task.taskId.trim(),
@@ -85,6 +91,8 @@ function parsePersistedTask(value: unknown): BrowserTask | null {
     panelHost: task.panelHost,
     controlHost: task.controlHost,
     sessionHost: task.sessionHost,
+    kanbanCardId: task.kanbanCardId ?? null,
+    runId: task.runId ?? null,
     localConnection: task.localConnection,
     status: task.status,
     leaseState: task.leaseState,
@@ -190,6 +198,8 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
       panelHost: seed.panelHost ?? null,
       controlHost: seed.controlHost ?? null,
       sessionHost: seed.sessionHost ?? null,
+      kanbanCardId: seed.kanbanCardId ?? null,
+      runId: seed.runId ?? null,
       localConnection: seed.localConnection ?? null,
       status: 'parked',
       leaseState: seed.leaseState ?? null,
@@ -211,6 +221,32 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     if (task.sessionHost === sessionHost) return cloneTask(task)
 
     task.sessionHost = sessionHost
+    task.updatedAt = this.timestamp()
+    this.persist()
+    return cloneTask(task)
+  }
+
+  bindKanbanCard(taskId: string, kanbanCardId: string): BrowserTask {
+    const task = this.requireTask(taskId)
+    if (task.kanbanCardId && task.kanbanCardId !== kanbanCardId) {
+      throw new Error(`BrowserTask kanban card mismatch: ${taskId}`)
+    }
+    if (task.kanbanCardId === kanbanCardId) return cloneTask(task)
+
+    task.kanbanCardId = kanbanCardId
+    task.updatedAt = this.timestamp()
+    this.persist()
+    return cloneTask(task)
+  }
+
+  bindRun(taskId: string, runId: string): BrowserTask {
+    const task = this.requireTask(taskId)
+    if (task.runId && task.runId !== runId) {
+      throw new Error(`BrowserTask run mismatch: ${taskId}`)
+    }
+    if (task.runId === runId) return cloneTask(task)
+
+    task.runId = runId
     task.updatedAt = this.timestamp()
     this.persist()
     return cloneTask(task)

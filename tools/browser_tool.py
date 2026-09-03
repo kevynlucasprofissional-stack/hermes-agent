@@ -5446,6 +5446,8 @@ def _workstation_or_legacy(action: str, args: dict, kw: dict, fallback):
         fallback=fallback,
         task_id=kw.get("task_id"),
         session_id=kw.get("session_id"),
+        kanban_card_id=kw.get("kanban_card_id") or kw.get("card_id"),
+        run_id=kw.get("run_id"),
     )
 
 

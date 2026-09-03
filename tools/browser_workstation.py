@@ -311,6 +311,8 @@ def _dispatch(
     *,
     task_id: Optional[str],
     session_id: Optional[str],
+    kanban_card_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> str:
     if action == "browser_navigate":
         _validate_navigation(args)
@@ -319,15 +321,22 @@ def _dispatch(
         timeout = float(os.getenv("HERMES_WORKSTATION_BROWSER_TIMEOUT", str(_DEFAULT_TIMEOUT_SECONDS)))
     except ValueError:
         timeout = _DEFAULT_TIMEOUT_SECONDS
+    card_id = (kanban_card_id or os.environ.get("HERMES_KANBAN_TASK") or "").strip() or None
+    rid = (run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
+    payload: Dict[str, Any] = {
+        "action": action,
+        "arguments": dict(args),
+        "task_id": key,
+        "session_id": session_id,
+    }
+    if card_id:
+        payload["kanban_card_id"] = card_id
+    if rid:
+        payload["run_id"] = rid
     response = _request_json(
         "POST",
         "/v1/action",
-        {
-            "action": action,
-            "arguments": dict(args),
-            "task_id": key,
-            "session_id": session_id,
-        },
+        payload,
         timeout=max(0.25, timeout),
     )
     result = _force_redact(response.get("result"))
@@ -348,6 +357,8 @@ def workstation_routed_browser_handler(
     fallback: Callable[[], Any],
     task_id: Optional[str] = None,
     session_id: Optional[str] = None,
+    kanban_card_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Any:
     """Route one ``browser_*`` call to internal Chromium or the legacy lane."""
     if not workstation_browser_enabled():
@@ -367,4 +378,11 @@ def workstation_routed_browser_handler(
 
     # Once selected, the internal browser is authoritative for this call.
     # Dispatch failures propagate and never trigger a second browser lane.
-    return _dispatch(action, args, task_id=task_id, session_id=session_id)
+    return _dispatch(
+        action,
+        args,
+        task_id=task_id,
+        session_id=session_id,
+        kanban_card_id=kanban_card_id,
+        run_id=run_id,
+    )

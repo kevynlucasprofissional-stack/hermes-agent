@@ -50,6 +50,8 @@ function taskSnapshot(status: 'parked' | 'visible' = 'parked', taskIds = ['task-
       panelHost: null,
       controlHost: null,
       sessionHost: `hermes-session-${index}`,
+      kanbanCardId: null,
+      runId: null,
       localConnection: null,
       status,
       leaseState: null,
