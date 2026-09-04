@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     takeControl: () => ipcRenderer.invoke('hermes:workstation-browser:take-control'),
     releaseControl: () => ipcRenderer.invoke('hermes:workstation-browser:release-control'),
     cleanupCache: force => ipcRenderer.invoke('hermes:workstation-browser:cleanup-cache', force),
+    getTaskJournal: taskId => ipcRenderer.invoke('hermes:workstation-browser:task-journal', taskId),
     onState: callback => {
       const listener = (_event, state) => callback(state)
       ipcRenderer.on('hermes:workstation-browser:state', listener)

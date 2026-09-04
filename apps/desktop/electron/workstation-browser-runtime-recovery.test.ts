@@ -27,11 +27,12 @@ const electron = vi.hoisted(() => {
       const current = this.listeners.get(event) ?? []
       current.push(listener)
       this.listeners.set(event, current)
+
       return this
     }
 
     private emit(event: string, ...args: unknown[]): void {
-      for (const listener of this.listeners.get(event) ?? []) listener(...args)
+      for (const listener of this.listeners.get(event) ?? []) {listener(...args)}
     }
 
     setWindowOpenHandler(): void {}
@@ -64,7 +65,7 @@ const electron = vi.hoisted(() => {
     }
 
     close(): void {
-      if (this.destroyed) return
+      if (this.destroyed) {return}
       this.destroyed = true
       this.emit('destroyed')
     }
@@ -87,6 +88,7 @@ const electron = vi.hoisted(() => {
           elements: []
         }
       }
+
       return {}
     }
 
@@ -109,7 +111,7 @@ const electron = vi.hoisted(() => {
     readonly contentView = {
       children: [] as FakeWebContentsView[],
       addChildView: (view: FakeWebContentsView) => {
-        if (!this.contentView.children.includes(view)) this.contentView.children.push(view)
+        if (!this.contentView.children.includes(view)) {this.contentView.children.push(view)}
       },
       removeChildView: (view: FakeWebContentsView) => {
         this.contentView.children = this.contentView.children.filter(candidate => candidate !== view)
@@ -180,6 +182,7 @@ const createdDirs: string[] = []
 function createPersistence(name: string): BrowserSessionStateFilePersistence {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `hermes-recovery-test-${name}-`))
   createdDirs.push(dir)
+
   return new BrowserSessionStateFilePersistence(
     path.join(dir, 'browser-session.json'),
     path.join(dir, 'browser-tasks.json')
@@ -188,6 +191,7 @@ function createPersistence(name: string): BrowserSessionStateFilePersistence {
 
 function executeControlRequest(runtime: WorkstationBrowserRuntime, request: Record<string, unknown>): Promise<unknown> {
   const method = Reflect.get(runtime as object, 'executeControlRequest') as (req: unknown) => Promise<unknown>
+
   return method.call(runtime, request)
 }
 
@@ -220,6 +224,7 @@ test('V1 #13 Golden Recovery Scenario: interruption -> pause -> reconnect/rebind
     run_id: runId,
     arguments: { url: 'https://example.test/phase-1' }
   })
+
   assert.ok(nav1)
 
   // Verify initial task state and persistent bindings
@@ -298,6 +303,7 @@ test('V1 #13 Golden Recovery Scenario: interruption -> pause -> reconnect/rebind
     run_id: runId,
     arguments: { url: 'https://example.test/phase-2-resumed' }
   })
+
   assert.ok(nav2)
 
   // Step 8: Assert exactly 1 owned page and persistent metadata intact

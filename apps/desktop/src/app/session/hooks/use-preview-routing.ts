@@ -9,6 +9,7 @@ import {
   closePreviewMatching,
   closeRightRail,
   completePreviewServerRestart,
+  isBrowserHubRoute,
   openPreview,
   openWorkstationBrowserPreview,
   progressPreviewServerRestart,
@@ -164,9 +165,14 @@ export function usePreviewRouting({ baseHandleGatewayEvent, currentCwd, requestG
       }
 
       if (event.type === 'workstation.browser.open') {
+        if (isBrowserHubRoute()) {
+          return
+        }
+
         if (!event.session_id || sessionIsOnScreen(event.session_id)) {
           openWorkstationBrowserPreview()
         }
+
         return
       }
 
@@ -186,7 +192,9 @@ export function usePreviewRouting({ baseHandleGatewayEvent, currentCwd, requestG
 
   useEffect(() => {
     const bridge = window.hermesDesktop?.workstationBrowser
-    if (!bridge?.onOpenChatPreview) return
+
+    if (!bridge?.onOpenChatPreview) {return}
+
     return bridge.onOpenChatPreview(() => {
       openWorkstationBrowserPreview()
     })

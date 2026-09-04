@@ -93,6 +93,22 @@ export interface WorkstationBrowserBridge {
   takeControl: () => Promise<WorkstationBrowserState>
   releaseControl: () => Promise<WorkstationBrowserState>
   cleanupCache: (force?: boolean) => Promise<WorkstationBrowserState>
+  getTaskJournal: (taskId: string) => Promise<TaskTimelineEvent[]>
   onState: (callback: (state: WorkstationBrowserState) => void) => () => void
   onOpenChatPreview?: (callback: (data: { url: string; taskId?: string }) => void) => () => void
+}
+
+export interface TaskTimelineEvent {
+  event_id: string
+  kind: string
+  task_id: string
+  session_id: string
+  message: string
+  timestamp: string
+  elapsed_seconds?: number
+  url?: string | null
+  risk?: string
+  browser_tab_id?: string | null
+  metadata?: Record<string, unknown>
+  evidence?: Array<{ kind: string; uri: string; summary?: string }>
 }

@@ -1,12 +1,13 @@
-import { type ChangeEvent, type FormEvent, type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, type MouseEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
-import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
+import { $previewTabs, $sessionPreviewTabs, activeSessionKey, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
 
+import { TaskJournalDrawer } from './task-journal-drawer'
 import { TaskRail } from './task-rail'
 import type { BrowserTask, WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from './types'
 
@@ -37,14 +38,17 @@ const EMPTY_STATE: WorkstationBrowserState = {
 }
 
 function cacheLabel(bytes: number | null): string {
-  if (bytes == null) return '—'
+  if (bytes == null) {return '—'}
   const mb = bytes / (1024 * 1024)
+
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`
 }
 
 function shortTitle(tab: WorkstationBrowserTabState): string {
-  if (tab.title && tab.title !== 'New Tab') return tab.title
-  if (!tab.url || tab.url === 'about:blank') return 'New Tab'
+  if (tab.title && tab.title !== 'New Tab') {return tab.title}
+
+  if (!tab.url || tab.url === 'about:blank') {return 'New Tab'}
+
   try {
     return new URL(tab.url).hostname || tab.url
   } catch {
@@ -63,10 +67,12 @@ function rectToBounds(rect: DOMRect): WorkstationBrowserBounds {
 
 export function BrowserView() {
   const bridge = window.hermesDesktop?.workstationBrowser
+  const hostRef = useRef<HTMLDivElement | null>(null)
   const [state, setState] = useState<WorkstationBrowserState>(EMPTY_STATE)
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(false)
-  const hostRef = useRef<HTMLDivElement | null>(null)
+  const [showDownloads, setShowDownloads] = useState(false)
+  const [auditTaskId, setAuditTaskId] = useState<string | null>(null)
 
   const activeTab = useMemo(
     () => state.tabs.find(tab => tab.id === state.activeTabId) ?? state.tabs[0] ?? null,
@@ -79,27 +85,41 @@ export function BrowserView() {
     }
   }, [activeTab?.url])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // When viewing Browser Hub (/browser), the full-screen browser is active.
     // The Right Rail must automatically close so it doesn't duplicate the browser.
+    const activeKey = activeSessionKey()
     const stashedTabs = $previewTabs.get()
     const stashedActiveId = $rightRailActiveTabId.get()
+
     if (stashedTabs.length > 0) {
+      if (activeKey) {
+        const map = { ...$sessionPreviewTabs.get(), [activeKey]: stashedTabs }
+        $sessionPreviewTabs.set(map)
+      }
+
       closeRightRail()
     }
 
     return () => {
       // When leaving Browser Hub to return to Chat, restore the Right Rail if it was previously open
-      if (stashedTabs.length > 0 && $previewTabs.get().length === 0) {
-        $previewTabs.set(stashedTabs)
-        if (stashedActiveId) selectRightRailTab(stashedActiveId)
+      const restoreKey = activeSessionKey()
+
+      if (restoreKey) {
+        const saved = $sessionPreviewTabs.get()[restoreKey] ?? stashedTabs
+
+        if (saved && saved.length > 0) {
+          $previewTabs.set(saved)
+          selectRightRailTab(stashedActiveId || saved[0].id)
+        }
       }
     }
   }, [])
 
   const run = useCallback(
     async (fn: () => Promise<WorkstationBrowserState>) => {
-      if (!bridge) return
+      if (!bridge) {return}
+
       try {
         setBusy(true)
         setState(await fn())
@@ -114,9 +134,10 @@ export function BrowserView() {
 
   const publishBounds = useCallback(
     async (attach = false) => {
-      if (!bridge || !hostRef.current) return
+      if (!bridge || !hostRef.current) {return}
       const rect = hostRef.current.getBoundingClientRect()
-      if (rect.width < 1 || rect.height < 1) return
+
+      if (rect.width < 1 || rect.height < 1) {return}
       const bounds = rectToBounds(rect)
       setState(await (attach ? bridge.attach(bounds, 'hub') : bridge.setBounds(bounds)))
     },
@@ -124,21 +145,23 @@ export function BrowserView() {
   )
 
   const transferToHub = useCallback(async () => {
-    if (!bridge || !hostRef.current) return
+    if (!bridge || !hostRef.current) {return}
     const rect = hostRef.current.getBoundingClientRect()
-    if (rect.width < 1 || rect.height < 1) return
+
+    if (rect.width < 1 || rect.height < 1) {return}
     const bounds = rectToBounds(rect)
     setState(await bridge.transferViewport('hub', bounds))
   }, [bridge])
 
   const transferToChat = useCallback(() => {
     openWorkstationBrowserPreview()
-    if (navigate) navigate('/')
+
+    if (navigate) {navigate('/')}
   }, [navigate])
 
   const handleSelectTask = useCallback(
     async (task: BrowserTask) => {
-      if (!bridge || !hostRef.current) return
+      if (!bridge || !hostRef.current) {return}
       const rect = hostRef.current.getBoundingClientRect()
       const bounds = rectToBounds(rect)
       await bridge.showTask(task.taskId, bounds, 'hub')
@@ -148,7 +171,7 @@ export function BrowserView() {
 
   const handleParkTask = useCallback(
     async (taskId: string) => {
-      if (!bridge) return
+      if (!bridge) {return}
       await bridge.parkTask(taskId)
     },
     [bridge]
@@ -156,7 +179,7 @@ export function BrowserView() {
 
   const handleHideTask = useCallback(
     async (taskId: string) => {
-      if (!bridge) return
+      if (!bridge) {return}
       await bridge.hideTask(taskId)
     },
     [bridge]
@@ -164,7 +187,7 @@ export function BrowserView() {
 
   const handleDestroyTask = useCallback(
     async (taskId: string) => {
-      if (!bridge) return
+      if (!bridge) {return}
       await bridge.destroyTask(taskId)
     },
     [bridge]
@@ -172,29 +195,30 @@ export function BrowserView() {
 
   const handleClearParked = useCallback(
     async () => {
-      if (!bridge) return
+      if (!bridge) {return}
       await bridge.clearParkedTasks()
     },
     [bridge]
   )
 
   useEffect(() => {
-    if (!bridge) return
+    if (!bridge) {return}
 
     let disposed = false
+
     const off = bridge.onState(next => {
-      if (!disposed) setState(next)
+      if (!disposed) {setState(next)}
     })
 
     void bridge
       .ensure()
       .then(next => {
-        if (disposed) return
+        if (disposed) {return}
         setState(next)
         requestAnimationFrame(() => void publishBounds(true))
       })
       .catch(error => {
-        if (!disposed) setState(current => ({ ...current, lastError: String(error) }))
+        if (!disposed) {setState(current => ({ ...current, lastError: String(error) }))}
       })
 
     return () => {
@@ -207,13 +231,15 @@ export function BrowserView() {
   }, [bridge, publishBounds])
 
   useEffect(() => {
-    if (!bridge || !hostRef.current) return
+    if (!bridge || !hostRef.current) {return}
 
     let frame = 0
+
     const schedule = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => void publishBounds(false))
     }
+
     const observer = new ResizeObserver(schedule)
     observer.observe(hostRef.current)
     window.addEventListener('resize', schedule)
@@ -231,7 +257,8 @@ export function BrowserView() {
 
   const submitAddress = (event: FormEvent) => {
     event.preventDefault()
-    if (!bridge) return
+
+    if (!bridge) {return}
     void run(() => bridge.navigate(address))
   }
 
@@ -287,6 +314,7 @@ export function BrowserView() {
                           // Best effort task cleanup.
                         }
                       }
+
                       return bridge.closeTab(tab.id)
                     })
                   }}
@@ -398,11 +426,57 @@ export function BrowserView() {
             <Codicon name="comment-discussion" />
             Move to Chat
           </Button>
+          {state.downloads && state.downloads.length > 0 && (
+            <Button
+              onClick={() => setShowDownloads(prev => !prev)}
+              size="sm"
+              title="Toggle Downloads Panel"
+              variant={showDownloads ? 'secondary' : 'ghost'}
+            >
+              <Codicon name="cloud-download" />
+              Downloads ({state.downloads.length})
+            </Button>
+          )}
           <span className="ml-auto hidden font-mono text-[10px] text-(--ui-text-quaternary) lg:block">
             Electron Chromium · persistent profile · cache {cacheLabel(state.cacheBytes)}
           </span>
         </div>
       </div>
+
+      {showDownloads && state.downloads && state.downloads.length > 0 && (
+        <div className="shrink-0 border-b border-(--ui-stroke-secondary) bg-(--ui-sidebar-surface-background) p-2 text-xs">
+          <div className="flex items-center justify-between mb-1.5 font-medium text-(--ui-text-primary)">
+            <span className="flex items-center gap-1.5">
+              <Codicon name="cloud-download" size="0.8rem" />
+              Downloads ({state.downloads.length})
+            </span>
+            <Button onClick={() => setShowDownloads(false)} size="icon-xs" variant="ghost">
+              <Codicon name="close" size="0.75rem" />
+            </Button>
+          </div>
+          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+            {state.downloads.map(dl => {
+              const pct = dl.totalBytes > 0 ? Math.round((dl.receivedBytes / dl.totalBytes) * 100) : 0
+
+              return (
+                <div className="rounded border border-(--ui-stroke-tertiary) p-1.5 bg-(--ui-card-background)" key={dl.id}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate font-medium text-(--ui-text-primary)" title={dl.filename}>{dl.filename}</span>
+                    <span className="shrink-0 text-[10px] font-mono text-(--ui-text-tertiary)">
+                      {dl.state === 'completed' ? 'Done' : `${pct}%`}
+                    </span>
+                  </div>
+                  {dl.state === 'progressing' && (
+                    <div className="mt-1 h-1 w-full rounded-full bg-(--ui-stroke-tertiary) overflow-hidden">
+                      <div className="h-full bg-emerald-500 transition-all duration-200" style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {state.lastError && (
         <div className="shrink-0 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-300">
@@ -413,13 +487,22 @@ export function BrowserView() {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <TaskRail
           activeTaskId={activeTab?.ownerTaskId}
+          onAuditTask={taskId => setAuditTaskId(prev => (prev === taskId ? null : taskId))}
           onClearParked={() => void handleClearParked()}
           onDestroyTask={taskId => void handleDestroyTask(taskId)}
           onHideTask={taskId => void handleHideTask(taskId)}
           onParkTask={taskId => void handleParkTask(taskId)}
           onSelectTask={task => void handleSelectTask(task)}
+          tabs={state.tabs}
           tasks={state.tasks}
         />
+
+        {auditTaskId && (
+          <TaskJournalDrawer
+            onClose={() => setAuditTaskId(null)}
+            taskId={auditTaskId}
+          />
+        )}
 
         <div className="relative min-h-0 flex-1 bg-black">
           {/* The Electron main process places the active WebContentsView exactly

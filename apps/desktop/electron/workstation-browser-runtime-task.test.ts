@@ -33,11 +33,12 @@ const electron = vi.hoisted(() => {
       const current = this.listeners.get(event) ?? []
       current.push(listener)
       this.listeners.set(event, current)
+
       return this
     }
 
     private emit(event: string, ...args: unknown[]): void {
-      for (const listener of this.listeners.get(event) ?? []) listener(...args)
+      for (const listener of this.listeners.get(event) ?? []) {listener(...args)}
     }
 
     setWindowOpenHandler(handler: (details: { url: string }) => { action: string }): void {
@@ -73,7 +74,7 @@ const electron = vi.hoisted(() => {
     }
 
     close(): void {
-      if (this.destroyed) return
+      if (this.destroyed) {return}
       this.destroyed = true
       this.emit('destroyed')
     }
@@ -95,6 +96,7 @@ const electron = vi.hoisted(() => {
           elements: []
         }
       }
+
       return {}
     }
     async capturePage(): Promise<{ toPNG: () => Uint8Array }> { return { toPNG: () => new Uint8Array() } }
@@ -118,7 +120,7 @@ const electron = vi.hoisted(() => {
     readonly contentView = {
       children: [] as FakeWebContentsView[],
       addChildView: (view: FakeWebContentsView) => {
-        if (!this.contentView.children.includes(view)) this.contentView.children.push(view)
+        if (!this.contentView.children.includes(view)) {this.contentView.children.push(view)}
       },
       removeChildView: (view: FakeWebContentsView) => {
         this.contentView.children = this.contentView.children.filter(candidate => candidate !== view)
@@ -175,20 +177,26 @@ vi.mock('electron', () => ({
   WebContentsView: electron.FakeWebContentsView
 }))
 
-import { WorkstationBrowserRuntime, workstationBrowserSessionStatePath } from './workstation-browser-runtime'
+import {
+  getStandardChromeUserAgent,
+  WorkstationBrowserRuntime,
+  workstationBrowserSessionStatePath
+} from './workstation-browser-runtime'
 import { BrowserSessionStateFilePersistence } from './workstation-browser-session-state'
 
 const tempRoots: string[] = []
 afterEach(() => {
   delete process.env.HERMES_WORKSTATION_HOME
   electron.windows.splice(0)
-  for (const root of tempRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true })
+
+  for (const root of tempRoots.splice(0)) {fs.rmSync(root, { recursive: true, force: true })}
 })
 
 function runtimeHome(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-runtime-task-'))
   tempRoots.push(root)
   process.env.HERMES_WORKSTATION_HOME = root
+
   return root
 }
 
@@ -201,6 +209,7 @@ function interruptibleSessionPersistence(home: string): {
   failAfterSuccessfulReplacements(count: number): void
 } {
   let successfulReplacementsBeforeFailure: number | null = null
+
   const io = {
     ...fs,
     renameSync: (...args: Parameters<typeof fs.renameSync>) => {
@@ -208,7 +217,8 @@ function interruptibleSessionPersistence(home: string): {
         successfulReplacementsBeforeFailure = null
         throw new Error('simulated BrowserSessionState projection interruption')
       }
-      if (successfulReplacementsBeforeFailure !== null) successfulReplacementsBeforeFailure -= 1
+
+      if (successfulReplacementsBeforeFailure !== null) {successfulReplacementsBeforeFailure -= 1}
       fs.renameSync(...args)
     }
   }
@@ -392,9 +402,11 @@ test('C1 create interruption recovers new BrowserTask metadata with the previous
   const fault = interruptibleSessionPersistence(home)
   const interrupted = new WorkstationBrowserRuntime(fault.persistence)
   const ordinary = interrupted.ensure().tabs[0]
+
   const ordinaryContents = interrupted.getWebContents(ordinary.id) as unknown as InstanceType<
     typeof electron.FakeWebContents
   >
+
   await ordinaryContents.loadURL('https://ordinary.example.test/customers/482913?access_token=c1-query-secret')
   ordinaryContents.setTitle('Recovery code 482913')
   const before = persistedComposite()
@@ -696,4 +708,13 @@ test('runtime restart keeps task metadata parked and recreates a page only on sh
   assert.equal(second.state().tabs.filter(tab => tab.ownerTaskId === 'task-persisted').length, 1)
 
   await second.destroy()
+})
+
+test('getStandardChromeUserAgent outputs modern Chrome UA without Electron or hermes traces', () => {
+  const ua = getStandardChromeUserAgent()
+  assert.match(ua, /^Mozilla\/5\.0 /)
+  assert.match(ua, /AppleWebKit\/537\.36/)
+  assert.match(ua, /Chrome\/133\.0\.0\.0 Safari\/537\.36/)
+  assert.equal(ua.includes('Electron'), false)
+  assert.equal(ua.includes('hermes'), false)
 })

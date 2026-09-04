@@ -11,10 +11,13 @@ import {
   closePreviewMatching,
   closeRightRail,
   closeRightRailTab,
+  isBrowserHubRoute,
   openPreview,
+  openWorkstationBrowserPreview,
   previewTabId,
   type PreviewTarget,
-  progressPreviewServerRestart
+  progressPreviewServerRestart,
+  syncSessionPreviewTabs
 } from './preview'
 
 function fileTarget(source: string): PreviewTarget {
@@ -188,5 +191,42 @@ describe('preview store', () => {
     openPreview(target, 'tool-result')
 
     expect(window.localStorage.getItem('hermes.desktop.previewTabs.v2')).toBe('[]')
+  })
+
+  it('detects browser hub route and suppresses workstation browser preview', () => {
+    window.history.pushState({}, '', '/browser')
+    expect(isBrowserHubRoute()).toBe(true)
+
+    openWorkstationBrowserPreview()
+    expect($previewTabs.get()).toHaveLength(0)
+
+    window.history.pushState({}, '', '/session/123')
+    expect(isBrowserHubRoute()).toBe(false)
+    openWorkstationBrowserPreview()
+    expect($previewTabs.get().some(t => t.target.url === 'workstation:browser')).toBe(true)
+  })
+
+  it('isolates preview tabs across sessions and clears pane for new session draft', () => {
+    window.location.pathname = '/session/123'
+    syncSessionPreviewTabs('session-A')
+    openPreview(urlTarget('https://news.ycombinator.com'), 'tool-result')
+    expect($previewTabs.get()).toHaveLength(1)
+
+    // Switch to brand-new session draft (null)
+    syncSessionPreviewTabs(null)
+    expect($previewTabs.get()).toHaveLength(0)
+    expect($rightRailActiveTabId.get()).toBeNull()
+
+    // Switch to session-B and add a file tab
+    syncSessionPreviewTabs('session-B')
+    expect($previewTabs.get()).toHaveLength(0)
+    openPreview(fileTarget('/work/demo.html'), 'file-browser')
+    expect($previewTabs.get()).toHaveLength(1)
+    expect($previewTabs.get()[0].target.path).toBe('/work/demo.html')
+
+    // Switch back to session-A: restores session-A's tab
+    syncSessionPreviewTabs('session-A')
+    expect($previewTabs.get()).toHaveLength(1)
+    expect($previewTabs.get()[0].target.url).toBe('https://news.ycombinator.com')
   })
 })

@@ -27,11 +27,12 @@ const electron = vi.hoisted(() => {
       const current = this.listeners.get(event) ?? []
       current.push(listener)
       this.listeners.set(event, current)
+
       return this
     }
 
     private emit(event: string, ...args: unknown[]): void {
-      for (const listener of this.listeners.get(event) ?? []) listener(...args)
+      for (const listener of this.listeners.get(event) ?? []) {listener(...args)}
     }
 
     setWindowOpenHandler(): void {}
@@ -65,7 +66,7 @@ const electron = vi.hoisted(() => {
     }
 
     close(): void {
-      if (this.destroyed) return
+      if (this.destroyed) {return}
       this.destroyed = true
       this.emit('destroyed')
     }
@@ -92,7 +93,7 @@ const electron = vi.hoisted(() => {
     readonly contentView = {
       children: [] as FakeWebContentsView[],
       addChildView: (view: FakeWebContentsView) => {
-        if (!this.contentView.children.includes(view)) this.contentView.children.push(view)
+        if (!this.contentView.children.includes(view)) {this.contentView.children.push(view)}
       },
       removeChildView: (view: FakeWebContentsView) => {
         this.contentView.children = this.contentView.children.filter(candidate => candidate !== view)
@@ -155,6 +156,7 @@ const electron = vi.hoisted(() => {
 vi.mock('electron', () => electron)
 
 import { BrowserWindow } from 'electron'
+
 import { WorkstationBrowserRuntime } from './workstation-browser-runtime'
 import { BrowserSessionStateFilePersistence } from './workstation-browser-session-state'
 
@@ -163,6 +165,7 @@ const createdDirs: string[] = []
 function createPersistence(name: string): BrowserSessionStateFilePersistence {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `hermes-viewport-test-${name}-`))
   createdDirs.push(dir)
+
   return new BrowserSessionStateFilePersistence(
     path.join(dir, 'browser-session.json'),
     path.join(dir, 'browser-tasks.json')

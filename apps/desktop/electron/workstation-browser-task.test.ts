@@ -6,9 +6,9 @@ import path from 'node:path'
 import { afterEach, test } from 'vitest'
 
 import {
+  type BrowserTaskBindings,
   BrowserTaskFilePersistence,
-  BrowserTaskLifecycle,
-  type BrowserTaskBindings
+  BrowserTaskLifecycle
 } from './workstation-browser-task'
 
 interface FakePage {
@@ -28,7 +28,9 @@ function fakeBrowser() {
   const bindings: BrowserTaskBindings<FakePage, { host: string }> = {
     ensurePage(taskId) {
       const existing = pages.get(taskId)
-      if (existing && !existing.destroyed) return existing
+
+      if (existing && !existing.destroyed) {return existing}
+
       const page: FakePage = {
         id: ++pageCounter,
         taskId,
@@ -37,7 +39,9 @@ function fakeBrowser() {
         visible: false,
         parked: true
       }
+
       pages.set(taskId, page)
+
       return page
     },
     pageForTask: taskId => pages.get(taskId) ?? null,
@@ -71,12 +75,13 @@ function fakeBrowser() {
 
 const tempRoots: string[] = []
 afterEach(() => {
-  for (const root of tempRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true })
+  for (const root of tempRoots.splice(0)) {fs.rmSync(root, { recursive: true, force: true })}
 })
 
 function tempStateFile(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-browser-task-'))
   tempRoots.push(root)
+
   return path.join(root, 'browser-tasks.json')
 }
 

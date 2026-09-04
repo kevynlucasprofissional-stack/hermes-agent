@@ -1,19 +1,23 @@
+import { useStore } from '@nanostores/react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { $sessions } from '@/store/session'
 
-import type { BrowserTask } from './types'
+import type { BrowserTask, WorkstationBrowserTabState } from './types'
 
 export interface TaskRailProps {
   tasks: BrowserTask[]
   activeTaskId?: string | null
+  tabs?: WorkstationBrowserTabState[]
   onSelectTask?: (task: BrowserTask) => void
   onParkTask?: (taskId: string) => void
   onHideTask?: (taskId: string) => void
   onDestroyTask?: (taskId: string) => void
   onClearParked?: () => void
+  onAuditTask?: (taskId: string) => void
   className?: string
 }
 
@@ -31,16 +35,19 @@ function statusBadge(task: BrowserTask) {
         label: 'Visible',
         color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
       }
+
     case 'parked':
       return {
         label: 'Parked',
         color: 'border-amber-500/30 text-amber-400 bg-amber-500/10'
       }
+
     case 'hidden':
       return {
         label: 'Background',
         color: 'border-sky-500/30 text-sky-400 bg-sky-500/10'
       }
+
     default:
       return {
         label: task.status,
@@ -52,14 +59,17 @@ function statusBadge(task: BrowserTask) {
 export function TaskRail({
   tasks,
   activeTaskId,
+  tabs,
   onSelectTask,
   onParkTask,
   onHideTask,
   onDestroyTask,
   onClearParked,
+  onAuditTask,
   className
 }: TaskRailProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const sessions = useStore($sessions)
 
   const groups: TaskGroup[] = useMemo(() => {
     const active: BrowserTask[] = []
@@ -142,7 +152,7 @@ export function TaskRail({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2 space-y-3">
         {groups.map(group => (
-          <div key={group.id} className="space-y-1">
+          <div className="space-y-1" key={group.id}>
             <div className="flex items-center gap-1 px-1 text-[11px] font-medium text-(--ui-text-tertiary)">
               <Codicon name={group.icon} size="0.7rem" />
               <span>{group.title}</span>
@@ -158,23 +168,61 @@ export function TaskRail({
                 {group.tasks.map(task => {
                   const badge = statusBadge(task)
                   const isCurrent = task.taskId === activeTaskId
+                  const isWaitingForHuman = group.id === 'waiting-for-human' || task.leaseState === 'waiting'
+
+                  const boundSession = sessions.find(s =>
+                    (task.sessionHost && (s.id === task.sessionHost || s.parent_session_id === task.sessionHost)) ||
+                    s.id === task.taskId
+                  )
+
+                  const matchingTab = tabs?.find(t => t.ownerTaskId === task.taskId)
+                  const pageTitle = matchingTab?.title && matchingTab.title !== 'about:blank' ? matchingTab.title : null
+                  const pageUrl = matchingTab?.url && matchingTab.url !== 'about:blank' ? matchingTab.url : null
+
+                  let displayTitle = task.taskId
+                  let subtitle: string | null = null
+
+                  if (boundSession?.title) {
+                    displayTitle = boundSession.title
+                    subtitle = pageTitle || task.taskId
+                  } else if (pageTitle) {
+                    displayTitle = pageTitle
+                    subtitle = task.taskId
+                  } else if (pageUrl) {
+                    try {
+                      displayTitle = new URL(pageUrl).hostname
+                    } catch {
+                      displayTitle = pageUrl
+                    }
+
+                    subtitle = task.taskId
+                  }
 
                   return (
                     <div
-                      key={task.taskId}
                       className={cn(
                         'group rounded-md border p-2 text-left transition-colors',
-                        isCurrent
-                          ? 'border-(--ui-stroke-primary) bg-(--ui-main-surface-background)'
-                          : 'border-(--ui-stroke-secondary) bg-(--ui-card-background) hover:border-(--ui-stroke-tertiary)'
+                        isWaitingForHuman
+                          ? 'border-amber-500/50 bg-amber-500/10 hover:border-amber-500'
+                          : isCurrent
+                            ? 'border-(--ui-stroke-primary) bg-(--ui-main-surface-background)'
+                            : 'border-(--ui-stroke-secondary) bg-(--ui-card-background) hover:border-(--ui-stroke-tertiary)'
                       )}
+                      key={task.taskId}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-mono font-medium text-(--ui-text-primary) truncate" title={task.taskId}>
-                          {task.taskId}
-                        </span>
-                        <span className={cn('rounded px-1 py-0.5 text-[9px] font-medium uppercase', badge.color)}>
-                          {badge.label}
+                      <div className="flex items-start justify-between gap-1.5 min-w-0">
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-semibold text-(--ui-text-primary) truncate text-[12px] leading-snug" title={displayTitle}>
+                            {displayTitle}
+                          </span>
+                          {subtitle && subtitle !== displayTitle && (
+                            <span className="font-mono text-[9px] text-(--ui-text-quaternary) truncate mt-0.5" title={subtitle}>
+                              {subtitle}
+                            </span>
+                          )}
+                        </div>
+                        <span className={cn('shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase', isWaitingForHuman ? 'border-amber-500/60 text-amber-400 bg-amber-500/20 font-bold' : badge.color)}>
+                          {isWaitingForHuman ? 'Action Required' : badge.label}
                         </span>
                       </div>
 
@@ -218,6 +266,17 @@ export function TaskRail({
                           >
                             <Codicon name="eye-closed" size="0.7rem" />
                             Hide
+                          </Button>
+                        )}
+                        {onAuditTask && (
+                          <Button
+                            onClick={() => onAuditTask(task.taskId)}
+                            size="xs"
+                            title="Audit Execution Timeline"
+                            variant="ghost"
+                          >
+                            <Codicon name="history" size="0.7rem" />
+                            Audit
                           </Button>
                         )}
                         {onDestroyTask && (

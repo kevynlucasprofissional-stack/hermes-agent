@@ -552,6 +552,7 @@ test('controller binds kanbanCardId and runId and rejects mismatch fail-closed a
     run_id: 'run-101',
     arguments: { url: 'https://example.test/kanban-work-resumed' }
   })
+
   assert.ok(nav)
   assert.equal(second.state().tabs.filter(tab => tab.ownerTaskId === taskId).length, 1)
   assert.equal(persistedTask(taskId)?.kanbanCardId, 'card-alpha')
