@@ -33,6 +33,7 @@ function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
     return null
   }
 }
+
 import {
   clampConsoleHeight,
   compactUrl,
@@ -222,7 +223,13 @@ export function PreviewPane(props: PreviewPaneProps) {
   return <StandardPreviewPane {...props} />
 }
 
-function StandardPreviewPane({ embedded = false, onRestartServer, reloadRequest = 0, tabId, target }: PreviewPaneProps) {
+function StandardPreviewPane({
+  embedded = false,
+  onRestartServer,
+  reloadRequest = 0,
+  tabId,
+  target
+}: PreviewPaneProps) {
   const { t } = useI18n()
   const copy = t.preview.web
   // The console store belongs to the TAB, not this render: the toggles live on

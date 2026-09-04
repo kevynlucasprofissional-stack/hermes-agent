@@ -47,13 +47,21 @@ function kindIcon(kind: string): string {
 }
 
 function kindColor(kind: string, risk?: string): string {
-  if (kind === 'error') {return 'border-red-500/40 text-red-400 bg-red-500/10'}
+  if (kind === 'error') {
+    return 'border-red-500/40 text-red-400 bg-red-500/10'
+  }
 
-  if (kind === 'task_completed') {return 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'}
+  if (kind === 'task_completed') {
+    return 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+  }
 
-  if (risk === 'high' || risk === 'critical') {return 'border-amber-500/40 text-amber-400 bg-amber-500/10'}
+  if (risk === 'high' || risk === 'critical') {
+    return 'border-amber-500/40 text-amber-400 bg-amber-500/10'
+  }
 
-  if (kind === 'navigation') {return 'border-sky-500/30 text-sky-400 bg-sky-500/10'}
+  if (kind === 'navigation') {
+    return 'border-sky-500/30 text-sky-400 bg-sky-500/10'
+  }
 
   return 'border-(--ui-stroke-tertiary) text-(--ui-text-tertiary) bg-(--ui-card-background)'
 }
@@ -71,7 +79,9 @@ export function TaskJournalDrawer({ taskId, onClose, className }: TaskJournalDra
 
     const bridge = window.hermesDesktop?.workstationBrowser
 
-    if (!bridge?.getTaskJournal) {return}
+    if (!bridge?.getTaskJournal) {
+      return
+    }
 
     setLoading(true)
     bridge
@@ -81,7 +91,9 @@ export function TaskJournalDrawer({ taskId, onClose, className }: TaskJournalDra
       .finally(() => setLoading(false))
   }, [taskId])
 
-  if (!taskId) {return null}
+  if (!taskId) {
+    return null
+  }
 
   return (
     <div
@@ -109,9 +121,7 @@ export function TaskJournalDrawer({ taskId, onClose, className }: TaskJournalDra
       {/* Timeline Content */}
       <div className="min-h-0 flex-1 overflow-y-auto p-2.5 space-y-2">
         {loading ? (
-          <div className="py-8 text-center text-xs text-(--ui-text-tertiary)">
-            Loading execution events…
-          </div>
+          <div className="py-8 text-center text-xs text-(--ui-text-tertiary)">Loading execution events…</div>
         ) : events.length === 0 ? (
           <div className="py-8 text-center text-xs text-(--ui-text-quaternary) italic">
             No journal events recorded for this task yet.
@@ -129,20 +139,18 @@ export function TaskJournalDrawer({ taskId, onClose, className }: TaskJournalDra
 
                   <div className="rounded-md border border-(--ui-stroke-secondary) bg-(--ui-card-background) p-2 space-y-1">
                     <div className="flex items-center justify-between gap-1">
-                      <span className={cn('rounded px-1 py-0.5 text-[9px] font-mono font-medium uppercase', badgeStyle)}>
+                      <span
+                        className={cn('rounded px-1 py-0.5 text-[9px] font-mono font-medium uppercase', badgeStyle)}
+                      >
                         <Codicon className="mr-0.5 inline" name={icon} size="0.65rem" />
                         {ev.kind.replace('_', ' ')}
                       </span>
                       {ev.elapsed_seconds !== undefined && ev.elapsed_seconds > 0 && (
-                        <span className="font-mono text-[9px] text-(--ui-text-quaternary)">
-                          +{ev.elapsed_seconds}s
-                        </span>
+                        <span className="font-mono text-[9px] text-(--ui-text-quaternary)">+{ev.elapsed_seconds}s</span>
                       )}
                     </div>
 
-                    <p className="text-xs text-(--ui-text-primary) font-medium leading-snug">
-                      {ev.message}
-                    </p>
+                    <p className="text-xs text-(--ui-text-primary) font-medium leading-snug">{ev.message}</p>
 
                     {ev.url && (
                       <div className="truncate font-mono text-[10px] text-sky-400/90" title={ev.url}>

@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from '@/app/browser/types'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
-import type {
-  WorkstationBrowserBounds,
-  WorkstationBrowserState,
-  WorkstationBrowserTabState
-} from '@/app/browser/types'
 
 export interface WorkstationBrowserPaneProps {
   onPopOut?: () => void
@@ -42,9 +38,18 @@ function rectToBounds(rect: DOMRect): WorkstationBrowserBounds {
 }
 
 function shortTitle(tab: WorkstationBrowserTabState | null): string {
-  if (!tab) return 'Workstation Browser'
-  if (tab.title && tab.title !== 'New Tab') return tab.title
-  if (!tab.url || tab.url === 'about:blank') return 'Blank Page'
+  if (!tab) {
+    return 'Workstation Browser'
+  }
+
+  if (tab.title && tab.title !== 'New Tab') {
+    return tab.title
+  }
+
+  if (!tab.url || tab.url === 'about:blank') {
+    return 'Blank Page'
+  }
+
   try {
     return new URL(tab.url).hostname || tab.url
   } catch {
@@ -65,7 +70,10 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
 
   const run = useCallback(
     async (fn: () => Promise<WorkstationBrowserState>) => {
-      if (!bridge) return
+      if (!bridge) {
+        return
+      }
+
       try {
         setBusy(true)
         setState(await fn())
@@ -78,10 +86,16 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
 
   const publishBounds = useCallback(
     async (attach = false) => {
-      if (!bridge || !hostRef.current) return
+      if (!bridge || !hostRef.current) {
+        return
+      }
       const rect = hostRef.current.getBoundingClientRect()
-      if (rect.width < 1 || rect.height < 1) return
+
+      if (rect.width < 1 || rect.height < 1) {
+        return
+      }
       const bounds = rectToBounds(rect)
+
       if (attach) {
         setState(await bridge.attach(bounds, 'chat'))
       } else {
@@ -92,22 +106,31 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   )
 
   useEffect(() => {
-    if (!bridge) return
+    if (!bridge) {
+      return
+    }
 
     let disposed = false
+
     const off = bridge.onState(next => {
-      if (!disposed) setState(next)
+      if (!disposed) {
+        setState(next)
+      }
     })
 
     void bridge
       .ensure()
       .then(next => {
-        if (disposed) return
+        if (disposed) {
+          return
+        }
         setState(next)
         requestAnimationFrame(() => void publishBounds(true))
       })
       .catch(error => {
-        if (!disposed) setState(current => ({ ...current, lastError: String(error) }))
+        if (!disposed) {
+          setState(current => ({ ...current, lastError: String(error) }))
+        }
       })
 
     return () => {
@@ -118,13 +141,17 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   }, [bridge, publishBounds])
 
   useEffect(() => {
-    if (!bridge || !hostRef.current) return
+    if (!bridge || !hostRef.current) {
+      return
+    }
 
     let frame = 0
+
     const schedule = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => void publishBounds(false))
     }
+
     const observer = new ResizeObserver(schedule)
     observer.observe(hostRef.current)
     window.addEventListener('resize', schedule)
@@ -139,16 +166,23 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   }, [bridge, publishBounds])
 
   const transferToChat = useCallback(async () => {
-    if (!bridge || !hostRef.current) return
+    if (!bridge || !hostRef.current) {
+      return
+    }
     const rect = hostRef.current.getBoundingClientRect()
-    if (rect.width < 1 || rect.height < 1) return
+
+    if (rect.width < 1 || rect.height < 1) {
+      return
+    }
     const bounds = rectToBounds(rect)
     setState(await bridge.transferViewport('chat', bounds))
   }, [bridge])
 
   if (!bridge) {
     return (
-      <div className={cn('grid h-full place-items-center p-4 text-center text-xs text-(--ui-text-secondary)', className)}>
+      <div
+        className={cn('grid h-full place-items-center p-4 text-center text-xs text-(--ui-text-secondary)', className)}
+      >
         Workstation Browser bridge is not available.
       </div>
     )
@@ -232,9 +266,7 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       )}
 
       {state.lastError && (
-        <div className="border-b border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-300">
-          {state.lastError}
-        </div>
+        <div className="border-b border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-300">{state.lastError}</div>
       )}
 
       <div className="relative min-h-0 flex-1 bg-black">

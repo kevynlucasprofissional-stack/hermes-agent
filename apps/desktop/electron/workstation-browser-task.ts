@@ -75,22 +75,38 @@ function validRecoveryState(value: unknown): value is BrowserTaskRecoveryState {
 }
 
 function parsePersistedTask(value: unknown): BrowserTask | null {
-  if (!value || typeof value !== 'object') {return null}
+  if (!value || typeof value !== 'object') {
+    return null
+  }
   const task = value as Partial<BrowserTask> & { status?: unknown; recoveryState?: unknown }
 
-  if (!validText(task.taskId) || !validText(task.createdAt) || !validText(task.updatedAt)) {return null}
+  if (!validText(task.taskId) || !validText(task.createdAt) || !validText(task.updatedAt)) {
+    return null
+  }
 
-  if (!validStatus(task.status) || !validRecoveryState(task.recoveryState)) {return null}
+  if (!validStatus(task.status) || !validRecoveryState(task.recoveryState)) {
+    return null
+  }
 
-  if (!validNullableText(task.panelHost) || !validNullableText(task.controlHost)) {return null}
+  if (!validNullableText(task.panelHost) || !validNullableText(task.controlHost)) {
+    return null
+  }
 
-  if (!validNullableText(task.sessionHost) || !validNullableText(task.localConnection)) {return null}
+  if (!validNullableText(task.sessionHost) || !validNullableText(task.localConnection)) {
+    return null
+  }
 
-  if (!validNullableText(task.leaseState) || typeof task.parked !== 'boolean') {return null}
+  if (!validNullableText(task.leaseState) || typeof task.parked !== 'boolean') {
+    return null
+  }
 
-  if (task.kanbanCardId !== undefined && !validNullableText(task.kanbanCardId)) {return null}
+  if (task.kanbanCardId !== undefined && !validNullableText(task.kanbanCardId)) {
+    return null
+  }
 
-  if (task.runId !== undefined && !validNullableText(task.runId)) {return null}
+  if (task.runId !== undefined && !validNullableText(task.runId)) {
+    return null
+  }
 
   return {
     taskId: task.taskId.trim(),
@@ -110,14 +126,22 @@ function parsePersistedTask(value: unknown): BrowserTask | null {
 }
 
 export function normalizeBrowserTaskSnapshot(value: unknown): BrowserTaskSnapshot | null {
-  if (!value || typeof value !== 'object') {return null}
+  if (!value || typeof value !== 'object') {
+    return null
+  }
   const snapshot = value as { version?: unknown; browserTaskCounter?: unknown; tasks?: unknown }
 
-  if (snapshot.version !== BROWSER_TASK_STATE_VERSION) {return null}
+  if (snapshot.version !== BROWSER_TASK_STATE_VERSION) {
+    return null
+  }
 
-  if (!Number.isInteger(snapshot.browserTaskCounter) || Number(snapshot.browserTaskCounter) < 0) {return null}
+  if (!Number.isInteger(snapshot.browserTaskCounter) || Number(snapshot.browserTaskCounter) < 0) {
+    return null
+  }
 
-  if (!Array.isArray(snapshot.tasks)) {return null}
+  if (!Array.isArray(snapshot.tasks)) {
+    return null
+  }
 
   // One logical task may appear only once. If a crash left duplicate metadata,
   // keep the most recently updated valid record and discard the stale duplicate.
@@ -126,10 +150,14 @@ export function normalizeBrowserTaskSnapshot(value: unknown): BrowserTaskSnapsho
   for (const raw of snapshot.tasks) {
     const parsed = parsePersistedTask(raw)
 
-    if (!parsed) {continue}
+    if (!parsed) {
+      continue
+    }
     const current = deduped.get(parsed.taskId)
 
-    if (!current || parsed.updatedAt >= current.updatedAt) {deduped.set(parsed.taskId, parsed)}
+    if (!current || parsed.updatedAt >= current.updatedAt) {
+      deduped.set(parsed.taskId, parsed)
+    }
   }
 
   return {
@@ -177,7 +205,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
   restore(): BrowserTask[] {
     const snapshot = this.persistence?.load()
 
-    if (!snapshot) {return []}
+    if (!snapshot) {
+      return []
+    }
 
     this.tasks.clear()
     this.browserTaskCounter = snapshot.browserTaskCounter
@@ -243,7 +273,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
       throw new Error(`BrowserTask session identity mismatch: ${taskId}`)
     }
 
-    if (task.sessionHost === sessionHost) {return cloneTask(task)}
+    if (task.sessionHost === sessionHost) {
+      return cloneTask(task)
+    }
 
     task.sessionHost = sessionHost
     task.updatedAt = this.timestamp()
@@ -259,7 +291,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
       throw new Error(`BrowserTask kanban card mismatch: ${taskId}`)
     }
 
-    if (task.kanbanCardId === kanbanCardId) {return cloneTask(task)}
+    if (task.kanbanCardId === kanbanCardId) {
+      return cloneTask(task)
+    }
 
     task.kanbanCardId = kanbanCardId
     task.updatedAt = this.timestamp()
@@ -275,7 +309,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
       throw new Error(`BrowserTask run mismatch: ${taskId}`)
     }
 
-    if (task.runId === runId) {return cloneTask(task)}
+    if (task.runId === runId) {
+      return cloneTask(task)
+    }
 
     task.runId = runId
     task.updatedAt = this.timestamp()
@@ -290,15 +326,21 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     let parkedOther = false
 
     for (const other of this.tasks.values()) {
-      if (other.taskId === taskId || other.status !== 'visible') {continue}
+      if (other.taskId === taskId || other.status !== 'visible') {
+        continue
+      }
       const otherPage = this.livePage(other.taskId)
 
-      if (otherPage) {this.bindings.parkPage(other.taskId, otherPage)}
+      if (otherPage) {
+        this.bindings.parkPage(other.taskId, otherPage)
+      }
       Object.assign(other, { status: 'parked' as const, parked: true, updatedAt: timestamp })
       parkedOther = true
     }
 
-    if (parkedOther) {this.persist()}
+    if (parkedOther) {
+      this.persist()
+    }
 
     const page = this.ensureLivePage(taskId, task)
     this.bindings.showPage(taskId, page, context)
@@ -310,7 +352,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     const task = this.requireTask(taskId)
     const page = this.livePage(taskId)
 
-    if (page) {this.bindings.hidePage(taskId, page)}
+    if (page) {
+      this.bindings.hidePage(taskId, page)
+    }
 
     return this.updateTask(task, { status: 'hidden', parked: false })
   }
@@ -319,7 +363,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     const task = this.requireTask(taskId)
     const page = this.livePage(taskId)
 
-    if (page) {this.bindings.parkPage(taskId, page)}
+    if (page) {
+      this.bindings.parkPage(taskId, page)
+    }
 
     return this.updateTask(task, { status: 'parked', parked: true })
   }
@@ -327,12 +373,16 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
   destroyTask(taskId: string): boolean {
     const task = this.tasks.get(taskId)
 
-    if (!task) {return false}
+    if (!task) {
+      return false
+    }
     // Explicit destroy owns cleanup even when the page is already crashed.
     // Bindings may still need to remove a stale task -> page association.
     const page = this.bindings.pageForTask(taskId)
 
-    if (page) {this.bindings.destroyPage(taskId, page)}
+    if (page) {
+      this.bindings.destroyPage(taskId, page)
+    }
     this.tasks.delete(taskId)
     this.persist()
 
@@ -360,7 +410,9 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
   private requireTask(taskId: string): BrowserTask {
     const task = this.tasks.get(taskId)
 
-    if (!task) {throw new Error(`BrowserTask not found: ${taskId}`)}
+    if (!task) {
+      throw new Error(`BrowserTask not found: ${taskId}`)
+    }
 
     return task
   }
@@ -374,10 +426,14 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
   private ensureLivePage(taskId: string, task: BrowserTask): Page {
     const existing = this.livePage(taskId)
 
-    if (existing) {return existing}
+    if (existing) {
+      return existing
+    }
     const page = this.bindings.ensurePage(taskId)
 
-    if (!this.bindings.pageIsAlive(page)) {throw new Error(`BrowserTask page could not be recovered: ${taskId}`)}
+    if (!this.bindings.pageIsAlive(page)) {
+      throw new Error(`BrowserTask page could not be recovered: ${taskId}`)
+    }
     task.recoveryState = 'recreated'
     task.updatedAt = this.timestamp()
     this.persist()

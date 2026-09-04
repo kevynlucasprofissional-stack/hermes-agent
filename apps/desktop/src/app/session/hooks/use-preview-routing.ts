@@ -193,7 +193,9 @@ export function usePreviewRouting({ baseHandleGatewayEvent, currentCwd, requestG
   useEffect(() => {
     const bridge = window.hermesDesktop?.workstationBrowser
 
-    if (!bridge?.onOpenChatPreview) {return}
+    if (!bridge?.onOpenChatPreview) {
+      return
+    }
 
     return bridge.onOpenChatPreview(() => {
       openWorkstationBrowserPreview()

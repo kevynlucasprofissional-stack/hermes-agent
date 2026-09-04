@@ -1,7 +1,7 @@
 import type { GatewayWsUrlResult } from '@hermes/shared'
 import type { TranslucencyState } from '@hermes/shared/translucency'
-import type { WorkstationBrowserBridge } from './app/browser/types'
 
+import type { WorkstationBrowserBridge } from './app/browser/types'
 import type { WakeIndicatorState } from './lib/wake-indicator'
 import type {
   PetOverlayBounds,

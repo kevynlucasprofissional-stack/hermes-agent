@@ -99,7 +99,12 @@ export function TaskRail({
 
   if (collapsed) {
     return (
-      <div className={cn('flex flex-col items-center border-r border-(--ui-stroke-secondary) bg-(--ui-sidebar-surface-background) p-1.5', className)}>
+      <div
+        className={cn(
+          'flex flex-col items-center border-r border-(--ui-stroke-secondary) bg-(--ui-sidebar-surface-background) p-1.5',
+          className
+        )}
+      >
         <Button
           aria-label="Expand Task Rail"
           onClick={() => setCollapsed(false)}
@@ -109,7 +114,9 @@ export function TaskRail({
         >
           <Codicon name="layout-sidebar-left-off" size="0.75rem" />
         </Button>
-        <span className="mt-2 text-[10px] text-(--ui-text-tertiary) [writing-mode:vertical-lr]">Tasks ({tasks.length})</span>
+        <span className="mt-2 text-[10px] text-(--ui-text-tertiary) [writing-mode:vertical-lr]">
+          Tasks ({tasks.length})
+        </span>
       </div>
     )
   }
@@ -156,13 +163,13 @@ export function TaskRail({
             <div className="flex items-center gap-1 px-1 text-[11px] font-medium text-(--ui-text-tertiary)">
               <Codicon name={group.icon} size="0.7rem" />
               <span>{group.title}</span>
-              <span className="ml-auto font-mono text-[10px] text-(--ui-text-quaternary)">
-                {group.tasks.length}
-              </span>
+              <span className="ml-auto font-mono text-[10px] text-(--ui-text-quaternary)">{group.tasks.length}</span>
             </div>
 
             {group.tasks.length === 0 ? (
-              <p className="px-2 py-1 text-[10px] italic text-(--ui-text-quaternary)">No {group.title.toLowerCase()} tasks</p>
+              <p className="px-2 py-1 text-[10px] italic text-(--ui-text-quaternary)">
+                No {group.title.toLowerCase()} tasks
+              </p>
             ) : (
               <div className="space-y-1">
                 {group.tasks.map(task => {
@@ -170,9 +177,10 @@ export function TaskRail({
                   const isCurrent = task.taskId === activeTaskId
                   const isWaitingForHuman = group.id === 'waiting-for-human' || task.leaseState === 'waiting'
 
-                  const boundSession = sessions.find(s =>
-                    (task.sessionHost && (s.id === task.sessionHost || s.parent_session_id === task.sessionHost)) ||
-                    s.id === task.taskId
+                  const boundSession = sessions.find(
+                    s =>
+                      (task.sessionHost && (s.id === task.sessionHost || s.parent_session_id === task.sessionHost)) ||
+                      s.id === task.taskId
                   )
 
                   const matchingTab = tabs?.find(t => t.ownerTaskId === task.taskId)
@@ -212,16 +220,29 @@ export function TaskRail({
                     >
                       <div className="flex items-start justify-between gap-1.5 min-w-0">
                         <div className="flex flex-col min-w-0 flex-1">
-                          <span className="font-semibold text-(--ui-text-primary) truncate text-[12px] leading-snug" title={displayTitle}>
+                          <span
+                            className="font-semibold text-(--ui-text-primary) truncate text-[12px] leading-snug"
+                            title={displayTitle}
+                          >
                             {displayTitle}
                           </span>
                           {subtitle && subtitle !== displayTitle && (
-                            <span className="font-mono text-[9px] text-(--ui-text-quaternary) truncate mt-0.5" title={subtitle}>
+                            <span
+                              className="font-mono text-[9px] text-(--ui-text-quaternary) truncate mt-0.5"
+                              title={subtitle}
+                            >
                               {subtitle}
                             </span>
                           )}
                         </div>
-                        <span className={cn('shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase', isWaitingForHuman ? 'border-amber-500/60 text-amber-400 bg-amber-500/20 font-bold' : badge.color)}>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase',
+                            isWaitingForHuman
+                              ? 'border-amber-500/60 text-amber-400 bg-amber-500/20 font-bold'
+                              : badge.color
+                          )}
+                        >
                           {isWaitingForHuman ? 'Action Required' : badge.label}
                         </span>
                       </div>
@@ -249,21 +270,13 @@ export function TaskRail({
                           Show
                         </Button>
                         {task.status !== 'parked' && (
-                          <Button
-                            onClick={() => onParkTask?.(task.taskId)}
-                            size="xs"
-                            variant="ghost"
-                          >
+                          <Button onClick={() => onParkTask?.(task.taskId)} size="xs" variant="ghost">
                             <Codicon name="archive" size="0.7rem" />
                             Park
                           </Button>
                         )}
                         {task.status === 'visible' && (
-                          <Button
-                            onClick={() => onHideTask?.(task.taskId)}
-                            size="xs"
-                            variant="ghost"
-                          >
+                          <Button onClick={() => onHideTask?.(task.taskId)} size="xs" variant="ghost">
                             <Codicon name="eye-closed" size="0.7rem" />
                             Hide
                           </Button>

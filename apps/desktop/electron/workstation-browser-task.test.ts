@@ -5,11 +5,7 @@ import path from 'node:path'
 
 import { afterEach, test } from 'vitest'
 
-import {
-  type BrowserTaskBindings,
-  BrowserTaskFilePersistence,
-  BrowserTaskLifecycle
-} from './workstation-browser-task'
+import { type BrowserTaskBindings, BrowserTaskFilePersistence, BrowserTaskLifecycle } from './workstation-browser-task'
 
 interface FakePage {
   id: number
@@ -29,7 +25,9 @@ function fakeBrowser() {
     ensurePage(taskId) {
       const existing = pages.get(taskId)
 
-      if (existing && !existing.destroyed) {return existing}
+      if (existing && !existing.destroyed) {
+        return existing
+      }
 
       const page: FakePage = {
         id: ++pageCounter,
@@ -75,7 +73,9 @@ function fakeBrowser() {
 
 const tempRoots: string[] = []
 afterEach(() => {
-  for (const root of tempRoots.splice(0)) {fs.rmSync(root, { recursive: true, force: true })}
+  for (const root of tempRoots.splice(0)) {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })
 
 function tempStateFile(): string {
@@ -383,10 +383,7 @@ test('bindKanbanCard binds once, allows idempotent repeat, and rejects mismatch 
   const repeat = lifecycle.bindKanbanCard('task-kanban', 'card-123')
   assert.equal(repeat.kanbanCardId, 'card-123')
 
-  assert.throws(
-    () => lifecycle.bindKanbanCard('task-kanban', 'card-other'),
-    /BrowserTask kanban card mismatch/
-  )
+  assert.throws(() => lifecycle.bindKanbanCard('task-kanban', 'card-other'), /BrowserTask kanban card mismatch/)
 })
 
 test('bindRun binds once, allows idempotent repeat, and rejects mismatch fail-closed', () => {
@@ -400,10 +397,7 @@ test('bindRun binds once, allows idempotent repeat, and rejects mismatch fail-cl
   const repeat = lifecycle.bindRun('task-run', 'run-456')
   assert.equal(repeat.runId, 'run-456')
 
-  assert.throws(
-    () => lifecycle.bindRun('task-run', 'run-other'),
-    /BrowserTask run mismatch/
-  )
+  assert.throws(() => lifecycle.bindRun('task-run', 'run-other'), /BrowserTask run mismatch/)
 })
 
 test('persistence preserves kanbanCardId and runId through restart', () => {
@@ -428,4 +422,3 @@ test('persistence preserves kanbanCardId and runId through restart', () => {
   assert.equal(restored[0].kanbanCardId, 'card-100')
   assert.equal(restored[0].runId, 'run-200')
 })
-

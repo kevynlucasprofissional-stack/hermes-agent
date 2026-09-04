@@ -237,7 +237,9 @@ export function openBrowserTab() {
 }
 
 export function isBrowserHubRoute(): boolean {
-  if (typeof window === 'undefined') {return false}
+  if (typeof window === 'undefined') {
+    return false
+  }
   const path = window.location.pathname || ''
   const hash = window.location.hash || ''
 
@@ -391,7 +393,9 @@ export const $sessionPreviewTabs = persistentAtom<Record<string, PreviewTab[]>>(
       try {
         const parsed = JSON.parse(raw) as Record<string, unknown>
 
-        if (!parsed || typeof parsed !== 'object') {return {}}
+        if (!parsed || typeof parsed !== 'object') {
+          return {}
+        }
         const result: Record<string, PreviewTab[]> = {}
 
         for (const [key, value] of Object.entries(parsed)) {
@@ -417,7 +421,9 @@ export function activeSessionKey(): string | null {
 }
 
 export function syncSessionPreviewTabs(nextSessionKey: string | null) {
-  if (nextSessionKey === currentActiveSessionKey) {return}
+  if (nextSessionKey === currentActiveSessionKey) {
+    return
+  }
 
   // Stash current tabs under previous session
   if (currentActiveSessionKey) {
@@ -465,7 +471,9 @@ if (typeof window !== 'undefined') {
   })
 
   $previewTabs.listen(tabs => {
-    if (isSyncingSessionTabs) {return}
+    if (isSyncingSessionTabs) {
+      return
+    }
     const key = activeSessionKey()
 
     if (key) {
@@ -481,4 +489,3 @@ if (typeof window !== 'undefined') {
     }
   })
 }
-

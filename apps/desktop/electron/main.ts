@@ -1,3 +1,5 @@
+import './workstation-browser-runtime'
+
 import { execFile, execFileSync, spawn } from 'node:child_process'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
@@ -29,8 +31,6 @@ import {
   shell,
   systemPreferences
 } from 'electron'
-
-import './workstation-browser-runtime'
 
 import { classifyActiveRuntime } from './active-runtime-state'
 import { destroyKeepaliveAgents, downloadAgentFor, jsonAgentFor, withRetry } from './api-transport'

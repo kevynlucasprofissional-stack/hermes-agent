@@ -231,9 +231,13 @@ function persistedTaskIds(): string[] {
   return composite.browserTasks.tasks.map(task => task.taskId)
 }
 
-function persistedTask(taskId: string): { taskId: string; sessionHost: string | null; kanbanCardId?: string | null; runId?: string | null } | undefined {
+function persistedTask(
+  taskId: string
+): { taskId: string; sessionHost: string | null; kanbanCardId?: string | null; runId?: string | null } | undefined {
   const composite = JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')) as {
-    browserTasks: { tasks: Array<{ taskId: string; sessionHost: string | null; kanbanCardId?: string | null; runId?: string | null }> }
+    browserTasks: {
+      tasks: Array<{ taskId: string; sessionHost: string | null; kanbanCardId?: string | null; runId?: string | null }>
+    }
   }
 
   return composite.browserTasks.tasks.find(task => task.taskId === taskId)
@@ -559,4 +563,3 @@ test('controller binds kanbanCardId and runId and rejects mismatch fail-closed a
   assert.equal(persistedTask(taskId)?.runId, 'run-101')
   await second.destroy()
 })
-
