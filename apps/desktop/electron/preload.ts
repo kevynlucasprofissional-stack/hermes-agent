@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     attach: (bounds, host) => ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host),
     setBounds: bounds => ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds),
     detach: () => ipcRenderer.invoke('hermes:workstation-browser:detach'),
+    setVisible: visible => ipcRenderer.invoke('hermes:workstation-browser:set-visible', visible),
+    clearError: () => ipcRenderer.invoke('hermes:workstation-browser:clear-error'),
     transferViewport: (targetHost, bounds) =>
       ipcRenderer.invoke('hermes:workstation-browser:transfer-viewport', targetHost, bounds),
     listTasks: () => ipcRenderer.invoke('hermes:workstation-browser:list-tasks'),

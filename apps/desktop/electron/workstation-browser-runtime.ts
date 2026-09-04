@@ -540,6 +540,7 @@ export class WorkstationBrowserRuntime {
   private paused = false
   private controlOwner: WorkstationBrowserControlOwner = 'agent'
   private lastError: string | null = null
+  private viewVisible = true
   private cacheBytes: number | null = null
   private cacheTimer: NodeJS.Timeout | null = null
   private control: ControlHandle | null = null
@@ -949,6 +950,33 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
+  setVisible(visible: boolean): WorkstationBrowserState {
+    this.viewVisible = visible
+    const entry = this.activeEntry()
+
+    if (!visible) {
+      if (entry) {
+        this.removeChildView(entry)
+      }
+    } else {
+      if (entry && this.ownerWindow && this.bounds && this.attached) {
+        this.ensureChildView(this.ownerWindow, entry.view)
+        entry.view.setBounds(this.bounds)
+      }
+    }
+
+    return this.state()
+  }
+
+  clearError(): WorkstationBrowserState {
+    if (this.lastError) {
+      this.lastError = null
+      this.emitState()
+    }
+
+    return this.state()
+  }
+
   transferViewport(window: BrowserWindow, targetHost: 'hub' | 'chat' | string, rawBounds: WorkstationBrowserBounds): WorkstationBrowserState {
     if (this.attached) {
       this.detachActiveView(false)
@@ -1077,6 +1105,12 @@ export class WorkstationBrowserRuntime {
         const raw = await readBody(req)
         const request = JSON.parse(raw || '{}') as BrowserControlRequest
         const result = await this.executeControlRequest(request)
+
+        if (this.lastError) {
+          this.lastError = null
+          this.emitState()
+        }
+
         sendJson(res, 200, { success: true, result })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -2098,8 +2132,23 @@ export class WorkstationBrowserRuntime {
   }
 
   private recordError(error: unknown): void {
-    this.lastError = error instanceof Error ? error.message : String(error)
+    const message = error instanceof Error ? error.message : String(error)
+    this.lastError = message
     this.emitState()
+
+    if (
+      message === 'stale_or_unknown_ref' ||
+      message === 'element_not_visible' ||
+      message === 'element_unavailable' ||
+      message === 'ref_required'
+    ) {
+      setTimeout(() => {
+        if (this.lastError === message) {
+          this.lastError = null
+          this.emitState()
+        }
+      }, 7_000).unref?.()
+    }
   }
 
   private emitState(): void {
@@ -2159,6 +2208,12 @@ function registerIpc(): void {
   )
   ipcMain.handle('hermes:workstation-browser:detach', event =>
     getWorkstationBrowserRuntime().detach(senderWindow(event))
+  )
+  ipcMain.handle('hermes:workstation-browser:set-visible', (_event, visible) =>
+    getWorkstationBrowserRuntime().setVisible(Boolean(visible))
+  )
+  ipcMain.handle('hermes:workstation-browser:clear-error', () =>
+    getWorkstationBrowserRuntime().clearError()
   )
   ipcMain.handle('hermes:workstation-browser:transfer-viewport', (event, targetHost, bounds) =>
     getWorkstationBrowserRuntime().transferViewport(

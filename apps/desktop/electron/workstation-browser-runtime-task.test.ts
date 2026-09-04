@@ -718,3 +718,34 @@ test('getStandardChromeUserAgent outputs modern Chrome UA without Electron or he
   assert.equal(ua.includes('Electron'), false)
   assert.equal(ua.includes('hermes'), false)
 })
+
+test('runtime setVisible removes view from window contentView when false and restores on true', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const window = hostWindow()
+  runtime.attach(window as never, { x: 0, y: 0, width: 900, height: 600 }, 'chat')
+
+  assert.equal(window.contentView.children.length, 1)
+
+  // When an overlay/menu is open: setVisible(false) removes child view from compositor
+  runtime.setVisible(false)
+  assert.equal(window.contentView.children.length, 0)
+
+  // When overlay/menu closes: setVisible(true) restores child view
+  runtime.setVisible(true)
+  assert.equal(window.contentView.children.length, 1)
+
+  await runtime.destroy()
+})
+
+test('runtime clearError resets lastError', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  ;(runtime as unknown as { recordError: (err: unknown) => void }).recordError('stale_or_unknown_ref')
+
+  assert.equal(runtime.state().lastError, 'stale_or_unknown_ref')
+  runtime.clearError()
+  assert.equal(runtime.state().lastError, null)
+
+  await runtime.destroy()
+})

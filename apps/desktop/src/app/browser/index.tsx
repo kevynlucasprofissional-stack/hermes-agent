@@ -65,6 +65,22 @@ function rectToBounds(rect: DOMRect): WorkstationBrowserBounds {
   }
 }
 
+function formatBrowserError(error: string): string {
+  if (error === 'stale_or_unknown_ref') {
+    return 'Element reference expired or was detached by page (stale_or_unknown_ref)'
+  }
+
+  if (error === 'element_not_visible') {
+    return 'Element is not visible in current viewport (element_not_visible)'
+  }
+
+  if (error === 'element_unavailable') {
+    return 'Element is unavailable for interaction (element_unavailable)'
+  }
+
+  return error
+}
+
 export function BrowserView() {
   const bridge = window.hermesDesktop?.workstationBrowser
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -254,6 +270,36 @@ export function BrowserView() {
       window.removeEventListener('transitionend', schedule)
     }
   }, [bridge, publishBounds])
+
+  useEffect(() => {
+    if (!bridge?.setVisible) {return}
+
+    let isOverlayPresent = false
+
+    const checkOverlay = () => {
+      const active = Boolean(
+        document.querySelector(
+          '[data-radix-menu-content], [data-slot="context-menu-content"], [data-slot="dropdown-menu-content"], [role="menu"], [data-radix-popper-content-wrapper], [data-radix-dialog-content], [data-radix-select-content]'
+        )
+      )
+
+      if (active !== isOverlayPresent) {
+        isOverlayPresent = active
+        void bridge.setVisible(!active)
+      }
+    }
+
+    const observer = new MutationObserver(checkOverlay)
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+
+      if (isOverlayPresent) {
+        void bridge.setVisible(true)
+      }
+    }
+  }, [bridge])
 
   const submitAddress = (event: FormEvent) => {
     event.preventDefault()
@@ -479,8 +525,18 @@ export function BrowserView() {
       )}
 
       {state.lastError && (
-        <div className="shrink-0 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-300">
-          {state.lastError}
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-300">
+          <span className="truncate" title={state.lastError}>
+            {formatBrowserError(state.lastError)}
+          </span>
+          <button
+            aria-label="Dismiss error"
+            className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] text-red-300/80 hover:bg-red-500/20 hover:text-white"
+            onClick={() => void bridge?.clearError?.()}
+            type="button"
+          >
+            ✕
+          </button>
         </div>
       )}
 

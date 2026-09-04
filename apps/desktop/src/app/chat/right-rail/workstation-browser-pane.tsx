@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
-import { Codicon } from '@/components/ui/codicon'
-import { cn } from '@/lib/utils'
 import type {
   WorkstationBrowserBounds,
   WorkstationBrowserState,
   WorkstationBrowserTabState
 } from '@/app/browser/types'
+import { Button } from '@/components/ui/button'
+import { Codicon } from '@/components/ui/codicon'
+import { cn } from '@/lib/utils'
 
 export interface WorkstationBrowserPaneProps {
   onPopOut?: () => void
@@ -42,14 +42,33 @@ function rectToBounds(rect: DOMRect): WorkstationBrowserBounds {
 }
 
 function shortTitle(tab: WorkstationBrowserTabState | null): string {
-  if (!tab) return 'Workstation Browser'
-  if (tab.title && tab.title !== 'New Tab') return tab.title
-  if (!tab.url || tab.url === 'about:blank') return 'Blank Page'
+  if (!tab) {return 'Workstation Browser'}
+
+  if (tab.title && tab.title !== 'New Tab') {return tab.title}
+
+  if (!tab.url || tab.url === 'about:blank') {return 'Blank Page'}
+
   try {
     return new URL(tab.url).hostname || tab.url
   } catch {
     return tab.url
   }
+}
+
+function formatBrowserError(error: string): string {
+  if (error === 'stale_or_unknown_ref') {
+    return 'Element reference expired or was detached by page (stale_or_unknown_ref)'
+  }
+
+  if (error === 'element_not_visible') {
+    return 'Element is not visible in current viewport (element_not_visible)'
+  }
+
+  if (error === 'element_unavailable') {
+    return 'Element is unavailable for interaction (element_unavailable)'
+  }
+
+  return error
 }
 
 export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrowserPaneProps) {
@@ -65,7 +84,8 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
 
   const run = useCallback(
     async (fn: () => Promise<WorkstationBrowserState>) => {
-      if (!bridge) return
+      if (!bridge) {return}
+
       try {
         setBusy(true)
         setState(await fn())
@@ -78,10 +98,12 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
 
   const publishBounds = useCallback(
     async (attach = false) => {
-      if (!bridge || !hostRef.current) return
+      if (!bridge || !hostRef.current) {return}
       const rect = hostRef.current.getBoundingClientRect()
-      if (rect.width < 1 || rect.height < 1) return
+
+      if (rect.width < 1 || rect.height < 1) {return}
       const bounds = rectToBounds(rect)
+
       if (attach) {
         setState(await bridge.attach(bounds, 'chat'))
       } else {
@@ -92,22 +114,23 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   )
 
   useEffect(() => {
-    if (!bridge) return
+    if (!bridge) {return}
 
     let disposed = false
+
     const off = bridge.onState(next => {
-      if (!disposed) setState(next)
+      if (!disposed) {setState(next)}
     })
 
     void bridge
       .ensure()
       .then(next => {
-        if (disposed) return
+        if (disposed) {return}
         setState(next)
         requestAnimationFrame(() => void publishBounds(true))
       })
       .catch(error => {
-        if (!disposed) setState(current => ({ ...current, lastError: String(error) }))
+        if (!disposed) {setState(current => ({ ...current, lastError: String(error) }))}
       })
 
     return () => {
@@ -118,13 +141,15 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   }, [bridge, publishBounds])
 
   useEffect(() => {
-    if (!bridge || !hostRef.current) return
+    if (!bridge || !hostRef.current) {return}
 
     let frame = 0
+
     const schedule = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => void publishBounds(false))
     }
+
     const observer = new ResizeObserver(schedule)
     observer.observe(hostRef.current)
     window.addEventListener('resize', schedule)
@@ -138,10 +163,41 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     }
   }, [bridge, publishBounds])
 
+  useEffect(() => {
+    if (!bridge?.setVisible) {return}
+
+    let isOverlayPresent = false
+
+    const checkOverlay = () => {
+      const active = Boolean(
+        document.querySelector(
+          '[data-radix-menu-content], [data-slot="context-menu-content"], [data-slot="dropdown-menu-content"], [role="menu"], [data-radix-popper-content-wrapper], [data-radix-dialog-content], [data-radix-select-content]'
+        )
+      )
+
+      if (active !== isOverlayPresent) {
+        isOverlayPresent = active
+        void bridge.setVisible(!active)
+      }
+    }
+
+    const observer = new MutationObserver(checkOverlay)
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+
+      if (isOverlayPresent) {
+        void bridge.setVisible(true)
+      }
+    }
+  }, [bridge])
+
   const transferToChat = useCallback(async () => {
-    if (!bridge || !hostRef.current) return
+    if (!bridge || !hostRef.current) {return}
     const rect = hostRef.current.getBoundingClientRect()
-    if (rect.width < 1 || rect.height < 1) return
+
+    if (rect.width < 1 || rect.height < 1) {return}
     const bounds = rectToBounds(rect)
     setState(await bridge.transferViewport('chat', bounds))
   }, [bridge])
@@ -232,8 +288,18 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       )}
 
       {state.lastError && (
-        <div className="border-b border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-300">
-          {state.lastError}
+        <div className="flex items-center justify-between gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-300">
+          <span className="truncate" title={state.lastError}>
+            {formatBrowserError(state.lastError)}
+          </span>
+          <button
+            aria-label="Dismiss error"
+            className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] text-red-300/80 hover:bg-red-500/20 hover:text-white"
+            onClick={() => void bridge?.clearError?.()}
+            type="button"
+          >
+            ✕
+          </button>
         </div>
       )}
 

@@ -81,6 +81,8 @@ export interface WorkstationBrowserBridge {
   attach: (bounds: WorkstationBrowserBounds, host?: string) => Promise<WorkstationBrowserState>
   setBounds: (bounds: WorkstationBrowserBounds) => Promise<WorkstationBrowserState>
   detach: () => Promise<WorkstationBrowserState>
+  setVisible: (visible: boolean) => Promise<WorkstationBrowserState>
+  clearError: () => Promise<WorkstationBrowserState>
   transferViewport: (targetHost: string, bounds: WorkstationBrowserBounds) => Promise<WorkstationBrowserState>
   listTasks: () => Promise<BrowserTask[]>
   showTask: (taskId: string, bounds: WorkstationBrowserBounds, host?: string) => Promise<BrowserTask>
