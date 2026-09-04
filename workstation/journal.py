@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -91,3 +91,33 @@ class ExecutionJournal:
                 except Exception:
                     continue
         return events
+
+    def read_timeline(self) -> list[dict[str, Any]]:
+        """Return chronological timeline events enriched with elapsed durations."""
+        events = self.read_events()
+        events.sort(key=lambda e: e.timestamp)
+        timeline: list[dict[str, Any]] = []
+        prev_dt = None
+
+        from datetime import datetime
+        for ev in events:
+            d = ev.to_dict()
+            try:
+                cur_dt = datetime.fromisoformat(ev.timestamp)
+                if prev_dt:
+                    d["elapsed_seconds"] = max(0.0, round((cur_dt - prev_dt).total_seconds(), 2))
+                else:
+                    d["elapsed_seconds"] = 0.0
+                prev_dt = cur_dt
+            except Exception:
+                d["elapsed_seconds"] = 0.0
+            timeline.append(d)
+
+        return timeline
+
+
+def get_task_timeline(task_id: str) -> list[dict[str, Any]]:
+    """Retrieve formatted execution timeline for a specific task."""
+    j = ExecutionJournal(task_id, "")
+    return j.read_timeline()
+

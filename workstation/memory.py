@@ -28,9 +28,19 @@ class ProcedureStep:
     value: str = ""
     expectation: str = ""
     required: bool = True
+    anchor_type: str = "selector"
+    fallback_anchors: list[dict[str, str]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {
+            "action": self.action,
+            "target": self.target,
+            "value": self.value,
+            "expectation": self.expectation,
+            "required": self.required,
+            "anchor_type": self.anchor_type,
+            "fallback_anchors": self.fallback_anchors,
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ProcedureStep:
@@ -40,7 +50,55 @@ class ProcedureStep:
             value=str(data.get("value", "")),
             expectation=str(data.get("expectation", "")),
             required=bool(data.get("required", True)),
+            anchor_type=str(data.get("anchor_type", "selector")),
+            fallback_anchors=list(data.get("fallback_anchors", [])),
         )
+
+    def resolve_anchor(self, available_elements: list[dict[str, Any]]) -> str | None:
+        """Resolve the best target identifier across multi-facet fallback anchors.
+
+        Prioritizes semantic stability: testid -> role_name -> text content -> CSS selector.
+        """
+        if not available_elements:
+            return self.target or None
+
+        # 1. Search by testid if present
+        for anchor in self.fallback_anchors:
+            if anchor.get("type") == "testid":
+                val = anchor.get("value", "").lower()
+                for el in available_elements:
+                    attrs = el.get("attributes", {})
+                    tid = str(attrs.get("data-testid", attrs.get("data-test", el.get("testid", "")))).lower()
+                    if val and val == tid:
+                        return str(el.get("ref", el.get("selector", self.target)))
+
+        # 2. Search by role_name
+        for anchor in self.fallback_anchors:
+            if anchor.get("type") == "role_name":
+                val = anchor.get("value", "").lower()
+                role_filter, _, name_filter = val.partition(":")
+                for el in available_elements:
+                    el_role = str(el.get("role", el.get("tag", ""))).lower()
+                    el_name = str(el.get("name", el.get("text", ""))).lower()
+                    if role_filter in el_role and name_filter in el_name:
+                        return str(el.get("ref", el.get("selector", self.target)))
+
+        # 3. Search by semantic text
+        for anchor in self.fallback_anchors:
+            if anchor.get("type") == "text":
+                val = anchor.get("value", "").lower()
+                for el in available_elements:
+                    el_name = str(el.get("name", el.get("text", ""))).lower()
+                    if val and val in el_name:
+                        return str(el.get("ref", el.get("selector", self.target)))
+
+        # 4. Fallback to original target selector
+        for el in available_elements:
+            el_sel = str(el.get("selector", el.get("path", "")))
+            if self.target and self.target == el_sel:
+                return str(el.get("ref", self.target))
+
+        return self.target or None
 
 
 @dataclass(slots=True)
@@ -129,6 +187,19 @@ class ProceduralMemory:
 
     def _persist(self) -> None:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        # Merge on write: read external updates from disk without dropping our in-memory changes
+        if self.storage_path.exists():
+            try:
+                disk_raw = json.loads(self.storage_path.read_text(encoding="utf-8"))
+                if isinstance(disk_raw, list):
+                    for item in disk_raw:
+                        if isinstance(item, dict) and "id" in item:
+                            disk_id = str(item["id"])
+                            if disk_id not in self._procedures:
+                                self._procedures[disk_id] = WebProcedure.from_dict(item)
+            except Exception:
+                pass
+
         temp_file = self.storage_path.with_suffix(".tmp")
         payload = [proc.to_dict() for proc in self._procedures.values()]
         temp_file.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")

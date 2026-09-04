@@ -184,17 +184,127 @@ The LAN, Tailscale, external-extension, memory/perception/drift and Lightpanda M
 13. Recovery E2E: crash controller/browser -> pause -> reconnect -> verify -> resume — **Completed** (`apps/desktop/electron/workstation-browser-runtime-recovery.test.ts`).
 14. Windows clean-install + native BrowserTask/host-composition E2E — **Completed** (`START-HERMES-WORKSTATION.bat`, `install.ps1`, `doctor.ps1`).
 
-## V1.1 — Completed
-
+## V1.1 — Completed & Hardened
+ 
 - Tailscale integration (`workstation/lan/controller.py` - `detect_tailscale`).
 - optional external Hermes Browser Extension compatibility mode (`workstation/routing.py`).
 - richer cache/resource maintenance (`apps/desktop/electron/workstation-browser-runtime.ts` - `cleanupCache`).
-- download/upload UX (`apps/desktop/electron/workstation-browser-runtime.ts` - `downloads` tracking and file chooser).
-- richer multi-task scheduling/ownership policies on top of the one-task/one-live-page invariant (`workstation/scheduler.py` - `MultiTaskScheduler`).
+- download/upload UX (`apps/desktop/electron/workstation-browser-runtime.ts` - `downloads` tracking and interactive Hub drawer).
+- richer multi-task scheduling/ownership policies on top of the one-task/one-live-page invariant (`workstation/scheduler.py` - `MultiTaskScheduler`), hardened with lease timeouts, heartbeats, and orphan task reaping (H-106).
+ 
+## V2 — Completed & Hardened
+ 
+- procedural web memory (`discover -> run -> explore -> learn`) (`workstation/memory.py` - `ProceduralMemory`), hardened with multi-facet fallback anchors (testid -> role -> text -> selector) and concurrent disk merge (H-101).
+- provenance-aware compact perception engine inspired by Lattice (`workstation/perception.py` - `PerceptionEngine`), hardened with hidden/invisible node filtering (H-102) and tiered smart budgeting that guarantees CTA and form preservation under token limits (H-103).
+- drift diagnosis and governed adaptation (`workstation/drift.py` - `DriftGovernor`), hardened with blocking cookie/modal overlay detection (`DISMISS_OVERLAY`) (H-104) and strict financial/destructive action boundaries in `workstation/safety.py`.
+- Lightpanda runtime for ultra-light headless tasks (`workstation/lightpanda.py` & `workstation/routing.py` - `LightpandaAdapter`), hardened with transparent gzip/deflate decompression and fail-closed auth redirect detection (H-105).
+- Windows filesystem atomic resilience: eliminated `EPERM` / `EBUSY` in `BrowserSessionStateFilePersistence` via `copyFileSync` fallback (H-107).
 
-## V2 — Completed
+## V2.1 — Native Chrome Web Store Extensions Support — Completed
 
-- procedural web memory (`discover -> run -> explore -> learn`) (`workstation/memory.py` - `ProceduralMemory`).
-- provenance-aware compact perception engine inspired by Lattice (`workstation/perception.py` - `PerceptionEngine`).
-- drift diagnosis and governed adaptation (`workstation/drift.py` - `DriftGovernor`).
-- Lightpanda runtime for ultra-light headless tasks (`workstation/lightpanda.py` & `workstation/routing.py` - `LightpandaAdapter`).
+- **Chrome Web Store Extension Downloader & Unpacker** — **Completed** (`workstation/extensions.py` - `ChromeExtensionManager`):
+  - Mecanismo para baixar pacotes `.crx` diretamente da Chrome Web Store a partir do ID da extensão ou URL pública (via endpoint oficial de atualização do Chromium: `clients2.google.com/service/update2/crx`).
+  - Descompactação segura com remoção de cabeçalho binário `Cr24` para diretório dedicado no perfil da Workstation (`~/.hermes/workstation/extensions/<extension_id>/`).
+- **Native Electron Runtime Loading** — **Completed** (`apps/desktop/electron/workstation-browser-runtime.ts` - `loadInstalledExtensions`):
+  - Integração no `WorkstationBrowserRuntime` via `this.browserSession.loadExtension(extensionPath, { allowFileAccess: true })`.
+  - Persistência e restauração automática das extensões instaladas durante a inicialização da sessão do Chromium.
+- **Agent Tooling & Extension Interaction** — **Completed** (`workstation/extensions.py`):
+  - Consulta de extensões ativas, resolução de caminhos de opções (`chrome-extension://<id>/options.html`) e integração de adblockers/extensões instaladas.
+- **Desktop UI — Extension Management Hub** — **Completed** (`workstation/extensions.py`):
+  - API de instalação, desinstalação e listagem de extensões.
+
+## V2.5 — Agent Runtime + System Capability Control Plane — Completed
+
+### Agent Runtime / Worker Registry — Completed (`workstation/workers.py`)
+
+Workstation-level abstraction for specialist agent harnesses without replacing Hermes as the primary conductor.
+
+- Normalized discovery, installation/readiness, invocation, task handoff, cancellation and health across compatible worker agents (`WorkerRegistry`, `WorkerHarnessInfo`, `DelegatedTaskHandoff`).
+- Delegation of bounded subtasks to workers (Codex, Claude Code, Antigravity, OpenCode, K-Tools-Neo) while retaining canonical Hermes task/session/card lineage in `ExecutionJournal`.
+- Auditable recording of worker execution steps in canonical journal events.
+- All worker details preserved behind clean adapters without leaking into Workstation core.
+
+### System Capability Layer — Completed (`workstation/host.py`)
+
+Generalized safe host-capability boundary for operations outside the browser.
+
+- Filesystem and workspace operations (`inspect_workspace`);
+- Process/application launch and command execution (`run_command`);
+- Clipboard read/write handoff (`read_clipboard`, `write_clipboard`);
+- Git operations (`git_status`);
+- Desktop notifications (`send_notification`);
+- Machine diagnostics and hardware metrics (`get_diagnostics`).
+- Providers implemented: `WindowsHostCapabilityProvider`, `LinuxHostCapabilityProvider`, and `KToolsNeoCapabilityAdapter` (candidate external automation adapter without hard dependency).
+
+### System Event → Hermes Task pipeline — Completed (`workstation/events.py`)
+
+Inverse automation direction surfacing system events back into canonical Hermes task model (`SystemEventPipeline`).
+
+- Supported event classes: `PROCESS_CRASH`, `BUILD_FAILURE`, `BUILD_SUCCESS`, `DOWNLOAD_COMPLETED`, `REPO_STATE_CHANGED`, `CONTROLLER_HEALTH_CHANGED`, `LONG_RUNNING_JOB_COMPLETED`, `USER_ATTENTION_REQUIRED`.
+- Translates critical/untracked events into canonical Kanban tasks via `WorkstationKanbanBridge` and enriches active tasks via `ExecutionJournal`.
+- Strict retention of provenance, reason, and execution evidence without duplicate schedulers or stores.
+
+### Scoped autonomy / Policy Engine — Completed (`workstation/policy.py`)
+
+Explicit scoped autonomy classifying actions into deterministic security outcomes:
+
+```text
+allow
+sandbox / constrain
+require human confirmation
+deny
+```
+
+- Enforces least privilege per task/capability;
+- Sensitive OS directory protection (`C:\Windows`, `/etc`, `~/.ssh`) and dangerous command pattern protection (`rm -rf /`, `format`, fork bombs) -> `DENY`;
+- Out-of-workspace writes and financial/irreversible actions -> `REQUIRE_APPROVAL`;
+- Untrusted executions -> `SANDBOX`;
+- Full auditable evaluation trail preserved for every action.
+
+### Agent Control Center / observability — Completed (`apps/desktop/src/app/browser/task-rail.tsx`, `task-journal-drawer.tsx`)
+
+Live task rail, task grouping, interactive journal replay player, download drawer, and execution lineage inspection.
+
+## V3 — Cross-platform Agentic Workstation — Completed
+
+### Omarchy as Linux reference host — Completed (`workstation/omarchy.py`)
+
+- `OmarchyAdapter` detecting Omarchy environment, default coding agent, system skills, and normalized agent CLI launcher without distro-specific file hacking.
+
+### Cross-platform host adapters — Completed (`workstation/cross_platform.py`)
+
+- `CrossPlatformHostManager` providing unified capability discovery, execution normalization, and host summaries across Windows and Linux.
+
+### Agentic Desktop Reference Tracking — Completed (`workstation/cross_platform.py` - `AgenticBenchmarkRegistry`)
+
+Lightweight architectural benchmark registry tracking:
+1. Omarchy
+2. Hermes Upstream
+3. OpenHands
+4. OpenCode
+5. Claude Code
+6. Codex
+7. Antigravity
+8. BrowserOS
+
+Evaluating all 4 core architectural questions:
+1. Problem solved?
+2. Does Hermes have this problem?
+3. Expressible in Hermes contracts?
+4. Upstream-delta safe?
+
+### V3 Target Experience — Fulfilled
+
+```text
+one user request
+  → canonical Hermes task/session/card
+  → Hermes plans/orchestrates
+  → optional specialist worker executes a bounded subtask
+  → Browser and/or host capability adapters act under scoped policy
+  → system events can wake or enrich the same task
+  → journal/evidence/recovery stay attached to the canonical lineage
+  → the same semantic workflow can run on supported Windows or Linux hosts
+```
+
+
+

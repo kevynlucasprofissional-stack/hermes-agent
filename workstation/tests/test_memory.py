@@ -65,3 +65,58 @@ def test_procedural_memory_lifecycle():
         reloaded = ProceduralMemory(storage_path=storage)
         assert len(reloaded.list_procedures()) == 1
         assert reloaded.get_procedure(proc.id) is not None
+
+
+def test_procedure_multi_facet_anchoring():
+    # H-101 verification: CSS class/selector changed in SPA build, but testid and semantic role survive
+    step = ProcedureStep(
+        action="click",
+        target="button.btn-primary-v1-obsolete",
+        expectation="Confirm purchase",
+        fallback_anchors=[
+            {"type": "testid", "value": "checkout-submit"},
+            {"type": "role_name", "value": "button:Place Order"},
+            {"type": "text", "value": "Place Order"},
+        ],
+    )
+
+    # Candidate elements on page after redesign
+    available_elements = [
+        {
+            "ref": "node-42",
+            "role": "button",
+            "name": "Place Order Now",
+            "attributes": {"data-testid": "checkout-submit", "class": "tailwind-hash-xyz-987"},
+        },
+        {
+            "ref": "node-10",
+            "role": "link",
+            "name": "Cancel",
+            "attributes": {},
+        },
+    ]
+
+    resolved_ref = step.resolve_anchor(available_elements)
+    assert resolved_ref == "node-42", "Must resolve to node-42 via data-testid anchor despite obsolete CSS selector"
+
+
+def test_concurrent_procedure_persistence():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        storage = Path(tmpdir) / "procedures.json"
+        mem_agent1 = ProceduralMemory(storage_path=storage)
+        mem_agent2 = ProceduralMemory(storage_path=storage)
+
+        # Agent 1 saves workflow A
+        p1 = mem_agent1.record_success("siteA.com", "Workflow A", [{"action": "click", "target": "#btnA"}])
+
+        # Agent 2 saves workflow B without restarting
+        p2 = mem_agent2.record_success("siteB.com", "Workflow B", [{"action": "click", "target": "#btnB"}])
+
+        # Reload fresh instance
+        reloaded = ProceduralMemory(storage_path=storage)
+        procs = reloaded.list_procedures()
+        assert len(procs) == 2
+        proc_sites = {p.site for p in procs}
+        assert "siteA.com" in proc_sites
+        assert "siteB.com" in proc_sites
+

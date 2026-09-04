@@ -21,6 +21,7 @@ class DriftSeverity(str, Enum):
 class AdaptationAction(str, Enum):
     PROCEED = "proceed"
     RETRY_WITH_ADAPTED_TARGET = "retry_with_adapted_target"
+    DISMISS_OVERLAY = "dismiss_overlay"
     RE_EXPLORE = "re_explore"
     REQUIRE_APPROVAL = "require_approval"
     HALT = "halt"
@@ -54,6 +55,11 @@ class DriftGovernor:
     BREAKING_PATTERNS = frozenset({
         "captcha", "verify you are human", "access denied", "blocked",
         "cloudflare", "security check", "session expired", "403 forbidden", "404 not found"
+    })
+
+    OVERLAY_PATTERNS = frozenset({
+        "cookie", "privacy policy", "consent", "we value your privacy",
+        "accept all", "cookies", "notice", "newsletter"
     })
 
     def diagnose(
@@ -127,7 +133,24 @@ class DriftGovernor:
                 evidence={"adapted_node": refs[best_candidate_ref]},
             )
 
-        # 3. Not found anywhere
+        # 3. Check for blocking cookie consent or modal overlay (H-104 Red Team guard)
+        has_overlay_keywords = any(p in page_view_lower for p in self.OVERLAY_PATTERNS)
+        if has_overlay_keywords:
+            for ref, data in refs.items():
+                btn_name = str(data.get("name", "")).lower()
+                btn_role = str(data.get("role", data.get("tag", ""))).lower()
+                if btn_role in {"button", "link"} and any(w in btn_name for w in ["accept", "agree", "allow", "close", "dismiss", "got it", "i understand", "ok"]):
+                    return DriftDiagnosis(
+                        severity=DriftSeverity.BENIGN,
+                        expected_target=expected_target,
+                        actual_target=ref,
+                        confidence=0.88,
+                        reason=f"Cookie/privacy overlay detected blocking workflow; candidate dismiss button found at ref '{ref}' ('{data.get('name')}')",
+                        suggested_action=AdaptationAction.DISMISS_OVERLAY,
+                        evidence={"overlay_button": data},
+                    )
+
+        # 4. Not found anywhere
         return DriftDiagnosis(
             severity=DriftSeverity.STRUCTURAL,
             expected_target=expected_target,
@@ -152,6 +175,9 @@ class DriftGovernor:
         if safety_decision.approval_required or safety_decision.risk in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
             if diagnosis.severity != DriftSeverity.NONE:
                 return AdaptationAction.REQUIRE_APPROVAL
+
+        if diagnosis.suggested_action == AdaptationAction.DISMISS_OVERLAY:
+            return AdaptationAction.DISMISS_OVERLAY
 
         if diagnosis.severity == DriftSeverity.NONE:
             return AdaptationAction.PROCEED

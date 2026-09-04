@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -132,3 +132,25 @@ def test_kanban_bridge_followup_and_completion(tmp_path, monkeypatch):
         events = kanban_db.list_events(conn, parent_id)
         completed_events = [e for e in events if getattr(e, "kind", None) == "completed" or getattr(e, "event", None) == "completed"]
         assert len(completed_events) > 0
+
+
+def test_journal_timeline_elapsed_seconds(tmp_path):
+    journal_file = tmp_path / "timeline-task.jsonl"
+    journal = ExecutionJournal("task-timeline-1", "session-1", file_path=journal_file)
+
+    journal.record(ExecutionEventKind.TASK_CREATED, "Task started")
+    import time
+    time.sleep(0.01)
+    journal.record(ExecutionEventKind.NAVIGATION, "Navigated to home", url="https://example.com")
+    time.sleep(0.01)
+    journal.record(ExecutionEventKind.TASK_COMPLETED, "Task completed successfully")
+
+    timeline = journal.read_timeline()
+    assert len(timeline) == 3
+    assert timeline[0]["kind"] == ExecutionEventKind.TASK_CREATED.value
+    assert timeline[0]["elapsed_seconds"] == 0.0
+    assert timeline[1]["kind"] == ExecutionEventKind.NAVIGATION.value
+    assert "elapsed_seconds" in timeline[1]
+    assert timeline[2]["kind"] == ExecutionEventKind.TASK_COMPLETED.value
+    assert timeline[2]["elapsed_seconds"] >= 0.0
+

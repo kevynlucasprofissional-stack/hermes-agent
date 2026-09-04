@@ -1,4 +1,4 @@
-﻿from workstation.scheduler import MultiTaskScheduler, ScheduledTaskState
+from workstation.scheduler import MultiTaskScheduler, ScheduledTaskState
 
 
 def test_single_active_task_invariant():
@@ -54,3 +54,42 @@ def test_human_intervention_yields_host():
     # Resume t1 -> joins queue
     sched.resume_task("t1")
     assert t1.state == ScheduledTaskState.QUEUED
+
+
+def test_scheduler_reaps_expired_lease_and_advances_queue():
+    # H-106 Red Team verification: orphan active task timeout deadlock prevention
+    sched = MultiTaskScheduler(lease_timeout_seconds=60.0)
+
+    # Task A is active, Task B is waiting in queue
+    t_a = sched.enqueue("task-orphan-a", "s1")
+    t_b = sched.enqueue("task-waiting-b", "s1")
+
+    assert t_a.state == ScheduledTaskState.ACTIVE
+    assert t_b.state == ScheduledTaskState.QUEUED
+
+    # Simulate future timestamp 10 minutes later (lease expired)
+    future_time = "2099-01-01T00:00:00+00:00"
+    reaped = sched.reap_expired_leases(now_iso=future_time)
+
+    assert len(reaped) == 1
+    assert reaped[0].task_id == "task-orphan-a"
+    assert t_a.state == ScheduledTaskState.PARKED
+    assert t_a.metadata.get("park_reason") == "lease_timeout_expired"
+
+    # Host invariant preserved: next task was automatically unblocked and activated!
+    assert t_b.state == ScheduledTaskState.ACTIVE
+    assert sched.active_task() == t_b
+
+
+def test_scheduler_heartbeat_extends_lease():
+    sched = MultiTaskScheduler(lease_timeout_seconds=30.0)
+    t = sched.enqueue("task-alive", "s1")
+    initial_expiry = t.lease_expires_at
+
+    import time
+    time.sleep(0.01)
+    renewed = sched.heartbeat("task-alive")
+    assert renewed is True
+    assert t.lease_expires_at is not None
+    assert t.lease_expires_at >= (initial_expiry or "")
+

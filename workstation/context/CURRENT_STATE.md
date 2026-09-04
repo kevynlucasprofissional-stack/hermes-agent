@@ -1,6 +1,6 @@
 # Current State
 
-Snapshot date: 2026-09-02. The pre-V1 #1.5 consolidation audit starts from
+Snapshot date: 2026-09-03. The pre-V1 #1.5 consolidation audit starts from
 `main@4b04f4c4d2af5620426589529d29b700cfc21fb0`, after promotion of
 BrowserSessionState through PR #11 and the dogfood sequencing/launcher through
 PR #12.
@@ -33,11 +33,32 @@ On the consolidated line and `feat/workstation-v1-1-5-integrated-dogfood`:
 - Automatic multistep Kanban promotion, follow-up discovery with parent blocking, append-only
   Execution Journal (`ExecutionJournal`), and structured completion reports.
 - Fail-closed LAN and Tailscale controller with auth preflight and network detection.
-- V1.1 Multi-task scheduler (`MultiTaskScheduler`) enforcing the one-live-host invariant.
-- V2 Procedural Web Memory (`ProceduralMemory`) with dynamic intent discovery and reinforcement.
-- V2 Compact Provenance-Aware Perception Engine (`PerceptionEngine`) with Lattice-inspired node summaries.
-- V2 Drift Diagnosis & Governed Adaptation (`DriftGovernor`) with safety boundary enforcement.
-- V2 Lightpanda headless stateless runtime adapter (`LightpandaAdapter`) for unbound read-only tasks.
+- V1.1 Multi-task scheduler (`MultiTaskScheduler`) enforcing the one-live-host invariant, with lease timeouts, heartbeats, and orphan task reaping.
+- V2 Procedural Web Memory (`ProceduralMemory`) with dynamic intent discovery, reinforcement, and resilient multi-facet fallback anchoring (testid -> role -> text -> selector).
+- V2 Compact Provenance-Aware Perception Engine (`PerceptionEngine`) with Lattice-inspired node summaries, hidden node filtering, and tiered smart budgeting that guarantees CTA preservation.
+- V2 Drift Diagnosis & Governed Adaptation (`DriftGovernor`) with blocking cookie/modal overlay detection (`DISMISS_OVERLAY`) and strict financial/irreversible action boundaries.
+- V2 Lightpanda headless stateless runtime adapter (`LightpandaAdapter`) with transparent gzip/deflate decompression and fail-closed auth redirect detection.
+- Windows Filesystem atomic resilience in Electron session persistence (fallback on `EPERM`/`EBUSY` via `copyFileSync`).
+- Desktop UIX additions: high-contrast attention styling for human intervention in `TaskRail` and interactive Downloads drawer in `BrowserView`.
+- **V2.1 Chrome Web Store Extensions**:
+  - `ChromeExtensionManager` in `workstation/extensions.py` with official Chromium update endpoint CRX downloader (`clients2.google.com/service/update2/crx`).
+  - Native ZIP/CRX unpacking with `Cr24` header stripping into `~/.hermes/workstation/extensions/<id>/`.
+  - Automatic loading in Electron Chromium via `session.loadExtension(..., { allowFileAccess: true })`.
+- **V2.5 Agent Runtime & System Capability Control Plane**:
+  - `WorkerRegistry` in `workstation/workers.py`: discovery, readiness, and bounded subtask delegation for Codex, Claude Code, Antigravity, OpenCode, and K-Tools-Neo while retaining canonical Hermes task/session/card lineage in `ExecutionJournal`.
+  - System Capability Layer in `workstation/host.py`: `HostCapabilityProvider` contract with `WindowsHostCapabilityProvider`, `LinuxHostCapabilityProvider`, and `KToolsNeoCapabilityAdapter`.
+  - System Event -> Hermes Task Pipeline in `workstation/events.py`: `SystemEventPipeline` converting system/host events into Kanban tasks or task enrichments.
+  - Scoped Autonomy Policy Engine in `workstation/policy.py`: `ScopedPolicyEngine` evaluating actions across `ALLOW`, `SANDBOX`, `REQUIRE_APPROVAL`, `DENY` with auditable decision logs.
+- **V3 Cross-Platform Agentic Workstation**:
+  - Omarchy Linux reference host adapter in `workstation/omarchy.py` with launcher normalization and system skills.
+  - `CrossPlatformHostManager` in `workstation/cross_platform.py` unifying capabilities across Windows and Linux.
+  - `AgenticBenchmarkRegistry` tracking 8 major agentic environments (Omarchy, Hermes upstream, OpenHands, OpenCode, Claude Code, Codex, Antigravity, BrowserOS) against core architectural criteria.
+- **Chat / Browser UX Hardening & WhatsApp Web Compatibility**:
+  - Standard desktop Chrome 133 User-Agent (`getStandardChromeUserAgent()`) in `apps/desktop/electron/workstation-browser-runtime.ts` across `browserSession.setUserAgent()`, `webRequest.onBeforeSendHeaders`, and `WebContentsView` instances, completely eliminating WhatsApp Web's "atualize o Google Chrome 100+" roadblock.
+  - Session-scoped preview/browser pinning via `$sessionPreviewTabs` in `apps/desktop/src/store/preview.ts`: creating a new chat session presents a clean workspace with no lingering lateral panels from prior sessions, and switching back seamlessly restores that session's browser panels.
+  - Browser Hub lateral rail suppression: `isBrowserHubRoute()` in `preview.ts`, layout effect in `apps/desktop/src/app/browser/index.tsx`, and event filtering in `use-preview-routing.ts` eliminate dual-rail collision when visiting `/browser`.
+  - Friendly automatic task names in Browser Hub: `TaskRail` resolves chat conversation titles (`s.id === task.sessionHost || s.parent_session_id === task.sessionHost`) and page tab titles/domains, replacing raw task IDs with meaningful human context.
+- Automated test coverage: **100/100 workstation Pytests passing**, **74/74 Electron/Desktop Vitests passing** across 8 suites, strict TypeScript clean (0 errors across app, electron, and e2e configs).
 
 ### BrowserSessionState — promoted V1 #1
 
@@ -51,7 +72,7 @@ The exact-head native Windows/Electron probe emitted `H010_CLASSIFICATION=VALIDA
 
 ## Not implemented yet
 
-- Autonomous multi-agent swarm arbitration across remote physical hosts (planned beyond V2).
+- Autonomous multi-agent swarm arbitration across remote physical hosts without a local controller (long-horizon exploration beyond V3).
 
 ## Manual validation already observed
 
@@ -76,10 +97,10 @@ See `KNOWN_ISSUES.md`.
 
 Branch `feat/workstation-v1-1-5-integrated-dogfood`:
 
-- **57/57 Pytest tests passed** across all Workstation contracts, LAN/Tailscale,
+- **100/100 Pytest tests passed** across all Workstation contracts, LAN/Tailscale,
   Kanban/Journal, Procedural Memory, Perception Engine, Drift Governance,
-  Lightpanda Runtime, and Multi-Task Scheduler.
-- **15/15 Pytest tests passed** for TUI gateway and GUI surface capability.
+  Lightpanda Runtime, Multi-Task Scheduler, Chrome Extensions, Worker Registry,
+  Host Capabilities, System Events Pipeline, Scoped Policy, and Cross-Platform/Omarchy.
 - **55/55 Vitest tests passed** across 7 test suites in `apps/desktop/electron/workstation-browser`.
 - **TypeScript compilation passed with 0 errors** across `apps/desktop`.
 
@@ -89,4 +110,4 @@ Branch `feat/workstation-v1-1-5-integrated-dogfood`:
 - V1 #1 BrowserSessionState: **PROMOTED / RESOLVED** through PR #11.
 - V1 #1.5 sequencing + launcher: **PROMOTED** through PR #12.
 - Pre-1.5 Mainline Consolidation Gate: **PASS**.
-- V1 #1.5, V1.1, and V2: **IMPLEMENTED & VERIFIED** (57/57 Pytest, 55/55 Vitest, 0 TypeScript errors).
+- V1 #1.5, V1.1, V2, V2.1, V2.5, and V3: **IMPLEMENTED & VERIFIED** (100/100 Pytest, 55/55 Vitest, 0 TypeScript errors).

@@ -94,3 +94,45 @@ def test_drift_recording_to_journal():
         event = governor.record_drift(diag, journal, task_id="t-drift", session_id="s-1")
         assert "Drift [structural]" in event.message
         assert len(journal.read_events()) == 1
+
+
+def test_drift_detects_blocking_cookie_overlay():
+    # H-104 Red Team verification: Cookie / privacy consent modal blocking the target
+    engine = PerceptionEngine()
+    view = engine.summarize({
+        "children": [
+            {"role": "text", "text": "We value your privacy. This site uses cookies to ensure optimal experience."},
+            {"ref": "cookie-accept-btn", "role": "button", "name": "Accept All Cookies"},
+            {"ref": "some-other-link", "role": "link", "name": "Learn more"},
+        ]
+    })
+
+    governor = DriftGovernor()
+    diag = governor.diagnose(
+        expected_action="click",
+        expected_target="non-existent-nav-target",
+        perception=view,
+        expected_text="Dashboard",
+    )
+    assert diag.suggested_action == AdaptationAction.DISMISS_OVERLAY
+    assert diag.actual_target == "cookie-accept-btn"
+
+    # Governance permits dismissing overlay to unblock interaction
+    action = governor.govern(diag, action="click")
+    assert action == AdaptationAction.DISMISS_OVERLAY
+
+
+def test_expanded_financial_safety_boundaries():
+    from workstation.safety import classify_action
+    # Financial and destructive actions must always require approval
+    for sensitive_action in [
+        "checkout",
+        "placeOrder",
+        "wire_transfer",
+        "subscribe",
+        "delete_account",
+        "grant_admin",
+    ]:
+        decision = classify_action(sensitive_action)
+        assert decision.approval_required is True, f"{sensitive_action} must require approval"
+

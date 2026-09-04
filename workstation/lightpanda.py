@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import time
 import urllib.request
@@ -64,12 +64,37 @@ class LightpandaAdapter:
         try:
             req = urllib.request.Request(
                 normalized_url,
-                headers={"User-Agent": self.config.user_agent},
+                headers={
+                    "User-Agent": self.config.user_agent,
+                    "Accept-Encoding": "gzip, deflate",
+                },
             )
             with urllib.request.urlopen(req, timeout=self.config.timeout_seconds) as resp:
+                final_url = resp.geturl().lower()
+                # H-105 Red Team guard: abort and fail-closed if redirected to auth gate
+                auth_signatures = [
+                    "/login", "/signin", "/auth", "/session/new", "/sso",
+                    "accounts.google.com", "login.microsoftonline.com", "auth0.com"
+                ]
+                if any(sig in final_url for sig in auth_signatures):
+                    raise PermissionError(f"AuthRedirectEncountered: target redirected to '{resp.geturl()}', failing closed to internal browser")
+
                 status_code = resp.getcode()
-                charset = resp.headers.get_content_charset() or "utf-8"
+                charset = (resp.headers.get_content_charset() if hasattr(resp.headers, "get_content_charset") else None) or "utf-8"
                 html_bytes = resp.read()
+
+                # Transparent decompression (H-105)
+                content_encoding = resp.headers.get("Content-Encoding", "").lower()
+                if "gzip" in content_encoding:
+                    import gzip
+                    html_bytes = gzip.decompress(html_bytes)
+                elif "deflate" in content_encoding:
+                    import zlib
+                    try:
+                        html_bytes = zlib.decompress(html_bytes)
+                    except zlib.error:
+                        html_bytes = zlib.decompress(html_bytes, -zlib.MAX_WBITS)
+
                 html_text = html_bytes.decode(charset, errors="replace")
 
             # Extract title

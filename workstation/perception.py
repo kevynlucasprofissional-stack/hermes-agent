@@ -58,7 +58,18 @@ class PerceptionEngine:
                     nodes.extend(self._extract_nodes(item, depth, f"{current_path}/{i}"))
             return nodes
 
-        if not isinstance(raw, dict):
+        # Check if explicitly hidden (H-102 Red Team guard)
+        raw_attrs = raw.get("attributes", {}) if isinstance(raw.get("attributes"), dict) else {}
+        node_type = str(raw_attrs.get("type", raw.get("type", ""))).lower()
+        is_hidden = (
+            raw.get("hidden", False) is True
+            or str(raw_attrs.get("aria-hidden", "")).lower() == "true"
+            or raw_attrs.get("hidden") is not None
+            or node_type == "hidden"
+            or "display:none" in str(raw_attrs.get("style", "")).replace(" ", "").lower()
+            or "visibility:hidden" in str(raw_attrs.get("style", "")).replace(" ", "").lower()
+        )
+        if is_hidden:
             return nodes
 
         ref = str(raw.get("ref", raw.get("id", "")))
@@ -87,7 +98,7 @@ class PerceptionEngine:
                 interactive=is_interactive,
                 tag=tag,
                 depth=depth,
-                attributes={k: str(v) for k, v in raw.get("attributes", {}).items()} if isinstance(raw.get("attributes"), dict) else {},
+                attributes={k: str(v) for k, v in raw_attrs.items()},
             ))
 
         # Recurse children
@@ -126,40 +137,82 @@ class PerceptionEngine:
                     "tag": node.tag,
                 }
 
-        # Format compact hierarchical view
-        lines: list[str] = []
-        interactive_count = 0
-
-        # Prioritize interactive and contentful nodes
-        for node in assigned_nodes:
+        # Classify nodes by importance tiers (H-103 Smart Budgeting)
+        # Tier 1 (Must preserve): Actions (buttons, submits) & Inputs (textboxes, selects, forms)
+        # Tier 2: Navigation links
+        # Tier 3: Static Content
+        def format_node_line(node: PerceptionNode) -> str:
             indent = "  " * min(node.depth, 4)
             ref_badge = f"[#{node.ref}] " if node.ref else ""
             val_badge = f' value="{node.value}"' if node.value else ""
             name_label = f'"{node.name}"' if node.name else ""
+            if node.interactive:
+                return f"{indent}- {ref_badge}{node.role} {name_label}{val_badge}".strip()
+            return f"{indent}- {node.role}: {name_label}".strip()
 
+        action_roles = {"button", "tab", "menuitem", "switch"}
+        input_roles = {"textbox", "searchbox", "checkbox", "radio", "combobox"}
+
+        tier_actions: list[tuple[int, str]] = []
+        tier_nav: list[tuple[int, str]] = []
+        tier_content: list[tuple[int, str]] = []
+
+        interactive_count = 0
+        for idx, node in enumerate(assigned_nodes):
             if node.interactive:
                 interactive_count += 1
-                lines.append(f"{indent}- {ref_badge}{node.role} {name_label}{val_badge}".strip())
-            elif node.name:
-                lines.append(f"{indent}- {node.role}: {name_label}".strip())
+            line = format_node_line(node)
+            is_action = node.role in action_roles or node.tag in {"button", "select"}
+            is_input = node.role in input_roles or node.tag in {"input", "textarea"}
+            is_nav = node.role == "link" or node.tag == "a"
 
-        # Check token budget (approximated as 4 chars per token)
-        full_text = "\n".join(lines)
+            if is_action or is_input:
+                tier_actions.append((idx, line))
+            elif is_nav:
+                tier_nav.append((idx, line))
+            else:
+                tier_content.append((idx, line))
+
+        # Build initial full view
+        all_ordered = [(idx, line) for idx, line in sorted(tier_actions + tier_nav + tier_content, key=lambda x: x[0])]
+        full_text = "\n".join(line for _, line in all_ordered)
         est_tokens = len(full_text) // 4
         truncated = False
 
-        if est_tokens > token_budget and lines:
+        if est_tokens > token_budget:
             truncated = True
-            # Binary chop or progressive prune from bottom
-            target_char_count = token_budget * 4
-            pruned_lines: list[str] = []
-            curr_len = 0
-            for line in lines:
-                if curr_len + len(line) + 1 > target_char_count:
-                    break
-                pruned_lines.append(line)
-                curr_len += len(line) + 1
-            pruned_lines.append(f"... [truncated: {len(lines) - len(pruned_lines)} elements omitted to fit token budget]")
+            char_budget = token_budget * 4
+
+            selected_items: list[tuple[int, str]] = []
+            curr_chars = 0
+
+            action_total_chars = sum(len(line) + 1 for _, line in tier_actions)
+            if action_total_chars > char_budget:
+                for item in tier_actions:
+                    if curr_chars + len(item[1]) + 1 <= char_budget:
+                        selected_items.append(item)
+                        curr_chars += len(item[1]) + 1
+                    else:
+                        break
+            else:
+                selected_items = list(tier_actions)
+                curr_chars = action_total_chars
+                for item in tier_nav:
+                    if curr_chars + len(item[1]) + 1 <= char_budget:
+                        selected_items.append(item)
+                        curr_chars += len(item[1]) + 1
+
+                for item in tier_content:
+                    if curr_chars + len(item[1]) + 1 <= char_budget:
+                        selected_items.append(item)
+                        curr_chars += len(item[1]) + 1
+
+            selected_items.sort(key=lambda x: x[0])
+            pruned_lines = [line for _, line in selected_items]
+            omitted = len(all_ordered) - len(selected_items)
+            if omitted > 0:
+                pruned_lines.append(f"... [truncated / smart-budget: {omitted} elements omitted; CTAs/forms prioritized]")
+
             full_text = "\n".join(pruned_lines)
             est_tokens = len(full_text) // 4
 

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -6,8 +6,15 @@ from enum import Enum
 from typing import Any
 
 
+from datetime import datetime, timezone, timedelta
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _lease_expiry(seconds: float) -> str:
+    return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
 
 
 class ScheduledTaskState(str, Enum):
@@ -29,6 +36,7 @@ class ScheduledTask:
     started_at: str | None = None
     completed_at: str | None = None
     lease_owner: str | None = None
+    lease_expires_at: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -43,10 +51,12 @@ class MultiTaskScheduler:
     Guarantees the core Workstation invariant: at most one task can be ACTIVE
     (bound to the live native host) at any given moment. Sibling tasks are queued,
     parked, or waiting for human input in order of priority and arrival.
+    Includes heartbeat and lease expiration guards against orphan task deadlocks.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, lease_timeout_seconds: float = 120.0) -> None:
         self._tasks: dict[str, ScheduledTask] = {}
+        self.lease_timeout_seconds = lease_timeout_seconds
 
     def enqueue(
         self,
@@ -99,7 +109,28 @@ class MultiTaskScheduler:
         next_task.state = ScheduledTaskState.ACTIVE
         next_task.started_at = _utc_now()
         next_task.lease_owner = f"worker-{next_task.task_id}"
+        next_task.lease_expires_at = _lease_expiry(self.lease_timeout_seconds)
         return next_task
+
+    def heartbeat(self, task_id: str) -> bool:
+        """Renew the active task's lease duration."""
+        task = self._tasks.get(task_id)
+        if not task or task.state != ScheduledTaskState.ACTIVE:
+            return False
+        task.lease_expires_at = _lease_expiry(self.lease_timeout_seconds)
+        return True
+
+    def reap_expired_leases(self, now_iso: str | None = None) -> list[ScheduledTask]:
+        """Detect tasks whose leases expired and park them, advancing the queue."""
+        reaped: list[ScheduledTask] = []
+        current_time = now_iso or _utc_now()
+
+        active = self.active_task()
+        if active and active.lease_expires_at and active.lease_expires_at < current_time:
+            self.park_task(active.task_id, reason="lease_timeout_expired")
+            reaped.append(active)
+
+        return reaped
 
     def park_task(self, task_id: str, reason: str = "") -> ScheduledTask | None:
         """Park an active or queued task and dispatch the next candidate."""
@@ -110,6 +141,7 @@ class MultiTaskScheduler:
         was_active = (task.state == ScheduledTaskState.ACTIVE)
         task.state = ScheduledTaskState.PARKED
         task.lease_owner = None
+        task.lease_expires_at = None
         if reason:
             task.metadata["park_reason"] = reason
 
