@@ -4,6 +4,7 @@ import { persistentAtom } from '@/lib/persisted'
 import { normalize } from '@/lib/text'
 
 import { $rightRailActiveTabId, type RightRailTabId, selectRightRailTab } from './layout'
+import { $activeSessionId, $selectedStoredSessionId } from './session'
 
 /**
  * PREVIEW RAIL — one list of tabs, one way in.
@@ -235,6 +236,31 @@ export function openBrowserTab() {
   openPreview(existing?.target ?? { kind: 'url', label: 'Browser', source: 'about:blank', url: 'about:blank' })
 }
 
+export function isBrowserHubRoute(): boolean {
+  if (typeof window === 'undefined') {return false}
+  const path = window.location.pathname || ''
+  const hash = window.location.hash || ''
+
+  return path.startsWith('/browser') || hash.includes('/browser')
+}
+
+/**
+ * Open or re-front the Workstation Browser tab. Reuses the single live
+ * Workstation Chromium instance rather than launching an isolated guest webview.
+ */
+export function openWorkstationBrowserPreview() {
+  if (isBrowserHubRoute()) {
+    return
+  }
+
+  openPreview({
+    kind: 'url',
+    label: 'Workstation Browser',
+    source: 'workstation-browser',
+    url: 'workstation:browser'
+  })
+}
+
 export function closeRightRailTab(tabId: string) {
   const current = $previewTabs.get()
   const index = current.findIndex(tab => tab.id === tabId)
@@ -350,3 +376,109 @@ export function failPreviewServerRestart(taskId: string, message: string) {
     status: 'error'
   })
 }
+
+/**
+ * Session-scoped preview tabs store.
+ * Pins preview/browser panels to the chat session where they were created.
+ */
+const SESSION_TABS_STORAGE_KEY = 'hermes.desktop.sessionPreviewTabs.v2'
+
+export const $sessionPreviewTabs = persistentAtom<Record<string, PreviewTab[]>>(
+  SESSION_TABS_STORAGE_KEY,
+  {},
+  {
+    decode: raw => {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>
+
+        if (!parsed || typeof parsed !== 'object') {return {}}
+        const result: Record<string, PreviewTab[]> = {}
+
+        for (const [key, value] of Object.entries(parsed)) {
+          if (Array.isArray(value)) {
+            result[key] = decodePreviewTabs(JSON.stringify(value))
+          }
+        }
+
+        return result
+      } catch {
+        return {}
+      }
+    },
+    encode: map => JSON.stringify(map)
+  }
+)
+
+let currentActiveSessionKey: string | null = null
+let isSyncingSessionTabs = false
+
+export function activeSessionKey(): string | null {
+  return $selectedStoredSessionId.get() || $activeSessionId.get() || null
+}
+
+export function syncSessionPreviewTabs(nextSessionKey: string | null) {
+  if (nextSessionKey === currentActiveSessionKey) {return}
+
+  // Stash current tabs under previous session
+  if (currentActiveSessionKey) {
+    const current = $previewTabs.get()
+    const map = { ...$sessionPreviewTabs.get() }
+
+    if (current.length > 0) {
+      map[currentActiveSessionKey] = [...current]
+    } else {
+      delete map[currentActiveSessionKey]
+    }
+
+    $sessionPreviewTabs.set(map)
+  }
+
+  currentActiveSessionKey = nextSessionKey
+
+  // For the new session:
+  isSyncingSessionTabs = true
+
+  try {
+    if (!nextSessionKey) {
+      // Clean slate for brand-new session draft
+      closeRightRail()
+    } else {
+      const map = $sessionPreviewTabs.get()
+      const saved = map[nextSessionKey] ?? []
+      $previewTabs.set([...saved])
+      selectRightRailTab(saved.length > 0 ? saved[0].id : null)
+    }
+  } finally {
+    isSyncingSessionTabs = false
+  }
+}
+
+if (typeof window !== 'undefined') {
+  currentActiveSessionKey = activeSessionKey()
+
+  $selectedStoredSessionId.listen(id => {
+    syncSessionPreviewTabs(id || $activeSessionId.get() || null)
+  })
+
+  $activeSessionId.listen(id => {
+    syncSessionPreviewTabs($selectedStoredSessionId.get() || id || null)
+  })
+
+  $previewTabs.listen(tabs => {
+    if (isSyncingSessionTabs) {return}
+    const key = activeSessionKey()
+
+    if (key) {
+      const map = { ...$sessionPreviewTabs.get() }
+
+      if (tabs.length > 0) {
+        map[key] = [...tabs]
+      } else {
+        delete map[key]
+      }
+
+      $sessionPreviewTabs.set(map)
+    }
+  })
+}
+

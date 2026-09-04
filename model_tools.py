@@ -472,6 +472,8 @@ def _compute_tool_definitions(
                     print(f"✅ Enabled legacy toolset '{toolset_name}': {', '.join(legacy_tools)}")
             elif not quiet_mode:
                 print(f"⚠️  Unknown toolset: {toolset_name}")
+        if force_available_tools:
+            tools_to_include.update(force_available_tools)
     else:
         # Default: start with everything
         from toolsets import get_all_toolsets

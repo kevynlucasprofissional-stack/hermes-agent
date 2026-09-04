@@ -56,13 +56,12 @@ def open_preview_tool(url: str, label: str = "") -> str:
 OPEN_PREVIEW_SCHEMA = {
     "name": "open_preview",
     "description": (
-        "Open something in the preview pane beside the chat in the Hermes desktop "
-        "app. Use this when the user asks to see a page, dev server, or file in the "
-        "preview pane — e.g. \"open cnn.com in the preview pane\" or \"preview "
-        "localhost:3000\". Accepts a web URL (a bare domain like www.cnn.com is fine), "
-        "a localhost dev-server URL, or a file path (HTML renders live; other files "
-        "show their contents). The pane opens for the current window only. To close "
-        "the pane or a tab, use close_preview."
+        "Open a local file or dev server in the preview pane beside the chat in the "
+        "Hermes desktop app (e.g. previewing an HTML file, markdown, or localhost:3000). "
+        "IMPORTANT: For general web browsing, interactive web tasks, opening sites, or "
+        "entering the Browser Hub (e.g. 'entra no browser hub e abre o trello', 'abra example.com'), "
+        "do NOT use open_preview — use browser_navigate instead. Use open_preview only when "
+        "the user specifically asks for the side preview pane or to preview local code/HTML."
     ),
     "parameters": {
         "type": "object",

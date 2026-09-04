@@ -49,6 +49,8 @@ class _Handler(BaseHTTPRequestHandler):
                     "runtime": "electron-chromium",
                     "action": payload.get("action"),
                     "task_id": payload.get("task_id"),
+                    "kanban_card_id": payload.get("kanban_card_id"),
+                    "run_id": payload.get("run_id"),
                 },
             },
         )
@@ -147,6 +149,20 @@ def test_internal_only_mode_fails_closed_when_controller_missing(tmp_path, monke
         )
 
 
+def test_unbound_task_defaults_to_fail_closed_when_routing_env_unset(tmp_path, monkeypatch):
+    missing = tmp_path / "missing.json"
+    monkeypatch.setenv("HERMES_WORKSTATION_BROWSER_CONTROL_FILE", str(missing))
+    monkeypatch.setenv("HERMES_WORKSTATION_BROWSER", "1")
+    monkeypatch.delenv("HERMES_WORKSTATION_BROWSER_ROUTING", raising=False)
+    bw._LAST_HEALTH_AT = 0.0
+    bw.clear_workstation_task_binding("new-task")
+    with pytest.raises(bw.WorkstationBrowserUnavailable):
+        bw.workstation_routed_browser_handler(
+            "browser_snapshot", {}, fallback=lambda: "legacy", task_id="new-task"
+        )
+
+
+
 def test_any_successful_internal_action_binds_task(controller):
     _server, control = controller
     bw.workstation_routed_browser_handler(
@@ -179,3 +195,30 @@ def test_navigation_allows_and_normalizes_localhost():
     args = {"url": "localhost:3000/health"}
     bw._validate_navigation(args)
     assert args["url"] == "http://localhost:3000/health"
+
+
+def test_dispatch_forwards_kanban_and_run_identities(controller, monkeypatch):
+    result = bw.workstation_routed_browser_handler(
+        "browser_navigate",
+        {"url": "https://example.com"},
+        fallback=lambda: pytest.fail("legacy fallback must not run"),
+        task_id="task-kanban",
+        kanban_card_id="card-123",
+        run_id="run-456",
+    )
+    decoded = json.loads(result)
+    assert decoded["kanban_card_id"] == "card-123"
+    assert decoded["run_id"] == "run-456"
+
+    monkeypatch.setenv("HERMES_KANBAN_TASK", "card-env-789")
+    monkeypatch.setenv("HERMES_KANBAN_RUN_ID", "run-env-012")
+    result_env = bw.workstation_routed_browser_handler(
+        "browser_navigate",
+        {"url": "https://example.com"},
+        fallback=lambda: pytest.fail("legacy fallback must not run"),
+        task_id="task-kanban-env",
+    )
+    decoded_env = json.loads(result_env)
+    assert decoded_env["kanban_card_id"] == "card-env-789"
+    assert decoded_env["run_id"] == "run-env-012"
+

@@ -62,7 +62,9 @@ export interface BrowserSessionStateSnapshot {
 type BrowserSessionStateFileSystem = Pick<
   typeof fs,
   'chmodSync' | 'existsSync' | 'mkdirSync' | 'readFileSync' | 'renameSync' | 'rmSync' | 'writeFileSync'
->
+> & {
+  copyFileSync?: typeof fs.copyFileSync
+}
 
 function browserTaskEmptySnapshot(): BrowserTaskSnapshot {
   return {
@@ -525,7 +527,21 @@ export class BrowserSessionStateFilePersistence {
 
     try {
       this.io.writeFileSync(temp, JSON.stringify(normalized, null, 2), { encoding: 'utf-8', mode: 0o600 })
-      this.io.renameSync(temp, this.filePath)
+
+      try {
+        this.io.renameSync(temp, this.filePath)
+      } catch (renameErr: any) {
+        if (
+          renameErr &&
+          (renameErr.code === 'EPERM' || renameErr.code === 'EBUSY') &&
+          typeof this.io.copyFileSync === 'function'
+        ) {
+          this.io.copyFileSync(temp, this.filePath)
+          this.io.rmSync(temp, { force: true })
+        } else {
+          throw renameErr
+        }
+      }
     } catch (error) {
       try {
         this.io.rmSync(temp, { force: true })

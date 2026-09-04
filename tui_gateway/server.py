@@ -3982,6 +3982,7 @@ def _set_session_context(
                         )
                     break
         return set_session_vars(
+            platform=source,
             session_key=session_key,
             session_id=session_id,
             source=source,

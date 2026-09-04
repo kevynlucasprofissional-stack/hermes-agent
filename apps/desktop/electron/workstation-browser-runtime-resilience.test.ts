@@ -231,9 +231,9 @@ function persistedTaskIds(): string[] {
   return composite.browserTasks.tasks.map(task => task.taskId)
 }
 
-function persistedTask(taskId: string): { taskId: string; sessionHost: string | null } | undefined {
+function persistedTask(taskId: string): { taskId: string; sessionHost: string | null; kanbanCardId?: string | null; runId?: string | null } | undefined {
   const composite = JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')) as {
-    browserTasks: { tasks: Array<{ taskId: string; sessionHost: string | null }> }
+    browserTasks: { tasks: Array<{ taskId: string; sessionHost: string | null; kanbanCardId?: string | null; runId?: string | null }> }
   }
 
   return composite.browserTasks.tasks.find(task => task.taskId === taskId)
@@ -487,3 +487,76 @@ test('failed session identity persistence remains fail-closed and converges on t
   assert.equal(persistedTask(taskId)?.sessionHost, 'hermes-session-a')
   await runtime.destroy()
 })
+
+test('controller binds kanbanCardId and runId and rejects mismatch fail-closed across restarts', async () => {
+  runtimeHome()
+  const taskId = 'task-kanban-identity-linked'
+  const first = new WorkstationBrowserRuntime()
+
+  await executeControlRequest(first, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    session_id: 'hermes-session-k',
+    kanban_card_id: 'card-alpha',
+    run_id: 'run-101',
+    arguments: { url: 'https://example.test/kanban-work' }
+  })
+
+  const taskFirst = first.listTasks().find(task => task.taskId === taskId)
+  assert.equal(taskFirst?.sessionHost, 'hermes-session-k')
+  assert.equal(taskFirst?.kanbanCardId, 'card-alpha')
+  assert.equal(taskFirst?.runId, 'run-101')
+  assert.equal(persistedTask(taskId)?.kanbanCardId, 'card-alpha')
+  assert.equal(persistedTask(taskId)?.runId, 'run-101')
+  await first.destroy()
+
+  const second = new WorkstationBrowserRuntime()
+  second.ensure()
+  const taskSecond = second.listTasks().find(task => task.taskId === taskId)
+  assert.equal(taskSecond?.sessionHost, 'hermes-session-k')
+  assert.equal(taskSecond?.kanbanCardId, 'card-alpha')
+  assert.equal(taskSecond?.runId, 'run-101')
+
+  await assert.rejects(
+    () =>
+      executeControlRequest(second, {
+        action: 'browser_snapshot',
+        task_id: taskId,
+        session_id: 'hermes-session-k',
+        kanban_card_id: 'card-different',
+        run_id: 'run-101',
+        arguments: {}
+      }),
+    /kanban card mismatch/
+  )
+
+  await assert.rejects(
+    () =>
+      executeControlRequest(second, {
+        action: 'browser_snapshot',
+        task_id: taskId,
+        session_id: 'hermes-session-k',
+        kanban_card_id: 'card-alpha',
+        run_id: 'run-different',
+        arguments: {}
+      }),
+    /run mismatch/
+  )
+
+  // Idempotent with same identities succeeds and resumes task work
+  const nav = await executeControlRequest(second, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    session_id: 'hermes-session-k',
+    kanban_card_id: 'card-alpha',
+    run_id: 'run-101',
+    arguments: { url: 'https://example.test/kanban-work-resumed' }
+  })
+
+  assert.ok(nav)
+  assert.equal(second.state().tabs.filter(tab => tab.ownerTaskId === taskId).length, 1)
+  assert.equal(persistedTask(taskId)?.kanbanCardId, 'card-alpha')
+  assert.equal(persistedTask(taskId)?.runId, 'run-101')
+  await second.destroy()
+})
+

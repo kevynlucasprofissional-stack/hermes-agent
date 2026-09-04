@@ -19,7 +19,7 @@ class WorkstationConfig:
 
     @property
     def browser_routing_enabled(self) -> bool:
-        return bool(self.raw.get("browser", {}).get("routing", {}).get("enabled", True))
+        return bool(self.raw.get("browser", {}).get("routing", {}).get("enabled", False))
 
     @property
     def lan_enabled(self) -> bool:

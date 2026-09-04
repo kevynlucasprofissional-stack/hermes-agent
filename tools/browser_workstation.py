@@ -113,10 +113,18 @@ def workstation_schema_tools_for_current_session() -> set[str]:
 
 
 def workstation_routing_enabled() -> bool:
-    """Whether an unbound task may fall back to legacy browser backends."""
-    if not _bool_env("HERMES_WORKSTATION_BROWSER_ROUTING", True):
-        return False
-    return bool(_browser_config().get("routing_enabled", True))
+    """Whether an unbound task may fall back to legacy browser backends.
+
+    Hermes Workstation operates with its internal embedded Chromium as its sole
+    browser. Fallback to upstream/legacy backends (agent-browser/Playwright) is
+    disabled by default so that Workstation sessions never unintentionally spawn
+    external browser processes. Set HERMES_WORKSTATION_BROWSER_ROUTING=1 or
+    browser.workstation.routing_enabled: true to explicitly re-enable fallback.
+    """
+    raw_env = os.getenv("HERMES_WORKSTATION_BROWSER_ROUTING")
+    if raw_env is not None:
+        return raw_env.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(_browser_config().get("routing_enabled", False))
 
 
 def _workstation_home() -> Path:
@@ -311,6 +319,8 @@ def _dispatch(
     *,
     task_id: Optional[str],
     session_id: Optional[str],
+    kanban_card_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> str:
     if action == "browser_navigate":
         _validate_navigation(args)
@@ -319,15 +329,22 @@ def _dispatch(
         timeout = float(os.getenv("HERMES_WORKSTATION_BROWSER_TIMEOUT", str(_DEFAULT_TIMEOUT_SECONDS)))
     except ValueError:
         timeout = _DEFAULT_TIMEOUT_SECONDS
+    card_id = (kanban_card_id or os.environ.get("HERMES_KANBAN_TASK") or "").strip() or None
+    rid = (run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
+    payload: Dict[str, Any] = {
+        "action": action,
+        "arguments": dict(args),
+        "task_id": key,
+        "session_id": session_id,
+    }
+    if card_id:
+        payload["kanban_card_id"] = card_id
+    if rid:
+        payload["run_id"] = rid
     response = _request_json(
         "POST",
         "/v1/action",
-        {
-            "action": action,
-            "arguments": dict(args),
-            "task_id": key,
-            "session_id": session_id,
-        },
+        payload,
         timeout=max(0.25, timeout),
     )
     result = _force_redact(response.get("result"))
@@ -336,6 +353,12 @@ def _dispatch(
     # fails closed even after an agent-process restart/reconnect that resumes an
     # existing Desktop tab with snapshot/read before another navigate.
     _bind(key)
+    if action == "browser_navigate":
+        try:
+            from tools import desktop_ui
+            desktop_ui.emit("workstation.browser.open", {"url": str(args.get("url") or ""), "task_id": key})
+        except Exception:
+            pass
     if isinstance(result, str):
         return result
     return json.dumps(result, ensure_ascii=False)
@@ -348,6 +371,8 @@ def workstation_routed_browser_handler(
     fallback: Callable[[], Any],
     task_id: Optional[str] = None,
     session_id: Optional[str] = None,
+    kanban_card_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Any:
     """Route one ``browser_*`` call to internal Chromium or the legacy lane."""
     if not workstation_browser_enabled():
@@ -360,11 +385,19 @@ def workstation_routed_browser_handler(
     if not available:
         if bound or not workstation_routing_enabled():
             raise WorkstationBrowserUnavailable(
-                "Hermes Browser is unavailable for a task bound to its persistent session. "
-                "The task fails closed; restore/restart Hermes Desktop and retry instead of switching browsers."
+                "Hermes Workstation Browser controller is unavailable. "
+                "Hermes Workstation is configured to fail closed and never fall back to external legacy browser processes. "
+                "Please start or restart Hermes Desktop via START-HERMES-WORKSTATION.bat to ensure the integrated browser runtime is active."
             )
         return fallback()
 
     # Once selected, the internal browser is authoritative for this call.
     # Dispatch failures propagate and never trigger a second browser lane.
-    return _dispatch(action, args, task_id=task_id, session_id=session_id)
+    return _dispatch(
+        action,
+        args,
+        task_id=task_id,
+        session_id=session_id,
+        kanban_card_id=kanban_card_id,
+        run_id=run_id,
+    )

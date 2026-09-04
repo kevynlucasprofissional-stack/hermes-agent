@@ -37,6 +37,8 @@ class BrowserRoutingPolicy:
             return BrowserBackend.INTERNAL
         if ctx.heavy_adaptive_flow:
             return BrowserBackend.BROWSER_EXEC
+        if ctx.public_read_only and ctx.headless_ok:
+            return BrowserBackend.LIGHTPANDA
         if ctx.public_read_only:
             return BrowserBackend.AGENT_BROWSER
         return BrowserBackend.INTERNAL

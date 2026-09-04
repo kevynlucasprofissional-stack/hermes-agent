@@ -6,9 +6,9 @@ import path from 'node:path'
 import { afterEach, test } from 'vitest'
 
 import {
+  type BrowserTaskBindings,
   BrowserTaskFilePersistence,
-  BrowserTaskLifecycle,
-  type BrowserTaskBindings
+  BrowserTaskLifecycle
 } from './workstation-browser-task'
 
 interface FakePage {
@@ -28,7 +28,9 @@ function fakeBrowser() {
   const bindings: BrowserTaskBindings<FakePage, { host: string }> = {
     ensurePage(taskId) {
       const existing = pages.get(taskId)
-      if (existing && !existing.destroyed) return existing
+
+      if (existing && !existing.destroyed) {return existing}
+
       const page: FakePage = {
         id: ++pageCounter,
         taskId,
@@ -37,7 +39,9 @@ function fakeBrowser() {
         visible: false,
         parked: true
       }
+
       pages.set(taskId, page)
+
       return page
     },
     pageForTask: taskId => pages.get(taskId) ?? null,
@@ -71,12 +75,13 @@ function fakeBrowser() {
 
 const tempRoots: string[] = []
 afterEach(() => {
-  for (const root of tempRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true })
+  for (const root of tempRoots.splice(0)) {fs.rmSync(root, { recursive: true, force: true })}
 })
 
 function tempStateFile(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-browser-task-'))
   tempRoots.push(root)
+
   return path.join(root, 'browser-tasks.json')
 }
 
@@ -256,6 +261,8 @@ test('restart preserves metadata, normalizes it to parked, and lazily recreates 
       panelHost: restored[0].panelHost,
       controlHost: restored[0].controlHost,
       sessionHost: restored[0].sessionHost,
+      kanbanCardId: restored[0].kanbanCardId,
+      runId: restored[0].runId,
       localConnection: restored[0].localConnection,
       leaseState: restored[0].leaseState,
       status: restored[0].status,
@@ -267,6 +274,8 @@ test('restart preserves metadata, normalizes it to parked, and lazily recreates 
       panelHost: 'panel-1',
       controlHost: 'control-1',
       sessionHost: 'session-1',
+      kanbanCardId: null,
+      runId: null,
       localConnection: 'local-1',
       leaseState: 'retained',
       status: 'parked',
@@ -300,11 +309,13 @@ test('persistence excludes page URLs and page-scoped secrets', () => {
   assert.deepEqual(Object.keys(JSON.parse(persisted).tasks[0]).sort(), [
     'controlHost',
     'createdAt',
+    'kanbanCardId',
     'leaseState',
     'localConnection',
     'panelHost',
     'parked',
     'recoveryState',
+    'runId',
     'sessionHost',
     'status',
     'taskId',
@@ -360,3 +371,61 @@ test('persistence prunes invalid and duplicate task metadata on restore', () => 
   assert.equal(restored[0].panelHost, 'newer-panel')
   assert.equal(restored[0].status, 'parked')
 })
+
+test('bindKanbanCard binds once, allows idempotent repeat, and rejects mismatch fail-closed', () => {
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings)
+  lifecycle.createTask({ taskId: 'task-kanban' })
+
+  const bound = lifecycle.bindKanbanCard('task-kanban', 'card-123')
+  assert.equal(bound.kanbanCardId, 'card-123')
+
+  const repeat = lifecycle.bindKanbanCard('task-kanban', 'card-123')
+  assert.equal(repeat.kanbanCardId, 'card-123')
+
+  assert.throws(
+    () => lifecycle.bindKanbanCard('task-kanban', 'card-other'),
+    /BrowserTask kanban card mismatch/
+  )
+})
+
+test('bindRun binds once, allows idempotent repeat, and rejects mismatch fail-closed', () => {
+  const browser = fakeBrowser()
+  const lifecycle = new BrowserTaskLifecycle(browser.bindings)
+  lifecycle.createTask({ taskId: 'task-run' })
+
+  const bound = lifecycle.bindRun('task-run', 'run-456')
+  assert.equal(bound.runId, 'run-456')
+
+  const repeat = lifecycle.bindRun('task-run', 'run-456')
+  assert.equal(repeat.runId, 'run-456')
+
+  assert.throws(
+    () => lifecycle.bindRun('task-run', 'run-other'),
+    /BrowserTask run mismatch/
+  )
+})
+
+test('persistence preserves kanbanCardId and runId through restart', () => {
+  const stateFile = tempStateFile()
+  const beforeBrowser = fakeBrowser()
+  const before = new BrowserTaskLifecycle(beforeBrowser.bindings, new BrowserTaskFilePersistence(stateFile))
+
+  before.createTask({
+    taskId: 'task-full-identity',
+    sessionHost: 'session-xyz',
+    kanbanCardId: 'card-100',
+    runId: 'run-200'
+  })
+
+  const afterBrowser = fakeBrowser()
+  const after = new BrowserTaskLifecycle(afterBrowser.bindings, new BrowserTaskFilePersistence(stateFile))
+  const restored = after.restore()
+
+  assert.equal(restored.length, 1)
+  assert.equal(restored[0].taskId, 'task-full-identity')
+  assert.equal(restored[0].sessionHost, 'session-xyz')
+  assert.equal(restored[0].kanbanCardId, 'card-100')
+  assert.equal(restored[0].runId, 'run-200')
+})
+

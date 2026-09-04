@@ -45,6 +45,8 @@ function browserTaskSnapshot(taskIds: string[] = []): BrowserTaskSnapshot {
       panelHost: null,
       controlHost: null,
       sessionHost: `hermes-session-${index}`,
+      kanbanCardId: null,
+      runId: null,
       localConnection: null,
       status: 'parked',
       leaseState: null,
@@ -381,3 +383,39 @@ test('empty state is versioned and contains BrowserTask identity linkage without
   assert.deepEqual(state.tabs, [])
   assert.deepEqual(state.browserTasks.tasks, [])
 })
+
+test('composite state persists and normalizes kanbanCardId and runId identity linkages', () => {
+  const { stateFile, legacyTaskFile } = tempFiles()
+  const persistence = new BrowserSessionStateFilePersistence(stateFile, legacyTaskFile)
+
+  const tasks: BrowserTaskSnapshot = {
+    version: BROWSER_TASK_STATE_VERSION,
+    browserTaskCounter: 1,
+    tasks: [
+      {
+        taskId: 'task-kanban-link',
+        createdAt: '2026-08-30T10:00:00.000Z',
+        panelHost: null,
+        controlHost: null,
+        sessionHost: 'hermes-session-42',
+        kanbanCardId: 'card-abc-123',
+        runId: 'run-xyz-789',
+        localConnection: null,
+        status: 'parked',
+        leaseState: null,
+        parked: true,
+        recoveryState: 'restored',
+        updatedAt: '2026-08-30T10:00:00.000Z'
+      }
+    ]
+  }
+
+  persistence.browserTaskPersistence().save(tasks)
+  const loaded = persistence.load()
+  assert.ok(loaded)
+  assert.equal(loaded.browserTasks.tasks[0]?.taskId, 'task-kanban-link')
+  assert.equal(loaded.browserTasks.tasks[0]?.sessionHost, 'hermes-session-42')
+  assert.equal(loaded.browserTasks.tasks[0]?.kanbanCardId, 'card-abc-123')
+  assert.equal(loaded.browserTasks.tasks[0]?.runId, 'run-xyz-789')
+})
+

@@ -72,3 +72,40 @@ def test_desktop_source_grants_capability_without_process_env():
         assert "browser_exec" not in tools
     finally:
         clear_session_vars(tokens)
+
+
+def test_desktop_surface_preserves_workstation_browser_tools_when_toolset_omitted_from_enabled(monkeypatch):
+    """When enabled_toolsets lacks 'browser' (e.g. custom platform_toolsets.cli or focus posture),
+    a Desktop session still receives Workstation Browser tools via surface capability,
+    while a TUI session strictly does not.
+    """
+    tokens_desktop = set_session_vars(platform="desktop", source="desktop", session_id="schema-desktop-omitted")
+    try:
+        tools = {
+            item["function"]["name"]
+            for item in model_tools.get_tool_definitions(
+                enabled_toolsets=["terminal", "file"],
+                quiet_mode=True,
+                skip_tool_search_assembly=True,
+            )
+        }
+        assert TARGET in tools
+        assert "browser_snapshot" in tools
+    finally:
+        clear_session_vars(tokens_desktop)
+
+    tokens_tui = set_session_vars(platform="tui", source="tui", session_id="schema-tui-omitted")
+    try:
+        tools_tui = {
+            item["function"]["name"]
+            for item in model_tools.get_tool_definitions(
+                enabled_toolsets=["terminal", "file"],
+                quiet_mode=True,
+                skip_tool_search_assembly=True,
+            )
+        }
+        assert TARGET not in tools_tui
+        assert "browser_snapshot" not in tools_tui
+    finally:
+        clear_session_vars(tokens_tui)
+

@@ -23,19 +23,35 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     reload: () => ipcRenderer.invoke('hermes:workstation-browser:reload'),
     stop: () => ipcRenderer.invoke('hermes:workstation-browser:stop'),
     focus: () => ipcRenderer.invoke('hermes:workstation-browser:focus'),
-    attach: bounds => ipcRenderer.invoke('hermes:workstation-browser:attach', bounds),
+    attach: (bounds, host) => ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host),
     setBounds: bounds => ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds),
     detach: () => ipcRenderer.invoke('hermes:workstation-browser:detach'),
+    transferViewport: (targetHost, bounds) =>
+      ipcRenderer.invoke('hermes:workstation-browser:transfer-viewport', targetHost, bounds),
+    listTasks: () => ipcRenderer.invoke('hermes:workstation-browser:list-tasks'),
+    showTask: (taskId, bounds, host) =>
+      ipcRenderer.invoke('hermes:workstation-browser:show-task', taskId, bounds, host),
+    hideTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:hide-task', taskId),
+    parkTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:park-task', taskId),
+    destroyTask: taskId => ipcRenderer.invoke('hermes:workstation-browser:destroy-task', taskId),
+    clearParkedTasks: () => ipcRenderer.invoke('hermes:workstation-browser:clear-parked-tasks'),
     pause: () => ipcRenderer.invoke('hermes:workstation-browser:pause'),
     resume: () => ipcRenderer.invoke('hermes:workstation-browser:resume'),
     takeControl: () => ipcRenderer.invoke('hermes:workstation-browser:take-control'),
     releaseControl: () => ipcRenderer.invoke('hermes:workstation-browser:release-control'),
     cleanupCache: force => ipcRenderer.invoke('hermes:workstation-browser:cleanup-cache', force),
+    getTaskJournal: taskId => ipcRenderer.invoke('hermes:workstation-browser:task-journal', taskId),
     onState: callback => {
       const listener = (_event, state) => callback(state)
       ipcRenderer.on('hermes:workstation-browser:state', listener)
 
       return () => ipcRenderer.removeListener('hermes:workstation-browser:state', listener)
+    },
+    onOpenChatPreview: callback => {
+      const listener = (_event, data) => callback(data)
+      ipcRenderer.on('hermes:workstation-browser:open-chat-preview', listener)
+
+      return () => ipcRenderer.removeListener('hermes:workstation-browser:open-chat-preview', listener)
     }
   },
   glassSupported: translucencySupport?.glass === true,
