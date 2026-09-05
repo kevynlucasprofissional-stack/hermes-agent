@@ -306,5 +306,89 @@ one user request
   → the same semantic workflow can run on supported Windows or Linux hosts
 ```
 
+## V3.1 — Runtime Resilience, Recovery Plane & Deterministic Routine Promotion — Planned
 
+**Purpose:** harden Hermes Workstation as a long-lived agentic system by separating the mechanisms that keep the runtime alive, rescue a broken installation, and replay already-understood workflows from the LLM-driven reasoning path.
 
+This milestone extends existing V2 procedural memory and V2.5 runtime/control-plane work; it must **not** introduce a second Hermes SessionDB, Kanban, Memory store, browser page store, task scheduler, or competing source of truth.
+
+### Independent Runtime Supervisor — Planned
+
+The process responsible for keeping Hermes alive must live outside the agent runtime it supervises.
+
+- Add a minimal supervisor/service process that owns runtime start, health checks, restart, crash-loop detection and controlled shutdown.
+- The agent runtime may request restart/update, but must never depend on itself remaining alive to complete its own resurrection.
+- Track a last-known-good runtime/profile checkpoint and detect failed startup after update or configuration change.
+- Support safe update handoff and rollback without requiring the Desktop UI to remain functional.
+- Emit lifecycle events into the existing Workstation event/journal path instead of creating a parallel operational history.
+
+**Acceptance:** deliberately crash or self-stop the Hermes runtime and prove the independent supervisor restores service or rolls back to a known-good state without relying on the dead runtime.
+
+### Recovery Plane / Safe Mode — Planned
+
+Recovery must remain available even when the normal Workstation UI, plugin graph, browser surface, or agent runtime is unhealthy.
+
+- Add a minimal out-of-band recovery surface, CLI and/or safe-mode UI with deliberately tiny dependencies.
+- Expose runtime health, startup diagnostics and the minimum logs/evidence required to identify a failed component.
+- Allow disabling/quarantining a broken optional plugin or integration without manually editing internal state files.
+- Allow restoring the last-known-good profile/checkpoint and restarting through the independent supervisor.
+- Support degraded boot: optional component failure should isolate that component and keep the core available unless safety or state-integrity invariants require fail-closed behavior.
+- Keep Recovery Plane independent from rich Desktop/plugin rendering so the recovery mechanism does not share the same primary failure domain.
+
+**Acceptance:** break the normal Workstation UI or an optional plugin intentionally and recover to an operational state using only the Recovery Plane, with no manual repository/profile surgery.
+
+### Routine promotion — discover → validate → promote → deterministic replay — Planned
+
+V2 `ProceduralMemory` already captures reusable knowledge from successful workflows. V3.1 adds an explicit promotion boundary so a workflow that is understood and validated no longer requires the LLM to rediscover every step on every run.
+
+- Capture a successful agent-discovered workflow with provenance, ordered actions, required inputs, preconditions, expected outputs and evidence.
+- Require explicit validation policy (human approval and/or strong automated evidence) before promotion from learned procedure to deterministic routine.
+- Store/version the reusable procedure through the existing Hermes Memory/skill ownership path; do not create a second memory authority.
+- Execute promoted routines through a deterministic runner whenever their declared preconditions match.
+- Record routine version, inputs, actions, outputs and evidence in the existing Execution Journal/Kanban lineage.
+- If reality diverges from the routine's assumptions, stop deterministic replay and hand control back to Hermes for diagnosis/re-exploration through the existing drift-governance path.
+- Allow revised successful behavior to produce a new routine version rather than silently mutating historical behavior.
+
+**Acceptance:** let Hermes discover a real multi-step workflow once, validate/promote it, replay it later without repeated LLM planning, then deliberately introduce drift and prove execution stops safely and returns control to the agent.
+
+### Architectural boundary
+
+```text
+Independent Supervisor
+  → keeps runtime alive / restarts / rolls back
+
+Recovery Plane
+  → rescues the system when normal Workstation paths are unhealthy
+
+Agent Runtime
+  → reasons, plans, coordinates and handles novel/drifted situations
+
+Deterministic Routine Runner
+  → replays validated known workflows without repeated LLM reasoning
+
+Workstation
+  → presents state, control, evidence and recovery entrypoints to the user
+```
+
+The intended workflow lifecycle becomes:
+
+```text
+novel task
+  → Hermes reasons and discovers a working procedure
+  → evidence + validation gate
+  → promote to versioned deterministic routine
+  → future compatible task replays the routine cheaply and predictably
+  → unexpected state/drift stops replay
+  → Hermes resumes reasoning and adapts
+  → revised behavior may be validated as a new routine version
+```
+
+### V3.1 exit criteria
+
+- runtime crash/self-stop recovery succeeds without the runtime supervising its own resurrection;
+- one broken optional plugin/UI path can be isolated and recovered through the out-of-band Recovery Plane;
+- last-known-good restore/rollback is demonstrably usable when a new runtime/profile fails startup;
+- one real agent-discovered workflow is promoted and replayed deterministically with canonical journal/Kanban evidence;
+- deterministic replay fails closed on unmet preconditions or drift and hands control back to Hermes;
+- no duplicate SessionDB, Kanban, Memory, browser state or task scheduler is introduced;
+- Windows dogfood evidence exists first, with the supervisor/recovery contracts designed so Linux can implement the same semantics.
