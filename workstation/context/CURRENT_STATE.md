@@ -1,45 +1,29 @@
 # Current State
 
-## 2026-09-18 Verified Operational Control Plane — NOT IMPLEMENTED / NEXT MILESTONE
+## 2026-09-18 Browser Operational Admission / Primitive Closure — P0 OPEN
 
-PR #27 completed the Experience Compiler contract milestone. The next target is
-[VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+PR #28 merged the Verified Operational Control Plane CP0–CP9. A subsequent live
+authenticated native-Browser dogfood run exposed an integration gap that unit/contract
+green status did not close.
 
-Current main already has useful owners:
-- trusted `MessageEnvelope` / `IntentAuthority`;
-- transient `WorkIntent`;
-- OperationalCapability Registry/Resolver;
-- Experience Compiler;
-- TaskCompiler/work_execute and WorkPlan pins;
-- ScopedPolicyEngine;
-- RuntimeEventBus / WaitContract;
-- SystemEventPipeline;
-- compact `needs_reasoning` handoff;
-- TaskRun/operation uncertainty and canonical commit ordering.
+Current reproduced state:
+- native Electron Chromium BrowserTask control works;
+- CP0–CP9 components exist and dedicated tests are green;
+- normal tool calls can still be blocked first by legacy `execution_policy`;
+- `read_preview` can be misclassified as mutation;
+- non-browser structural repetition can still force compilation without sufficient
+  semantic closure;
+- the Browser Kernel lacks a trusted rich-text plain-text paste primitive and a narrow
+  persisted GET/HEAD readback primitive;
+- request-provided route authority is not yet fully separated from trusted authority;
+- CertifiedDispatcher is not yet the mandatory routed-mutation chokepoint;
+- mutation timeout and SPA empty-snapshot readiness remain under-specified.
 
-However, **the formal intent-to-capability Router described in the new target is
-not implemented**.
+Therefore CP0–CP9 remains **implemented / contract-validated**, but production mutation
+admission is **not yet fully qualified end to end**.
 
-Concrete current gaps:
-- `WorkIntent` classifies execution/durability/risk but does not represent
-  immutable desired state + target + invariants + EffectBudget + AuthorityRef;
-- OperationalCapability lacks a shared typed logical contract sufficient to prove
-  goal coverage/effect containment/invariant preservation;
-- no first-class RoutingDecision/RoutingCertificate or CompositionCertificate;
-- no intent-driven capability index/router;
-- no certified-dispatch type boundary;
-- no restart-safe persisted AwaitCondition / normalized causal Trigger Plane;
-- current wait/event contracts are not yet the full observer/correlation/
-  continuation/deadline/fence model;
-- current reasoning handoff is not yet an OpenCondition/AttentionPacket contract;
-- Router/Trigger shadow/economic metrics are not yet first-class.
-
-This milestone must **extend, not replace**, current owners. In particular,
-OperationIntent is distinct from the existing WorkIntent; Trigger Plane must not
-become another scheduler/task database; and the Dispatcher must preserve all
-existing TaskRun, BrowserTask, policy/approval, uncertainty, evidence and canonical
-completion invariants.
-
+Canonical P0:
+[BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
 
 Snapshot date: 2026-09-18.
 
