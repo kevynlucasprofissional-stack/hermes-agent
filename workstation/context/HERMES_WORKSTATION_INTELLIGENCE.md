@@ -1,5 +1,42 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Browser ownership, recovery e verdade visual — 2026-09-18
+
+A investigação de flicker + restart revelou um problema de reconciliação entre
+owners existentes, não uma simples perda de persistência. A relação que precisa
+convergir é:
+
+`Chat -> BrowserTask -> tab lógica/restaurada -> activeTabId -> viewportHost -> superfície visível`.
+
+BrowserTask pode sobreviver como `parked/restored`, sua tab pode ficar lazy e o
+runtime ainda criar `about:blank` ativo. O controller pode depois operar a página
+correta em background sem que Chat/Hub assumam essa task. Logo, `Parked` pode
+coexistir com execução real: visibilidade e atividade são dimensões diferentes.
+
+Falhas concretas:
+- tooltip Radix usa wrapper genérico que o detector atual trata como native-view
+  occluder, causando remove/add do WebContentsView durante hover;
+- `preferredTaskId` existe e é testado no runtime, mas não atravessa
+  preload/types/WorkstationBrowserPane;
+- `detach` e `setVisible` não são host-fenced, apesar de Chat/Hub compartilharem
+  BrowserWindow e `setBounds` já ter `expectedHost`.
+
+Regra de UX permanece: evento em background não rouba foco/foreground. Recuperação
+reconcilia a BrowserTask quando a própria superfície Browser daquele chat está
+requisitada; outra task continua background e o Hub projeta atividade sem transferir
+viewport automaticamente.
+
+Invariante: se chat C está ativo, sua superfície Browser está aberta e C possui T,
+há no máximo uma página viva de T e Chat UI, Hub, BrowserTask, activeTabId e
+viewportHost convergem para a mesma identidade, inclusive após restart.
+
+Não criar `desiredPresentation` persistente por reflexo: primeiro derivar intenção
+dos owners existentes (session-scoped preview + sessão ativa + BrowserTask/
+BrowserSessionState). Visibilidade não é lifecycle nem execution activity.
+
+Plano: `workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
+
+
 ## Browser dogfood pós-Control Plane — admission e primitive closure — 2026-09-18
 
 O Trello expôs um gap de integração que os testes isolados de CP0–CP9 não provaram:
