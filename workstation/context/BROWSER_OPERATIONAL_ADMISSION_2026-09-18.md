@@ -1,5 +1,12 @@
 # Browser Operational Admission & Primitive Closure — 2026-09-18
 
+> **Companion P0 lane:** Browser task/session/viewport presentation recovery is tracked
+> in [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
+> Admission answers whether an operation may execute and be verified; the companion
+> lane answers whether the correct BrowserTask is the surface the user sees before
+> and after restart. Neither may create a second Browser/session state owner.
+
+
 ## Status
 
 **LIVE DOGFOOD REPRODUCED / P0 IMPLEMENTATION REQUIRED.**
