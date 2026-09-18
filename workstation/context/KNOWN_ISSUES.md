@@ -1,5 +1,25 @@
 # Workstation Known Issues
 
+## KI-012 — Browser viewport ownership can diverge from BrowserTask after hover/restart [P0 OPEN — 2026-09-18]
+
+**Observed:** Browser flickers while hovering other chats; after restart a chat can
+show `Blank Page` though BrowserTask recovery metadata exists; the agent can
+continue Browser work invisibly while Browser Hub reports the task `Parked`.
+
+**Validated code causes:** generic Radix popper occlusion catches tooltips; restored
+BrowserTasks are parked/lazy while `ensure()` can foreground `about:blank`;
+controller recovery can use a non-attached parked task; production attach drops
+runtime `preferredTaskId`; and `detach`/`setVisible` lack host fencing.
+
+**Classification:** root causes validated by current-main code audit; corrective
+implementation and product-level proof remain open.
+
+**Canonical plan:** [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
+
+Do not close from direct runtime tests alone. Closure requires renderer/preload/runtime
+restart + Chat<->Hub race coverage and H004/H013 where affected.
+
+
 
 ## KI-011 — Durable compiler can obstruct stateful native-browser work [REOPENED BY LIVE DOGFOOD — CROSS-LAYER P0 OPEN — 2026-09-18]
 
