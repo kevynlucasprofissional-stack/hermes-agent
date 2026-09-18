@@ -1,5 +1,30 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Browser dogfood pós-Control Plane — admission e primitive closure — 2026-09-18
+
+O Trello expôs um gap de integração que os testes isolados de CP0–CP9 não provaram:
+**o Browser nativo funciona, mas o caminho completo descoberta -> compilação ->
+Capability -> Router -> dispatch -> verificação ainda pode entrar em deadlock.**
+
+A falha canônica é:
+`adaptive action -> legacy REQUIRE_COMPILE -> work_execute exige verifier/authority ->
+a operação fiel não existe no Kernel -> browser_console seria arbitrário -> gate bloqueia
+as ferramentas de preparação -> PREFLIGHT_REQUIRED`.
+
+Consequências: `read_preview` deve declarar PURE_READ; efeito de ferramenta
+multipropósito precisa poder depender da subação; repetição estrutural nunca basta para
+REQUIRE_COMPILE; rich editors precisam de paste plain-text first-party; persisted
+readback precisa de GET/HEAD bounded; legacy execution policy não pode ser segundo
+admission plane; AuthorityScope vem de contexto confiável; routed mutation deve cruzar
+CertifiedDispatcher; timeout de mutação é UNCERTAIN até reconciliação; snapshot SPA
+vazio exige readiness bounded.
+
+> **Só é legítimo exigir compilação obrigatória quando existe fechamento operacional:
+> identidade semântica + primitive determinística + autoridade confiável + verifier
+> suficiente + caminho certificado de dispatch.**
+
+Especificação: `workstation/context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md`.
+
 ## Control Plane Verificável — Router como typechecker operacional — 2026-09-18
 
 Com Progressive Operational Compilation e Experience Compiler implementados, o
