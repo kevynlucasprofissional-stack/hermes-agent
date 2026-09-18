@@ -147,6 +147,10 @@ class OperationalCapability:
     source_trace_refs: list[str] = field(default_factory=list)
     promotion_policy_version: str = ''
     learning_metadata: dict[str, Any] = field(default_factory=dict)
+    formal_contract: dict[str, Any] | None = None
+    family_id: str = ""
+    alias_of: str = ""
+    superseded_by: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -180,6 +184,10 @@ class OperationalCapability:
             "source_trace_refs": list(self.source_trace_refs),
             "promotion_policy_version": self.promotion_policy_version,
             "learning_metadata": self.learning_metadata,
+            "formal_contract": self.formal_contract.to_dict() if hasattr(self.formal_contract, "to_dict") else self.formal_contract,
+            "family_id": self.family_id,
+            "alias_of": self.alias_of,
+            "superseded_by": self.superseded_by,
         }
 
     @classmethod
@@ -222,6 +230,10 @@ class OperationalCapability:
             source_trace_refs=list(data.get('source_trace_refs', [])),
             promotion_policy_version=str(data.get('promotion_policy_version', '')),
             learning_metadata=dict(data.get('learning_metadata', {})),
+            formal_contract=data.get("formal_contract"),
+            family_id=str(data.get("family_id", "")),
+            alias_of=str(data.get("alias_of", "")),
+            superseded_by=str(data.get("superseded_by", "")),
         )
 
 
@@ -233,7 +245,12 @@ class OperationalCapabilityRegistry:
     """
     def __init__(self, artifacts: ArtifactStore | None = None, root: Path | str | None = None):
         self.artifacts = artifacts or ArtifactStore()
-        self.root = Path(root) if root else self.artifacts.root.parent / "operational_capabilities"
+        if root:
+            self.root = Path(root)
+        elif (self.artifacts.root.parent / "capabilities").exists():
+            self.root = self.artifacts.root.parent / "capabilities"
+        else:
+            self.root = self.artifacts.root.parent / "operational_capabilities"
         self.root.mkdir(parents=True, exist_ok=True)
         self.index_file = self.root / "index.json"
         self._lock = threading.RLock()
@@ -282,7 +299,8 @@ class OperationalCapabilityRegistry:
             old = index.get(entry_key)
             contract_fields = ('input_schema', 'output_schema', 'effect', 'route', 'scope', 'preconditions',
                 'postconditions', 'verifier_contract', 'dependencies', 'implementation', 'provenance',
-                'semantic_fingerprint', 'compatibility_fingerprint', 'trust_class', 'taint', 'learning_metadata')
+                'semantic_fingerprint', 'compatibility_fingerprint', 'trust_class', 'taint', 'learning_metadata',
+                'formal_contract', 'family_id')
             contract_digest = digest({k: sanitized.get(k) for k in contract_fields})
             learned = capability.provenance.get('source') == 'experience_compiler'
             if old and old.get('immutable_contract') and old['immutable_contract'] != contract_digest:
@@ -306,6 +324,9 @@ class OperationalCapabilityRegistry:
                 "semantic_fingerprint": capability.semantic_fingerprint,
                 "compatibility_fingerprint": capability.compatibility_fingerprint,
                 "scope": capability.scope,
+                "family_id": capability.family_id,
+                "alias_of": capability.alias_of,
+                "superseded_by": capability.superseded_by,
                 "ref": ref.ref,
                 "sha256": sha,
                 "updated_at": capability.updated_at,
@@ -408,6 +429,30 @@ class OperationalCapabilityRegistry:
                 body = self.artifacts.read_json(entry["ref"])
                 return OperationalCapability.from_dict(body)
         return None
+
+    def find_by_family(self, family_id: str, *, target_family: str | None = None, promoted_only: bool = True) -> list[OperationalCapability]:
+        """Find capabilities by semantic family identifier (with alias resolution)."""
+        with self._transaction():
+            index = self._load_index()
+            results = []
+            for entry in sorted(index.values(), key=lambda e: tuple(int(v) if v.isdigit() else 0 for v in e.get('version', '0').split('.')), reverse=True):
+                fam = entry.get("family_id") or ""
+                alias = entry.get("alias_of") or ""
+                if fam != family_id and alias != family_id:
+                    continue
+                if promoted_only and entry.get("lifecycle") != CapabilityLifecycle.PROMOTED.value:
+                    continue
+                if entry.get("drift_state") != "healthy":
+                    continue
+                body = self.artifacts.read_json(entry["ref"])
+                cap = OperationalCapability.from_dict(body)
+                if target_family and cap.formal_contract:
+                    fc = cap.formal_contract
+                    tf = fc.get("target_family") if isinstance(fc, dict) else getattr(fc, "target_family", "")
+                    if tf and tf != target_family:
+                        continue
+                results.append(cap)
+            return results
 
 
 class CapabilityResolver:

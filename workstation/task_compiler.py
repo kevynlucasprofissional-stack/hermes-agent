@@ -260,6 +260,10 @@ class TaskCompiler:
     def execute(self, request: dict, *, task_id: str, session_id: str, dispatch: Callable,
                 progress: Callable | None = None, provider_usage: dict | None = None,
                 environment: str | None = None, event_bus=None, canonical_task_id: str | None = None) -> dict:
+        if request.get("action") == "route" or request.get("operation_intent"):
+            return self._execute_route(request, task_id=task_id, session_id=session_id,
+                dispatch=dispatch, progress=progress, provider_usage=provider_usage,
+                event_bus=event_bus, canonical_task_id=canonical_task_id)
         if request.get("capability_id"):
             return self._execute_capability(request, task_id=task_id, session_id=session_id,
                 dispatch=dispatch, canonical_task_id=canonical_task_id)
@@ -901,6 +905,126 @@ class TaskCompiler:
         persist_metrics()
         return envelope
 
+    def _execute_route(self, request, *, task_id, session_id, dispatch, progress=None, provider_usage=None,
+                       event_bus=None, canonical_task_id=None):
+        from workstation.control_plane.intent import OperationIntent
+        from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
+        from workstation.control_plane.router import (
+            CapabilityRouter,
+            ComposedDecision,
+            ExecutableDecision,
+            HumanDecision,
+            ReasoningDecision,
+            SatisfiedDecision,
+            WaitDecision,
+        )
+        from workstation.operational_capabilities import OperationalCapabilityRegistry
+
+        raw_intent = request.get("operation_intent")
+        if isinstance(raw_intent, OperationIntent):
+            intent = raw_intent
+        elif isinstance(raw_intent, dict):
+            intent = OperationIntent.from_dict(raw_intent)
+        else:
+            raise ValueError("Route action requires a valid operation_intent")
+
+        semantic_state = request.get("semantic_state") or {}
+        raw_auth = request.get("authority") or {}
+        if isinstance(raw_auth, AuthorityScope):
+            authority = raw_auth
+        elif isinstance(raw_auth, dict):
+            lvl = raw_auth.get("level", AuthorityLevel.LOCAL_MUTATION)
+            if isinstance(lvl, int):
+                lvl = AuthorityLevel(lvl)
+            authority = AuthorityScope(
+                level=lvl,
+                allowed_actions=set(raw_auth.get("allowed_actions", ["*"])),
+                allowed_resources=set(raw_auth.get("allowed_resources", ["*"])),
+            )
+        else:
+            authority = AuthorityScope(level=AuthorityLevel.SYSTEM_CRITICAL, allowed_actions={"*"}, allowed_resources={"*"})
+
+        registry = getattr(self, "capability_registry", None)
+        if registry is None:
+            registry = OperationalCapabilityRegistry(artifacts=self.artifacts)
+        router = CapabilityRouter(registry)
+
+        decision = router.route(intent, semantic_state, authority)
+
+        if isinstance(decision, SatisfiedDecision):
+            return {
+                "success": True,
+                "routing_decision": "SATISFIED",
+                "message": "Goal is already satisfied by current semantic state",
+                "certificate_hash": "",
+            }
+
+        if isinstance(decision, ExecutableDecision):
+            cert_hash = decision.certificate.certificate_hash()
+            cap_exec_req = {
+                **request,
+                "capability_id": decision.capability.id,
+                "capability_version": decision.capability.version,
+                "operation_key": request.get("operation_key") or f"route_{intent.id}",
+            }
+            exec_res = self._execute_capability(
+                cap_exec_req,
+                task_id=task_id,
+                session_id=session_id,
+                dispatch=dispatch,
+                canonical_task_id=canonical_task_id,
+            )
+            return {
+                **exec_res,
+                "success": bool(exec_res.get("success", True)),
+                "routing_decision": "EXECUTE",
+                "capability_id": decision.capability.id,
+                "certificate_hash": cert_hash,
+            }
+
+        if isinstance(decision, ComposedDecision):
+            cert_hash = decision.certificate.certificate_hash()
+            return {
+                "success": True,
+                "routing_decision": "COMPOSE",
+                "plan": [c.id for c in decision.plan],
+                "certificate_hash": cert_hash,
+            }
+
+        if isinstance(decision, WaitDecision):
+            return {
+                "success": False,
+                "routing_decision": "WAIT",
+                "condition": decision.condition.to_dict() if hasattr(decision.condition, "to_dict") else decision.condition,
+                "reason": decision.reason,
+            }
+
+        if isinstance(decision, HumanDecision):
+            return {
+                "success": False,
+                "routing_decision": "ASK_HUMAN",
+                "reason": decision.reason,
+                "missing_authority": decision.missing_authority.to_dict() if decision.missing_authority else None,
+            }
+
+        # ReasoningDecision
+        from workstation.reasoning_handoff import needs_reasoning
+        handoff = needs_reasoning(
+            self.artifacts,
+            owner=str(canonical_task_id or task_id or session_id),
+            completed_until=None,
+            expected="Executable capability match",
+            observed=decision.reason,
+            safe_to_resume=False,
+            context={"intent_id": intent.id, "unmatched_goals": [g.to_dict() for g in decision.unmatched_goals]},
+        )
+        return {
+            **handoff,
+            "success": False,
+            "routing_decision": "WAKE_LLM",
+            "reason": decision.reason,
+        }
+
     def _execute_capability(self, request, *, task_id, session_id, dispatch, canonical_task_id=None):
         from workstation.operational_kernel import OperationalKernel
         from workstation.experience_compiler.promotion import pin_capability, contract_fingerprint
@@ -977,7 +1101,7 @@ class TaskCompiler:
             self.store.update_plan_state(plan.id, 'blocked')
             ref = self.artifacts.store(owner, plan.id + '_handoff.json', sanitize(result))
             envelope.update({k: v for k, v in result.items() if k != 'output'})
-        return {**envelope, 'plan_id': plan.id, 'results_ref': ref.ref}
+        return {**envelope, 'plan_id': plan.id, 'results_ref': ref.ref, 'success': bool(result.get('success'))}
 
     def resume(self, plan_id: str, *, session_id: str, dispatch: Callable,
                progress: Callable | None = None, provider_usage: dict | None = None,
@@ -1056,6 +1180,7 @@ def _execute_compiled_work(compiler, context, args, kwargs):
                                     session_id=session_id, dispatch=dispatch, progress=progress,
                                     provider_usage=usage, event_bus=event_bus, canonical_task_id=canonical_task_id)
     references.append({"trusted": True, "version": 1, "source": "KanbanRun", "kind": "durable_work",
-                       "id": envelope["plan_id"], "task_id": envelope["task_id"],
-                       "owner_session_id": session_id, "result_ref": envelope["results_ref"]})
+                       "id": envelope.get("plan_id", envelope.get("capability_id", "route")),
+                       "task_id": envelope.get("task_id", str(kwargs.get("task_id") or session_id)),
+                       "owner_session_id": session_id, "result_ref": envelope.get("results_ref")})
     return json.dumps(envelope, ensure_ascii=False)

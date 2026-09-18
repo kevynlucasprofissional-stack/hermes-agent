@@ -1,14 +1,14 @@
 # Workstation roadmap
 
-## Verified Operational Control Plane (2026-09-18) — NEXT MILESTONE / CP0–CP9 PLANNED
+## Verified Operational Control Plane (2026-09-18) — CP0–CP9 IMPLEMENTED / CONTRACT VALIDATED
 
 Canonical specification:
 [context/VERIFIED_OPERATIONAL_CONTROL_PLANE.md](context/VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
 
 PR #26 established the Operational Capability Runtime and PR #27 implemented the
 Experience Compiler. Hermes can now execute known capabilities deterministically
-and learn reusable capabilities from verified experience. The next architectural
-problem is **selection and control**:
+and learn reusable capabilities from verified experience. The Verified Operational
+Control Plane solves **selection and control**:
 
 > Given an immutable semantic intent, current state, authority/policy and runtime
 > events, derive a justified decision to SATISFY / EXECUTE / COMPOSE / WAIT /
@@ -33,7 +33,7 @@ OpenCondition / AttentionPacket
   -> wake the LLM only for the smallest unresolved semantic decision
 ~~~
 
-Implementation order:
+Implemented sequence:
 
 1. **CP0 — typed intent/effect IR + immutable OperationIntent**
    - small versioned predicate/effect AST;
@@ -96,7 +96,6 @@ Canonical proof properties:
 The Router must remain a bounded deterministic typechecker/proof engine, not
 another agent or general planner. Safety/authority/correctness are hard
 constraints; optimization is secondary.
-
 
 ## Experience Compiler / Verified Operational Transitions (2026-09-18) — EC0–EC8 IMPLEMENTED / CONTRACT VALIDATED
 
