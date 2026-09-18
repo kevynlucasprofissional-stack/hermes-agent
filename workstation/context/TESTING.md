@@ -1,12 +1,41 @@
 # Workstation Testing
 
-## Planned Verified Operational Control Plane regression gate
+## Browser Operational Admission / Primitive Closure P0 regression gate
+
+Canonical target:
+[BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
+
+Minimum focused proof:
+- `read_preview` PURE_READ; mixed-action tools classify subactions correctly;
+- structural similarity alone never forces compilation across terminal/filesystem/browser;
+- same-family proven fan-out retains compilation/canary behavior;
+- rich-text plain-text paste preserves exact newline semantics and target reacquisition;
+- browser readback is GET/HEAD-only, bounded, policy/same-origin constrained and spills large data by reference;
+- trusted runtime authority cannot be broadened by route/request payload;
+- routed mutation cannot bypass valid certificate + CertifiedDispatcher;
+- mutable timeout becomes UNCERTAIN and blocks blind retry until reconciliation;
+- transient empty SPA snapshots receive bounded re-observation without site-specific sleeps;
+- generic Trello-like fixture proves edit -> paste -> save -> persisted readback -> verify;
+- verified canary fans out equivalent items with zero intermediate planning calls;
+- per-item drift preserves previous confirmed effects and returns bounded NEEDS_REASONING.
+
+Required affected suites should include or extend:
+`test_execution_policy.py`, `test_progressive_compilation.py`,
+`test_task_compiler.py`, `test_capability_router.py`,
+`test_control_plane_integration.py`, `test_browser_workstation_route.py`,
+plus Electron `workstation-browser-runtime*.test.ts` coverage.
+
+When Electron/controller product code changes, rerun H004 native browser smoke and
+Work100 after focused RED/GREEN. Provider-free tests do not by themselves prove live
+authenticated provider behavior.
+
+## Verified Operational Control Plane regression gate — implemented baseline
 
 Canonical target:
 [VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
 
-The CP0–CP9 milestone is not implemented yet. When implementation begins, prove
-the control plane behavior rather than source shape.
+CP0–CP9 is implemented and contract-validated. Preserve the control-plane
+behavioral contracts below as a regression baseline; source shape alone is never proof.
 
 Required focused contracts:
 
