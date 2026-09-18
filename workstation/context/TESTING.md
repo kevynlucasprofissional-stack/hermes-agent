@@ -1,5 +1,97 @@
 # Workstation Testing
 
+## Planned Verified Operational Control Plane regression gate
+
+Canonical target:
+[VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+
+The CP0–CP9 milestone is not implemented yet. When implementation begins, prove
+the control plane behavior rather than source shape.
+
+Required focused contracts:
+
+- immutable/canonical OperationIntent hashing and explicit IntentRevision;
+- existing WorkIntent behavior remains backward-compatible;
+- MessageEnvelope/page/request prose cannot mint execution authority;
+- typed predicate/effect IR normalization is deterministic and contains no
+  arbitrary executable code;
+- target mismatch, false precondition or unbound input prevents EXECUTE;
+- postcondition must imply the intent goal;
+- goal coverage does not excuse an extra forbidden effect;
+- invariant-breaking plans are rejected even when the goal would be reached;
+- intent permission without authority and authority without intent permission both
+  reject mutation;
+- verifier/evidence strength must meet AcceptanceContract;
+- outstanding relevant uncertain mutation dominates and forces reconciliation;
+- POSSIBLE_MATCH is never dispatchable;
+- EXECUTE/COMPOSE require a valid Routing/Composition Certificate;
+- stale/invalid certificate cannot reach side-effect dispatch;
+- state/resource-version changes between route and dispatch invalidate/re-route;
+- already-satisfied goal produces SATISFIED with zero mutation;
+- deterministic future condition produces WAIT, not LLM polling;
+- authority/preference gap produces ASK_HUMAN;
+- semantic strategy gap produces WAKE_LLM with minimal OpenCondition;
+- LLM output must pass Router admission before mutation;
+- bounded composition proves causal links, pre/postcondition chaining, effect
+  containment, invariant preservation, authority JOIN and verifier closure;
+- intermediate threat/conflicting effect is rejected or deterministically reordered;
+- composition budget exhaustion yields WAKE_LLM instead of unbounded search;
+- semantic Skill family requirements resolve implementations without pinning
+  physical IDs by default;
+- large synthetic capability catalogs remain internal and do not grow provider
+  tool schemas;
+- approximate retrieval cannot authorize execution;
+- AwaitCondition survives restart and resumes the exact fenced continuation;
+- stale/duplicate events do not duplicate mutable effects;
+- event arrival wakes but authoritative predicate=false prevents continuation;
+- uncorrelated system events remain observation-only and never create work;
+- causal trigger cycles/no-progress trip a circuit breaker;
+- bounded polling/backoff consumes zero LLM calls while waiting;
+- uncertain external-style dispatch reconciles before any retry;
+- Router-vs-Capability-vs-Policy-vs-Observation failure attribution is preserved;
+- shadow Router records proposed decisions without controlling production mutation;
+- Router/Trigger/VOLC metrics keep unknown denominators as null.
+
+Recommended focused files:
+- `workstation/tests/test_operation_intent.py`;
+- `workstation/tests/test_capability_router.py`;
+- `workstation/tests/test_control_plane_composition.py`;
+- `workstation/tests/test_await_trigger_plane.py`;
+- extensions to `test_canonical_work_loop.py`, `test_events_pipeline.py`,
+  `test_operational_capabilities.py`, `test_task_compiler.py`,
+  `test_experience_compiler.py` and the existing policy/uncertainty owners.
+
+Use deterministic unit tests plus property/metamorphic counterexamples. If a
+property-testing dependency is not already justified by the repository, prefer a
+small deterministic generator rather than adding a heavy dependency. Tests must
+not read source text.
+
+Canonical proof properties to encode explicitly:
+
+~~~text
+Router Soundness
+Goal Non-Expansion
+Authority Non-Escalation
+Deterministic Closure
+Verification Closure
+Uncertainty Dominance
+Event wakes; state confirms
+LLM proposes; Router authorizes
+No certificate; no dispatch
+~~~
+
+Follow root `AGENTS.md`: Python validation runs through
+`scripts/run_tests.sh`, never direct `pytest`. Start with focused RED/GREEN,
+then affected Workstation regressions, the full Workstation wrapper gate and
+`python workstation/work100.py --run`. Run Desktop/Electron gates only when
+their product/runtime paths are changed.
+
+Roll out routing authority in test evidence stages:
+adaptive baseline -> shadow Router -> low-risk Router -> mutating Router.
+Do not use a unit-green Router as sufficient evidence to grant production mutation
+authority.
+
+
 A Workstation change is stable only when its **behavioral contract** is proven at the lowest useful layer and the relevant integration path remains green. Typecheck or source-shape checks alone are not proof.
 
 ## AEPC-E002 semantic-homogeneity regression gate
