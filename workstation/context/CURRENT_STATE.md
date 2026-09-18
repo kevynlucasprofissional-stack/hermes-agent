@@ -1,5 +1,28 @@
 # Current State
 
+## 2026-09-18 Browser Ownership & Recovery Reconciliation — P0 OPEN
+
+Current-main audit validated a Browser presentation/recovery gap rather than simple
+persistence loss. BrowserTask/BrowserSessionState retain logical recovery data, but
+the active Chat Browser surface, lazy restored tabs, Browser Hub and the one native
+Chromium viewport can diverge.
+
+Validated facts:
+- duplicated Chat/Hub overlay observers include generic Radix popper wrappers, so
+  tooltips can remove/re-add WebContentsView and cause hover flicker;
+- BrowserTask restore intentionally produces `parked/restored` tasks and lazy task tabs;
+- `ensure()` can activate fallback `about:blank` while a logical task tab is pending;
+- controller execution can use a recovered task entry that remains projected `parked`;
+- runtime `attach(... preferredTaskId)` is tested, but preload/types/Chat UI drop it;
+- `detach()` and `setVisible()` lack the expected-host fencing already in `setBounds`.
+
+Implementation is open. Canonical plan:
+[BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
+
+This lane is orthogonal to Browser Operational Admission: admission governs safe
+operation execution/verification; this lane governs task/session/viewport convergence.
+
+
 ## 2026-09-18 Browser Operational Admission / Primitive Closure — P0 OPEN
 
 PR #28 merged the Verified Operational Control Plane CP0–CP9. A subsequent live
