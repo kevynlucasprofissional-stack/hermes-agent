@@ -273,6 +273,13 @@ class OperationalKernel:
             return dispatch("browser_extract_items", inputs)
 
         # 3. Control primitives
+        if primitive == 'process_observe':
+            observer = ctx.get('process_observer')
+            if not callable(observer):
+                raise CapabilityDriftError('owner-controlled process observer required')
+            result = observer(inputs)
+            from workstation.experience_compiler.state_abstraction import abstract_state
+            return abstract_state('host_process', result).semantic_predicates
         if primitive in {"wait", "sleep"}:
             duration = float(inputs.get("duration", inputs.get("seconds", 0.5)))
             time.sleep(min(10.0, max(0.01, duration)))
@@ -284,6 +291,9 @@ class OperationalKernel:
         raise ValueError(f"Unknown primitive: {primitive}")
 
     def _find_ref_by_anchor(self, elements: list[dict[str, Any]], anchor: dict[str, Any]) -> str | None:
+        if anchor.get('type') in {'testid', 'role_name', 'text'}:
+            from workstation.memory import ProcedureStep
+            return ProcedureStep(action='resolve', fallback_anchors=[anchor]).resolve_anchor(elements, strict=True) if elements else None
         anchor_type = anchor.get("type")
         anchor_val = str(anchor.get("value", "")).lower()
         if anchor_type == "testid":
@@ -320,6 +330,10 @@ class OperationalKernel:
 
         cond_dict = interpolate_variables(cond_dict, context)
         c_type = cond_dict.get("type")
+
+        if c_type == 'semantic_predicate':
+            state = context.get('semantic_state', {})
+            return cond_dict['key'] in state and state[cond_dict['key']] == cond_dict['expected']
 
         if c_type == "file_exists":
             target = _resolve_path(cond_dict["path"], cond_dict.get("base_dir"))
@@ -364,7 +378,15 @@ class OperationalKernel:
     ) -> dict[str, Any]:
         """Execute a capability, resolving its dependencies and running deterministic steps."""
         if isinstance(capability_or_id, str):
-            cap = self.resolver.resolve(capability_or_id, version or "*")
+            pinned = (context or {}).get('capability_pins', {}).get(capability_or_id)
+            cap = self.resolver.resolve(capability_or_id, pinned['version'] if pinned else version or '*')
+            if pinned and (cap.semantic_fingerprint != pinned['semantic_fingerprint'] or
+                           cap.compatibility_fingerprint != pinned['compatibility_fingerprint']):
+                raise CapabilityDriftError('pinned dependency contract changed')
+            if pinned and pinned.get('contract_fingerprint'):
+                from workstation.experience_compiler.promotion import contract_fingerprint
+                if contract_fingerprint(cap) != pinned['contract_fingerprint']:
+                    raise CapabilityDriftError('pinned dependency implementation changed')
         else:
             cap = capability_or_id
 
@@ -379,6 +401,72 @@ class OperationalKernel:
         }
         if context:
             exec_context.update({k: v for k, v in context.items() if k not in exec_context})
+
+        learned = cap.provenance.get('source') == 'experience_compiler'
+        if learned and cap.lifecycle.value != 'promoted' and not exec_context.get('learning_replay'):
+            raise CapabilityValidationError('learned candidates require controlled replay before execution')
+        if learned:
+            from workstation.experience_compiler.generalization import validate_inputs
+            validate_inputs(cap.input_schema, cap.learning_metadata.get('relations', []), inputs)
+        durable_store = exec_context.get('durable_store')
+        durable_item_id = exec_context.get('durable_item_id')
+        checkpoint_prefix = cap.id + '@' + cap.version
+
+        def observe_semantics(output=None):
+            from workstation.experience_compiler.state_abstraction import abstract_state, filesystem_state
+            if cap.route == 'native_browser':
+                if not dispatch:
+                    raise CapabilityDriftError('semantic browser observation unavailable')
+                raw = dispatch('browser_snapshot', {'full': False})
+                if isinstance(raw, str):
+                    raw = json.loads(raw)
+                if cap.scope.get('host'):
+                    from urllib.parse import urlsplit
+                    if urlsplit(raw.get('url', '')).hostname != cap.scope['host']:
+                        raise CapabilityDriftError('browser scope drift')
+                return abstract_state(cap.route, raw).semantic_predicates
+            if cap.route == 'filesystem':
+                steps = cap.implementation.get('steps', [])
+                step = steps[-1] if output is not None else steps[0]
+                args = interpolate_variables(step.get('args', {}), exec_context)
+                path = args.get('path') or args.get('src')
+                return filesystem_state(path).semantic_predicates if path else {}
+            if cap.route == 'host_process':
+                observer = exec_context.get('process_observer')
+                if not callable(observer):
+                    raise CapabilityDriftError('process observation owner unavailable')
+                return abstract_state('host_process', observer(inputs)).semantic_predicates
+            if cap.route == 'composite':
+                state = {}
+                for backend in cap.scope.get('backends', {}):
+                    if backend == 'filesystem':
+                        filesystem_steps = [s for s in cap.implementation.get('steps', [])
+                                            if (s.get('primitive') or '').startswith('fs_')]
+                        if filesystem_steps:
+                            selected = filesystem_steps[-1] if output is not None else filesystem_steps[0]
+                            arguments = interpolate_variables(selected.get('args', {}), exec_context)
+                            path = arguments.get('path') or arguments.get('src')
+                            if path:
+                                state.update(filesystem_state(path).semantic_predicates)
+                    elif backend == 'host_process':
+                        observer = exec_context.get('process_observer')
+                        if not callable(observer):
+                            raise CapabilityDriftError('composite process owner unavailable')
+                        state.update(abstract_state(backend, observer(inputs)).semantic_predicates)
+                    elif backend == 'native_browser':
+                        if not dispatch:
+                            raise CapabilityDriftError('composite browser owner unavailable')
+                        raw = dispatch('browser_snapshot', {'full': False})
+                        raw = json.loads(raw) if isinstance(raw, str) else raw
+                        from urllib.parse import urlsplit
+                        host = cap.scope['backends'][backend].get('host')
+                        if host and urlsplit(raw.get('url', '')).hostname != host:
+                            raise CapabilityDriftError('composite browser scope drift')
+                        state.update(abstract_state(backend, raw).semantic_predicates)
+                    else:
+                        raise CapabilityDriftError('unsupported composite state owner')
+                return state
+            return abstract_state(cap.route, output or {}).semantic_predicates
 
         try:
             # 1. Execute dependencies in topological order
@@ -399,11 +487,20 @@ class OperationalKernel:
                     context=exec_context,
                     owner=owner,
                 )
+                if dep_result.get('status') == 'NEEDS_REASONING':
+                    return dep_result
                 dep_key = dep.output_alias or dep.capability_id
                 exec_context["deps"][dep_key] = dep_result
 
             # 2. Verify preconditions
-            self.check_conditions(cap.preconditions, exec_context, stage="precondition")
+            pre_checkpoint = checkpoint_prefix + '_preconditions'
+            pre_verified = durable_store and durable_store.get_item(durable_item_id).checkpoints.get(pre_checkpoint)
+            if learned and not pre_verified:
+                exec_context['semantic_state'] = observe_semantics()
+            if not pre_verified:
+                self.check_conditions(cap.preconditions, exec_context, stage="precondition")
+                if durable_store:
+                    durable_store.update_item_checkpoint(durable_item_id, pre_checkpoint)
 
             # 3. Execute implementation steps
             steps = cap.implementation.get("steps", [])
@@ -412,7 +509,45 @@ class OperationalKernel:
                 step_id = step.get("id", f"step_{idx}")
                 primitive = step.get("primitive") or step.get("tool") or step.get("action")
                 step_args = step.get("args") or step.get("inputs") or {}
-                step_result = self.execute_primitive(primitive, step_args, dispatch=dispatch, context=exec_context)
+                checkpoint = checkpoint_prefix + '_' + step_id
+                if durable_store:
+                    cp = durable_store.get_item(durable_item_id).checkpoints
+                    if cp.get(checkpoint + '_meta', {}).get('result_ref'):
+                        output = self.artifacts.read_json(cp[checkpoint + '_meta']['result_ref'])
+                        exec_context['steps'][step_id], exec_context['prev'] = output, output
+                        continue
+                    if cp.get(checkpoint + '_dispatch'):
+                        raise CapabilityDriftError('uncertain mutation requires reconciliation; no blind retry')
+                if learned and step.get('when'):
+                    exec_context['semantic_state'] = observe_semantics(output)
+                    if not all(exec_context['semantic_state'].get(k) == v for k, v in step['when'].items()):
+                        continue
+                from tools.effects import tool_effect, READ_EFFECTS
+                owner_reads = {'fs_stat', 'fs_read', 'fs_hash', 'fs_list_dir', 'stat', 'read', 'hash_file', 'list_dir',
+                               'process_observe', 'wait', 'sleep'}
+                mutating = primitive not in owner_reads and tool_effect(primitive) not in READ_EFFECTS
+                route = 'filesystem' if primitive.startswith('fs_') or primitive in {'read_file', 'write_file', 'stat', 'copy', 'move', 'mkdir', 'hash_file'} else 'host_process' if primitive == 'process_observe' else 'native_browser'
+                admission = exec_context.get('primitive_admission')
+                if admission:
+                    admission(route, mutating)
+                bound_args = interpolate_variables(step_args, exec_context)
+                filesystem_scope = cap.scope.get('backends', {}).get('filesystem', cap.scope)
+                if learned and route == 'filesystem' and filesystem_scope.get('base_dir'):
+                    base = Path(filesystem_scope['base_dir']).resolve()
+                    for key in ('path', 'src', 'dst'):
+                        if key in bound_args and not _resolve_path(bound_args[key], bound_args.get('base_dir')).is_relative_to(base):
+                            raise CapabilityDriftError('filesystem target escaped exact learned scope')
+                if durable_store and mutating:
+                    durable_store.update_item_checkpoint(durable_item_id, checkpoint + '_dispatch')
+                try:
+                    step_result = self.execute_primitive(primitive, bound_args, dispatch=dispatch, context=exec_context)
+                except Exception as exc:
+                    if durable_store or learned:
+                        raise CapabilityDriftError(f'primitive failed; reconcile dispatched effects: {type(exc).__name__}') from exc
+                    raise
+                if durable_store:
+                    ref = self.artifacts.store(owner or cap.id, digest({'checkpoint': checkpoint, 'result': sanitize(step_result)}) + '.json', sanitize(step_result))
+                    durable_store.update_item_checkpoint(durable_item_id, checkpoint, metadata={'result_ref': ref.ref})
                 exec_context["steps"][step_id] = step_result
                 exec_context["prev"] = step_result
                 output = step_result
@@ -426,6 +561,8 @@ class OperationalKernel:
             exec_context["output"] = output
 
             # 4. Verify postconditions
+            if learned:
+                exec_context['semantic_state'] = observe_semantics(output)
             self.check_conditions(cap.postconditions, exec_context, stage="postcondition")
 
             # 5. Record validation evidence & savings
@@ -435,9 +572,14 @@ class OperationalKernel:
                 "inputs_sample": sanitize(inputs),
             }
             cap.success_count += 1
-            cap.savings["llm_calls_saved"] = cap.savings.get("llm_calls_saved", 0) + 1
-            cap.savings["tokens_saved"] = cap.savings.get("tokens_saved", 0) + 1500
-            self.registry.register(cap)
+            if learned:
+                cap.savings['deterministic_replays'] = cap.savings.get('deterministic_replays', 0) + 1
+                cap.savings['executor_llm_calls'] = 0
+            else:
+                cap.savings["llm_calls_saved"] = cap.savings.get("llm_calls_saved", 0) + 1
+                cap.savings["tokens_saved"] = cap.savings.get("tokens_saved", 0) + 1500
+            if not exec_context.get('learning_replay'):
+                self.registry.register(cap)
 
             return {
                 "success": True,
@@ -448,7 +590,8 @@ class OperationalKernel:
             }
 
         except CapabilityDriftError as drift_err:
-            self.registry.record_drift(cap.id, str(drift_err), quarantine=True)
+            if not exec_context.get('learning_replay'):
+                self.registry.record_drift(cap.id, str(drift_err), quarantine=True, version=cap.version)
             if owner:
                 from workstation.reasoning_handoff import needs_reasoning
                 handoff = needs_reasoning(

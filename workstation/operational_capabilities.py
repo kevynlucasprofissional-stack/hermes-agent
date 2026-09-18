@@ -85,7 +85,9 @@ def matches_version(version: str, constraint: str | None) -> bool:
             return v_parts >= min_parts
         except ValueError:
             return version >= min_v
-    return version.startswith(constraint)
+    if len(constraint.split('.')) >= 3:
+        return False
+    return version == constraint or version.startswith(constraint + '.')
 
 
 @dataclass
@@ -139,6 +141,12 @@ class OperationalCapability:
     savings: dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=_utc_now)
     updated_at: str = field(default_factory=_utc_now)
+    causal_grade: int = 0
+    trust_class: str = 'manually_managed'
+    taint: list[str] = field(default_factory=list)
+    source_trace_refs: list[str] = field(default_factory=list)
+    promotion_policy_version: str = ''
+    learning_metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -166,6 +174,12 @@ class OperationalCapability:
             "savings": dict(self.savings),
             "created_at": self.created_at,
             "updated_at": self.updated_at,
+            "causal_grade": int(self.causal_grade),
+            "trust_class": self.trust_class,
+            "taint": list(self.taint),
+            "source_trace_refs": list(self.source_trace_refs),
+            "promotion_policy_version": self.promotion_policy_version,
+            "learning_metadata": self.learning_metadata,
         }
 
     @classmethod
@@ -202,6 +216,12 @@ class OperationalCapability:
             savings=dict(data.get("savings", {})),
             created_at=str(data.get("created_at", _utc_now())),
             updated_at=str(data.get("updated_at", _utc_now())),
+            causal_grade=int(data.get('causal_grade', 0)),
+            trust_class=str(data.get('trust_class', 'manually_managed')),
+            taint=list(data.get('taint', [])),
+            source_trace_refs=list(data.get('source_trace_refs', [])),
+            promotion_policy_version=str(data.get('promotion_policy_version', '')),
+            learning_metadata=dict(data.get('learning_metadata', {})),
         )
 
 
@@ -246,8 +266,8 @@ class OperationalCapabilityRegistry:
             return {}
         try:
             return json.loads(self.index_file.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
+        except (OSError, ValueError) as exc:
+            raise CapabilityValidationError('capability index unreadable; admission fails closed') from exc
 
     def register(self, capability: OperationalCapability) -> OperationalCapability:
         """Register a new or updated operational capability."""
@@ -257,9 +277,25 @@ class OperationalCapabilityRegistry:
         sanitized = sanitize(capability.to_dict())
         sha = digest(sanitized)
         with self._transaction():
-            ref = self.artifacts.store("operational_capabilities", f"{capability.id}_{capability.version}_{sha[:16]}.json", sanitized)
             index = self._load_index()
             entry_key = f"{capability.id}@{capability.version}"
+            old = index.get(entry_key)
+            contract_fields = ('input_schema', 'output_schema', 'effect', 'route', 'scope', 'preconditions',
+                'postconditions', 'verifier_contract', 'dependencies', 'implementation', 'provenance',
+                'semantic_fingerprint', 'compatibility_fingerprint', 'trust_class', 'taint', 'learning_metadata')
+            contract_digest = digest({k: sanitized.get(k) for k in contract_fields})
+            learned = capability.provenance.get('source') == 'experience_compiler'
+            if old and old.get('immutable_contract') and old['immutable_contract'] != contract_digest:
+                raise CapabilityValidationError('historically promoted learned contract is immutable; create a new version')
+            if learned and capability.lifecycle == CapabilityLifecycle.PROMOTED and not (old and old.get('immutable_contract')):
+                from workstation.experience_compiler.promotion import ExperiencePromotionPolicy
+                admission = ExperiencePromotionPolicy().evaluate(capability)
+                if not admission.admitted:
+                    raise CapabilityValidationError('learned promotion denied: ' + ', '.join(admission.reasons))
+                capability.promotion_policy_version = admission.policy_version
+                sanitized = sanitize(capability.to_dict())
+                sha = digest(sanitized)
+            ref = self.artifacts.store("operational_capabilities", f"{capability.id}_{capability.version}_{sha[:16]}.json", sanitized)
             index[entry_key] = {
                 "id": capability.id,
                 "version": capability.version,
@@ -273,6 +309,8 @@ class OperationalCapabilityRegistry:
                 "ref": ref.ref,
                 "sha256": sha,
                 "updated_at": capability.updated_at,
+                'immutable_contract': (old or {}).get('immutable_contract') or (
+                    contract_digest if learned and capability.lifecycle == CapabilityLifecycle.PROMOTED else None),
             }
             temp = self.index_file.with_name(f"index.{os.getpid()}.{threading.get_ident()}.tmp")
             with temp.open("w", encoding="utf-8") as stream:
@@ -293,7 +331,7 @@ class OperationalCapabilityRegistry:
                         candidates.append(entry)
             if not candidates:
                 return None
-            candidates.sort(key=lambda e: e.get("version", "0"), reverse=True)
+            candidates.sort(key=lambda e: tuple(int(v) if v.isdigit() else 0 for v in e.get('version', '0').split('.')), reverse=True)
             chosen = candidates[0]
             body = self.artifacts.read_json(chosen["ref"])
             return OperationalCapability.from_dict(body)
@@ -319,7 +357,7 @@ class OperationalCapabilityRegistry:
         cap.success_count += 1
         if cap.lifecycle == CapabilityLifecycle.DISCOVERED:
             cap.lifecycle = CapabilityLifecycle.VALIDATED
-        if cap.success_count >= auto_promote_threshold and cap.lifecycle == CapabilityLifecycle.VALIDATED and cap.drift_state == "healthy":
+        if cap.provenance.get('source') != 'experience_compiler' and cap.success_count >= auto_promote_threshold and cap.lifecycle == CapabilityLifecycle.VALIDATED and cap.drift_state == "healthy":
             cap.lifecycle = CapabilityLifecycle.PROMOTED
         return self.register(cap)
 
@@ -330,8 +368,8 @@ class OperationalCapabilityRegistry:
         cap.lifecycle = CapabilityLifecycle.PROMOTED
         return self.register(cap)
 
-    def record_drift(self, capability_id: str, reason: str, *, quarantine: bool = True) -> OperationalCapability:
-        cap = self.get(capability_id)
+    def record_drift(self, capability_id: str, reason: str, *, quarantine: bool = True, version: str | None = None) -> OperationalCapability:
+        cap = self.get(capability_id, version)
         if not cap:
             raise CapabilityNotFoundError(f"Capability '{capability_id}' not found")
         cap.failure_count += 1
@@ -354,7 +392,7 @@ class OperationalCapabilityRegistry:
         """Find matching capability by route, semantic fingerprint, and scope."""
         with self._transaction():
             index = self._load_index()
-            for entry in index.values():
+            for entry in sorted(index.values(), key=lambda e: tuple(int(v) if v.isdigit() else 0 for v in e.get('version', '0').split('.')), reverse=True):
                 if entry.get("route") != route:
                     continue
                 if entry.get("semantic_fingerprint") != semantic_fingerprint:
@@ -465,4 +503,3 @@ def learn_operational_capability(
         compatibility_fingerprint=compatibility_fingerprint,
     )
     return registry.register(capability)
-

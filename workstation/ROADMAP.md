@@ -1,6 +1,6 @@
 # Workstation roadmap
 
-## Experience Compiler / Verified Operational Transitions (2026-09-18) — NEXT MILESTONE / EC0-EC8 PLANNED
+## Experience Compiler / Verified Operational Transitions (2026-09-18) — EC0–EC8 IMPLEMENTED / CONTRACT VALIDATED
 
 Canonical specification:
 [context/EXPERIENCE_COMPILER.md](context/EXPERIENCE_COMPILER.md).
@@ -45,7 +45,7 @@ adaptive execution
   -> exact resolver / work_execute
 ~~~
 
-Implementation order:
+Implemented sequence (evidence and remaining qualification: context/TESTING.md):
 
 1. **EC0 — transition identity at capture**
    - normalize `procedure_trace` into a first-class TransitionSample contract;

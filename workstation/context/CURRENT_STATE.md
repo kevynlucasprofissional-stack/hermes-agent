@@ -15,37 +15,33 @@ file. “Implemented”, “contract layer validated” and “tests green” do
 a product-level causal invariant has been proven across Task -> Run -> operation ->
 evidence -> canonical commit -> projection.
 
-## 2026-09-18 Experience Compiler / Verified Operational Transitions — NOT IMPLEMENTED / NEXT MILESTONE
+## 2026-09-18 Experience Compiler / Verified Operational Transitions — IMPLEMENTED / CONTRACT VALIDATED
 
-The deterministic Operational Capability Runtime is implemented, but **automatic
-experience compilation is not yet equivalent to the architecture now specified in
-[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md)**.
+The Experience Compiler now emits the existing OperationalCapability format from
+bounded, semantically normalized experience. See
+[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md) for the specification and evidence.
 
-Current code can capture bounded adaptive traces, derive semantic anchors,
-register OperationalCapability candidates and replay promoted capabilities.
-However, the inspected `workstation/procedure_trace.py` path is still action-centric:
-it does not yet normalize a semantic state-before/state-after delta, mine an
-Experience Corpus, segment traces into Operational Slices, align multiple traces,
-anti-unify parameters, infer conservative preconditions/effects/branches, assign
-causal support, run safe ablation, or refine learned models from counterexamples.
+`workstation/experience_compiler/` implements semantic before/after deltas,
+artifact-derived corpus, segmentation/alignment, typed anti-unification and
+relations, conservative action models with failures, reverse dependency slices,
+causal grades, safe interventions and immutable refinement. Causal support and
+effect evidence remain distinct. Exact replay uses the existing kernel without
+operational-planning LLM calls.
 
-Concrete current seams:
-- `record_trace()` may derive a semantic browser anchor after dispatch but calls
-  `semantic_operation_fingerprint(name, args)` on the original args, so ref-only
-  browser actions may still lack semantic trace identity;
-- capture can emit anchor `type="name"` while `candidate_steps()` admits
-  `role_name`, `testid` and `text`, creating a capture/replay mismatch;
-- current learning is still approximately
-  `trace -> candidate_steps() -> experience_candidate()`, before cross-trace
-  generalization or causal reduction;
-- `OperationalCapabilityRegistry.record_validation(..., auto_promote_threshold=2)`
-  is a generic registry convenience and is **not sufficient promotion authority**
-  for experience-learned mutable capabilities.
+Verified canonical completion mines candidates after commit. Derived anchors
+participate in the capture fingerprint and replay requires unique exact semantic
+identity. Learned success counts never grant promotion; independent admission
+checks provenance/taint, C/E evidence, risk, diversity, drift and reuse utility.
+TaskRun pins live in existing WorkPlan metadata; durable checkpoints prevent blind
+replay after uncertain dispatch. Historically promoted learned contracts remain
+immutable even after quarantine.
 
-The next milestone introduces TransitionSample/VOT semantics, an Experience
-Compiler pipeline, explicit observational-vs-interventional evidence, C0-C5
-causal grades, trust/taint-aware promotion, safe replay/ablation and
-counterexample-guided immutable revisions.
+Validation covers browser, real temporary files, a real subprocess, a learned
+cross-backend composite and two compositions reusing one learned atomic capability.
+Interventions require owner-supplied isolated fixtures and bounded deadlines.
+Default adaptive provenance remains observational and cannot auto-promote mutation.
+Global coverage/novelty and paid-provider savings remain unknown, not estimated.
+Native Desktop qualification is separate; see TESTING.md for exact gate status.
 
 The Capability Runtime must be extended, not rebuilt. Existing TaskRun,
 BrowserTask, ArtifactStore, ExecutionJournal, RecipeStore, ProceduralMemory,

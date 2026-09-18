@@ -291,7 +291,26 @@ class WorkstationKanbanBridge:
                       "outcome": outcome.to_dict(), "acceptance_approved": True,
                       "verification_event_ids": metadata["workstation"].get("verification_event_ids", [])},
         )
-        if report.repeatability_hint and report.procedure_steps:
+        from workstation.experience_compiler.corpus import ExperienceCorpus
+        from workstation.experience_compiler.compiler import ExperienceCompiler
+        from workstation.operational_capabilities import OperationalCapabilityRegistry, CapabilityValidationError
+        from workstation.artifacts import ArtifactStore
+        artifacts = ArtifactStore()
+        # Mining is a projection after canonical commit; insufficient state evidence
+        # remains observations and cannot affect completion or grant write authority.
+        corpus = None
+        try:
+            corpus = ExperienceCorpus(artifacts, discover=True)
+            corpus.accept_run(journal, outcome)
+            learned = ExperienceCompiler(OperationalCapabilityRegistry(artifacts), corpus).mine()
+        except (OSError, ValueError, CapabilityValidationError) as error:
+            import logging
+            logging.getLogger(__name__).warning('Experience projection failed after accepted completion: %s', type(error).__name__)
+            learned = []
+        for capability in learned:
+            journal.record(ExecutionEventKind.ACTION, 'experience operational candidate; causal validation required',
+                metadata={'capability_id': capability.id, 'capability_version': capability.version})
+        if report.repeatability_hint and report.procedure_steps and corpus is not None and not corpus.refs:
             from workstation.memory import ProceduralMemory
             from workstation.routines import RoutinePromotionService
             memory = ProceduralMemory()

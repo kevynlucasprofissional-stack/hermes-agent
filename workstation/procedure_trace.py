@@ -1,11 +1,12 @@
 """Bounded adaptive observations; artifacts/journal/memory retain ownership."""
 import re
 import json
+import uuid
 from tools.effects import tool_effect
 from workstation.recipes import sanitize, digest
 from workstation.routing import canonical_route_for_tool
 
-_TRANSIENT = {'ref', 'node_id', 'nodeId', 'tab_id', 'tabId', 'webContentsId', 'webcontents_id'}
+_TRANSIENT = {'ref', 'node_id', 'nodeId', 'tab_id', 'tabId', 'webContentsId', 'webcontents_id', 'web_contents_id', 'WebContentsId'}
 
 
 def durable_arguments(value):
@@ -37,6 +38,11 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
     selected_runtime = 'internal' if isinstance(decoded, dict) and decoded.get('runtime') == 'electron-chromium' else None
     traces = getattr(agent, '_work_procedure_trace', [])
     before_ref = traces[-1]['after_state_ref'] if traces else None
+    if selected_runtime == 'internal' and isinstance(decoded.get('target'), dict) and not arguments.get('semantic_anchor'):
+        from workstation.experience_compiler.state_abstraction import semantic_anchor
+        anchor = semantic_anchor(decoded['target'])
+        if anchor:
+            arguments['semantic_anchor'] = durable_arguments(anchor)
     if selected_runtime == 'internal' and args.get('ref') and not arguments.get('semantic_anchor') and before_ref:
         from workstation.routines import semantic_browser_elements
         before = artifacts.read_json(before_ref)
@@ -46,11 +52,17 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
             if element.get('testid'):
                 arguments['semantic_anchor'] = {'type': 'testid', 'value': element['testid']}
             elif element.get('name'):
-                arguments['semantic_anchor'] = {'type': 'name', 'value': f"{element.get('role', 'element')}:{element['name']}"}
+                arguments['semantic_anchor'] = {'type': 'role_name', 'value': f"{element.get('role') or element.get('tag', 'element')}:{element['name']}"}
             elif element.get('label') and sum(e.get('role') == element.get('role') and e.get('label') == element['label'] for e in elements) == 1:
                 arguments['semantic_anchor'] = {'type': 'role_name', 'value': element['role'] + ':' + element['label']}
-    sem_fp = semantic_operation_fingerprint(name, args)
-    op_fp = sem_fp or structural_signature(name, args)
+    route = canonical_route_for_tool(name, runtime=selected_runtime)
+    from urllib.parse import urlsplit
+    before_data = artifacts.read_json(before_ref) if before_ref else {}
+    url = arguments.get('url') or (before_data.get('url') if isinstance(before_data, dict) else None)
+    parsed = urlsplit(url or '')
+    scope = {'host': parsed.hostname, 'path_family': re.sub(r'/\d+(?=/|$)', '/:number', parsed.path or '/')} if parsed.hostname else {}
+    sem_fp = semantic_operation_fingerprint(name, arguments, route=route, scope=scope)
+    op_fp = sem_fp or structural_signature(name, arguments)
     record = {'tool': name, 'action': name.removeprefix('browser_'),
         'route': canonical_route_for_tool(name, runtime=selected_runtime), 'operation_fingerprint': op_fp,
         'semantic_fingerprint': sem_fp,
@@ -60,6 +72,10 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
         'effect': tool_effect(name).value, 'duration_ms': duration_ms,
         'task_id': getattr(agent, '_canonical_work_task_id', None),
         'run_id': getattr(agent, '_canonical_work_run_id', None),
+        'operation_id': getattr(agent, '_current_operation_id', None) or 'observation_' + uuid.uuid4().hex,
+        'operation_index': len(traces),
+        'scope': scope,
+        'runtime': decoded.get('runtime', route) if isinstance(decoded, dict) else route,
         'provider_usage': sanitize(getattr(agent, '_current_provider_usage', None)),
         'replayable': not any(k in args for k in _TRANSIENT) or bool(arguments.get('semantic_anchor'))}
     if len(traces) >= 64:
@@ -67,10 +83,19 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
         return
     traces.append(record)
     agent._work_procedure_trace = traces
+    from workstation.experience_compiler.state_abstraction import abstract_state, sample_from_trace
+    sample = sample_from_trace(record,
+        before=abstract_state(route, before_data, before_ref),
+        after=abstract_state(route, decoded, output.ref))
+    sample.provenance.operation_index = record['operation_index']
+    sample_ref = artifacts.store(owner, 'transition_' + digest(sample.to_dict()) + '.json', sample.to_dict(),
+        schema='hermes.transition_sample.v1')
+    record['transition_ref'] = sample_ref.ref
     ref = artifacts.store(owner, 'trace_' + digest(record) + '.json', record)
     ExecutionJournal(owner, agent.session_id).record(ExecutionEventKind.ACTION,
         'adaptive observation captured; semantic verification required', metadata={'trace_ref': ref.ref,
-        'operation_fingerprint': record['operation_fingerprint'], 'run_id': record['run_id']})
+        'operation_fingerprint': record['operation_fingerprint'], 'run_id': record['run_id'],
+        'transition_ref': sample_ref.ref})
 
 
 def candidate_steps(traces):

@@ -65,15 +65,18 @@ Resolver uma Capability e aprender uma Capability são problemas distintos:
 retrieval pode ser aproximado para gerar candidatos; admission continua exato,
 determinístico e policy-gated.
 
-Gap concreto do código atual:
-- `procedure_trace.py` ainda é action-centric;
-- derived semantic anchor não participa necessariamente do fingerprint porque
-  `record_trace()` calcula o fingerprint sobre os args originais;
-- capture pode emitir anchor `name`, enquanto `candidate_steps()` não o admite;
-- `trace -> candidate_steps -> experience_candidate` acontece antes de
-  cross-trace generalization/causal reduction;
-- `record_validation(auto_promote_threshold=2)` não pode ser a autoridade final
-  de promoção para capabilities aprendidas de mutações.
+Implementação EC0–EC8 validada em contratos: `experience_compiler/` normaliza
+transições, reconstrói corpus pelos owners existentes, alinha/generaliza traces,
+infere modelos conservadores e reduz dependências. Replay/ablação são APIs de
+fixtures isoladas controladas pelo owner; contraexemplos geram revisão imutável.
+Derived anchors participam do fingerprint e controles ambíguos bloqueiam replay.
+Promoção learned depende de política independente; contagem não concede autoridade.
+WorkPlan mantém pins por TaskRun e checkpoints duráveis impedem retry cego.
+Browser, filesystem real e processo local compartilham a arquitetura, inclusive
+composição learned e reuso atômico. Provenance adaptativa comum continua
+observacional; conteúdo de página não vira autoridade por repetição. Custos reais
+de provider e cobertura global seguem desconhecidos. Qualificação Desktop nativa
+é separada dos testes de contrato; resultados exatos estão em TESTING.md/H-068.
 
 Especificação canônica:
 `workstation/context/EXPERIENCE_COMPILER.md`.

@@ -20,7 +20,9 @@ _SECRET = re.compile(r"token|apikey|authorization|cookie|password|secret|credent
 def sanitize(value):
     if isinstance(value, dict):
         return {k: sanitize(v) for k, v in value.items()
-                if not _SECRET.search(re.sub(r"[^a-z]", "", str(k).lower()))
+                if (not _SECRET.search(re.sub(r"[^a-z]", "", str(k).lower()))
+                    or (k == 'cookie_banner_visible' and (isinstance(v, bool)
+                        or isinstance(v, list) and len(v) == 2 and all(isinstance(x, bool) for x in v))))
                 and k not in {"reasoning", "reasoning_content", "codex_reasoning_items", "chain-of-thought"}}
     if isinstance(value, list):
         return [sanitize(v) for v in value]

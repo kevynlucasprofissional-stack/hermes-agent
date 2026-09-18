@@ -220,12 +220,80 @@ before drift, compact handoff and no lost-ACK replay. Simulated discovery uses
 3 provider calls versus 0 on promoted replay. Efficiency fixtures additionally
 exercise 8 -> 0 and null denominators; neither result measures paid-provider cost.
 
-## Planned Experience Compiler validation gate
+## Experience Compiler EC0–EC8 validation — 2026-09-18
+
+Baseline: fetched main `2479b712f8a3912ff6df9066d1782e8b407b4177`.
+All Python contract gates use Git Bash and `scripts/run_tests.sh`, native Windows
+Python, `-j 4 --file-timeout 900`. Sandbox signal-pipe WinError 5 required
+escalation; it was an execution-environment failure, not a product defect.
+
+Focused command (final: 116 passed, 0 failed, 8 files, 62.5s):
+
+```bash
+scripts/run_tests.sh workstation/tests/test_experience_compiler.py workstation/tests/test_execution_policy.py workstation/tests/test_progressive_compilation.py workstation/tests/test_operational_capabilities.py workstation/tests/test_task_compiler.py workstation/tests/test_routines.py workstation/tests/test_browser_workstation_route.py workstation/tests/test_semantic_validation_and_capabilities.py -j 4 --file-timeout 900
+```
+
+Full command:
+
+```bash
+scripts/run_tests.sh workstation/tests -j 4 --file-timeout 900
+```
+
+First full run: 545 passed, 0 failed, 2 skipped, 56 files, 255.7s.
+Expanded run: 547 passed, 0 failed, 2 skipped, 56 files, 230.3s.
+Final full: **550 passed, 0 failed, 2 skipped, 56 files, 226.8s**.
+The final strict observed-binding guard was checked by the focused regate after
+the broad run's compiler file completed; no other product changes followed.
+Compiler contracts include
+40 tests: browser fixture replay, real temp-file write/hash readback, real subprocess
+exit readback, learned filesystem/process composite, two atomic reuse flows,
+strict unique anchors, corrupt-index refusal, task-run pins and causal C5 fixtures.
+Automatic mining incorporates matching failure segments; missing predicates remain
+unresolved evidence. Conditional browser replay is checked from the persisted
+registry in both banner states. Source refs resolve to original corpus artifacts.
+Large capability outputs use the existing reference plane; real large-file
+readback and confirmed-result resume preserve compact context.
+These prove contracts and local integration, not a live authenticated product task.
+
+Work100 command: `.venv\Scripts\python.exe workstation/work100.py --run`.
+Result: **30 PASS; 0 FAIL; 0 COVERAGE_GAP; 0 NOT_RUN_ENVIRONMENT**.
+Repeated after final product changes with the same result.
+The catalog includes two executed Electron contracts; this remains distinct from
+native Windows/Desktop E2E. No TypeScript/Electron product source changed.
+Standalone UI/typecheck/build gates were not required for this Python milestone.
+Native environment: Electron is hoisted at
+`node_modules/electron/dist/electron.exe`; the absent workspace-local binary is
+not a blocker. `apps/desktop/dist/electron-main.mjs` exists. Existing H004 native
+smoke passed after final Work100:
+
+```text
+node workstation/context/engineering-journal/probes/h004-native-browser-task-smoke.mjs
+```
+
+Exit 0; `H004_CLASSIFICATION=VALIDATED`, `H004_A_CONTROLLER_ACTION_PASS`,
+`H004_LIVE_DESTROY_PASS`, `H004_RESTART_PASS`; Windows 10.0.26200 / Electron 40.10.2.
+Real isolated profiles, live WebContentsView identity, explicit destruction,
+two distinct restart processes, lazy recovery and structural secret isolation.
+Its scope is BrowserTask lifecycle/recovery and secret isolation;
+packaged/full Experience Compiler product E2E was not part of this qualification.
+Paid-provider economics, global capability coverage and novelty remain unknown;
+compiler metrics emit null for unsupported denominators. No destructive production
+experiments or historical third-party mutations were replayed.
+
+Adjacent owner command (8 passed, 0 failed, 2 files, 11.9s):
+
+```bash
+scripts/run_tests.sh tests/agent/test_tool_guardrails.py tests/agent/test_tool_executor_checkpoint_paths.py -j 4 --file-timeout 900
+```
+
+Final documentation gate:
+`scripts/run_tests.sh workstation/tests/test_context_docs.py -j 4 --file-timeout 900`
+— 4 passed, 0 failed (1.1s). Final `git diff --check` passed.
 
 Canonical target:
 [EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
 
-When EC0-EC8 implementation begins, add focused behavior tests for:
+Implemented focused behavior tests cover:
 - TransitionSample normalization and semantic state deltas;
 - ref-only Browser traces receiving derived semantic identity;
 - capture/replay anchor-type consistency;
