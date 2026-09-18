@@ -123,11 +123,26 @@ class ProcedureStep:
             fallback_anchors=list(data.get("fallback_anchors", [])),
         )
 
-    def resolve_anchor(self, available_elements: list[dict[str, Any]]) -> str | None:
+    def resolve_anchor(self, available_elements: list[dict[str, Any]], *, strict: bool = False) -> str | None:
         """Resolve the best target identifier across multi-facet fallback anchors.
 
         Prioritizes semantic stability: testid -> role_name -> text content -> CSS selector.
         """
+        if strict:
+            for anchor in self.fallback_anchors:
+                value = str(anchor.get('value', '')).casefold()
+                matches = []
+                for element in available_elements:
+                    attributes = element.get('attributes', {})
+                    role = str(element.get('role', element.get('tag', ''))).casefold()
+                    name = str(element.get('name', element.get('label', element.get('text', '')))).casefold()
+                    testid = str(attributes.get('data-testid', attributes.get('data-test', attributes.get('data-qa', element.get('testid', ''))))).casefold()
+                    actual = {'testid': testid, 'role_name': role + ':' + name, 'text': name}.get(anchor.get('type'))
+                    if value and actual == value:
+                        matches.append(element)
+                if matches:
+                    return str(matches[0]['ref']) if len(matches) == 1 and matches[0].get('ref') else None
+            return None
         if not available_elements:
             return self.target or None
 

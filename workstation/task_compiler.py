@@ -261,30 +261,8 @@ class TaskCompiler:
                 progress: Callable | None = None, provider_usage: dict | None = None,
                 environment: str | None = None, event_bus=None, canonical_task_id: str | None = None) -> dict:
         if request.get("capability_id"):
-            from workstation.operational_kernel import OperationalKernel
-            kernel = OperationalKernel(artifacts=self.artifacts)
-            inputs = request.get("capability_inputs") or request.get("inputs") or {}
-            owner = str(canonical_task_id or task_id or session_id)
-            result = kernel.execute_capability(
-                request["capability_id"],
-                inputs,
-                version=request.get("capability_version"),
-                dispatch=dispatch,
-                context={"task_id": owner, "session_id": session_id},
-                owner=owner,
-            )
-            plan_id = f"cap_exec_{request['capability_id']}_{int(time.time())}"
-            from workstation.recipes import sanitize
-            res_ref = self.artifacts.store(owner, f"{plan_id}_result.json", sanitize(result))
-            return {
-                "status": result.get("status", "COMPLETED"),
-                "plan_id": plan_id,
-                "task_id": owner,
-                "capability_id": request["capability_id"],
-                "results_ref": res_ref.ref,
-                "output": result.get("output"),
-                "savings": result.get("savings", {}),
-            }
+            return self._execute_capability(request, task_id=task_id, session_id=session_id,
+                dispatch=dispatch, canonical_task_id=canonical_task_id)
         recipe_key = request.get("recipe_key")
         if not recipe_key and request.get('operation_fingerprint'):
             from workstation.operational_capabilities import OperationalCapabilityRegistry
@@ -296,30 +274,9 @@ class TaskCompiler:
                 promoted_only=True
             )
             if matched_cap:
-                from workstation.operational_kernel import OperationalKernel
-                kernel = OperationalKernel(registry=op_reg, artifacts=self.artifacts)
-                inputs = request.get("capability_inputs") or request.get("inputs") or {}
-                owner = str(canonical_task_id or task_id or session_id)
-                cap_res = kernel.execute_capability(
-                    matched_cap,
-                    inputs,
-                    dispatch=dispatch,
-                    context={"task_id": owner, "session_id": session_id},
-                    owner=owner
-                )
-                plan_id = f"cap_reuse_{matched_cap.id}_{int(time.time())}"
-                from workstation.recipes import sanitize
-                res_ref = self.artifacts.store(owner, f"{plan_id}_result.json", sanitize(cap_res))
-                return {
-                    "status": cap_res.get("status", "COMPLETED"),
-                    "plan_id": plan_id,
-                    "task_id": owner,
-                    "capability_id": matched_cap.id,
-                    "results_ref": res_ref.ref,
-                    "output": cap_res.get("output"),
-                    "savings": cap_res.get("savings", {}),
-                    "reused_capability": True
-                }
+                return {**self._execute_capability({**request, 'capability_id': matched_cap.id,
+                    'capability_version': matched_cap.version}, task_id=task_id, session_id=session_id,
+                    dispatch=dispatch, canonical_task_id=canonical_task_id), 'reused_capability': True}
             match = self.recipes.find_verified(fingerprint=request['operation_fingerprint'],
                 scope=request.get('recipe_scope'), mutation_target=request.get('mutation_target'),
                 preflight=request.get('preflight', []))
@@ -944,6 +901,84 @@ class TaskCompiler:
         persist_metrics()
         return envelope
 
+    def _execute_capability(self, request, *, task_id, session_id, dispatch, canonical_task_id=None):
+        from workstation.operational_kernel import OperationalKernel
+        from workstation.experience_compiler.promotion import pin_capability, contract_fingerprint
+        from workstation.recipes import digest, sanitize
+        from hermes_cli import kanban_db
+        kernel = OperationalKernel(artifacts=self.artifacts)
+        owner = str(canonical_task_id or task_id or session_id)
+        conn = self.store.get_connection()
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        canonical = kanban_db.get_task(conn, owner) if 'tasks' in tables else None
+        if (canonical_task_id and not canonical) or (canonical and canonical.session_id != session_id):
+            raise ValueError('Canonical task does not belong to the owning conversation')
+        run_id = str(canonical.current_run_id) if canonical and canonical.current_run_id is not None else None
+        inputs = request.get('capability_inputs') or request.get('inputs') or {}
+        identity = 'cap_exec_' + digest({'owner': owner, 'run_id': run_id, 'session_id': session_id,
+            'capability_id': request['capability_id'], 'inputs': sanitize(inputs),
+            'operation_key': request.get('operation_key')})[:24]
+        plan = self.store.get_plan(request.get('_capability_plan_id') or identity)
+        if plan and plan.session_id != session_id:
+            raise ValueError('Capability plan belongs to another conversation')
+        if plan and plan.run_id != run_id:
+            raise ValueError('stale_task_run: capability resume belongs to a superseded run')
+        if plan and plan.metadata.get('capability_result_ref'):
+            result = self.artifacts.read_json(plan.metadata['capability_result_ref'])
+            return {**result, 'plan_id': plan.id, 'results_ref': plan.metadata['capability_result_ref']}
+        selected = kernel.resolver.resolve(request['capability_id'], request.get('capability_version') or '*')
+        if not plan:
+            objective = self.artifacts.store(identity, 'objective.json', sanitize(request))
+            plan = self.store.create_plan(identity, selected.name, [{}], session_id=session_id, run_id=run_id,
+                execution_key=identity, metadata={'objective_ref': objective.ref,
+                    'canonical_task_id': canonical.id if canonical else None, 'browser_task_id': task_id,
+                    'capability_execution': True})
+        pin = pin_capability(self.store, plan.id, selected)
+        cap = kernel.registry.get(pin['capability_id'], pin['version'])
+        if not cap or cap.semantic_fingerprint != pin['semantic_fingerprint'] or cap.compatibility_fingerprint != pin['compatibility_fingerprint']:
+            raise ValueError('pinned capability contract changed')
+        if pin.get('contract_fingerprint') and contract_fingerprint(cap) != pin['contract_fingerprint']:
+            raise ValueError('pinned capability implementation changed')
+        for dependency in kernel.resolver.linearize(cap.id, cap.version):
+            pin_capability(self.store, plan.id, dependency)
+        item = self.store.get_work_items(plan.id)[0]
+        constraints = merge_constraints(active_constraints(), request.get('constraints', {}))
+        def admit(route, mutating):
+            require_allowed_route(route, constraints)
+            if mutating:
+                require_allowed_route(route, {k.removeprefix('mutation_'): v for k, v in constraints.items() if k.startswith('mutation_')})
+            if mutating and canonical:
+                live = kanban_db.get_task(self.store.get_connection(), canonical.id)
+                if not live or str(live.current_run_id) != str(plan.run_id) or live.status in {'done', 'cancelled'}:
+                    raise ValueError('stale_task_run')
+        # Browser actions retain the caller's scoped tool dispatcher/approval/lease.
+        def scoped_dispatch(name, args):
+            return dispatch(name, args, task_id, f'{item.id}_{name}')
+        result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner,
+            context={'task_id': owner, 'session_id': session_id,
+                'capability_pins': self.store.get_plan(plan.id).metadata['capability_pins'],
+                'durable_store': self.store, 'durable_item_id': item.id, 'primitive_admission': admit})
+        projected_output = blob_references(self.artifacts, owner, sanitize(result.get('output')))
+        if len(json.dumps(projected_output, ensure_ascii=False).encode('utf-8', 'surrogatepass')) > 2048:
+            projected_output = content_reference(self.artifacts, owner, projected_output, schema='capability_output')
+        envelope = {'status': result.get('status', 'COMPLETED'), 'task_id': owner,
+            'capability_id': cap.id, 'capability_version': cap.version,
+            'output': projected_output, 'savings': result.get('savings', {}),
+            'metrics': {'executor_llm_calls': 0}}
+        if result.get('success'):
+            ref = self.artifacts.store(owner, plan.id + '_result.json', sanitize(envelope))
+            self.store.mark_item_persisted(item.id, ref.ref)
+            self.store.mark_item_validated(item.id, {'valid': True, 'capability_version': cap.version,
+                                                    'evidence_ref': ref.ref})
+            self.store.complete_item(item.id)
+            self.store.update_plan_state(plan.id, 'completed')
+            self.store.update_plan_metadata(plan.id, {'capability_result_ref': ref.ref})
+        else:
+            self.store.update_plan_state(plan.id, 'blocked')
+            ref = self.artifacts.store(owner, plan.id + '_handoff.json', sanitize(result))
+            envelope.update({k: v for k, v in result.items() if k != 'output'})
+        return {**envelope, 'plan_id': plan.id, 'results_ref': ref.ref}
+
     def resume(self, plan_id: str, *, session_id: str, dispatch: Callable,
                progress: Callable | None = None, provider_usage: dict | None = None,
                status_only: bool = False, event_bus=None) -> dict:
@@ -952,6 +987,11 @@ class TaskCompiler:
             raise ValueError("Plan not found in the owning conversation")
         if status_only:
             return self.store.operational_ledger(plan_id)
+        if plan.metadata.get('capability_execution'):
+            objective = self.artifacts.read_json(plan.metadata['objective_ref'])
+            return self._execute_capability({**objective, '_capability_plan_id': plan.id},
+                task_id=plan.metadata['browser_task_id'], session_id=session_id, dispatch=dispatch,
+                canonical_task_id=plan.metadata.get('canonical_task_id'))
         reasoning = plan.metadata.get('reasoning_handoff') or {}
         if reasoning.get('safe_to_resume'):
             body = self.artifacts.read_json(reasoning['state_ref'])

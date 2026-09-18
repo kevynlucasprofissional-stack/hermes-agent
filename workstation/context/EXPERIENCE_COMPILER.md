@@ -2,7 +2,51 @@
 
 Date established: 2026-09-18
 
-Status: **TARGET ARCHITECTURE / IMPLEMENTATION REQUIRED**
+Status: **IMPLEMENTED / CONTRACT VALIDATED — native product qualification separate**
+
+## Implementation evidence — 2026-09-18
+
+Base: `2479b712f8a3912ff6df9066d1782e8b407b4177`. Implementation is in
+`workstation/experience_compiler/`; executable output remains OperationalCapability.
+The corpus is a rebuildable ArtifactStore/ExecutionJournal projection. Capture
+normalizes semantic anchors before fingerprinting; deterministic replay requires
+one exact, uniquely reacquired live control. Ambiguous controls fail closed.
+
+EC0–EC8 now cover bounded semantic browser/filesystem/process projections,
+ordered transition samples, closure/segmentation/alignment, conservative typed
+anti-unification and parameter relations, positive/negative action models,
+reverse dependency slices, separate C0–C5/E0–E3, owner-controlled replay/ablation,
+immutable counterexample revisions, independent learned promotion and durable
+WorkPlan metadata pins. Candidate consolidation uses exact compatibility and
+positive compression/reuse utility. Conditional steps observe state again;
+optional observations do not become mandatory actions.
+Automatic mining associates success and failure segments by operation/target
+family, canonical route/runtime and scope. Missing predicates are unknown evidence,
+not a discriminating negative value. Candidate provenance retains source sample
+artifact URIs, including counterexamples. Banner presence is a boolean state flag;
+actual cookies/credentials remain excluded by the canonical sanitizer.
+The capability path in `work_execute` retains durable result checkpoints and uses
+the existing reference plane for blobs/large outputs, including confirmed resume.
+Unresolved/redacted legacy observation bindings remain corpus evidence; they cannot
+become literal executable steps. Owner binding evidence is required before compiling
+those samples. Existing declared manual capability variables remain supported.
+
+Canonical completion projects accepted final readback into the corpus and mines
+candidates after commit. A failed learning projection cannot undo accepted work.
+Ordinary adaptive observations default to environment-origin runtime observations,
+not trusted promotion authority. Owner-provided provenance, isolated reset-per-trial
+fixtures and verified evidence are required to cross that boundary. Interventions
+are explicit owner APIs, never model-provided scripts or production experiments.
+
+Learned browser and real temporary-filesystem replay, a real subprocess readback,
+learned filesystem/process composition and atomic reuse in two larger flows are
+covered by `test_experience_compiler.py`. Paid-provider cost, global coverage and
+novelty are unknown when no trustworthy denominator exists; metrics return null.
+No live third-party mutations or destructive ablations were performed. C5 needs
+distinct owner-controlled compatible contexts, never passive repetition.
+
+Exact commands/results and native NOT RUN scope are maintained in
+[TESTING.md](TESTING.md) and [H-068](engineering-journal/CURRENT.md).
 
 Depends on:
 - [ADAPTIVE_EXECUTION_COMPILATION.md](ADAPTIVE_EXECUTION_COMPILATION.md)
@@ -90,7 +134,7 @@ customer.change_email(customer_id, value)
 The first can be an atomic UI-local capability. The second is a larger capability
 whose closure is the persisted business effect.
 
-## Current implementation baseline on main
+## Historical implementation baseline on main before EC0–EC8
 
 As of main after PR #26, the deterministic capability substrate exists:
 
@@ -106,7 +150,7 @@ As of main after PR #26, the deterministic capability substrate exists:
 
 The missing layer is automatic **experience compilation**.
 
-### Concrete gaps discovered in current code
+### Concrete gaps reproduced at the baseline and addressed by this milestone
 
 1. `workstation/procedure_trace.py` remains primarily an action log. It stores
    before/after artifact refs but does not normalize them into semantic
@@ -133,7 +177,7 @@ The missing layer is automatic **experience compilation**.
    learned-capability promotion does not yet carry a trust/taint-aware causal
    admission contract.
 
-These are the next architecture gaps. Do not rebuild the capability runtime.
+These were the implementation gaps. The milestone extends the existing runtime.
 
 ## TransitionSample: trace becomes a semantic transition log
 

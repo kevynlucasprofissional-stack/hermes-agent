@@ -10,7 +10,7 @@ Before changing Workstation code, read these documents in order:
 2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
 3. [`ADAPTIVE_EXECUTION_COMPILATION.md`](ADAPTIVE_EXECUTION_COMPILATION.md) — active execution-policy correction; preserves causal safety while making novel stateful work executable.
 4. [`PROGRESSIVE_OPERATIONAL_COMPILATION.md`](PROGRESSIVE_OPERATIONAL_COMPILATION.md) — implemented deterministic Operational Capability Runtime and the role of `work_execute`.
-5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — **next active architecture milestone**: TransitionSamples/VOTs, trace segmentation, parameterization, causal validation, trust-aware promotion and automatic trace-to-Capability learning without an LLM consolidation loop.
+5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — **implemented Experience Compiler milestone**: TransitionSamples/VOTs, trace segmentation, parameterization, causal validation, trust-aware promotion and automatic trace-to-Capability learning without an LLM consolidation loop. Native product qualification remains separate.
 6. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — active reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
 7. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — implemented causal reliability invariants that all active lanes must preserve.
 8. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.

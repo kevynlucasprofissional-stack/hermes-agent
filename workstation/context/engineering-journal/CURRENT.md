@@ -2,7 +2,86 @@
 
 ## H-068 — Experience Compiler / Verified Operational Transition learning boundary (2026-09-18)
 
-**Classification:** TARGET ARCHITECTURE IDENTIFIED / IMPLEMENTATION REQUIRED.
+Implementation experiments (base `2479b712f8a3912ff6df9066d1782e8b407b4177`):
+- EC0 hypothesis: durable derived anchors repair identity without weakening policy.
+  RED: 4 failures; GREEN with Progressive Compilation: 14 passed.
+- EC1 hypothesis: bounded owner-state projections preserve semantic deltas and redact handles.
+  RED: 3 failures; GREEN with Progressive Compilation: 17 passed.
+- EC2 hypothesis: artifact refs suffice for corpus; state predicates distinguish branches.
+  RED: 3 failures; GREEN: 10 passed.
+- EC3 hypothesis: structural generalization plus negative examples yields conservative contracts.
+  RED: 3 failures; GREEN: 13 passed.
+- EC4 hypothesis: reverse dependencies prune incidental observations without claiming intervention.
+  RED: 2 failures; GREEN: 15 passed.
+- EC5 hypothesis: fixture-only replay/reduction raises causal grade separately from E strength.
+  RED: 7 failures; GREEN with Operational Capability tests: 34 passed.
+- EC6 hypothesis: independent admission and SQLite metadata pins prevent count-based learned authority.
+  RED: 4 failures; GREEN: 38 passed with the existing capability contracts.
+- EC7 hypothesis: consolidation emits existing capabilities with exact fingerprints and zero planning calls.
+  RED: 2 failures; GREEN: 40 passed with capability contracts.
+- EC8 hypothesis: real filesystem transitions replay through the same kernel and compose durably.
+  Integration RED: atomic persistence/validation ordering failure; GREEN: 42 passed.
+  Additional proof: real subprocess readback, learned cross-backend composite,
+  atomic reuse in two larger flows, indexed corpus ordering and controlled C5.
+All runs use `scripts/run_tests.sh` through Git Bash with native Windows Python.
+Git Bash needed sandbox escalation after signal-pipe WinError 5; no product change for that failure.
+Focused gates: 113 passed (8 files, 54.5s), then 114 passed (49.9s).
+Final focused: 116 passed (8 files, 62.5s), including 40 compiler contracts.
+First full gate: 545 passed, 2 skipped (56 files, 255.7s).
+Expanded full gate: 547 passed, 2 skipped (56 files, 230.3s).
+Final full: 550 passed, 0 failed, 2 skipped (56 files, 226.8s).
+Post-review strict observed-binding admission was regated focused after the
+broad suite's compiler file completed; other product code remained unchanged.
+Exact qualification commands are recorded in TESTING.md.
+Final review experiments:
+- RED: 2 failures reproduced automatic mining dropping failures and missing
+  predicates being misclassified as discriminating evidence. GREEN: 114 focused.
+- RED: conditional replay failed after normalization/alignment. Fixed exact
+  control identity in alignment and retained only the harmless boolean banner
+  visibility flag/boolean delta in the canonical sanitizer; cookies/credentials
+  remain excluded. GREEN: 61 across compiler/progressive/capability owners.
+- RED: source_trace_refs lacked actual source sample URIs. Corpus now projects
+  canonical sample_ref into provenance; candidate retains successful and negative
+  source artifact refs. Persisted conditional replay covers both banner states.
+  GREEN: 115 focused (57.0s).
+- RED: real large filesystem read leaked 78KB inline through capability work_execute.
+  Canonical reference-plane projection now externalizes large outputs; resume
+  preserves the compact confirmed result. GREEN: 116 focused (41.1s).
+- RED: legacy `$item.text` observation was admitted as an executable literal.
+  Learned compilation now refuses unresolved observed binding expressions;
+  samples remain in corpus until owner binding evidence exists. Declared manual
+  capability variables keep their existing runtime contract. GREEN: 116 focused (62.5s).
+Adjacent guardrails/checkpoint gate: 8 passed (2 files, 11.9s).
+Work100: 30 PASS, 0 FAIL/COVERAGE_GAP/NOT_RUN_ENVIRONMENT, including Electron contracts.
+Native Desktop environment correction: Electron exists in root node_modules
+(hoisted), not apps/desktop/node_modules. Initial NOT RUN inference from the
+workspace-local path was incorrect. Final Work100 again passed all 30 cases.
+H004 native smoke: `node workstation/context/engineering-journal/probes/h004-native-browser-task-smoke.mjs`
+returned exit 0 / `H004_CLASSIFICATION=VALIDATED`, live/controller/destroy and
+restart markers passed. Windows 10.0.26200, Electron 40.10.2; restart PIDs
+32148 -> 29168 preserved logical Task identity and recreated exactly one page.
+Temporary fixture roots were resolved/checked and no concurrent H004 process
+was found before running. Profiles were isolated; only loopback fixture pages.
+Compiled main bundle exists. Smoke scope remains native BrowserTask lifecycle,
+not full packaged/product Experience Compiler qualification.
+No live provider mutations, destructive ablations or paid-provider savings claims.
+
+Changed files: `experience_compiler/{models,state_abstraction,corpus,segmentation,
+generalization,causal,promotion,compiler}.py`, its package entrypoint and
+`tests/test_experience_compiler.py`; extended owners: `procedure_trace.py`,
+`memory.py`, `operational_capabilities.py`, `operational_kernel.py`,
+`task_compiler.py`, `kanban.py`, `recipes.py`; updated the specification, current state,
+intelligence map, roadmap, testing document and context entrypoint.
+Baseline: clean main fast-forwarded from `e1fb739d92c183048be7fc3dd9e3820df92f1846`
+to fetched `2479b712f8a3912ff6df9066d1782e8b407b4177`. The authoritative
+integration history is recorded in Git.
+Remaining evidence debt: full product/packaged Desktop E2E, live authenticated browser qualification,
+paid-provider economics and corpus-wide coverage/novelty denominators. Owner fixtures
+must reset between interventions and honor deadlines. Raw observational provenance
+does not automatically become trusted learned-mutation authority. Redacted legacy
+text bindings require owner-supplied parameter evidence before learned compilation.
+
+**Classification:** IMPLEMENTED / CONTRACT VALIDATED; native qualification separate.
 
 **Evidence base:** current `main` after PR #26 plus the two 2026-09-18
 state-transition / Experience Compiler investigations. Canonical target:
@@ -21,7 +100,7 @@ transition from which an OperationalCapability can be inferred.
 - native Browser target metadata is structured and transient refs are not intended
   as durable identity.
 
-**Gaps observed directly on current main:**
+**Historical gaps reproduced at the baseline and addressed by EC0–EC8:**
 1. `procedure_trace.py` records actions with before/after refs, not normalized
    semantic TransitionSamples/state deltas.
 2. `record_trace()` derives `arguments["semantic_anchor"]` after observing the
