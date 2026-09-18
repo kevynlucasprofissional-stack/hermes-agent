@@ -1,5 +1,103 @@
 # Workstation roadmap
 
+## Verified Operational Control Plane (2026-09-18) — NEXT MILESTONE / CP0–CP9 PLANNED
+
+Canonical specification:
+[context/VERIFIED_OPERATIONAL_CONTROL_PLANE.md](context/VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+
+PR #26 established the Operational Capability Runtime and PR #27 implemented the
+Experience Compiler. Hermes can now execute known capabilities deterministically
+and learn reusable capabilities from verified experience. The next architectural
+problem is **selection and control**:
+
+> Given an immutable semantic intent, current state, authority/policy and runtime
+> events, derive a justified decision to SATISFY / EXECUTE / COMPOSE / WAIT /
+> ASK_HUMAN / WAKE_LLM without making the LLM the scheduler.
+
+Core target contracts:
+
+~~~text
+OperationIntent
+  -> desired state + target + invariants + EffectBudget + AuthorityRef + Acceptance
+
+Capability Router
+  -> deterministic executability/typecheck proof
+
+RoutingCertificate / CompositionCertificate
+  -> no certificate, no dispatch
+
+AwaitCondition / Trigger Plane
+  -> wait durably with zero LLM; event wakes, authoritative state confirms
+
+OpenCondition / AttentionPacket
+  -> wake the LLM only for the smallest unresolved semantic decision
+~~~
+
+Implementation order:
+
+1. **CP0 — typed intent/effect IR + immutable OperationIntent**
+   - small versioned predicate/effect AST;
+   - stable intent hash and IntentRevision;
+   - preserve current WorkIntent behavior;
+   - authority references only from trusted ingress/policy.
+2. **CP1 — formal Capability contract**
+   - backward-compatible typed pre/postconditions, effect footprint,
+     target/operation family and authority requirements;
+   - authority lattice/JOIN and resource normalization.
+3. **CP2 — direct Router + RoutingCertificate**
+   - internal capability index;
+   - EXACT_EXECUTABLE / POSSIBLE_MATCH / INCOMPATIBLE / NEEDS_REASONING;
+   - SATISFIED / EXECUTE / WAIT / ASK_HUMAN / WAKE_LLM;
+   - prove goal coverage, effect containment, invariants, authority, policy,
+     verifier, freshness and uncertainty closure.
+4. **CP3 — bounded deterministic composition**
+   - backward chaining over typed contracts;
+   - hard search budgets;
+   - CompositionCertificate;
+   - causal-link/threat/conflicting-effect detection;
+   - whole-plan effect/authority/verifier closure.
+5. **CP4 — certified dispatch / preflight**
+   - only certified dispatchable decision types can reach side-effect dispatch;
+   - pin intent/state/capability/router-policy versions;
+   - revalidate critical state immediately before mutation;
+   - stale certificate reroutes/reconciles.
+6. **CP5 — Await/Trigger Plane**
+   - persistent AwaitCondition using existing TaskRun/WorkPlan owners;
+   - causal/versioned event envelope, dedupe/stale/cycle/fence semantics;
+   - restart-safe continuation;
+   - deterministic temporal/polling policies;
+   - uncorrelated events remain observation-only.
+7. **CP6 — minimal reasoning handoff**
+   - OpenCondition + AttentionPacket over existing reasoning_handoff;
+   - confirmed effects/checkpoints preserved;
+   - LLM proposal always returns through Router admission.
+8. **CP7 — Skill/catalog routing**
+   - semantic capability-family requirements rather than physical IDs by default;
+   - internal/lazy catalog; approximate retrieval is proposal-only.
+9. **CP8 — evaluation / shadow rollout**
+   - Router/Trigger metrics, VOLC/RAR/ONR, failure attribution;
+   - adaptive baseline -> shadow Router -> low-risk Router -> mutating Router.
+10. **CP9 — integration / product qualification**
+    - browser/filesystem/process paths, restart waits, uncertainty reconciliation,
+      cross-backend composition, Workstation/Work100/Desktop gates.
+
+Canonical proof properties:
+
+- Router Soundness;
+- Goal Non-Expansion;
+- Authority Non-Escalation;
+- Deterministic Closure;
+- Verification Closure;
+- Uncertainty Dominance;
+- Event wakes; state confirms;
+- LLM proposes; Router authorizes;
+- **No certificate; no dispatch.**
+
+The Router must remain a bounded deterministic typechecker/proof engine, not
+another agent or general planner. Safety/authority/correctness are hard
+constraints; optimization is secondary.
+
+
 ## Experience Compiler / Verified Operational Transitions (2026-09-18) — EC0–EC8 IMPLEMENTED / CONTRACT VALIDATED
 
 Canonical specification:
