@@ -383,6 +383,41 @@ reserved for semantics that require implementation identity.
 Detailed target:
 [VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
 
+
+## D-021 — Mandatory compilation requires operational closure; Router is the mutation-admission owner
+
+D-017 through D-020 remain authoritative. Live browser dogfooding established the
+missing composition rule between them.
+
+Hermes may only make compilation **mandatory** for an operation family when it has
+positive semantic homogeneity **and** an executable deterministic closure: trusted
+primitive(s), compatible authority/policy, sufficient verifier/readback and a certified
+dispatch path. Structural repetition alone may propose learning/compilation but cannot
+force unrelated work into `durable_compile_required`.
+
+The legacy execution-policy detector is therefore an optimization/learning signal, not a
+second independent mutation authority. Final mutation admission converges on
+OperationIntent + trusted AuthorityScope + Policy/Approval + Capability Router +
+CertifiedDispatcher. Adaptive execution remains bounded and policy-controlled when no
+exact executable Capability exists.
+
+Arbitrary `browser_console`, terminal or unknown-code execution does not become trusted
+merely because the user authorized the high-level task. Recurring useful semantics must
+instead be lowered into first-party typed primitives. Rich browser editors require a
+deterministic plain-text paste semantic; persisted external verification requires a
+narrow read-only Browser readback path rather than arbitrary page JavaScript.
+
+OperationIntent/request data may **narrow** but never mint execution authority. Effective
+AuthorityScope is derived from trusted ingress/TaskRun/policy/approval context.
+
+Mutating route decisions must cross the certified dispatcher as the production
+chokepoint. Timeout after possible mutation dispatch becomes UNCERTAIN until reconciled;
+blind retry is forbidden. Browser observation must distinguish a transient empty SPA
+snapshot from stable semantic state using bounded readiness, not site-specific sleeps.
+
+Canonical design:
+[BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
