@@ -1,5 +1,95 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-068 — Experience Compiler / Verified Operational Transition learning boundary (2026-09-18)
+
+**Classification:** TARGET ARCHITECTURE IDENTIFIED / IMPLEMENTATION REQUIRED.
+
+**Evidence base:** current `main` after PR #26 plus the two 2026-09-18
+state-transition / Experience Compiler investigations. Canonical target:
+[../EXPERIENCE_COMPILER.md](../EXPERIENCE_COMPILER.md).
+
+**Finding:** H-067 solved the deterministic execution substrate but not the
+automatic consolidation problem. The correct next unit is not a raw tool call,
+successful trace, script or whole workflow. It is a **Verified Operational
+Transition (VOT)**: a semantically closed, parameterized and verifiable state
+transition from which an OperationalCapability can be inferred.
+
+**Current implementation confirmed:**
+- semantic target family/fingerprint is implemented in `execution_policy.py`;
+- OperationalCapability Registry/Resolver and Operational Kernel are implemented;
+- `work_execute(capability_id, inputs)` and exact promoted replay are implemented;
+- native Browser target metadata is structured and transient refs are not intended
+  as durable identity.
+
+**Gaps observed directly on current main:**
+1. `procedure_trace.py` records actions with before/after refs, not normalized
+   semantic TransitionSamples/state deltas.
+2. `record_trace()` derives `arguments["semantic_anchor"]` after observing the
+   previous Browser inventory but calls
+   `semantic_operation_fingerprint(name, args)` using the original args. Ref-only
+   Browser actions can therefore retain structural rather than semantic trace
+   identity.
+3. The same capture path can emit anchor `type="name"`; `candidate_steps()`
+   currently admits only `role_name`, `testid`, `text`. This is a concrete
+   capture/replay contract mismatch.
+4. Current learning still collapses approximately
+   `trace -> candidate_steps() -> experience_candidate()`; there is no
+   cross-trace alignment, anti-unification, invariant/action-model inference,
+   Operational Slice or causal validation first.
+5. `OperationalCapabilityRegistry.record_validation()` defaults to
+   `auto_promote_threshold=2`. Count-based validation alone is insufficient
+   authority for experience-learned mutable capabilities.
+6. There is no explicit causal-confidence dimension separate from E0-E3 effect
+   evidence and no trust/taint-aware learned promotion policy.
+
+**New architecture rule:** recurrence, generalization and causality are different
+questions and must not collapse into one threshold.
+
+~~~text
+RECURRENCE
+  -> pattern hypothesis
+
+GENERALIZATION
+  -> parameterized candidate
+
+CAUSAL SUPPORT
+  -> dependency slice + failures + replay/intervention
+
+PROMOTION
+  -> evidence + causal grade + provenance/taint + risk + utility
+~~~
+
+**Causal evidence target:** C0 one observation; C1 recurrent successes; C2
+discriminative support against failures; C3 controlled replay; C4 safe ablation
+supports step necessity/minimality; C5 invariance across materially distinct
+compatible states/parameters. This axis is independent from E0-E3 effect evidence.
+
+**Safety finding:** Experience -> persistent Capability is a trust boundary.
+Repeated external/page text must not become trusted precondition/effect/authority.
+TransitionSamples and candidates need origin, authority origin, trust class and
+taint. Destructive production ablation is prohibited.
+
+**Promotion finding:** capture broadly; promote narrowly. Learned mutation
+promotion must not be granted by success count alone. A separate Experience
+Compiler promotion admission must consider semantic closure, E0-E3, C0-C5,
+provenance/taint, effect/risk, cross-run diversity, drift and expected reuse
+utility.
+
+**Required implementation sequence:** EC0 transition identity; EC1 semantic
+state/provenance; EC2 corpus/segmentation/alignment; EC3 anti-unification/action
+model; EC4 dependency/causal support; EC5 safe replay/ablation/counterexamples;
+EC6 promotion/library snapshot; EC7 integration/economics; EC8 cross-backend proof.
+
+**Do not repeat these rejected shortcuts:**
+- LLM summary of a trace as the learning mechanism;
+- successful trace == procedure;
+- frequency == causal proof;
+- validation count == promotion authority;
+- fuzzy retrieval == mutation authority;
+- destructive production experimentation;
+- second Memory/Task/Evidence/Browser state owner.
+
+
 ## H-067 — Capability abstraction / Progressive Operational Compilation (2026-09-18)
 
 **Classification:** IMPLEMENTED & VERIFIED across Python and Electron layers (Target architectural finding resolved).
