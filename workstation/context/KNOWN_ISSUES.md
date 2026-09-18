@@ -1,7 +1,21 @@
 # Workstation Known Issues
 
 
-## KI-011 — Durable compiler can obstruct stateful native-browser work [ROOT CAUSE FIXED — SEMANTIC HOMOGENEITY HARDENING OPEN — NATIVE VALIDATION PENDING — 2026-09-18]
+## KI-011 — Durable compiler can obstruct stateful native-browser work [REOPENED BY LIVE DOGFOOD — CROSS-LAYER P0 OPEN — 2026-09-18]
+
+**2026-09-18 post-PR #28 reopening:** authenticated Trello dogfooding on current
+native Electron Chromium reproduced the product class after the earlier policy hardening.
+The Browser can navigate/click/read; the remaining deadlock is between legacy admission,
+primitive expressiveness, verified readback and the new Control Plane. Concrete findings:
+`read_preview` effect misclassification; structural non-browser hard-force; missing
+rich-text paste/readback primitives; legacy and Router admission paths coexisting;
+request-authored route authority; non-mandatory CertifiedDispatcher; mutation-timeout
+retry ambiguity; and transient empty SPA snapshots.
+
+The previous AEPC correction remains valuable regression coverage, but it was not full
+product closure. KI-011 now closes only with the P0 exit criteria in
+[BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
+
 
 **Implemented correction:** remote implementation
 `9e7292ab7825e5ce1ea294490eec57ba1f286069` (documentation/evidence
