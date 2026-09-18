@@ -219,7 +219,46 @@ reacquisition, owner-declared phases, E1/E2 distinction, seven confirmed steps
 before drift, compact handoff and no lost-ACK replay. Simulated discovery uses
 3 provider calls versus 0 on promoted replay. Efficiency fixtures additionally
 exercise 8 -> 0 and null denominators; neither result measures paid-provider cost.
->>>>>>> ba85f322b3 (docs(workstation): record progressive compilation evidence and native boundary)
+
+## Planned Experience Compiler validation gate
+
+Canonical target:
+[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
+
+When EC0-EC8 implementation begins, add focused behavior tests for:
+- TransitionSample normalization and semantic state deltas;
+- ref-only Browser traces receiving derived semantic identity;
+- capture/replay anchor-type consistency;
+- segmentation of redundant observation/wait/scroll from a successful trace;
+- cross-trace alignment and anti-unification;
+- conservative precondition/effect/conditional-branch inference;
+- success/failure contrast and Operational Slice reduction;
+- observational C0-C2 versus replay/ablation C3-C5 causal grades;
+- prohibition of destructive production ablation;
+- provenance/taint-aware promotion;
+- learned mutation not auto-promoting from raw validation count alone;
+- immutable counterexample refinement/versioning;
+- TaskRun-stable capability-version view;
+- exact promoted replay with zero new operational-planning LLM calls;
+- browser/filesystem lifecycle parity and cross-backend composition.
+
+Python execution must follow the repository root `AGENTS.md`: use
+`scripts/run_tests.sh`, never direct `pytest`, for current implementation
+validation. Historical commands below are evidence records from prior runs and
+are not the current invocation rule.
+
+Expected focused files should include a dedicated
+`workstation/tests/test_experience_compiler.py` (or a small cohesive package)
+plus existing regression owners:
+`test_execution_policy.py`, `test_progressive_compilation.py`,
+`test_operational_capabilities.py`, `test_task_compiler.py`,
+`test_routines.py`, `test_browser_workstation_route.py` and any Electron
+runtime tests changed by semantic-state capture.
+
+After focused green, run the full Workstation wrapper gate and
+`python workstation/work100.py --run`; if Electron/browser product code changes,
+run the corresponding Desktop Vitest/typecheck/native qualification required by
+the existing ladder.
 
 ## Validation ladder
 
