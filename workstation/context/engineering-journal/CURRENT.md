@@ -1,5 +1,33 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-070 — Native Browser operational-admission deadlock after CP0–CP9 (2026-09-18)
+
+**Classification:** LIVE DOGFOOD REPRODUCED / CROSS-LAYER ROOT CAUSE IDENTIFIED / P0 OPEN.
+
+**Observed:** native Electron Chromium succeeds at Trello navigation/click/read, yet the
+task reaches `durable_compile_required` while the durable contract demands mutation
+authority + independent readback + verifier that the Browser Kernel cannot faithfully
+express for the discovered rich-text operation.
+
+**Confirmed contributors on current main:** `read_preview` falls through to MUTATION;
+non-browser structural repetition can still force compile; `Input.insertText` is not
+equivalent to plain-text paste for the reproduced ProseMirror case; no narrow GET/HEAD
+persisted readback primitive; legacy admission can block before Router; route request
+can supply authority material; `_execute_route` does not make CertifiedDispatcher the
+mandatory mutation chokepoint; mutation timeout is generically retryable; and a live
+SPA snapshot produced zero text/elements before later hydration.
+
+**Root cause:** valid safety/compilation layers are composed so mandatory deterministic
+compilation can be demanded before the Operational Kernel has faithful typed/verifiable
+closure for the learned operation.
+
+**Decision:** D-021. Preserve arbitrary-code guardrails; close the gap with typed
+primitives, semantic-only mandatory compilation, one authoritative admission path,
+trusted authority derivation, certified dispatch, uncertainty-aware timeout and bounded
+readiness.
+
+**Canonical plan:** ../BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md.
+
 ## H-069 — Verified Operational Control Plane (CP0–CP9) implementation & contract validation (2026-09-18)
 
 **Classification:** IMPLEMENTED / CONTRACT VALIDATED / 100% REGRESSIONS GREEN.
