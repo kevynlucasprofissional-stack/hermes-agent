@@ -38,6 +38,14 @@ This document does not declare the entire product program complete.
 
 ## Implemented contracts and integrations
 
+- `control_plane/`: Verified Operational Control Plane (`router.py`, `intent.py`,
+  `ir.py`, `contract.py`, `dispatcher.py`, `waiting.py`, `composition.py`, `metrics.py`).
+  Replaces blind LLM tool looping with deterministic executability typechecking
+  (`NO VALID CERTIFICATE -> NO DISPATCH`). Evaluates 15 proof obligations before
+  issuing auditable `RoutingCertificate`, bounds backward chaining, coordinates
+  reactive trigger planes (`AwaitCondition`), minimizes context in reasoning handoffs
+  (`AttentionPacket`), and tracks true cost vectors via `VOLCMetrics`.
+  Integrated directly into `TaskCompiler.execute` and `tools/workstation_work.py` (`action="route"`).
 - `contracts.py`: MessageOrigin/IntentAuthority/MessageEnvelope; TaskOutcome,
   OutcomeStatus, AcceptanceContract and AcceptanceEvaluator. Evidence acceptance
   requires a passing verifier linked to supplied evidence; required deliverables,

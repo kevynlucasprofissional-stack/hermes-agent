@@ -94,6 +94,45 @@ authority.
 
 A Workstation change is stable only when its **behavioral contract** is proven at the lowest useful layer and the relevant integration path remains green. Typecheck or source-shape checks alone are not proof.
 
+## Verified Operational Control Plane Test Suite (CP0–CP9)
+
+The Verified Operational Control Plane is validated through 5 dedicated test modules in `workstation/tests/`:
+
+1. `test_operation_intent.py`:
+   - Typed Predicate AST evaluation (`TRUE`, `FALSE`, `EQ`, `NEQ`, `EXISTS`, `ABSENT`, `AND`, `OR`, `NOT`, `IN`, `SUBSET`, `LT`, `LTE`, `GT`, `GTE`, `UNCHANGED`, `TRANSITION`).
+   - Algebraic entailment (`entails`) and invariant preservation (`preserves_invariant`).
+   - Effect AST and effect containment (`effect_contained`).
+   - `OperationIntent` serialization and cryptographic hashing (`operation_intent_hash`).
+   - Authority lattice (`AuthorityLevel`, `AuthorityScope`, `authority_covers`, `authority_join`).
+2. `test_capability_router.py`:
+   - `CapabilityRouter.route` evaluation across decision lattice (`SATISFIED`, `EXECUTE`, `COMPOSE`, `WAIT`, `ASK_HUMAN`, `WAKE_LLM`).
+   - Strict 15-point `RoutingCertificate` validation (`NO VALID CERTIFICATE -> NO DISPATCH`).
+   - Revalidation freshness checks before dispatch.
+   - Metamorphic property tests (weakening preconditions/strengthening budgets maintains executability).
+3. `test_control_plane_composition.py`:
+   - Bounded backward chaining planner under depth, node, and time limits.
+   - Causal threat detection (`detect_causal_threats`) and automatic plan reordering.
+   - Fallback to `ReasoningDecision` when composition budget is exceeded.
+4. `test_await_trigger_plane.py`:
+   - `AwaitCondition` specification and persistence in `AwaitConditionStore`.
+   - `TriggerCoordinator` enforcing *Event wakes; authoritative state confirms*.
+   - Run fencing preventing stale event processing.
+   - `TriggerCircuitBreaker` guarding against runaway poll/trigger loops.
+   - `CertifiedDispatcher` idempotency and `DispatchStatus.UNCERTAIN` protection.
+5. `test_control_plane_integration.py`:
+   - Reasoning handoff (`OpenCondition`, `AttentionPacket`, `needs_reasoning`).
+   - Router re-admission of LLM-proposed intents.
+   - Semantic capability family resolution without physical pins.
+   - `ShadowRouter` 0-mutation evaluation.
+   - `FailureAttributor` root-cause classification (7 failure classes).
+   - `VOLCMetrics` cost vector retention with unknown cost handling.
+   - `TaskCompiler` and `tools/workstation_work.py` execution via `action="route"`.
+
+Canonical test execution:
+```bash
+.\.venv\Scripts\python.exe scripts/run_tests_parallel.py workstation/tests/test_operation_intent.py workstation/tests/test_capability_router.py workstation/tests/test_control_plane_composition.py workstation/tests/test_await_trigger_plane.py workstation/tests/test_control_plane_integration.py
+```
+
 ## AEPC-E002 semantic-homogeneity regression gate
 
 The 2026-09-18 follow-up audit found that shape-equivalent browser calls can still

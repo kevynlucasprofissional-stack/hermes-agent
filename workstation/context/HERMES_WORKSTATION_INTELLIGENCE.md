@@ -7,6 +7,11 @@ próximo gargalo deixa de ser "como executar/aprender uma Capability" e passa a 
 **quando usar o que já foi aprendido, quando compor, quando esperar, quando pedir
 autoridade humana e quando gastar raciocínio novo**.
 
+O Verified Operational Control Plane (CP0–CP9) consolida o princípio central:
+
+> **THE LLM PROPOSES. THE ROUTER PROVES. THE POLICY AUTHORIZES. THE RUNTIME EXECUTES. THE VERIFIER CONFIRMS.**
+> **NO VALID CERTIFICATE -> NO DISPATCH.**
+
 A nova arquitetura introduz cinco abstrações complementares:
 
 ~~~text
@@ -17,7 +22,7 @@ Capability Router
   = prova se já sabemos chegar lá deterministicamente
 
 Routing/Composition Certificate
-  = por que EXECUTE/COMPOSE é autorizado
+  = por que EXECUTE/COMPOSE é autorizado (15 proof obligations estritas)
 
 AwaitCondition / Trigger Plane
   = suspende sem LLM até uma condição observável tornar-se verdadeira
@@ -28,7 +33,7 @@ OpenCondition / AttentionPacket
 
 **WorkIntent não é OperationIntent.** O `workstation/work_intent.py` atual
 classifica execução, durabilidade, risco e necessidade de Task/Browser/worker.
-Isso continua existindo. OperationIntent será um artefato imutável declarativo
+Isso continua existindo. OperationIntent é um artefato imutável declarativo
 com target, desired state, invariants, EffectBudget, AuthorityRef, Acceptance e
 lineage. A linguagem natural é interpretada uma vez; o runtime depois trabalha
 sobre o contrato/hash, não reinterpreta o pedido a cada passo.
@@ -51,7 +56,7 @@ Para EXECUTE/COMPOSE, o Router precisa provar simultaneamente:
 - target/input/precondition compatibility;
 - invariant preservation;
 - authority + policy + approval;
-- verifier/evidence sufficiente;
+- verifier/evidence suficiente;
 - state freshness;
 - deterministic closure;
 - ausência de uncertain mutation relevante.
@@ -83,30 +88,26 @@ Skills devem normalmente declarar `requires_family` semântico e não versões/I
 físicos de Capabilities. O catálogo permanece interno/lazy, preservando narrow
 waist e prompt caching.
 
-Owners atuais a estender, não duplicar:
+Owners atuais estendidos:
 - `contracts.py`: MessageEnvelope/IntentAuthority/Acceptance;
 - `work_intent.py`: WorkIntent transitório;
 - `operational_capabilities.py`: contratos/registry/resolver;
-- `task_compiler.py` + `work_execute`: execução/pins/checkpoints;
+- `task_compiler.py` + `work_execute`: execução/pins/checkpoints/route;
 - `policy.py`: policy/approval boundary;
 - `runtime.py`: RuntimeEventBus/WaitContract/EvidenceState;
 - `events.py`: system-event observation boundary;
-- `reasoning_handoff.py`: NEEDS_REASONING;
+- `reasoning_handoff.py`: NEEDS_REASONING, OpenCondition, AttentionPacket;
 - `journal.py`: durable causal evidence;
-- `evaluation.py`: métricas/baseline.
+- `control_plane/`: router, intent, ir, composition, dispatcher, waiting, metrics.
 
-Qualidade deve ser medida por Exact Reuse Precision, False Exact Match, Missed
+Qualidade é medida por Exact Reuse Precision, False Exact Match, Missed
 Reuse, Router Regret, wakeup precision/recall, stale/duplicate events,
 event-to-resume latency, polling cost, RAR/ONR e **Verified Outcome Lifetime
 Cost (VOLC)**. Safety, authority, correctness/evidence e uncertainty são
 constraints rígidas, não variáveis econômicas.
 
-Rollout recomendado: Adaptive Baseline -> Shadow Router -> Low-Risk Router ->
-Mutating Router.
-
 Especificação canônica:
 `workstation/context/VERIFIED_OPERATIONAL_CONTROL_PLANE.md`.
-
 
 ## Experience Compiler — aprender transformações, não memorizar trajetórias — 2026-09-18
 

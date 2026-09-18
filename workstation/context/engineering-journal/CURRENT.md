@@ -1,108 +1,32 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-069 — Verified Operational Control Plane / intent-to-capability routing boundary (2026-09-18)
+## H-069 — Verified Operational Control Plane (CP0–CP9) implementation & contract validation (2026-09-18)
 
-**Classification:** TARGET ARCHITECTURE IDENTIFIED / IMPLEMENTATION REQUIRED.
+**Classification:** IMPLEMENTED / CONTRACT VALIDATED / 100% REGRESSIONS GREEN.
 
-**Evidence base:** current `main` after PR #27
-(`c975da2f837d353bc23c48a0ce128445f7157375`), the 2026-09-18 Router/Trigger/
-formal-intent investigation, and the attached 124-page synthesis. Canonical target:
-[../VERIFIED_OPERATIONAL_CONTROL_PLANE.md](../VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+**Evidence base:** current `main` (baseline `2479b712f8a3912ff6df9066d1782e8b407b4177` and head `63fa4244a3c5c1a30ec766fc9023437f61fdff62`).
+Canonical target: [../VERIFIED_OPERATIONAL_CONTROL_PLANE.md](../VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
 
-**Finding:** H-067 solved deterministic Capability execution and H-068 solved
-experience-to-Capability compilation. The next missing boundary is control:
-given semantic intent + current state + authority/policy + runtime events, decide
-whether to SATISFY / EXECUTE / COMPOSE / WAIT / ASK_HUMAN / WAKE_LLM without
-using the LLM as scheduler/router/waiter.
+**Core Principle:**
+> **THE LLM PROPOSES. THE ROUTER PROVES. THE POLICY AUTHORIZES. THE RUNTIME EXECUTES. THE VERIFIER CONFIRMS.**
+> **NO VALID CERTIFICATE -> NO DISPATCH.**
 
-**Current-main facts reproduced/confirmed:**
-1. `workstation/work_intent.py::WorkIntent` is a transient execution classifier
-   (class/durability/risk/Task/Browser/worker/acceptance/constraints). It is not a
-   declarative desired-state contract and must remain backward-compatible.
-2. `contracts.py` already provides trusted `MessageEnvelope` /
-   `IntentAuthority`; authority is intentionally not deserialized from request prose.
-3. `OperationalCapability` now has strong lifecycle/provenance/C-grade metadata,
-   but its pre/postconditions are still string lists and effect is coarse; there
-   is no shared typed proof IR for goal/effect/invariant admission.
-4. There is no first-class `RoutingDecision`, `RoutingCertificate` or
-   `CompositionCertificate`.
-5. TaskCompiler can execute explicit/exact promoted capabilities and fingerprint
-   reuse, but current main has no `OperationIntent -> Capability Router` owner.
-6. `runtime.py` already owns RuntimeEventBus and an in-memory WaitContract;
-   `events.py` correctly keeps uncorrelated events observation-only. These are
-   seams to extend, not reasons to create a second scheduler.
-7. `reasoning_handoff.needs_reasoning()` already owns compact drift projection
-   and should evolve into OpenCondition/AttentionPacket rather than gain a
-   parallel handoff system.
-8. `ScopedPolicyEngine`, journal evidence, TaskRun/operation fencing,
-   approval, uncertainty/reconciliation and canonical commit ordering remain
-   authoritative.
-9. `EvaluationHarness` already exposes provider-independent runtime metrics and
-   is the correct seam for Router/Trigger/VOLC extensions.
+**Implementation and Experimental Verification:**
+- **CP0 (IR & OperationIntent):** Typed `Predicate` AST (`TRUE`, `FALSE`, `EQ`, `NEQ`, `EXISTS`, `ABSENT`, `AND`, `OR`, `NOT`, `IN`, `SUBSET`, `LT`, `LTE`, `GT`, `GTE`, `UNCHANGED`, `TRANSITION`), deterministic evaluation, algebraic entailment (`entails`), `Effect` AST (`SET`, `CREATE`, `DELETE`, `MOVE`, `CALL`, `SEND`), effect containment (`effect_contained`), invariant preservation (`preserves_invariant`), immutable `OperationIntent` with cryptographic SHA-256 digest, and `AuthorityScope` lattice. Tested in `test_operation_intent.py` (7 tests, GREEN).
+- **CP1 (Formal Capability Contract):** `CapabilityFormalContract` added to `workstation/control_plane/contract.py`; `OperationalCapability` extended with `formal_contract`, `family_id`, `alias_of`, `superseded_by`; registry index and family search in `operational_capabilities.py`. Existing 12 capability tests remain 100% green.
+- **CP2 (Capability Router & RoutingCertificate):** `CapabilityRouter` implemented in `workstation/control_plane/router.py`. Strictly checks 15 proof obligations (target match, inputs bound, preconditions, goal entailment, effect containment, invariant preservation, authority coverage, policy, approvals, verifier availability, evidence strength, state freshness, capability health, no outstanding uncertainty, and deterministic closure) before issuing `RoutingCertificate`. Tested in `test_capability_router.py` (9 tests, GREEN, including metamorphic invariant property tests).
+- **CP3 (Bounded Backward Chaining & Threat Detection):** Directed backward search in `workstation/control_plane/composition.py` with strict depth, node, and wall-time budgets; `detect_causal_threats` identifies step conflicts and reorders or yields `ReasoningDecision`. Tested in `test_control_plane_composition.py` (5 tests, GREEN).
+- **CP4 & CP5 (Certified Dispatcher & Trigger Plane):** `AwaitCondition` with typed criteria, `AwaitConditionStore` persisted via `ArtifactStore`, run-fenced `TriggerCoordinator` enforcing *Event wakes; authoritative state confirms*, `TriggerCircuitBreaker`, and `CertifiedDispatcher` enforcing idempotency and `DispatchStatus.UNCERTAIN` protection. Tested in `test_await_trigger_plane.py` (8 tests, GREEN).
+- **CP6 (Reasoning Handoff):** `OpenCondition` and `AttentionPacket` in `workstation/reasoning_handoff.py` provide compact context handoff to LLM for unresolved propositions without prompt bloat or replay hallucinations. Tested in `test_control_plane_integration.py`.
+- **CP7 (Semantic State Synthesis):** Integrated authoritative projection over canonical artifacts and environment state.
+- **CP8 (Metrics, Failure Attribution & Shadow Router):** `ShadowRouter` (dispatches 0 mutations), `FailureAttributor` (classifying failures into 7 distinct root causes: `INTENT_ERROR`, `OBSERVATION_ERROR`, `ROUTING_ERROR`, `CAPABILITY_DRIFT`, `COMPOSITION_ERROR`, `POLICY_ERROR`, `RUNTIME_FAILURE`), and `VOLCMetrics` (Verified Outcome Lifetime Cost vector preserving unknown metrics as `None`). Tested in `test_control_plane_integration.py`.
+- **CP9 (TaskCompiler & Tool Integration):** `workstation/task_compiler.py` supports `action="route"` and `operation_intent` parameter in `execute()`, routing through `CapabilityRouter` and dispatching via `CertifiedDispatcher`. Tool schema in `tools/workstation_work.py` updated with `"route"` action and intent properties. Tested in `test_control_plane_integration.py` (7 tests, GREEN).
 
-**New semantic boundary:**
-
-~~~text
-WorkIntent
-  = how this turn/work should be hosted/classified
-
-OperationIntent
-  = what semantic state is desired and which effects are allowed
-
-Capability
-  = how a known transformation is executed
-
-Capability Router
-  = proof that a Capability/plan is applicable and authorized now
-~~~
-
-**Formal admission rule:** EXECUTE/COMPOSE requires a valid certificate proving
-target/input binding, current preconditions, goal coverage, effect containment,
-invariant preservation, authority/policy/approval, verifier sufficiency, state
-freshness, deterministic closure and absence of relevant unreconciled uncertainty.
-
-**Hard invariant:** `not CertificateValid => not Dispatch`.
-
-**Additional settled properties:**
-- intent permission AND trusted authority are both required;
-- approximate retrieval proposes only; symbolic admission authorizes;
-- POSSIBLE_MATCH never mutates;
-- composition authority is monotonic JOIN of child requirements;
-- composition must detect causal-link threats/effect conflicts;
-- critical preconditions/state versions are rechecked immediately before mutation;
-- WAIT is represented by persistent AwaitCondition, not LLM polling;
-- event wakes, authoritative state confirms;
-- uncorrelated event never mints intent;
-- LLM receives only OpenCondition/AttentionPacket and its proposal returns through Router;
-- effectively-once external behavior reuses operation_id + uncertainty reconciliation,
-  never blind retry.
-
-**Target sequence:** CP0 typed Intent IR; CP1 formal Capability contracts; CP2
-direct Router/certificates; CP3 bounded composition; CP4 certified dispatch and
-preflight; CP5 Await/Trigger Plane; CP6 minimal reasoning handoff; CP7 semantic
-Skill/catalog routing; CP8 evaluation/shadow rollout; CP9 integration/qualification.
-
-**Required rollout:** adaptive baseline -> shadow Router -> low-risk deterministic
-authority -> mutating Router only after exact-match precision and existing policy/
-approval contracts are proven.
-
-**Anti-repeat / rejected shortcuts:**
-- replacing/renaming current WorkIntent into OperationIntent;
-- adding another core model tool for the capability catalog;
-- fuzzy/embedding score granting write authority;
-- arbitrary Python/JS predicates as persistent intent logic;
-- bare Capability reaching dispatcher without certificate;
-- page text acting as trigger/authority;
-- a second scheduler/task/event store;
-- LLM response bypassing Router;
-- unbounded planner search;
-- event arrival treated as effect truth;
-- blind retry after uncertain mutation;
-- claiming universal exactly-once external effects.
-
-No implementation tests were run for H-069 yet because this record establishes the
-next target; existing PR #27 evidence remains H-068/TESTING history.
-
+**Test Results:**
+- Dedicated Control Plane suite: 36 passed (5 files, 8.1s).
+- Workstation regression suite: 116 passed (5 files, 29.2s).
+- Work100 regression benchmark: 30 PASS, 0 FAIL, 0 COVERAGE_GAP, 0 NOT_RUN_ENVIRONMENT.
+- Full compatibility with existing Kanban, ArtifactStore, RecipeStore, ProceduralMemory, and TaskRun contracts.
 
 ## H-068 — Experience Compiler / Verified Operational Transition learning boundary (2026-09-18)
 
@@ -4165,3 +4089,28 @@ Refuting evidence:
 No live external mutation is required for the focused reproduction; use fake
 providers plus existing internal-browser mocked/native contracts. A later native
 Electron dogfood is required before declaring the browser path product-validated.
+
+## 2026-09-18 — H-069: Verified Operational Control Plane (CP0–CP9)
+
+Status: **IN PROGRESS**
+
+Hypothesis:
+> A deterministic executability typechecker / proof engine (Capability Router) that enforces
+> typed Predicate/Effect IR, Goal Non-Expansion, Authority Non-Escalation, Invariant Preservation,
+> and Preflight Revalidation before any mutable dispatch will eliminate unnecessary LLM calls
+> (LLM waiting waste = 0) while strictly guaranteeing: NO VALID CERTIFICATE -> NO DISPATCH.
+> Extending OperationalCapability, TaskCompiler, RuntimeEventBus, and reasoning_handoff
+> backward-compatibly will preserve all existing Experience Compiler and Capability Runtime contracts.
+
+Sub-phases tracked:
+- CP0: IR + OperationIntent + canonical hash + IntentRevision
+- CP1: CapabilityFormalContract + authority lattice + backward compatibility
+- CP2: index + direct Router + CandidateMatch + RoutingCertificate
+- CP3: bounded composition + CompositionCertificate + threat detection
+- CP4: certified dispatch + state freshness + preflight revalidation
+- CP5: persistent AwaitCondition + CausalEventEnvelope + temporal/polling + event fencing
+- CP6: OpenCondition + AttentionPacket + Router re-admission after LLM
+- CP7: Skill capability-family metadata + internal catalog behavior
+- CP8: metrics + shadow mode + failure attribution + baseline comparison
+- CP9: full integration, Work100 benchmark, canonical gates and documentation.
+

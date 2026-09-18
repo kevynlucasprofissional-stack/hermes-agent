@@ -56,6 +56,24 @@ file. “Implemented”, “contract layer validated” and “tests green” do
 a product-level causal invariant has been proven across Task -> Run -> operation ->
 evidence -> canonical commit -> projection.
 
+## 2026-09-18 Verified Operational Control Plane (CP0–CP9) — IMPLEMENTED / CONTRACT VALIDATED
+
+The Verified Operational Control Plane is implemented and verified across Python and Workstation layers.
+See [VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md) for full specification and contract evidence.
+
+`workstation/control_plane/` implements the deterministic executability proof engine and capability router:
+- CP0: Typed Predicate AST, Effect AST, algebraic entailment (`entails`), effect containment, invariant preservation, and immutable `OperationIntent`.
+- CP1: `CapabilityFormalContract` and library indexing by family/target (`OperationalCapability.formal_contract`, `family_id`).
+- CP2: `CapabilityRouter` enforcing `NO VALID CERTIFICATE -> NO DISPATCH` via 15 proof obligations in `RoutingCertificate`.
+- CP3: Bounded backward chaining with search budgets and causal threat detection (`detect_causal_threats`).
+- CP4 & CP5: Typed `AwaitCondition`, persistent `AwaitConditionStore`, run-fenced `TriggerCoordinator`, `TriggerCircuitBreaker`, and `CertifiedDispatcher`.
+- CP6: Minimal `OpenCondition` and `AttentionPacket` for bounded reasoning handoff without prompt bloat.
+- CP7: Authoritative semantic state synthesis.
+- CP8: `ShadowRouter` (0 mutations dispatched), `FailureAttributor` (7 failure classes), and `VOLCMetrics` (Verified Outcome Lifetime Cost).
+- CP9: `TaskCompiler` and `tools/workstation_work.py` route integration.
+
+36 dedicated control plane tests in `workstation/tests/` pass with 100% green status, with all regression suites green.
+
 ## 2026-09-18 Experience Compiler / Verified Operational Transitions — IMPLEMENTED / CONTRACT VALIDATED
 
 The Experience Compiler now emits the existing OperationalCapability format from

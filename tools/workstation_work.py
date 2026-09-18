@@ -32,7 +32,7 @@ registry.register(
         "parameters": {"type": "object", "properties": {
             "operation_key": {"type": "string"}, "title": {"type": "string"},
             "mutation_target": {"type": "object", "description": "Intended resource scope (external/local), provider, kind and field. Declare external tasks so preparation-only plans fail before dispatch."},
-            "plan_id": {"type": "string"}, "action": {"type": "string", "enum": ["execute", "resume", "status", "contract", "discover"]},
+            "plan_id": {"type": "string"}, "action": {"type": "string", "enum": ["execute", "resume", "status", "contract", "discover", "route"]},
             "recipe_key": {"type": "string"}, "recipe_scope": {"type": "object", "description": "Stable route/host/path_family; no secrets or item IDs."},
             "operation_fingerprint": {"type": "string", "description": "Exact verified fingerprint for automatic reuse; scope, target and preconditions must agree."},
             "routine_preconditions": {"type": "array", "items": {"type": "string"}, "description": "Exact structured precondition contracts for harness-selected promoted routines."},
@@ -58,10 +58,13 @@ registry.register(
             "capability_id": {"type": "string", "description": "Deterministic Operational Capability identifier to execute or compose."},
             "capability_version": {"type": "string", "description": "Optional version constraint for the capability."},
             "capability_inputs": {"type": "object", "description": "Input arguments mapped to the capability schema."},
+            "operation_intent": {"type": "object", "description": "Deterministic semantic operation intent specification (goal, effects, invariants)."},
+            "semantic_state": {"type": "object", "description": "Current observed semantic facts for router precondition and goal evaluation."},
+            "authority": {"type": "object", "description": "Granted authority scope for the operation."},
             "constraints": {"type": "object", "properties": {
                 "mutation_allowed_routes": {"type": "array", "items": {"type": "string"}, "description": "Mutation channel authority only; independent verification reads remain permitted."},
                 "mutation_forbidden_routes": {"type": "array", "items": {"type": "string"}},
                 "allowed_routes": {"type": "array", "items": {"type": "string"}},
                 "forbidden_routes": {"type": "array", "items": {"type": "string"}}}},
-        }, "anyOf": [{"required": ["operation_key", "steps"]}, {"required": ["recipe_key"]}, {"required": ["capability_id"]}, {"required": ["operation_fingerprint", "recipe_scope"]}, {"required": ["plan_id"]}, {"properties": {"action": {"enum": ["contract", "discover"]}}, "required": ["action"]}]}},
+        }, "anyOf": [{"required": ["operation_key", "steps"]}, {"required": ["recipe_key"]}, {"required": ["capability_id"]}, {"required": ["operation_intent"]}, {"required": ["operation_fingerprint", "recipe_scope"]}, {"required": ["plan_id"]}, {"properties": {"action": {"enum": ["contract", "discover", "route"]}}, "required": ["action"]}]}},
 )
