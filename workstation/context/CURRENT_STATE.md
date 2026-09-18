@@ -15,17 +15,54 @@ file. “Implemented”, “contract layer validated” and “tests green” do
 a product-level causal invariant has been proven across Task -> Run -> operation ->
 evidence -> canonical commit -> projection.
 
+## 2026-09-18 Experience Compiler / Verified Operational Transitions — NOT IMPLEMENTED / NEXT MILESTONE
+
+The deterministic Operational Capability Runtime is implemented, but **automatic
+experience compilation is not yet equivalent to the architecture now specified in
+[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md)**.
+
+Current code can capture bounded adaptive traces, derive semantic anchors,
+register OperationalCapability candidates and replay promoted capabilities.
+However, the inspected `workstation/procedure_trace.py` path is still action-centric:
+it does not yet normalize a semantic state-before/state-after delta, mine an
+Experience Corpus, segment traces into Operational Slices, align multiple traces,
+anti-unify parameters, infer conservative preconditions/effects/branches, assign
+causal support, run safe ablation, or refine learned models from counterexamples.
+
+Concrete current seams:
+- `record_trace()` may derive a semantic browser anchor after dispatch but calls
+  `semantic_operation_fingerprint(name, args)` on the original args, so ref-only
+  browser actions may still lack semantic trace identity;
+- capture can emit anchor `type="name"` while `candidate_steps()` admits
+  `role_name`, `testid` and `text`, creating a capture/replay mismatch;
+- current learning is still approximately
+  `trace -> candidate_steps() -> experience_candidate()`, before cross-trace
+  generalization or causal reduction;
+- `OperationalCapabilityRegistry.record_validation(..., auto_promote_threshold=2)`
+  is a generic registry convenience and is **not sufficient promotion authority**
+  for experience-learned mutable capabilities.
+
+The next milestone introduces TransitionSample/VOT semantics, an Experience
+Compiler pipeline, explicit observational-vs-interventional evidence, C0-C5
+causal grades, trust/taint-aware promotion, safe replay/ablation and
+counterexample-guided immutable revisions.
+
+The Capability Runtime must be extended, not rebuilt. Existing TaskRun,
+BrowserTask, ArtifactStore, ExecutionJournal, RecipeStore, ProceduralMemory,
+OperationalCapabilityRegistry/Resolver, Operational Kernel, approvals,
+uncertainty/reconciliation and canonical completion ordering remain owners.
+
 ## 2026-09-18 Progressive Operational Compilation & Operational Capability Runtime — IMPLEMENTED & VERIFIED
 
-The capability-runtime architecture specified in
+The deterministic capability-runtime substrate specified in
 [PROGRESSIVE_OPERATIONAL_COMPILATION.md](PROGRESSIVE_OPERATIONAL_COMPILATION.md)
-is fully implemented, verified, and integrated across Python and Electron layers.
-The architecture replaces premature `REQUIRE_COMPILE` enforcement with a deterministic progression:
-`experience -> learn operation -> deterministic Capability -> validate -> promote -> compose -> auto-reuse -> work_execute runtime -> LLM only on novelty/drift`.
-
-Progressive Operational Compilation / Operational Capability Runtime is fully implemented across Python and Electron layers.
-The architecture replaces premature `REQUIRE_COMPILE` enforcement with a deterministic progression:
-`experience -> learn operation -> deterministic Capability -> validate -> promote -> compose -> auto-reuse -> work_execute runtime -> LLM only on novelty/drift`.
+is implemented, verified, and integrated across Python and Electron layers.
+It establishes the execution side of the progression: semantic operation identity,
+OperationalCapability lifecycle/registry/resolver, Operational Kernel,
+composition, direct/automatic exact reuse and zero-LLM deterministic replay.
+The separate automatic trace-to-capability learning/compiler layer is the next
+milestone and is explicitly tracked in
+[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
 
 Key implementations and verified invariants:
 1. **AEPC-E002 Resolved (`workstation/execution_policy.py`, `workstation/batch_detection.py`, `workstation/procedure_trace.py`):**
