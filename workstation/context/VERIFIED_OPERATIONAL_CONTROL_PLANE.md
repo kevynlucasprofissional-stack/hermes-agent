@@ -1,5 +1,25 @@
 # Verified Operational Control Plane — OperationIntent, Capability Router, Await/Trigger Plane
 
+## Post-merge dogfood qualification addendum — P0 open
+
+CP0–CP9 is implemented and contract-validated, but live native-Browser dogfooding
+proved that component-level green status is not yet equivalent to one authoritative
+production mutation path.
+
+The active integration hardening is specified in
+[BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
+It does not replace this Control Plane. It closes the seams around it:
+- legacy repetition admission vs Router authority;
+- trusted AuthorityScope derivation;
+- mandatory CertifiedDispatcher use;
+- Browser primitive/verifier expressiveness;
+- mutation-timeout uncertainty;
+- semantic snapshot readiness.
+
+Until that P0 closes, describe the Control Plane as **implemented /
+contract-validated, production mutation integration hardening open**, not as fully
+qualified end to end.
+
 Date established: 2026-09-18
 
 Status: **TARGET ARCHITECTURE / IMPLEMENTATION REQUIRED**
