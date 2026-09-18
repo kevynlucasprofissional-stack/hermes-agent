@@ -1,5 +1,46 @@
 # Current State
 
+## 2026-09-18 Verified Operational Control Plane — NOT IMPLEMENTED / NEXT MILESTONE
+
+PR #27 completed the Experience Compiler contract milestone. The next target is
+[VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+
+Current main already has useful owners:
+- trusted `MessageEnvelope` / `IntentAuthority`;
+- transient `WorkIntent`;
+- OperationalCapability Registry/Resolver;
+- Experience Compiler;
+- TaskCompiler/work_execute and WorkPlan pins;
+- ScopedPolicyEngine;
+- RuntimeEventBus / WaitContract;
+- SystemEventPipeline;
+- compact `needs_reasoning` handoff;
+- TaskRun/operation uncertainty and canonical commit ordering.
+
+However, **the formal intent-to-capability Router described in the new target is
+not implemented**.
+
+Concrete current gaps:
+- `WorkIntent` classifies execution/durability/risk but does not represent
+  immutable desired state + target + invariants + EffectBudget + AuthorityRef;
+- OperationalCapability lacks a shared typed logical contract sufficient to prove
+  goal coverage/effect containment/invariant preservation;
+- no first-class RoutingDecision/RoutingCertificate or CompositionCertificate;
+- no intent-driven capability index/router;
+- no certified-dispatch type boundary;
+- no restart-safe persisted AwaitCondition / normalized causal Trigger Plane;
+- current wait/event contracts are not yet the full observer/correlation/
+  continuation/deadline/fence model;
+- current reasoning handoff is not yet an OpenCondition/AttentionPacket contract;
+- Router/Trigger shadow/economic metrics are not yet first-class.
+
+This milestone must **extend, not replace**, current owners. In particular,
+OperationIntent is distinct from the existing WorkIntent; Trigger Plane must not
+become another scheduler/task database; and the Dispatcher must preserve all
+existing TaskRun, BrowserTask, policy/approval, uncertainty, evidence and canonical
+completion invariants.
+
+
 Snapshot date: 2026-09-18.
 
 The 2026-09-15 hardening snapshot below remains valid as implementation and test
@@ -56,9 +97,10 @@ is implemented, verified, and integrated across Python and Electron layers.
 It establishes the execution side of the progression: semantic operation identity,
 OperationalCapability lifecycle/registry/resolver, Operational Kernel,
 composition, direct/automatic exact reuse and zero-LLM deterministic replay.
-The separate automatic trace-to-capability learning/compiler layer is the next
-milestone and is explicitly tracked in
-[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
+The automatic trace-to-capability Experience Compiler layer is now implemented
+and contract-validated in
+[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md). The next milestone is the
+verified intent/router/await control plane.
 
 Key implementations and verified invariants:
 1. **AEPC-E002 Resolved (`workstation/execution_policy.py`, `workstation/batch_detection.py`, `workstation/procedure_trace.py`):**
