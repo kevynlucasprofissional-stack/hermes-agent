@@ -1,73 +1,108 @@
 # Workstation roadmap
 
-## Progressive Operational Compilation / Capability Runtime (2026-09-18) — TARGET ARCHITECTURE / P0-P5 PLANNED
+## Experience Compiler / Verified Operational Transitions (2026-09-18) — NEXT MILESTONE / EC0-EC8 PLANNED
 
 Canonical specification:
-[context/PROGRESSIVE_OPERATIONAL_COMPILATION.md](context/PROGRESSIVE_OPERATIONAL_COMPILATION.md).
+[context/EXPERIENCE_COMPILER.md](context/EXPERIENCE_COMPILER.md).
 
-The latest abstraction review generalizes AEPC-E002. The immediate bug remains
-that structural similarity can masquerade as semantic homogeneity, but the larger
-problem is that `work_execute` is still treated too much like a batch-compilation
-guardrail. The target is an incremental operational compiler in which Hermes
-learns reusable deterministic **Capabilities**, validates/promotes them, composes
-atomic capabilities into larger flows, and reuses them automatically without
-re-paying LLM reasoning.
+PR #26 completed the first Progressive Operational Compilation milestone:
+semantic operation identity, OperationalCapability Registry/Resolver,
+Operational Kernel, direct `work_execute(capability_id, inputs)`, deterministic
+composition and exact promoted replay are now implemented foundations.
 
-Target stack:
+The next problem is no longer "how do we execute a known capability without an
+LLM?". It is:
+
+> **how does Hermes turn real adaptive traces into trustworthy, minimal,
+> parameterized OperationalCapabilities without asking an LLM to summarize the
+> trace or rediscover the procedure?**
+
+Canonical learned unit:
 
 ~~~text
-LLM / Skill
-  -> bounded ADAPTIVE discovery on novelty/drift
-  -> Experience capture
-  -> Capability Candidate
-  -> validated/promoted Capability
-  -> Capability composition / Routine
-  -> work_execute deterministic runtime
-  -> Operational Kernel
-       browser | filesystem | process | HTTP/API | later desktop
+Verified Operational Transition (VOT)
+= smallest semantically closed + parameterizable + executable + verifiable
+  state transition with positive reuse value
 ~~~
 
-`work_execute` therefore becomes execution infrastructure, not a command the
-model must manually satisfy after a repetition guard blocks progress. Exact
-compatible promoted Capability/Recipe/Routine reuse should be selected by the
-harness before another planning call. If no reusable path exists, safe authorized
-adaptive work proceeds and may teach the compiler.
+Target learning stack:
 
-Implementation sequence:
+~~~text
+adaptive execution
+  -> TransitionSamples
+  -> semantic state abstraction
+  -> transition graph
+  -> boundary proposals
+  -> cross-trace clustering/alignment
+  -> anti-unification + invariants
+  -> conservative preconditions/effects/branches
+  -> dependency / Operational Slice
+  -> observational causal support
+  -> safe replay / ablation where admissible
+  -> counterexample refinement
+  -> OperationalCapability Candidate
+  -> trust/risk/causal promotion admission
+  -> exact resolver / work_execute
+~~~
 
-1. **P0 — close AEPC-E002 without weakening safety**
-   - structural shape is discovery-only;
-   - semantic operation/target family is required for `REQUIRE_COMPILE`;
-   - `executed_unverified` is not verified success;
-   - preserve heterogeneous-browser vs true homogeneous-fan-out paired regressions.
-2. **P1 — first-class Capability contract/registry/resolver**
-   - versioned inputs/effects/scope/preconditions/postconditions/verifiers/dependencies;
-   - extend existing RecipeStore/ProceduralMemory owners instead of creating a new
-     memory/task database;
-   - `work_execute(capability_id, inputs)` plus backward-compatible graph/recipe/routine execution.
-3. **P2 — Operational Kernel + native Browser semantic contract**
-   - trusted primitives for browser/filesystem/process;
-   - semantic target/action observations, reacquirable anchors and semantic operation
-     fingerprints; transient `@eN` refs never become durable identity.
-4. **P3 — Experience -> Candidate -> Validate -> Promote**
-   - accepted adaptive segments become versioned Capability candidates;
-   - replay validation precedes promotion; drift creates a revision and compact
-     `NEEDS_REASONING`, never historical in-place mutation.
-5. **P4 — composition and automatic reuse**
-   - Capability -> Capability without LLM;
-   - prefer the smallest exact validated reusable unit;
-   - larger routines reference atomic dependencies instead of duplicating them.
-6. **P5 — cross-backend proof**
-   - filesystem/process and mixed browser+local flows use the same lifecycle,
-     resolver, evidence and policy model.
+Implementation order:
 
-**Core invariant:** do not force determinism before Hermes knows the procedure;
-once a procedure is validated, do not pay the LLM to rediscover it.
+1. **EC0 — transition identity at capture**
+   - normalize `procedure_trace` into a first-class TransitionSample contract;
+   - fix browser fingerprinting so derived semantic anchors participate in
+     operation identity rather than ref-only calls falling back to structural shape;
+   - normalize emitted/replayable anchor types (`name` mismatch included).
+2. **EC1 — semantic state + provenance**
+   - bounded state predicates and semantic deltas;
+   - evidence strength, Task/Run/operation lineage, trust class and taint.
+3. **EC2 — corpus, segmentation and pattern discovery**
+   - Experience Corpus projection over existing ArtifactStore/ExecutionJournal;
+   - effect/commit/verification/changepoint/backend boundaries;
+   - cross-trace alignment; core vs conditional vs optional vs anomalous.
+4. **EC3 — parameterization / action-model inference**
+   - anti-unify instance values into typed parameters;
+   - infer supported parameter relations/invariants;
+   - conservative preconditions/effects and state-conditioned branches;
+   - failures/drift are negative examples.
+5. **EC4 — dependency and causal support**
+   - compute Operational Slices from data/control/effect dependency graphs;
+   - separate recurrence/generalization from causal confidence;
+   - assign explicit C0-C5 causal grades.
+6. **EC5 — safe replay / ablation / counterexamples**
+   - controlled replay and delta reduction only in safe/reversible environments;
+   - no destructive production experimentation to improve a capability;
+   - counterexamples refine assumptions into a new immutable candidate version.
+7. **EC6 — promotion hardening / stable library view**
+   - learned mutation promotion cannot be granted by raw validation count alone;
+   - provenance/taint, E0-E3 evidence, C0-C5 causal grade, risk, diversity and
+     utility participate in admission;
+   - TaskRun uses a stable capability-version view;
+   - run-local ephemeral compiled segment != globally promoted capability.
+8. **EC7 — integration / registry economics**
+   - emit candidates into the existing OperationalCapabilityRegistry;
+   - preserve exact zero-LLM replay;
+   - deduplicate/prune with utility/MDL-style value;
+   - keep retrieval broad but execution admission exact.
+9. **EC8 — cross-backend proof**
+   - browser + filesystem lifecycle parity;
+   - process/local case;
+   - one cross-backend learned composite;
+   - one atomic learned capability reused by two larger flows.
 
-This milestone remains subordinate to the Canonical Execution Reliability Gate:
-TaskRun lineage, BrowserTask/lease ownership, uncertainty/reconciliation,
-canary-before-fan-out, effect/approval policy, acceptance and canonical commit
-must remain unchanged.
+**Causal rule:** passive trace recurrence can propose/generalize a candidate, but
+cannot by itself prove step necessity or grant high causal confidence.
+Observational mining and interventional validation are separate phases.
+
+**Trust rule:** Experience -> persistent Capability is a trust boundary. Repeated
+untrusted page prose never becomes authority merely because the agent followed it.
+
+**Promotion rule:** capture broadly, promote narrowly. The generic
+`OperationalCapabilityRegistry.record_validation(..., auto_promote_threshold=2)`
+must not be the complete promotion authority for experience-learned mutations.
+
+**Optimization target:** minimize new reasoning required per verified outcome over
+the lifetime of the system, while preserving the Canonical Execution Reliability
+Gate.
 
 ## Upstream Reliability Hardening Intake (2026-09-18) — P0 IMPLEMENTED & VALIDATED; P1 PLANNED
 
