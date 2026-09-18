@@ -1,5 +1,113 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Control Plane Verificável — Router como typechecker operacional — 2026-09-18
+
+Com Progressive Operational Compilation e Experience Compiler implementados, o
+próximo gargalo deixa de ser "como executar/aprender uma Capability" e passa a ser
+**quando usar o que já foi aprendido, quando compor, quando esperar, quando pedir
+autoridade humana e quando gastar raciocínio novo**.
+
+A nova arquitetura introduz cinco abstrações complementares:
+
+~~~text
+OperationIntent
+  = o que precisa se tornar verdadeiro
+
+Capability Router
+  = prova se já sabemos chegar lá deterministicamente
+
+Routing/Composition Certificate
+  = por que EXECUTE/COMPOSE é autorizado
+
+AwaitCondition / Trigger Plane
+  = suspende sem LLM até uma condição observável tornar-se verdadeira
+
+OpenCondition / AttentionPacket
+  = menor decisão semântica ainda não compilada que justifica acordar o LLM
+~~~
+
+**WorkIntent não é OperationIntent.** O `workstation/work_intent.py` atual
+classifica execução, durabilidade, risco e necessidade de Task/Browser/worker.
+Isso continua existindo. OperationIntent será um artefato imutável declarativo
+com target, desired state, invariants, EffectBudget, AuthorityRef, Acceptance e
+lineage. A linguagem natural é interpretada uma vez; o runtime depois trabalha
+sobre o contrato/hash, não reinterpreta o pedido a cada passo.
+
+O Router não deve ser outro agente. Deve se comportar como compilador/typechecker:
+
+~~~text
+Intent + SemanticState + Capability contracts + Policy
+  -> candidate retrieval
+  -> proof/admission
+  -> SATISFIED | EXECUTE | COMPOSE | WAIT | ASK_HUMAN | WAKE_LLM
+~~~
+
+Approximate retrieval pode localizar candidatos, mas similarity nunca concede
+authority. `POSSIBLE_MATCH` nunca despacha mutação.
+
+Para EXECUTE/COMPOSE, o Router precisa provar simultaneamente:
+- goal coverage;
+- effect containment no EffectBudget;
+- target/input/precondition compatibility;
+- invariant preservation;
+- authority + policy + approval;
+- verifier/evidence sufficiente;
+- state freshness;
+- deterministic closure;
+- ausência de uncertain mutation relevante.
+
+Regra canônica:
+
+> **No certificate, no dispatch.**
+
+A prova vale sobre um estado observado/versionado, não sobre um mundo futuro
+imutável. Por isso preconditions críticas, fencing, approval e resource version
+são revalidados imediatamente antes do side effect.
+
+Composição automática é backward chaining bounded sobre pre/postconditions
+tipadas, com CompositionCertificate, causal links, threat detection, união de
+efeitos e JOIN monotônico de authority. Busca que excede budget volta ao LLM; não
+vira um planner geral infinito.
+
+Esperar deixa de ser raciocínio ocioso. AwaitCondition persiste predicate,
+observer/correlation, continuation, deadline/temporal semantics e TaskRun fence;
+o worker pode ceder completamente. **Evento acorda; estado autoritativo confirma.**
+Evento não correlacionado continua sendo observação e nunca cria trabalho.
+
+Drift produz OpenCondition/AttentionPacket contendo somente hipótese quebrada,
+efeitos já confirmados, estado observado, subgrafo restante e autoridade
+disponível. O LLM propõe solução; a proposta volta ao Router. O modelo nunca
+bypassa admission.
+
+Skills devem normalmente declarar `requires_family` semântico e não versões/IDs
+físicos de Capabilities. O catálogo permanece interno/lazy, preservando narrow
+waist e prompt caching.
+
+Owners atuais a estender, não duplicar:
+- `contracts.py`: MessageEnvelope/IntentAuthority/Acceptance;
+- `work_intent.py`: WorkIntent transitório;
+- `operational_capabilities.py`: contratos/registry/resolver;
+- `task_compiler.py` + `work_execute`: execução/pins/checkpoints;
+- `policy.py`: policy/approval boundary;
+- `runtime.py`: RuntimeEventBus/WaitContract/EvidenceState;
+- `events.py`: system-event observation boundary;
+- `reasoning_handoff.py`: NEEDS_REASONING;
+- `journal.py`: durable causal evidence;
+- `evaluation.py`: métricas/baseline.
+
+Qualidade deve ser medida por Exact Reuse Precision, False Exact Match, Missed
+Reuse, Router Regret, wakeup precision/recall, stale/duplicate events,
+event-to-resume latency, polling cost, RAR/ONR e **Verified Outcome Lifetime
+Cost (VOLC)**. Safety, authority, correctness/evidence e uncertainty são
+constraints rígidas, não variáveis econômicas.
+
+Rollout recomendado: Adaptive Baseline -> Shadow Router -> Low-Risk Router ->
+Mutating Router.
+
+Especificação canônica:
+`workstation/context/VERIFIED_OPERATIONAL_CONTROL_PLANE.md`.
+
+
 ## Experience Compiler — aprender transformações, não memorizar trajetórias — 2026-09-18
 
 A implementação de Progressive Operational Compilation resolveu a metade
