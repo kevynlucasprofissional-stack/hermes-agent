@@ -1,5 +1,34 @@
 # Workstation Testing
 
+## Browser Ownership & Recovery Reconciliation regression gate — P0 OPEN
+
+Canonical target:
+[BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
+
+Direct runtime coverage already proves `attach(... preferredTaskId)` can switch
+task-owned tabs; that is insufficient because the production renderer/preload path
+currently does not carry the identity.
+
+Required RED/GREEN behaviors:
+- tooltip hover does not hide the native Browser; real occluders do;
+- stale Chat/Hub detach or visibility calls cannot affect a newer host owner;
+- Chat A/Browser A -> Chat B/Browser B -> Chat A restores A without duplicate pages;
+- the A/B flow survives restart and lazy BrowserTask recovery;
+- requested recoverable task wins over fallback `about:blank`;
+- exactly one WebContents is materialized per restored BrowserTask;
+- background agent activity does not steal foreground and is projected separately
+  from `visible/parked`;
+- session lineage/compaction aliases still resolve the matching task;
+- explicit Chat <-> Hub viewport transfer remains correct.
+
+Validation ladder: focused renderer tests -> focused Electron runtime/session-state
+tests -> Desktop typecheck -> affected Desktop UI/Electron suites -> H004 -> H013 ->
+Workstation/Work100 where Workstation-owned contracts are touched.
+
+The regression must not pass via eager resurrection of every task, foreground
+theft, weakened safe restore, redefinition of `parked`, or a parallel state owner.
+
+
 ## Browser Operational Admission / Primitive Closure P0 regression gate
 
 Canonical target:
