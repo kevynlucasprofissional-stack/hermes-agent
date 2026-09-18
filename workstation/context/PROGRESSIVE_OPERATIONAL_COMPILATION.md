@@ -5,6 +5,25 @@ Date established: 2026-09-18
 Status: **IMPLEMENTED & VALIDATED** (2026-09-18)
 Implementation: `workstation/operational_capabilities.py`, `workstation/operational_kernel.py`, `workstation/execution_policy.py`, `workstation/task_compiler.py`, `tools/workstation_work.py`, `apps/desktop/electron/workstation-browser-runtime.ts`
 
+
+Next architecture layer: **Experience Compiler — TARGET / NOT YET IMPLEMENTED**.
+See [EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
+
+The status `IMPLEMENTED & VALIDATED` in this document applies to the deterministic
+Capability Runtime substrate: semantic operation identity, OperationalCapability
+Registry/Resolver, Operational Kernel, deterministic composition/replay and
+`work_execute(capability_id, inputs)`. It does **not** mean that Hermes already
+performs automatic causal compilation of arbitrary real traces into minimal,
+generalized capabilities.
+
+The next milestone replaces the remaining early learning path
+`trace -> candidate_steps -> experience_candidate` with TransitionSample/state
+delta capture, cross-trace segmentation/alignment, anti-unification, invariant
+and action-model inference, Operational Slicing, explicit observational vs
+interventional evidence, C0-C5 causal grades, trust/taint-aware promotion and
+counterexample-guided immutable revisions.
+
+
 This document extends
 [ADAPTIVE_EXECUTION_COMPILATION.md](ADAPTIVE_EXECUTION_COMPILATION.md).
 AEPC established that deterministic compilation must not block novel or stateful
