@@ -1,5 +1,31 @@
 # Workstation roadmap
 
+## Browser Ownership & Recovery Reconciliation (2026-09-18) — P0 OPEN
+
+Canonical specification:
+[context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
+
+A current-main audit found a cross-layer ownership/recovery gap distinct from
+Browser Operational Admission. BrowserTask and BrowserSessionState retain logical
+recovery data, but Chat preview state, lazy task-tab materialization, the one native
+viewport and Browser Hub can diverge after restart or host transfer. The same audit
+identified chat-hover flicker as native-view occlusion triggered by generic Radix
+popper wrappers used by tooltips.
+
+P0 sequence:
+1. explicit/shared native-view occlusion contract; tooltips never hide Chromium;
+2. host-fence `detach` and `setVisible` as `setBounds` already is;
+3. finish `preferredTaskId` wiring through bridge/preload/Chat UI;
+4. task-bound attach materializes one pending restored tab before fallback `about:blank`;
+5. reconcile session -> BrowserTask -> pending/live tab -> activeTabId -> viewportHost;
+6. separate foreground visibility from execution activity so `parked + working` is valid;
+7. add renderer/preload/runtime restart, host-race and tooltip product regressions.
+
+Hard invariants: background work never steals foreground; stale host cleanup cannot
+detach/hide a newer owner; at most one live page exists per BrowserTask; no second
+Browser/session/presentation store is introduced.
+
+
 ## Browser Operational Admission / Primitive Closure (2026-09-18) — P0 NEXT MILESTONE
 
 Canonical specification:
