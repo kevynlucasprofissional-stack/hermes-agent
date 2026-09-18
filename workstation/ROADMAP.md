@@ -1,5 +1,31 @@
 # Workstation roadmap
 
+## Browser Operational Admission / Primitive Closure (2026-09-18) — P0 NEXT MILESTONE
+
+Canonical specification:
+[context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
+
+Live authenticated Trello dogfooding after PR #28 proved that CP0–CP9, the
+Experience Compiler and the Operational Capability Runtime are individually present
+but are not yet closed as one production mutation path. The native Browser works;
+the failure is the boundary between legacy repetition admission, deterministic
+primitive expressiveness, certified routing and persisted verification.
+
+P0 sequence:
+1. effect truth: `read_preview` PURE_READ and action-sensitive effects for mixed tools;
+2. semantic admission: no structural-only `REQUIRE_COMPILE` for non-browser tools;
+3. Browser primitive closure: semantic plain-text paste + bounded GET/HEAD readback;
+4. one admission owner: legacy repetition becomes learning signal, Router/policy owns mutation admission;
+5. trusted authority + mandatory CertifiedDispatcher;
+6. mutation-timeout => UNCERTAIN + authoritative reconciliation;
+7. generic bounded SPA hydration/readiness stabilization;
+8. dogfood proof: verified canary -> deterministic fan-out with zero intermediate LLM planning.
+
+Hard exit criterion: no `durable_compile_required <-> PREFLIGHT_REQUIRED` deadlock
+when the runtime lacks a compilable primitive; no arbitrary JavaScript promoted as a
+Capability implementation; no request-authored authority escalation; no blind retry
+after uncertain external mutation.
+
 ## Verified Operational Control Plane (2026-09-18) — CP0–CP9 IMPLEMENTED / CONTRACT VALIDATED
 
 Canonical specification:
