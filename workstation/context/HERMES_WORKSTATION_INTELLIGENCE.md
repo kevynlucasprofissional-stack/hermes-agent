@@ -1,5 +1,84 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Experience Compiler — aprender transformações, não memorizar trajetórias — 2026-09-18
+
+A implementação de Progressive Operational Compilation resolveu a metade
+"execução": o Work já possui identidade semântica de operação, OperationalCapability,
+Registry/Resolver, Operational Kernel, composição e replay determinístico sem LLM.
+A descoberta seguinte é que **capturar uma trajetória bem-sucedida ainda não é
+aprender uma capacidade**.
+
+Regra canônica:
+
+> **O Hermes não deve memorizar o que fez. Deve aprender o que sabe fazer.**
+
+A unidade observável passa a ser uma **Verified Operational Transition (VOT)**:
+a menor transformação de estado semanticamente fechada que possui preconditions
+observáveis, parâmetros, execução determinística, postcondition verificável,
+efeito/autoridade explícitos e recuperação de drift. Uma Capability pode conter
+uma ou várias VOTs/etapas, mas sua atomicidade é definida pelo effect boundary,
+não pela quantidade de tool calls.
+
+O Experience Compiler recebe traces como evidência e deve produzir modelos de
+ação, não macros literais:
+
+~~~text
+Trace
+  -> TransitionSample
+  -> estado semântico before/after + delta
+  -> segmentação
+  -> alinhamento entre traces
+  -> anti-unification / parâmetros
+  -> invariants + preconditions/effects/branches
+  -> Operational Slice
+  -> causal validation
+  -> counterexample refinement
+  -> OperationalCapability Candidate
+  -> promoção
+~~~
+
+Três perguntas são separadas:
+- **recurrence:** o padrão existe?
+- **generalization:** ele representa uma família parametrizável?
+- **causality:** o subgrafo realmente sustenta a postcondition?
+
+Frequência não prova causalidade. Traces passivos propõem e generalizam; replay
+controlado, contraste com falhas e, quando seguro, ablação/delta reduction elevam
+a confiança. A nova escala C0-C5 mede suporte causal do modelo aprendido; E0-E3
+continua medindo a força da evidência do efeito observado.
+
+A arquitetura deve usar sucessos, falhas, drift e intervenção humana como
+evidência. Falhas são contraexemplos que restringem preconditions, criam branches
+ou geram nova versão; não são apenas ruído.
+
+**Capture muito, promova pouco.** Toda interação estruturada pode produzir
+TransitionSample; somente uma fração deve virar Candidate e uma fração menor
+Promoted Capability. Utilidade/reuso/compressão devem impedir explosão de
+micro-capabilities.
+
+Experience -> persistent Capability é fronteira de confiança. Cada sample/candidate
+carrega provenance, authority origin, trust class e taint. Conteúdo textual não
+confiável da página nunca vira regra/autoridade persistente apenas porque apareceu
+repetidamente.
+
+Resolver uma Capability e aprender uma Capability são problemas distintos:
+retrieval pode ser aproximado para gerar candidatos; admission continua exato,
+determinístico e policy-gated.
+
+Gap concreto do código atual:
+- `procedure_trace.py` ainda é action-centric;
+- derived semantic anchor não participa necessariamente do fingerprint porque
+  `record_trace()` calcula o fingerprint sobre os args originais;
+- capture pode emitir anchor `name`, enquanto `candidate_steps()` não o admite;
+- `trace -> candidate_steps -> experience_candidate` acontece antes de
+  cross-trace generalization/causal reduction;
+- `record_validation(auto_promote_threshold=2)` não pode ser a autoridade final
+  de promoção para capabilities aprendidas de mutações.
+
+Especificação canônica:
+`workstation/context/EXPERIENCE_COMPILER.md`.
+
+
 ## Compilação Operacional Progressiva — Capability como unidade reutilizável — 2026-09-18
 
 A análise posterior ao AEPC-E002 identificou que o problema não é apenas ajustar
