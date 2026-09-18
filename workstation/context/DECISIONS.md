@@ -300,6 +300,89 @@ production experimentation merely to increase causal confidence.
 Canonical design:
 [EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
 
+## D-020 — OperationIntent is declarative; mutating routing requires a verified certificate
+
+D-018 remains authoritative for deterministic OperationalCapabilities and D-019
+remains authoritative for experience-to-Capability learning. D-020 defines the
+selection/control boundary that follows from both.
+
+The existing `WorkIntent` remains a transient classifier for execution class,
+durability, risk, Browser/worker needs and acceptance policy. It must not be
+silently redefined as the semantic goal contract.
+
+A new immutable **OperationIntent** represents what must become true, not how to
+do it. Its canonical contract includes target identity/family, desired-state
+predicates, invariants, an EffectBudget, trusted authority reference, acceptance
+requirements and TaskRun lineage. It contains no physical Capability ID, transient
+Browser ref or procedural steps unless an explicit user/system constraint requires
+a concrete implementation.
+
+Intent permission and execution authority are independent requirements:
+
+~~~text
+IntentAllows(effect)
+AND
+AuthorityAllows(effect)
+~~~
+
+Never OR. Broad credentials do not expand the current intent, and a requested
+effect does not manufacture authority.
+
+The **Capability Router** is a deterministic bounded proof/typechecking engine,
+not another agent. Approximate retrieval may propose candidates, but only symbolic
+admission can authorize execution. Final decisions are:
+
+~~~text
+SATISFIED | EXECUTE | COMPOSE | WAIT | ASK_HUMAN | WAKE_LLM
+~~~
+
+`EXECUTE` and `COMPOSE` are dispatchable only when backed by a valid
+`RoutingCertificate` / `CompositionCertificate`. The certificate must establish
+target/input compatibility, current preconditions, goal coverage, effect
+containment, invariant preservation, authority/policy/approval sufficiency,
+verifier strength, state freshness, deterministic closure and absence of relevant
+unreconciled uncertainty.
+
+Canonical proof invariants:
+
+- **Router Soundness** — every dispatchable decision satisfies all proof obligations;
+- **Goal Non-Expansion** — semantic effects remain within the OperationIntent EffectBudget;
+- **Authority Non-Escalation** — composition authority is the JOIN of child requirements
+  and may not exceed granted authority;
+- **Deterministic Closure** — no unresolved semantic branch remains for EXECUTE/COMPOSE;
+- **Verification Closure** — effect verification satisfies the intent AcceptanceContract;
+- **Uncertainty Dominance** — relevant unresolved dispatched mutation blocks new mutation.
+
+The hard runtime rule is:
+
+> **No valid certificate, no dispatch.**
+
+Even a valid certificate applies to a versioned observed state. Critical
+preconditions, TaskRun fencing, approval and state/resource freshness must be
+revalidated immediately before mutable side effects. A stale certificate is
+invalidated and routed/reconciled again.
+
+The smallest persistent waiting unit is **AwaitCondition**, not the event itself.
+An event is a wake hint; authoritative state confirms whether the condition is
+true. AwaitCondition persists typed predicate, observer/correlation,
+continuation, deadline/temporal semantics and TaskRun/operation fence through
+existing owners. It must not create a parallel scheduler/task database.
+Uncorrelated events remain observations and cannot mint work intent.
+
+The smallest reasoning escalation is **OpenCondition** carried by a bounded
+AttentionPacket over the existing reasoning-handoff owner. The LLM may propose a
+resolution, but that proposal returns through Router admission before any
+mutation:
+
+> **LLM proposes; Router authorizes.**
+
+Skills should normally depend on semantic capability families
+(`requires_family`), not physical capability IDs. Exact physical pins are
+reserved for semantics that require implementation identity.
+
+Detailed target:
+[VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
