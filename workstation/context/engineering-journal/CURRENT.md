@@ -4142,3 +4142,36 @@ Sub-phases tracked:
 - CP8: metrics + shadow mode + failure attribution + baseline comparison
 - CP9: full integration, Work100 benchmark, canonical gates and documentation.
 
+## 2026-09-18 — H-071: Browser ownership/recovery reconciliation
+
+**Classification:** VALIDATED BY CURRENT-MAIN CODE AUDIT / IMPLEMENTATION OPEN.
+
+**Observed cluster:** hover flicker; restart can leave Chat Browser on Blank Page;
+agent can continue Browser work invisibly; Hub may report Parked during real work.
+
+**Hypothesis:** persistence is not the primary loss boundary. The defect is incomplete
+reconciliation across session-scoped preview intent, BrowserTask/BrowserSessionState
+lazy recovery, activeTabId and one host-owned native viewport, plus an overly broad
+native-view occlusion detector.
+
+**Confirming evidence:**
+1. Hub and Chat toggle setVisible from duplicated overlay observers containing generic
+   `data-radix-popper-content-wrapper`;
+2. tooltips use Radix portals/poppers and chat rows use `OverflowTip`;
+3. BrowserTask restore => `parked/restored`; task tabs are lazy;
+4. `ensure()` may create active `about:blank` while the logical task tab is pending;
+5. `entryForTask()` can recover a controller page then park its projection if not attached;
+6. runtime `attach(... preferredTaskId)` exists and task-switch tests pass;
+7. preload/types/Chat pane omit that argument;
+8. `setBounds` is host-fenced but `detach`/`setVisible` are not.
+
+**Smallest experiments:** BOR-E001 explicit occluder contract; BOR-E002 production
+preferredTaskId wiring; BOR-E003 host-fenced cleanup; BOR-E004 task-bound pending-tab
+materialization across A/B restart; BOR-E005 independent activity projection.
+
+**Practical implication:** fix one reconciliation invariant, not four symptoms.
+Active chat + open Browser surface + matching BrowserTask must converge Chat UI, Hub,
+task, active tab and viewport host on one identity without foreground theft.
+
+Canonical target:
+`../BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
