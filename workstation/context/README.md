@@ -8,23 +8,24 @@ Before changing Workstation code, read these documents in order:
 
 1. [`../../AGENTS.md`](../../AGENTS.md) — repository-wide engineering rules and invariants.
 2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
-3. [`ADAPTIVE_EXECUTION_COMPILATION.md`](ADAPTIVE_EXECUTION_COMPILATION.md) — active execution-policy correction; preserves causal safety while making novel stateful work executable.
+3. [`ADAPTIVE_EXECUTION_COMPILATION.md`](ADAPTIVE_EXECUTION_COMPILATION.md) — implemented execution-policy correction for bounded novelty/drift.
 4. [`PROGRESSIVE_OPERATIONAL_COMPILATION.md`](PROGRESSIVE_OPERATIONAL_COMPILATION.md) — implemented deterministic Operational Capability Runtime and the role of `work_execute`.
-5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — **implemented Experience Compiler milestone**: TransitionSamples/VOTs, trace segmentation, parameterization, causal validation, trust-aware promotion and automatic trace-to-Capability learning without an LLM consolidation loop. Native product qualification remains separate.
-6. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — active reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
-7. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — implemented causal reliability invariants that all active lanes must preserve.
-8. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
-9. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — the pre-1.5 gate result, PR/branch disposition ledger, and recurring post-milestone review rule.
-10. [`DECISIONS.md`](DECISIONS.md) — settled downstream architecture decisions, including D-018/D-019 for Capability Runtime and Experience Compiler.
-11. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable boundaries and security/maintenance constraints.
-12. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — Workstation runtime architecture and distribution model.
-13. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
-14. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership and use of internal/external components.
-15. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Experience Compiler EC0-EC8 is now the active capability-learning milestone.
-16. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
-17. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced or observed problems whose causes must not be guessed.
-18. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger and anti-repeat memory. H-068 is the current Experience Compiler finding; H-067 records the implemented Capability Runtime milestone.
-19. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
+5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — implemented Experience Compiler: TransitionSamples/VOTs, segmentation, parameterization, causal validation and trust-aware promotion.
+6. [`VERIFIED_OPERATIONAL_CONTROL_PLANE.md`](VERIFIED_OPERATIONAL_CONTROL_PLANE.md) — **next active architecture milestone**: immutable OperationIntent, Capability Router/typechecker, Routing/Composition Certificates, Await/Trigger Plane, OpenCondition/AttentionPacket and Router/Trigger evaluation.
+7. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
+8. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — causal reliability invariants that all active lanes must preserve.
+9. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
+10. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — pre-1.5 gate result, branch/PR disposition ledger and recurring consolidation rule.
+11. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions, including D-018/D-019/D-020 for Capability Runtime, Experience Compiler and verified Control Plane.
+12. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable security/maintenance boundaries.
+13. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — implemented Workstation runtime architecture and distribution model.
+14. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
+15. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership/use of internal/external components.
+16. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Verified Operational Control Plane CP0–CP9 is the active next milestone; Experience Compiler EC0–EC8 is implemented.
+17. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
+18. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
+19. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger. H-069 is the current Control Plane finding; H-068 records the implemented Experience Compiler milestone.
+20. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
 
 After this read-order, inspect the **current `main` implementation and its tests** for the subsystem you intend to change. Documentation is intent and state; code on `main` is the source of truth for implementation details. Historical findings that current `main` has already fixed become regression evidence, while unverified claims must be reproduced before architecture changes. In particular, do not recreate a native Browser harness merely because #114964 describes an upstream keepalive bug: H004/H013 already exist downstream and must be reused/extended.
 
