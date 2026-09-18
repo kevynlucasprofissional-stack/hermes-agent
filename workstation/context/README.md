@@ -11,21 +11,22 @@ Before changing Workstation code, read these documents in order:
 3. [`ADAPTIVE_EXECUTION_COMPILATION.md`](ADAPTIVE_EXECUTION_COMPILATION.md) — implemented execution-policy correction for bounded novelty/drift.
 4. [`PROGRESSIVE_OPERATIONAL_COMPILATION.md`](PROGRESSIVE_OPERATIONAL_COMPILATION.md) — implemented deterministic Operational Capability Runtime and the role of `work_execute`.
 5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — implemented Experience Compiler: TransitionSamples/VOTs, segmentation, parameterization, causal validation and trust-aware promotion.
-6. [`VERIFIED_OPERATIONAL_CONTROL_PLANE.md`](VERIFIED_OPERATIONAL_CONTROL_PLANE.md) — **next active architecture milestone**: immutable OperationIntent, Capability Router/typechecker, Routing/Composition Certificates, Await/Trigger Plane, OpenCondition/AttentionPacket and Router/Trigger evaluation.
-7. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
-8. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — causal reliability invariants that all active lanes must preserve.
-9. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
-10. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — pre-1.5 gate result, branch/PR disposition ledger and recurring consolidation rule.
-11. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions, including D-018/D-019/D-020 for Capability Runtime, Experience Compiler and verified Control Plane.
-12. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable security/maintenance boundaries.
-13. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — implemented Workstation runtime architecture and distribution model.
-14. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
-15. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership/use of internal/external components.
-16. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Verified Operational Control Plane CP0–CP9 is the active next milestone; Experience Compiler EC0–EC8 is implemented.
-17. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
-18. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
-19. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger. H-069 is the current Control Plane finding; H-068 records the implemented Experience Compiler milestone.
-20. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
+6. [`VERIFIED_OPERATIONAL_CONTROL_PLANE.md`](VERIFIED_OPERATIONAL_CONTROL_PLANE.md) — implemented CP0–CP9 baseline: immutable OperationIntent, Capability Router/typechecker, certificates, Await/Trigger, reasoning handoff and evaluation contracts.
+7. [`BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md`](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md) — **active P0 integration milestone**: one admission owner, primitive closure, trusted authority, certified dispatch, timeout uncertainty and SPA readiness.
+8. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
+9. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — causal reliability invariants that all active lanes must preserve.
+10. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
+11. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — pre-1.5 gate result, branch/PR disposition ledger and recurring consolidation rule.
+12. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions, including D-018/D-019/D-020/D-021 for Capability Runtime, Experience Compiler, verified Control Plane and operational-admission closure.
+13. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable security/maintenance boundaries.
+14. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — implemented Workstation runtime architecture and distribution model.
+15. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
+16. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership/use of internal/external components.
+17. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Browser Operational Admission / Primitive Closure is the active P0 milestone; CP0–CP9 and Experience Compiler EC0–EC8 are implemented baselines.
+18. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
+19. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
+20. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger. H-070 is the current Browser operational-admission finding; H-069 records the implemented Control Plane milestone.
+21. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
 
 After this read-order, inspect the **current `main` implementation and its tests** for the subsystem you intend to change. Documentation is intent and state; code on `main` is the source of truth for implementation details. Historical findings that current `main` has already fixed become regression evidence, while unverified claims must be reproduced before architecture changes. In particular, do not recreate a native Browser harness merely because #114964 describes an upstream keepalive bug: H004/H013 already exist downstream and must be reused/extended.
 
