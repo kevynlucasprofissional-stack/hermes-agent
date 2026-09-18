@@ -1,5 +1,37 @@
 # Canonical Work Loop — implementation evidence
 
+## Next target boundary — verified OperationIntent / Router / Await control plane
+
+The implemented Canonical Work Loop remains the owner of trusted ingress,
+TaskRun lineage, evidence, acceptance and canonical completion. The next target
+does not replace these contracts.
+
+Current `WorkIntent` remains the transient classifier used to decide how a turn
+is hosted (durability, risk, Browser/worker need, acceptance). The planned
+`OperationIntent` is additive and different: an immutable declarative desired
+state + target + invariants + EffectBudget + trusted AuthorityRef + acceptance
+contract. It exists so a Capability Router can prove that a proposed deterministic
+Capability/plan is both semantically useful and authorized before dispatch.
+
+`MessageEnvelope` / `IntentAuthority` remain the trusted work-intent ingress
+boundary. Execution authority for individual effects must be derived from that
+trusted provenance plus the existing scoped policy/approval state; it is never
+minted from request/page prose.
+
+The current `RuntimeEventBus` / `WaitContract` and SystemEventPipeline are
+implementation seeds for a persistent `AwaitCondition` / Trigger Plane.
+The target reuses existing TaskRun/WorkPlan/Kanban/journal owners and does not
+create a second scheduler. Uncorrelated events remain observations. Events wake a
+condition; authoritative current state must confirm it before mutable continuation.
+
+The current compact `needs_reasoning` handoff is the owner to extend with
+OpenCondition/AttentionPacket. Confirmed effects/checkpoints remain preserved and
+an LLM-proposed adaptation must return through Router admission before mutation.
+
+Detailed target:
+[VERIFIED_OPERATIONAL_CONTROL_PLANE.md](VERIFIED_OPERATIONAL_CONTROL_PLANE.md).
+
+
 Base audited on 2026-09-17: `main` and fetched `origin/main`
 `edaa8cc8fd1180de05f92450caede853ec862daf`. Changes remain in the working tree.
 This document does not declare the entire product program complete.
