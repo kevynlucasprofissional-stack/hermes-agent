@@ -235,6 +235,71 @@ Memory system merely to host capabilities.
 Detailed target and acceptance criteria:
 [PROGRESSIVE_OPERATIONAL_COMPILATION.md](PROGRESSIVE_OPERATIONAL_COMPILATION.md).
 
+## D-019 — Learned operational knowledge is a verified state transition, and promotion is evidence/causality gated
+
+D-018 remains authoritative for the deterministic Capability Runtime. D-019
+defines how adaptive experience may become a persistent OperationalCapability.
+
+The canonical learned unit is a **Verified Operational Transition (VOT)**: the
+smallest semantically closed, parameterizable, executable and verifiable state
+transition with positive reuse value. Tool calls, raw traces and successful
+trajectories are evidence inputs; none is automatically the reusable unit.
+
+Experience learning is a pipeline, not a trace recorder:
+
+~~~text
+trace
+  -> TransitionSamples
+  -> semantic state abstraction
+  -> boundary proposals
+  -> cross-trace alignment
+  -> parameterization / anti-unification
+  -> conservative precondition/effect/branch inference
+  -> dependency / Operational Slice
+  -> causal support
+  -> safe replay/ablation when policy permits
+  -> counterexample refinement
+  -> OperationalCapability Candidate
+  -> promotion admission
+~~~
+
+The successful consolidation path must not require an LLM. The LLM remains for
+novel intent, ambiguity and drift diagnosis, but it does not grant learned
+capability promotion authority.
+
+Passive recurrence establishes observational support, not causal proof.
+Experience Compiler tracks a separate C0-C5 causal grade, while existing E0-E3
+continues to represent strength of effect verification. Learned mutable
+capabilities require both dimensions plus existing effect/approval policy.
+
+Experience -> persistent Capability is a trust boundary. Provenance/trust/taint
+must survive into TransitionSamples and candidates. Repeated page-provided prose
+or other untrusted instructions never become trusted preconditions, effects or
+authority simply through frequency.
+
+The runtime should capture broadly and promote narrowly. Generic registry
+success counts, including
+`OperationalCapabilityRegistry.record_validation(..., auto_promote_threshold=2)`,
+are not sufficient by themselves to auto-promote experience-learned mutations.
+Promotion admission must additionally consider semantic closure, compatibility,
+causal grade, evidence, provenance/taint, cross-run diversity, risk/blast radius,
+drift and expected reuse utility.
+
+A TaskRun executes against a stable capability-version view. New observations may
+create candidates or run-local ephemeral compiled segments, but they must not
+silently alter the meaning of a capability already selected for that TaskRun.
+
+Counterexamples refine the smallest unsupported assumption and create a new
+immutable candidate/version. Historical promoted behavior is never silently
+rewritten in place.
+
+Controlled replay/ablation is allowed only when the effect/environment is
+sufficiently safe and reversible. The system must not perform destructive
+production experimentation merely to increase causal confidence.
+
+Canonical design:
+[EXPERIENCE_COMPILER.md](EXPERIENCE_COMPILER.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
