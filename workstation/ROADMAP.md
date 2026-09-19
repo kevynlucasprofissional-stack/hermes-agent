@@ -1,5 +1,36 @@
 # Workstation roadmap
 
+## Verification Contract Synthesis / Operational Truth (2026-09-19) — H-076 CORRECTIVE IMPLEMENTATION OPEN
+
+Canonical specification:
+[context/VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](context/VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
+Post-PR #33 audit on main@e010c8981a4bdeb89ac94479e0d7e891d48eadae
+falsified the need for a separate Verifier Compiler but confirmed an epistemic
+verification gap. H-075 now transfers verified adaptive work to deterministic owners;
+H-076 defines what may legitimately count as VERIFIED.
+
+Confirmed current-main seams:
+- TaskCompiler can still default undeclared verifier strength to E3 in one path;
+- Router treats non-empty verifier metadata as sufficient and normally sets
+  state_fresh=True without a typed temporal/version proof;
+- Dispatcher integration can consume executor-produced verification.accepted;
+- OperationalKernel can certify learned external work from correlated semantic
+  observation;
+- RunClosureProof requires a non-empty verifier contract, not a validated/fresh/covered
+  verifier result;
+- Experience Compiler preserves minimum evidence/effects better than verifier identity,
+  relation, freshness, fault-domain provenance and discriminative validation.
+
+P0-P7: eliminate false-confidence seams; typed VerificationContract +
+VerificationResult evaluator; runtime integration; RunClosure/Await integration;
+Verification Contract Synthesis; negative-control/verifier-sensitivity validation;
+action+oracle pair promotion/metrics; extend the existing Trello-shaped benchmark with
+truth/adversarial cases.
+
+H-075 remains implemented. H-076 hardens the meaning of the verification consumed by
+H-075 and must not create a second registry, scheduler, evidence store or control plane.
+
 ## In-Flight Operationalization / Adaptive-to-Deterministic Handoff (2026-09-19) — IMPLEMENTED & QUALIFIED (Phases P0–P6)
 
 Canonical specification:
