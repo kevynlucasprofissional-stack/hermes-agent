@@ -1,5 +1,52 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-078 — Upstream como laboratório, Workstation como supervisor unidirecional — 2026-09-19
+
+A direção estratégica do Hermes Work foi refinada: não haverá uma escolha binária entre
+"continuar forkando Hermes" e "reescrever um software standalone". A migração do upstream
+será usada para **extrair as costuras enquanto elas são tocadas**.
+
+```text
+hoje:
+Hermes internals -> Workstation patches
+
+migração:
+Hermes generic contracts -> Workstation supervisor/adapter -> Work Runtime
+
+futuro:
+Hermes Agent / outros reasoners -> adapters/gateway -> Work Runtime independente
+```
+
+O ponto crítico é não confundir desacoplamento com perda de controle. O Hermes não deve
+precisar aprender, por prompt ou imports específicos, que "tem que usar o Workstation".
+O Workstation deve observar o fluxo normal de Hermes e participar fora do modelo:
+propostas de tool/LLM, execução real, resultados, verificação e lifecycle chegam por
+contratos genéricos; o Workstation pode então admitir, interromper, pausar, transformar,
+substituir por capability determinística, reconciliar, verificar e aprender.
+
+Isso torna a relação deliberadamente unidirecional: Workstation conhece o adapter Hermes;
+o core genérico do Hermes não conhece Workstation.
+
+O audit do código atual mostra que a oportunidade é concreta, não teórica. A base já
+possui hooks `pre_tool_call/post_tool_call`, `pre_verify`, `pre/post_api_request` e
+middleware `tool_request/tool_execution` e `llm_request/llm_execution`. O upstream
+moderno reforça essa decomposição. Portanto, ao sincronizar, não devemos reconstruir as
+injeções antigas nos novos owners quando esses contratos genéricos conseguem transportar
+a semântica.
+
+A regra operacional passa a ser: **cada conflito de upstream deve pagar parte da dívida de
+acoplamento**. Se uma costura direta for tocada, a primeira pergunta deixa de ser "onde
+recoloco este import?" e passa a ser "qual observação/middleware/provider genérico permite
+ao Workstation manter a mesma autoridade sem o Hermes conhecê-lo?".
+
+A retirada é progressiva e segura: caminho antigo permanece enquanto o novo roda em
+shadow; com paridade provada, a autoridade muda para o adapter; só então o import direto é
+apagado. `work_execute` continua útil, mas não é requisito para o Workstation existir na
+execução.
+
+Canonical:
+[UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
 ## H-077 — Falsificação arquitetural, validade externa e envelope de validade — 2026-09-19
 
 O H-076 foi implementado e qualificado no `main@2babc8b4cf89bab217cd76b5992d192776184337`, mas a investigação
