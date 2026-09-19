@@ -1,5 +1,36 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-076 — Verification Contract Synthesis / verdade operacional — 2026-09-19
+
+Depois do merge do H-075 no main@e010c8981a4bdeb89ac94479e0d7e891d48eadae,
+o gargalo seguinte ficou explícito: Hermes já consegue transferir trabalho adaptativo
+verificado para execução determinística, mas "verified" ainda pode carregar uma prova
+correlacionada, stale ou subespecificada.
+
+A hipótese de um Verifier Compiler separado foi refutada. O desenho correto é estender
+CapabilityFormalContract.verifier para um VerificationContract tipado, usar um
+VerificationEvaluator determinístico e ensinar o Experience Compiler a propor
+verificadores como CANDIDATE, validando-os separadamente da action model.
+
+Dimensões canônicas da prova:
+- persistência/evidence class;
+- source authority/trust;
+- fault-domain independence;
+- temporal validity/freshness;
+- equivalence relation;
+- predicate/goal coverage.
+
+Novo princípio: o Hermes não aprende um verifier porque ele acompanhou sucesso; aprende
+quando ele consegue **discriminar sucesso de ausência/corrupção/staleness/conflito**.
+Isso exige Verifier Sensitivity, negativos seguros, held-out evidence, drift/fingerprint
+e separação entre discovery evidence e validation evidence.
+
+O H-075 permanece implementado. H-076 endurece a verdade consumida por RunClosureProof,
+Router, Kernel, Dispatcher, Await, composition e Experience Compiler.
+
+Canônico:
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
 ## H-075 — In-Flight Operationalization Handoff Gap — 2026-09-19
 
 A hipótese inicial foi parcialmente refutada: executor determinístico, checkpoints,
