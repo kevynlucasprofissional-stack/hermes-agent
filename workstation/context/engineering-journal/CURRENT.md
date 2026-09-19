@@ -1,8 +1,72 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-071 — PR #29 post-merge operational truth audit (2026-09-19)
+
+**Classification:** REPRODUCED CODE/CI GAPS / CORRECTIVE P0 REQUIRED / QUALIFICATION OPEN.
+
+**Evidence base:** `main@24997c9af8256ac41001bdee9f827c643d5598e4`, PR #29
+diff, current production code, focused tests and exact-head GitHub Actions jobs.
+
+**Confirmed findings:**
+- **H-071-A — false COMPOSE success:** `TaskCompiler._execute_route()` dispatches
+  `ComposedDecision` with a callback that returns `{"success": True, "plan": [...]}`
+  rather than executing the plan. Current dispatcher semantics can mark that path
+  VERIFIED/COMMITTED.
+- **H-071-B — ACK collapsed into verification:** `CertifiedDispatcher.dispatch()`
+  initializes `verified=True`; absent `verifier_fn`, a success/ack result advances
+  to VERIFIED/COMMITTED unless it explicitly contains an error. This violates the
+  evidence-strength boundary.
+- **H-071-C — authority trust root too broad:** `TaskCompiler._execute_route()`
+  accepts request `trusted_authority` and may synthesize
+  `EXTERNAL_REVERSIBLE + * + *` from bare task/session presence when no persisted
+  grant is found.
+- **H-071-D — mandatory compilation still lacks closure proof:**
+  `execution_policy.decisions_for_calls()` can emit `REQUIRE_COMPILE` from
+  `sem_fp && sem_count >= 3` without proving deterministic primitive/capability,
+  verifier, authority/policy and certified-dispatch closure required by D-021.
+- **H-071-E — Browser HTTP readback contract incomplete:** Electron does not enforce
+  same-origin-by-default and uses partial literal-host blocking; Python
+  `browser_read_http` can fall back to process `requests.request`, changing the
+  authenticated Browser-session semantics. Full payload retention before inline
+  truncation also needs proof.
+- **H-071-F — terminal semantic family remains over-broad:** syntactic families such
+  as `python:-m` / `bash:-c` can conflate unrelated arbitrary commands.
+- **H-071-G — qualification failed on exact PR head:** Workstation CI
+  `core-patch-dry-run` and Workstation Browser Windows `desktop-typecheck` both
+  failed before downstream gates with
+  `ERROR: browser tool route anchor missing for browser_type` from
+  `python workstation/scripts/apply_core_integration.py --root . --check`.
+  The local 599-pass/focused suites remain useful but do not establish exact-head
+  product qualification.
+- **H-071-H — current dogfood test is simulation-heavy:** the Python reference
+  capability and fake Electron WebContents prove orchestration/strings, not real
+  contenteditable/ProseMirror-like paste + authenticated same-origin readback.
+
+**Corrective experiment order:**
+1. RED tests for ACK-without-verifier and COMPOSE-without-execution;
+2. implement real composition execution/non-terminal planning and evidence-gated commit;
+3. RED tests for task/session-without-grant and request-authored trusted authority;
+4. remove synthetic wildcard authority and source trust from canonical runtime context;
+5. RED/GREEN operational-closure admission, including same-family/no-closure =>
+   SUGGEST and same-family/verified-closure => REQUIRE;
+6. harden native Browser readback and remove bound-runtime process fallback;
+7. repair core-integration `browser_type` anchor and rerun Linux/Windows checks;
+8. real Electron/WebContents fixture for rich editor + delayed hydration + cookie +
+   same-origin readback + verification + replay;
+9. exact-head full gates, H004/Work100 where affected, then update status to qualified.
+
+**Decision:** D-021 remains authoritative; this is implementation non-compliance, not a
+replacement architecture.
+
+**Closure condition:** all corrective contracts green on the exact candidate head, no
+skipped required Workstation/Windows gates, and real runtime fixture demonstrates
+`novel discovery -> verified canary -> deterministic fan-out` without false
+verification, synthetic authority or compile deadlock.
+
+
 ## H-070 — Native Browser operational admission & primitive closure (2026-09-18)
 
-**Classification:** IMPLEMENTED / CONTRACT QUALIFIED / 100% REGRESSIONS GREEN / P0 CLOSED.
+**Classification:** IMPLEMENTATION LANDED; historical local qualification claim superseded by H-071. P0 is reopened until corrective/product gates pass.
 
 **Observed & Diagnosed:** native Electron Chromium succeeds at Trello navigation/click/read, yet the
 task reached `durable_compile_required <-> PREFLIGHT_REQUIRED` deadlock while the durable contract
