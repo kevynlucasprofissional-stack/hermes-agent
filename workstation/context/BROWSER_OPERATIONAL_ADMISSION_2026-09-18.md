@@ -9,17 +9,24 @@
 
 ## Status
 
-**IMPLEMENTED / CONTRACT QUALIFIED / 100% REGRESSIONS GREEN (2026-09-18)**
+**IMPLEMENTATION LANDED / POST-MERGE AUDIT REOPENED / PRODUCT QUALIFICATION BLOCKED (2026-09-19)**
 
-All 8 implementation phases (P0.1–P0.8) are complete and qualified:
-- Full workstation regression suite: 62 test files, 599 tests passed, 0 failed, 2 skipped.
-- Focused P0 regression suite: `workstation/tests/test_browser_operational_admission.py` (13/13 tests passed).
-- Desktop Vitest admission suite: `apps/desktop/electron/workstation-browser-runtime-admission.test.ts` (4/4 tests passed).
-- Execution policy suite: `workstation/tests/test_execution_policy.py` (11/11 tests passed).
-- Readonly preflight suite: `workstation/tests/test_readonly_preflight.py` (22/22 tests passed).
-- Durable hardening suite: `workstation/tests/test_durable_hardening.py` (34/34 tests passed).
-- Zero whitespace/lint check failures (`git diff --check` clean).
+PR #29 landed P0.1–P0.8 implementation work and produced strong focused/local evidence:
+599 Workstation tests passed locally, the dedicated Browser admission suite passed 13/13,
+and the Electron admission suite passed 4/4. Those results remain implementation evidence,
+but they do **not** close the milestone.
 
+Post-merge review of `main@24997c9af8256ac41001bdee9f827c643d5598e4`
+found unresolved contract violations in composition execution, verification semantics,
+authority origin, operational-closure admission and Browser HTTP readback. Exact-head
+GitHub Actions also failed both Workstation CI and Workstation Browser Windows at
+`workstation/scripts/apply_core_integration.py --root . --check` with
+`browser tool route anchor missing for browser_type`, causing later Windows product
+gates to be skipped.
+
+Current status is therefore: **implementation base retained; corrective P0 and
+qualification open**. Do not label CLOSED / fully contract-qualified / 100% regressions
+green until the post-PR #29 corrective gate in TESTING.md passes.
 ```text
 adaptive agent execution
   -> execution-policy admission
@@ -33,6 +40,60 @@ The native Browser itself was able to navigate, snapshot, click, inspect and kee
 same BrowserTask. The failure occurs when discovered operational knowledge becomes
 repetitive and the legacy compilation gate requires a deterministic representation
 that the Browser Kernel cannot yet faithfully express.
+
+
+## Post-PR #29 audit findings — 2026-09-19
+
+The following findings are current-main implementation gaps against D-021, not a
+replacement design:
+
+### BOA-010 — COMPOSE can report COMMITTED without executing the plan
+`TaskCompiler._execute_route()` currently supplies a composition dispatch callback
+that returns the list of planned capabilities with `success=True`. The callback must
+execute the certified composition (with per-boundary verification) or the route must
+remain explicitly non-terminal. A plan echo is not an effect.
+
+### BOA-011 — ACK is treated as VERIFIED by default
+`CertifiedDispatcher.dispatch()` defaults verification to true when no
+`verifier_fn` is supplied and the result does not declare failure. The default must be
+conservative. ACK-only evidence remains ACKNOWLEDGED/NEEDS_VERIFICATION unless the
+formal acceptance/effect contract explicitly allows that evidence strength.
+
+### BOA-012 — trusted authority still has untrusted/synthetic origins
+Request `trusted_authority` and automatic `EXTERNAL_REVERSIBLE + * + *` scopes
+derived from task/session presence are not trusted grants. Effective mutation authority
+must originate in trusted ingress/TaskRun/policy/approval state; request data may only
+narrow it.
+
+### BOA-013 — semantic recurrence still bypasses operational-closure proof
+`sem_fp && sem_count >= 3` is not sufficient for mandatory compilation.
+`REQUIRE_COMPILE` additionally requires a deterministic executable representation,
+compatible authority/policy, verifier/readback and certified dispatch. Without closure,
+repetition is `SUGGEST_COMPILE` / Experience Compiler evidence.
+
+### BOA-014 — browser_read_http must stay a Browser-session readback primitive
+The native runtime must default to same-origin, require policy for cross-origin, reuse
+canonical URL/destination safety (including DNS/IPv6/private/metadata cases), constrain
+headers and externalize the complete payload before inline truncation. A bound native
+BrowserTask must fail closed when native readback is unavailable; process-level
+`requests.request` fallback changes the security/session semantics.
+
+### BOA-015 — arbitrary terminal syntax is not semantic identity
+Families such as `terminal:python:-m` and `terminal:bash:-c` are too broad to grant
+mandatory compilation. Owner-declared operation family or equivalent positive semantic
+identity/closure is required.
+
+### BOA-016 — focused mocks are not final product qualification
+The existing reference dogfood is valuable unit/integration coverage, but final closure
+needs real Electron/WebContents behavior with rich/contenteditable editor semantics,
+delayed SPA hydration, session cookie, same-origin readback, persisted verifier and
+deterministic replay.
+
+### BOA-017 — exact-head integration gate currently fails
+Both Linux Workstation CI and Workstation Browser Windows reproduced
+`browser tool route anchor missing for browser_type` in
+`apply_core_integration.py --check`. Fix the committed-source integration anchor,
+then rerun the complete candidate-head gates before status can return to QUALIFIED.
 
 ## Canonical diagnosis
 
