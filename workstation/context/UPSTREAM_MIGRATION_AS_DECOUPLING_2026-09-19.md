@@ -1,4 +1,4 @@
-# H-078 — Upstream Migration as Decoupling / Unidirectional Workstation Supervision
+# H-078 — Upstream Migration as Decoupling / Minimum Necessary First-Party Seams
 
 Date established: 2026-09-19  
 Status: **ACTIVE STRATEGIC MIGRATION PROGRAM**  
@@ -8,33 +8,36 @@ Upstream candidate observed during analysis: `NousResearch/hermes-agent@1f4fbd51
 ## Executive decision
 
 Hermes Work will **adapt to the current Hermes upstream while using that migration to
-progressively remove direct Workstation seams from Hermes internals**.
+remove accidental coupling and minimize first-party seams without sacrificing proven
+Workstation capability or quality**.
 
-This is not a big-bang standalone rewrite and it is not a simple "sync fork" exercise.
+This is neither a big-bang standalone rewrite, nor a blind fork sync, nor a "zero source
+changes" purity program.
 
 The direction is:
 
 ```text
 adapt upstream
--> preserve Workstation semantics
+-> preserve Workstation semantics and product quality
 -> classify every overlap
--> extract coupling boundaries while resolving it
--> move Workstation observation/control onto generic Hermes extension surfaces
--> shrink direct Hermes -> Workstation knowledge
+-> remove accidental seams where generic contracts are sufficient
+-> introduce small generic abstractions where upstream lacks the right extension point
+-> deliberately preserve the few first-party seams that require privileged lifecycle/UI
 -> keep Hermes as the first-party laboratory / reference reasoner
--> eventually make Work Runtime independently executable
+-> progressively make Work Runtime independently executable
 ```
 
-The migration is therefore **Upstream Migration as Decoupling**.
+Canonical seam policy:
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md).
 
-## The non-negotiable direction of dependency
+## The dependency direction, with one critical nuance
 
-The target relation is unidirectional:
+For reasoning/runtime supervision, the target relation remains unidirectional:
 
 ```text
-Hermes Agent / upstream
+Hermes Agent / upstream generic core
         |
-        | generic lifecycle + middleware + provider/adapter contracts
+        | generic lifecycle + middleware + provider contracts
         v
 Workstation supervisory adapter
         |
@@ -42,21 +45,28 @@ Workstation supervisory adapter
 Hermes Work Runtime / Control Plane
 ```
 
-Hermes core must progressively stop importing or special-casing Workstation.
+The LLM/Reasoner must not need Workstation-specific prompt compliance. Correctness must not
+depend on the model choosing `work_execute`, remembering a Workstation workflow, or being
+aware that supervision exists.
 
-Workstation may consume **generic, versioned Hermes extension contracts** and may observe,
-wrap, veto, pause, modify, verify, reconcile or redirect execution through those contracts.
-Hermes should not need model-level knowledge that "it must use Hermes Work".
+However, this does **not** imply that the complete first-party Hermes Work distribution
+must be unaware of Workstation.
 
-This directly addresses the failure mode where seam removal would make Hermes "forget"
-the Workstation. Correctness must not depend on the LLM choosing `work_execute`, following a
-prompt convention, or remembering a Workstation-specific workflow.
+The downstream Desktop may deliberately contain narrow first-party integrations when
+generic extension surfaces cannot preserve equivalent capability, lifecycle, authority,
+native UI integration or correctness.
 
-The Workstation should be able to supervise **normal Hermes behavior**.
+```text
+Reasoner:             should not need Workstation knowledge
+Generic agent core:   should avoid Workstation-specific knowledge where generic seams suffice
+First-party Desktop:  may knowingly integrate Workstation at narrow privileged boundaries
+```
+
+The objective is **minimum necessary first-party seams**, not zero seams.
 
 ## Supervisor, not hidden prompt convention
 
-The desired runtime semantics are:
+The desired runtime semantics remain:
 
 ```text
 Hermes proposes / acts normally
@@ -77,171 +87,195 @@ Hermes proposes / acts normally
                  - compile experience
 ```
 
-The model can remain unaware of the Workstation-specific machinery.
+`work_execute` remains useful as an explicit Capability/Intent execution API and
+deterministic fast path, but it is not the activation mechanism on which Workstation
+participation depends.
 
-`work_execute` remains useful as an explicit Capability/Intent execution API and as a
-deterministic fast path, but **it must not remain a correctness dependency for Workstation
-participation**.
+## Why the current upstream makes extraction feasible
 
-## Why the current upstream makes this feasible
-
-The current fork already contains generic Hermes plugin/lifecycle and middleware surfaces,
-and the newer upstream strengthens the same direction.
-
-Observed generic surfaces include:
+The current fork and newer upstream already expose generic Hermes plugin/lifecycle and
+middleware surfaces:
 
 - lifecycle hooks: `pre_tool_call`, `post_tool_call`, `pre_verify`,
   `pre_api_request`, `post_api_request`, session/task lifecycle hooks;
 - behavior-changing middleware:
   - `tool_request` — rewrite effective tool arguments;
-  - `tool_execution` — wrap the actual tool execution callback;
-  - `llm_request` — rewrite/observe provider request payloads;
+  - `tool_execution` — wrap actual tool execution;
+  - `llm_request` — rewrite/observe provider requests;
   - `llm_execution` — wrap provider execution;
 - plugin registration through `PluginContext.register_hook()` and
   `PluginContext.register_middleware()`;
-- browser/provider/plugin boundaries in the modern upstream.
+- browser/provider/plugin boundaries;
+- a substantially stronger Desktop Plugin SDK with contributed panes/workspaces and
+  docking surfaces.
 
-These are materially better extraction targets than injecting Workstation imports into
-`agent/conversation_loop.py`, `agent/tool_executor.py` or `tools/browser_tool.py`.
+These are materially better targets than re-injecting Workstation logic throughout
+`agent/conversation_loop.py`, `agent/tool_executor.py` and other refactored owners.
 
-The strategic insight is therefore:
+But extension capability is not assumed to be universal. When a generic surface cannot
+preserve the required semantics, the choice is not to regress the Workstation merely to
+keep upstream pristine.
 
-> **Do not recreate old Workstation patches inside the upstream's new module layout when a
-> generic observer/middleware/provider boundary can own the same behavior.**
+## The Browser proves why zero-seam purity is wrong
 
-## Current seam map on the downstream baseline
+Today the Workstation Browser is not just a renderer plugin.
 
-### Tier A — inward core seams: retire progressively
+The integrated path includes:
+- successful internal Browser navigation;
+- a `workstation.browser.open` desktop event;
+- session-aware routing in the Desktop;
+- automatic Workstation Browser reveal in the chat Right Rail;
+- a persistent Electron Chromium `WebContentsView`;
+- BrowserTask/page ownership;
+- background execution;
+- human take/release control;
+- stale-run fencing;
+- Hub <-> Chat viewport transfer;
+- controller loopback;
+- persistent profile and recovery.
 
-These are the highest-priority dependencies because generic Hermes code knows about
-Workstation directly.
+Modern upstream can likely absorb some historical presentation seams through its Plugin SDK,
+because plugins can now contribute/dock workspaces and panes. Those seams should be tested
+for REMOVE or UPSTREAM_ABSTRACT.
 
-- `agent/conversation_loop.py`
-  - invokes Workstation turn preparation;
-  - imports Workstation routing/constraint behavior;
-  - projects Workstation continuation state into provider context.
-- `agent/tool_executor.py`
-  - calls Workstation durable-execution state;
-  - performs Workstation mutation preparation/recording;
-  - captures raw results for Workstation compilation/learning.
-- `agent/turn_finalizer.py`
-  - calls Workstation Kanban/finalization and procedure-trace promotion logic.
-- `tools/browser_tool.py`
-  - directly imports Workstation Browser routing and Workstation artifact/reference/task
-    helpers.
+But renderer pane extensibility is not equivalent to main-process ownership of a persistent
+native `WebContentsView`. Until a generic upstream native-view/provider contract offers
+equivalent lifecycle and safety, the native Browser bootstrap/IPC path is a legitimate
+PRESERVE_FIRST_PARTY seam.
 
-Target: replace these with Workstation-owned subscribers/adapters over generic Hermes
-surfaces. No replacement seam may require the model to remember to opt in.
+**No proven Browser capability, UX behavior or correctness invariant may be downgraded just
+to reduce the diff against upstream.**
 
-### Tier B — product edge adapters: isolate, then keep narrow
+## Current seam map and intended disposition
 
-Examples:
+The initial machine-readable registry is `workstation/first_party_seams.json`.
 
-- `hermes_cli/web_server.py` Workstation API projections;
-- `hermes_cli/kanban_db.py` Workstation completion/acceptance integration;
-- Desktop `electron/main.ts` / `preload.ts` and Workstation Browser IPC.
+High-value examples:
 
-These are not equivalent to agent-core coupling. They are legitimate product integration
-edges, but the long-term target is a narrow Work Gateway / Desktop adapter rather than
-state ownership inside Hermes.
+- `agent/conversation_loop.py` -> **REMOVE candidate** through generic lifecycle/LLM
+  supervision after shadow parity.
+- `agent/tool_executor.py` -> **REMOVE candidate** through
+  `tool_request/tool_execution` middleware and tool lifecycle hooks.
+- `agent/turn_finalizer.py` -> **UPSTREAM_ABSTRACT candidate** if current verification /
+  finalization hooks are not strong enough.
+- `tools/browser_tool.py` -> **UPSTREAM_ABSTRACT candidate**: generic Browser provider /
+  native-browser boundary, Workstation Browser behind it.
+- `apps/desktop/electron/main.ts` Workstation Browser runtime bootstrap ->
+  **PRESERVE_FIRST_PARTY candidate** while no equivalent native-view provider exists.
+- `apps/desktop/electron/preload.ts` Workstation Browser privileged IPC ->
+  **PRESERVE_FIRST_PARTY candidate** under the same condition.
+- Workstation-specific Right Rail routing -> **UPSTREAM_ABSTRACT candidate** because the
+  modern Desktop Plugin SDK may now provide enough UI placement primitives; preserve the
+  current path until parity is demonstrated.
 
-### Tier C — Workstation-owned code: preserve
+## Two classification layers
 
-`workstation/`, Workstation Browser runtime/task/session ownership, Control Plane,
-Operational Capability Runtime, Verification, Experience Compiler, Journal, ArtifactStore,
-Await/Trigger and canonical task/run semantics remain Workstation-owned.
+Every upstream overlap is still classified as one of:
 
-The migration must move dependencies **toward** these owners, not duplicate them.
+1. **ADOPT_UPSTREAM**
+2. **KEEP_WORKSTATION**
+3. **SEMANTIC_PORT**
+4. **EXTRACT_BOUNDARY**
 
-## Conflict classification for the upstream migration
+When a source-level first-party seam remains after that analysis, it receives one seam
+disposition:
 
-Every overlap is classified as exactly one of:
-
-1. **ADOPT_UPSTREAM** — generic Hermes behavior/structure wins.
-2. **KEEP_WORKSTATION** — downstream-owned implementation has no upstream owner.
-3. **SEMANTIC_PORT** — preserve Workstation invariant but implement it in the new upstream
-   structure.
-4. **EXTRACT_BOUNDARY** — do not merely port the patch; replace direct coupling with a
-   generic hook/middleware/provider/adapter boundary.
-
-`EXTRACT_BOUNDARY` is preferred whenever it can preserve behavior without teaching Hermes
-core about Workstation.
+1. **REMOVE** — generic current surface is sufficient.
+2. **UPSTREAM_ABSTRACT** — capability is valid; add/use the smallest generic extension
+   boundary and place Workstation behind it.
+3. **PRESERVE_FIRST_PARTY** — privileged first-party lifecycle is genuinely required.
 
 Canonical merge rule:
 
 ```text
 UPSTREAM STRUCTURE
 + WORKSTATION SEMANTICS
-+ FEWER DIRECT SEAMS THAN BEFORE
++ MINIMUM NECESSARY FIRST-PARTY SEAMS
++ NO CAPABILITY REGRESSION FOR PURITY
 ```
 
-## Migration safety rule: shadow before retirement
+## First-party seam budget
+
+A preserved or newly introduced seam in upstream-owned code must prove:
+
+1. no existing generic extension surface provides equivalent semantics;
+2. the feature requires privilege/lifecycle/ordering/native UI access/correctness that a
+   higher-level extension cannot provide;
+3. it creates material product capability;
+4. it is concentrated behind the smallest practical boundary;
+5. behavioral contract/E2E coverage proves the capability;
+6. it is documented in `UPSTREAM_DELTA.md` and `first_party_seams.json`;
+7. every upstream cycle re-evaluates whether a new upstream abstraction makes it removable.
+
+One deliberate seam is preferable to many scattered `if workstation` branches.
+
+## Migration safety rule: shadow before change of authority
 
 No existing seam is removed merely because a cleaner API exists.
-
-For each seam:
 
 ```text
 existing direct path
         |
         +--> remains authoritative temporarily
         |
-        +--> new supervisory path runs in shadow/observation mode
+        +--> replacement path runs in shadow/observation mode
                          |
                          v
-             compare lineage / decisions / evidence
+             compare lineage / decisions / evidence / UX
                          |
-                  prove parity or improve
+                 prove behavioral parity
                          |
                     switch authority
                          |
-                   remove old seam
+       remove old seam OR retain it deliberately if parity is impossible
 ```
 
-Required proof before retirement:
+Required proof includes, where relevant:
 
-- the Workstation still observes the same operational event;
-- task/session/run/operation lineage is not lost;
-- mutation effect classification is preserved;
-- BrowserTask ownership and human-control fencing are preserved where applicable;
-- uncertain mutation still reconciles before retry;
+- same operational event observed at the right ordering point;
+- task/session/run/operation lineage preserved;
+- pre-mutation veto/pause ability preserved;
+- exactly-once/no-double-dispatch preserved;
+- effect classification and authority preserved;
+- BrowserTask ownership/human fencing preserved;
+- uncertain mutation reconciles before retry;
 - ACK remains distinct from VERIFIED;
-- Experience Compiler still receives admissible observations;
+- Experience Compiler receives admissible observations;
 - deterministic reuse still works;
-- normal Hermes tool use triggers supervision even when the model never calls
-  `work_execute`;
-- upstream regression tests plus Workstation qualification gates remain green.
+- normal Hermes tool use remains supervised without explicit `work_execute`;
+- UI placement/visibility/background continuity remains equivalent;
+- upstream regression tests plus Workstation qualification gates stay green.
 
 ## Implementation plan
 
-### P0 — Establish the migration contract and seam audit — ACTIVE
+### P0 — Decision, seam policy and measurable inventory — ACTIVE
 
-- record D-026 and this canonical document;
-- update ROADMAP / UPSTREAM / CURRENT_STATE / Intelligence / AGENTS guidance;
-- add a repository seam-audit utility;
-- freeze an upstream SHA at execution start;
-- generate the initial seam inventory before touching merge conflicts.
+- record D-026 plus D-027 and the minimum-seam policy;
+- maintain `first_party_seams.json`;
+- make the seam audit distinguish unclassified seams from deliberate seams;
+- freeze an upstream SHA at integration start;
+- generate the initial inventory before conflict resolution.
 
-Exit: no future coding agent can legitimately treat "reinsert all old Workstation imports"
-as the default sync strategy.
+Exit: no coding agent can treat either "reinsert every old patch" or "remove every seam"
+as the default strategy.
 
 ### P1 — Controlled upstream baseline migration
 
-- create an immutable pre-migration branch/tag;
+- create immutable pre-migration ref;
 - create `integration/upstream-YYYY-MM-DD`;
-- merge/rebase only against the pinned upstream SHA;
-- classify overlaps by ADOPT_UPSTREAM / KEEP_WORKSTATION / SEMANTIC_PORT /
+- integrate only the pinned upstream SHA;
+- classify overlaps as ADOPT_UPSTREAM / KEEP_WORKSTATION / SEMANTIC_PORT /
   EXTRACT_BOUNDARY;
+- classify remaining first-party seams as REMOVE / UPSTREAM_ABSTRACT /
+  PRESERVE_FIRST_PARTY;
 - adopt upstream decompositions instead of resurrecting old monoliths.
-
-Exit: upstream structure is current while Workstation invariants remain testable.
 
 ### P2 — Hermes supervisory adapter in shadow mode
 
-Build the first-party Hermes adapter as a Workstation-owned integration using generic
-hooks/middleware.
+Build the first-party Hermes adapter over generic lifecycle/middleware where those
+surfaces are semantically sufficient.
 
-Initial observation/control vocabulary:
+Observation/control vocabulary:
 
 ```text
 LLM_REQUEST
@@ -254,74 +288,54 @@ TURN_END
 SESSION_START/END
 ```
 
-The adapter translates Hermes-specific payloads into Workstation-owned operational
-observations. It must not become a second Control Plane or state store.
+The adapter translates Hermes payloads into Workstation operational observations. It does
+not become a second Control Plane or state store.
 
-Exit: Workstation can reconstruct the relevant Hermes execution timeline without direct
-imports from the agent loop.
+### P3 — Minimize tool-execution seams
 
-### P3 — Tool execution seam retirement
+Attempt to move semantics embedded in `agent/tool_executor.py` to generic
+`tool_request/tool_execution` middleware plus `pre/post_tool_call`.
 
-Move the semantics currently embedded in `agent/tool_executor.py` toward generic
-`tool_request` / `tool_execution` middleware plus `pre_tool_call` /
-`post_tool_call` observation.
+Exit: no **unnecessary** Workstation dependency remains in the tool executor. Any residual
+first-party seam must be explicitly classified and justified; functional parity is more
+important than a zero-import metric.
 
-Target behavior:
+### P4 — Minimize turn/finalizer seams
 
-- Workstation sees ordinary Hermes tool calls;
-- it can preflight/admit/block/pause when required;
-- it can wrap execution once, never double-dispatch;
-- it captures result/effect/evidence after actual execution;
-- deterministic capability substitution is possible only with equivalent authority and
-  verification semantics.
+Move turn/finalizer behavior to generic lifecycle/reasoning contracts where possible.
+When an exact ordering/correctness capability is missing, prefer a small generic upstream
+abstraction over a Workstation-specific conditional.
 
-Exit: `agent/tool_executor.py` no longer imports Workstation.
+Exit: conversation/finalization coupling is reduced to the minimum justified surface, with
+shadow-parity evidence for every removed seam.
 
-### P4 — Turn lifecycle / reasoning boundary retirement
+### P5 — Browser boundary without capability loss
 
-Replace conversation-loop/finalizer Workstation knowledge with generic lifecycle/API
-observation plus an adapter-controlled reasoning handoff.
+Adopt the upstream Browser architecture and push Workstation Browser behavior behind the
+strongest generic provider/runtime boundary available.
 
-Important constraint:
+Use the upstream Desktop Plugin SDK for presentation only when it can reproduce the
+current Right Rail/Hub behavior without regression.
 
-> Removing direct turn seams must not remove Workstation supervision.
+Preserve narrow Electron main/preload seams where native `WebContentsView`, BrowserTask
+lifecycle, persistent background execution or human-control semantics require privilege
+the SDK does not expose.
 
-Use generic pre/post request, pre-verify and session/task lifecycle surfaces where they are
-semantically sufficient. Widen a **generic** upstream-compatible surface only when a
-concrete missing event cannot be represented otherwise.
+Exit: no scattered Browser Workstation branches; native first-party seams, if still
+necessary, are concentrated, documented and E2E-tested.
 
-Exit: `agent/conversation_loop.py` and `agent/turn_finalizer.py` do not import
-Workstation.
+### P6 — Session / Kanban / API / Desktop edge minimization
 
-### P5 — Browser provider boundary
-
-Adopt the upstream Browser architecture and preserve Workstation Chromium / BrowserTask as
-a first-class provider/runtime behind a generic browser capability boundary.
-
-Do not make the Workstation Browser a special branch scattered through generic
-`browser_tool.py`.
-
-Exit: generic browser facade does not know Workstation identity; Workstation Browser keeps
-task ownership, native session, handoff, recovery and verification semantics.
-
-### P6 — Session / Kanban / API edge isolation
-
-Move Workstation-specific completion, projection and API behavior behind narrow adapters
-or the Work Gateway while reusing upstream's decomposed session/kanban owners.
-
-Exit: no Workstation state survives merely because an old Hermes internal DB/file shape was
-preserved.
+Reuse upstream decomposed owners. Convert edges to narrow adapters where feasible, but do
+not remove first-party integrations that are still required for correct canonical
+ownership or UX semantics.
 
 ### P7 — Work Gateway and standalone runtime boundary
 
-Expose the same Work Runtime through first-party Hermes adapter, MCP, ACP and native
-API/SDK.
-
-Hermes stays the default/reference reasoner, not the owner of Workstation truth.
+Expose the same Work Runtime through Hermes first-party adapter, MCP, ACP and native
+API/SDK. Hermes remains the reference/default reasoner, not the owner of Workstation truth.
 
 ### P8 — Hermes-less qualification
-
-The decisive test:
 
 ```text
 Hermes Agent = OFF
@@ -337,19 +351,21 @@ OperationIntent
 PASS
 ```
 
-Only after this passes should repository/process separation or a standalone Work Desktop
-be treated as a product-packaging decision rather than an architectural rewrite.
+This proves Runtime Independence. It does **not** require the first-party Hermes Work
+distribution to stop using deliberate native integration seams.
 
 ## What must not happen
 
 - no blind GitHub "Sync fork" into main;
-- no restore of obsolete upstream monoliths merely to preserve old patches;
+- no restore of obsolete upstream monoliths to keep patch locations alive;
+- no "ours everywhere" / "theirs everywhere";
 - no second task DB, BrowserTask store, journal, capability registry or Control Plane;
-- no model-prompt convention as the only way to activate Workstation;
-- no removal of a seam before shadow parity / E2E evidence;
-- no new Workstation import into generic Hermes core unless explicitly temporary,
-  documented, and accompanied by a retirement path;
-- no conversion of MCP into the Workstation domain model; MCP/ACP remain adapters;
+- no model-prompt convention as the only Workstation activation path;
+- no seam removal before parity evidence;
+- no **new unclassified** Workstation seam in upstream-owned code;
+- no rule that all source-level first-party integrations must eventually disappear;
+- no capability/UX/correctness regression merely to achieve plugin purity;
+- no MCP-as-domain-model rewrite;
 - no standalone rewrite that forks product logic into two copies.
 
 ## Target architecture
@@ -369,10 +385,15 @@ Hermes Agent     Claude/Codex/etc.     Desktop/CLI
               Experience Compiler
                        |
           browser / files / APIs / OS
+
+FIRST-PARTY HERMES WORK DISTRIBUTION
+may retain narrow native seams where required
+for product capability and lifecycle.
 ```
 
-For the first-party Hermes path, the strongest desired property is:
+The strongest desired property is now:
 
-> **Hermes does not need to know that it should use Workstation. Workstation knows how to
-> observe Hermes, supervise the parts that matter, and intervene through generic contracts
-> without depending on model compliance.**
+> **The Reasoner does not need to remember Workstation. Generic Hermes core should use
+> generic contracts wherever possible. The first-party distribution may keep a small,
+> deliberate seam budget where deeper integration is the only way to preserve the product
+> we are actually building.**
