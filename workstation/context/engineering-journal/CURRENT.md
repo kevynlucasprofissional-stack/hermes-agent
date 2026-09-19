@@ -1,5 +1,43 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-078 — Upstream Migration as Decoupling / Supervisory Independence — 2026-09-19
+
+**Status:** ACTIVE STRATEGIC MIGRATION PROGRAM.
+
+Hypothesis accepted from the 2026-09-19 upstream/fork audit: merely porting the existing
+Workstation patches into the upstream's new module layout would preserve the recurring
+coupling tax. The migration should instead use every touched overlap to reduce direct
+Hermes -> Workstation knowledge.
+
+Observed current direct seams include:
+- `agent/conversation_loop.py` -> Workstation turn preparation/routing/continuation;
+- `agent/tool_executor.py` -> Workstation mutation/durable-execution/result capture;
+- `agent/turn_finalizer.py` -> Workstation finalization/procedure learning;
+- `tools/browser_tool.py` -> Workstation Browser routing/artifact/task helpers.
+
+Countervailing evidence confirms a plausible extraction path already exists rather than
+requiring new speculative infrastructure: current fork and modern upstream expose generic
+plugin/lifecycle and middleware surfaces including `pre_tool_call/post_tool_call`,
+`pre_verify`, API request/response hooks, `tool_request/tool_execution` and
+`llm_request/llm_execution`.
+
+Decision: H-078 / D-026. Workstation must supervise normal Hermes behavior without model
+compliance. Old seams retire only after a Workstation-owned adapter proves shadow parity.
+
+Initial implementation landed in this lane:
+- canonical H-078 architecture document;
+- expanded upstream strategy;
+- coding-agent rule;
+- seam-audit utility `workstation/scripts/audit_hermes_seams.py`.
+
+Next experiment: pin the upstream SHA for the actual integration branch, run the seam
+audit on the downstream baseline, then construct the overlap matrix with
+ADOPT_UPSTREAM / KEEP_WORKSTATION / SEMANTIC_PORT / EXTRACT_BOUNDARY classifications.
+
+Canonical:
+[../UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](../UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
+
 ## H-077 — Architectural falsification / external validity / post-H-076 residual audit (2026-09-19)
 
 **Classification:** CORE ARCHITECTURE PRESERVED / UNIVERSAL EXTERNAL-VALIDITY CLAIM
