@@ -1,5 +1,28 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-078C — First real upstream merge exposes structural debt (2026-09-19)
+
+**Status:** ACTIVE CONFLICT RESOLUTION; NO QUALIFIED UPSTREAM MERGE YET.
+
+The diagnostic-only Antigravity run preserved the merge state and reported 69 unresolved
+UU conflicts against the pinned upstream. The highest-risk clusters are agent loop
+decomposition, tool causal execution, Browser broker/routing, Kanban completion and
+Desktop native lifecycle.
+
+GitHub verification adds an important result: the H-078B merge into downstream main did
+not include the upstream history. The downstream generic contracts are real and useful,
+but key historical owners remain much larger than their upstream counterparts. H-078C
+therefore changes the execution strategy from "merge the decoupled fork" to "adopt modern
+upstream owner, semantic-port only the Workstation invariant".
+
+Safety blocker before mutation: preserve three pre-existing unstaged files outside the
+merge resolution workflow. Do not use blanket `ours/theirs`, `git add -A`, reset,
+restore or merge-abort.
+
+Canonical resolution plan:
+[../UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md](../UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md).
+
+
 ## H-078B — Code-to-Code Upstream Migration / Semantic Decoupling — 2026-09-19
 
 **Status:** COMPLETE / EMPIRICALLY VERIFIED / GREEN TEST LADDER.
