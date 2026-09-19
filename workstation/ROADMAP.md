@@ -1,5 +1,75 @@
 # Workstation roadmap
 
+
+## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — CANONICAL EXTENSION / IMPLEMENTATION OPEN
+
+Canonical specification:
+[context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+The 2026-09-18 architecture audit established that the desired direction is not a
+replacement for Progressive Operational Compilation, Experience Compiler or the
+Verified Operational Control Plane. It is the missing hierarchy that connects them:
+
+~~~text
+Trusted primitives
+  -> Verified Operational Transition (VOT)
+  -> OperationalCapability
+  -> Composite OperationalCapability
+  -> Deterministic Workflow
+  -> Await/Event
+  -> OpenCondition / reasoning boundary
+~~~
+
+The canonical atomic rule is **smallest semantically closed, parameterizable,
+executable and verifiable transition with positive reuse value**, not smallest tool
+sequence. This prevents micro-capability explosion while preserving increasingly
+high-level reuse.
+
+Implementation order:
+
+1. **P0 — truthful Control Plane closure (dependency, already open).**
+   Complete the Browser Operational Admission corrective P0: real COMPOSE execution
+   or non-terminal planning state, ACK != verification, trusted authority origin,
+   operational-closure-aware mandatory compilation, routed decision contract fixes
+   and exact-head qualification.
+2. **P1 — Experience Compiler -> Router bridge.**
+   Conservatively derive/persist `CapabilityFormalContract` from trusted learned
+   evidence so promoted learned capabilities can be selected by
+   `OperationIntent -> CapabilityRouter`, not only exact fingerprint reuse.
+3. **P2 — non-resident Await/Continuation.**
+   Make persistent `AwaitCondition` the semantic wait owner; persist an exact
+   continuation, release the worker/executor, resume after causal event plus
+   authoritative state confirmation, and keep polling only as a scheduled bounded
+   observer fallback.
+4. **P3 — Hierarchical Experience Compiler.**
+   Capture capability-invocation traces and allow recurrent, causally supported,
+   semantically closed sequences to become dependency-based composite capability
+   candidates. Frequency alone never grants promotion; reuse existing replay,
+   ablation, counterexample, provenance, authority and promotion gates.
+5. **P4 — Operational Reasoning Amortization metrics.**
+   Add ORA (verified semantic transitions executed with zero LLM / total verified
+   semantic transitions), LLM calls per verified transition, exact/routed/composite
+   reuse, non-resident WAIT ratio, worker-seconds per waiting wall time, WAKE_LLM
+   reasons and hierarchical candidate/promotion/reuse rates.
+
+Hard properties:
+- promoted learned capabilities become Router-visible only from provable typed
+  contracts; missing proof fails closed;
+- composite plans cannot commit unless actually executed and verified;
+- persistent waits survive restart and do not retain an idle worker;
+- repeated capability sequences may propose composites but passive recurrence is
+  never causal proof;
+- child drift/version changes propagate through composite pins/contracts;
+- no second registry, scheduler, task DB, BrowserTask store, journal, memory system
+  or control plane is introduced.
+
+Optimization target:
+
+> **As Hermes accumulates verified experience, the proportion of operational work
+> that requires fresh LLM reasoning should decrease, without weakening evidence,
+> authority, drift handling or uncertainty semantics.**
+
+
 ## Browser Ownership & Recovery Reconciliation (2026-09-19) — IMPLEMENTATION LANDED / CORRECTIVE P0 REOPENED
 
 Canonical specification:
