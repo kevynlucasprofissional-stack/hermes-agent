@@ -1,6 +1,6 @@
 # Workstation Known Issues
 
-## KI-016 — Post-H-076/H-077 false-confidence residuals can still overstate operational truth [REOPENED — H-077.1]
+## KI-016 — Post-H-076/H-077 false-confidence residuals can still overstate operational truth [IMPLEMENTED — EXACT-HEAD CI PENDING]
 
 Post-merge audit of `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`
 confirmed that PR #36 closed several original seams but not the full truth boundary.

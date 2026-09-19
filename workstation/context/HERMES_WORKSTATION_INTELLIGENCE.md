@@ -1,6 +1,6 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## H-077.1 — Fechamento de Qualificação do Truthful Core — ATIVO (2026-09-19)
+## H-077.1 — Fechamento de Qualificação do Truthful Core — IMPLEMENTADO / CI PENDENTE (2026-09-19)
 
 A base do PR #36 permanece válida, mas a qualificação plena do H-077 foi reaberta por
 falsificação pós-merge.

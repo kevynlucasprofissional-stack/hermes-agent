@@ -1,6 +1,6 @@
 # Current State
 
-## 2026-09-19 H-077.1 Truthful Core Qualification Closure — ACTIVE / BLOCKING
+## 2026-09-19 H-077.1 Truthful Core Qualification Closure — IMPLEMENTED / EXACT-HEAD CI PENDING
 
 Audited main: `92a3acb51e87af85a9f380ee04d2cf47d7900ca5` after PR #36.
 

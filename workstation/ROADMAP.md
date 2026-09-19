@@ -1,6 +1,6 @@
 # Workstation roadmap
 
-## H-077.1 — Truthful Core Qualification Closure (2026-09-19) — ACTIVE / BLOCKING
+## H-077.1 — Truthful Core Qualification Closure (2026-09-19) — IMPLEMENTED / EXACT-HEAD CI PENDING
 
 Canonical:
 [context/H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](context/H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).

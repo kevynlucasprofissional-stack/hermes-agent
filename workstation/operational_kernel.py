@@ -482,6 +482,13 @@ class OperationalKernel:
         if learned:
             from workstation.experience_compiler.generalization import validate_inputs
             validate_inputs(cap.input_schema, cap.learning_metadata.get('relations', []), inputs)
+            if cap.lifecycle.value == 'promoted' and not exec_context.get('learning_replay'):
+                from workstation.control_plane.validity_envelope import derive_validity_envelope
+                envelope = derive_validity_envelope(cap, current_context=exec_context)
+                if not envelope.is_valid(exec_context):
+                    return {"success": False, "execution_acknowledged": False,
+                            "status": "NEEDS_REASONING", "reason": "validity_envelope_unproven",
+                            "validity_envelope": envelope.to_dict()}
         durable_store = exec_context.get('durable_store')
         durable_item_id = exec_context.get('durable_item_id')
         checkpoint_prefix = cap.id + '@' + cap.version
@@ -693,33 +700,30 @@ class OperationalKernel:
                     has_real_observation = True
 
                 if has_real_observation:
-                    res_binding = verifier_contract.resource_binding or {}
-                    res_id = str(exec_context.get("resource_id", res_binding.get("resource_id", res_binding.get("id", ""))))
-                    res_version = str(exec_context.get("resource_version", ""))
-                    strength = (
-                        verifier_contract.minimum_evidence
-                        if (obs_fn or verifier_contract.observer)
-                        else EvidenceStrength.SAME_SESSION_SEMANTIC_OBSERVATION
-                    )
-                    supplied_evidence = [VerificationEvidence(
-                        evidence_id=f"observation:{cap.id}:{cap.version}",
-                        observer=verifier_contract.observer or "semantic_observer",
-                        source_kind=verifier_contract.source_kind if verifier_contract.source_kind != "unknown" else ("browser_dom" if cap.route in {"browser", "native_browser"} else "runtime_state"),
-                        value=observed_val,
-                        evidence_strength=strength,
-                        trust_class=(verifier_contract.allowed_trust[0] if verifier_contract.allowed_trust else "trusted_runtime"),
-                        observer_failure_domain=(verifier_contract.allowed_observer_failure_domains[0]
-                                                 if verifier_contract.allowed_observer_failure_domains
-                                                 else ("browser_renderer" if cap.route in {"browser", "native_browser"} else "runtime")),
-                        resource_id=res_id,
-                        resource_version=res_version,
-                        observed_at=datetime.now(timezone.utc).isoformat(),
-                        read_after_write=True,
-                        operation_id=operation_id,
-                        task_id=task_id,
-                        run_id=run_id,
-                        covered_predicates=tuple(verifier_contract.covered_predicates),
-                    )]
+                    # An observer may return a fully declared receipt.  Raw
+                    # legacy values retain only the runtime surface we know;
+                    # contract requirements never fill their provenance.
+                    if isinstance(observed_val, VerificationEvidence):
+                        supplied_evidence = [observed_val]
+                    elif isinstance(observed_val, dict) and {"evidence_id", "observer", "source_kind", "value"} <= set(observed_val):
+                        supplied_evidence = [VerificationEvidence.from_dict(observed_val)]
+                    else:
+                        builtin_fs = verifier_contract.observer in {'fs_stat', 'fs_read', 'fs_hash', 'stat', 'read', 'hash_file'}
+                        supplied_evidence = [VerificationEvidence(
+                            evidence_id=f"observation:{cap.id}:{cap.version}",
+                            observer=verifier_contract.observer if builtin_fs else "legacy_raw_observer",
+                            source_kind="filesystem" if builtin_fs else ("browser_dom" if cap.route in {"browser", "native_browser"} else "runtime_state"),
+                            value=observed_val,
+                            evidence_strength=(EvidenceStrength.SEMANTIC_PERSISTED_READBACK if builtin_fs else EvidenceStrength.SAME_SESSION_SEMANTIC_OBSERVATION),
+                            trust_class="trusted_runtime" if builtin_fs else "untrusted",
+                            observer_failure_domain="filesystem" if builtin_fs else ("browser_renderer" if cap.route in {"browser", "native_browser"} else "runtime"),
+                            resource_id=str(exec_context.get("resource_id", "")),
+                            resource_version=str(exec_context.get("resource_version", "")),
+                            observed_at=datetime.now(timezone.utc).isoformat(),
+                            read_after_write=bool(builtin_fs), operation_id=operation_id,
+                            task_id=task_id, run_id=run_id,
+                            covered_predicates=tuple(exec_context.get("observed_predicates", ())),
+                        )]
                 else:
                     supplied_evidence = []
             verification_result = evaluate_verification(
@@ -731,8 +735,8 @@ class OperationalKernel:
                 mutation_observed_at=str(exec_context.get("mutation_observed_at", "")),
                 transition_required=verifier_contract.transition_claim,
                 expected_operation_id=operation_id,
-                expected_run_id=run_id,
-                expected_task_id=task_id,
+                expected_run_id=exec_context.get("expected_run_id"),
+                expected_task_id=exec_context.get("expected_task_id"),
             )
             try:
                 self.ora_metrics.record_verification(verification_result)
@@ -745,11 +749,12 @@ class OperationalKernel:
                 "status": "success",
                 "inputs_sample": sanitize(inputs),
             }
-            cap.success_count += 1
-            if learned:
+            if verification_result.verified:
+                cap.success_count += 1
+            if learned and verification_result.verified:
                 cap.savings['deterministic_replays'] = cap.savings.get('deterministic_replays', 0) + 1
                 cap.savings['executor_llm_calls'] = 0
-            else:
+            elif not learned and verification_result.verified:
                 cap.savings["llm_calls_saved"] = cap.savings.get("llm_calls_saved", 0) + 1
                 cap.savings["tokens_saved"] = cap.savings.get("tokens_saved", 0) + 1500
             if not exec_context.get('learning_replay'):
@@ -819,7 +824,8 @@ class OperationalKernel:
                 pass
 
             return {
-                "success": True,
+                "success": verification_result.verified,
+                "execution_acknowledged": True,
                 "capability_id": cap.id,
                 "capability_version": cap.version,
                 "output": output,

@@ -2,7 +2,7 @@
 
 ## H-077.1 — Post-merge truthful-core qualification falsification — 2026-09-19
 
-**Status:** ACTIVE / BLOCKING CORRECTIVE QUALIFICATION.  
+**Status:** IMPLEMENTATION COMPLETE / EXACT-HEAD QUALIFICATION PENDING.  
 **Audit baseline:** `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`.
 
 **Hypothesis:** PR #36 fully qualified H-077.  

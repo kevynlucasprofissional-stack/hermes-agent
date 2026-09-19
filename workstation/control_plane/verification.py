@@ -352,6 +352,18 @@ def evaluate_verification(
             fresh = False
     if not fresh:
         return VerificationResult(VerificationStatus.STALE, c.fingerprint(), refs, source_admissible=True, fault_domain_admissible=True, reason="freshness_requirement_failed", evaluated_at=stamp)
+    # Lineage is evidence provenance, never an optional annotation once the
+    # caller has fenced a task/run.  State satisfaction may be non-causal, but
+    # it may not borrow observations from another execution.
+    for field, expected_id in (("task_id", expected_task_id), ("run_id", expected_run_id)):
+        if expected_id:
+            values = [getattr(e, field) for e in evs]
+            if any(not value for value in values):
+                return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs,
+                    reason=f"{field}_missing", evaluated_at=stamp)
+            if any(value != expected_id for value in values):
+                return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs,
+                    reason=f"{field}_mismatch", evaluated_at=stamp)
     matches = [relation_matches(c, expected, e.value) for e in evs]
     normalized_values = {json.dumps(e.value, sort_keys=True, default=str) for e in evs}
     if len(normalized_values) > 1 and c.disagreement_policy == "conflict":

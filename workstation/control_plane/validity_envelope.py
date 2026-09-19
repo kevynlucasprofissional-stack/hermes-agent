@@ -57,14 +57,20 @@ class ValidityEnvelope:
     def is_valid(self, context: dict[str, Any] | None = None) -> bool:
         if not self.is_valid_for_reuse:
             return False
-        if context:
-            for k, v in self.authority_scope.items():
-                if k in context and str(context[k]) != str(v):
-                    return False
-            if self.resource_binding:
-                expected_res = self.resource_binding.get("resource_id") or self.resource_binding.get("id")
+        context = context or {}
+        # Only concrete scalar bounds are applicability dimensions.  Their
+        # absence is unknown applicability, not permission to reuse.
+        for k, v in self.authority_scope.items():
+            if v in (None, "") or isinstance(v, (dict, list, tuple, set)):
+                continue
+            if k not in context or context[k] in (None, "") or str(context[k]) != str(v):
+                return False
+        if self.resource_binding:
+            expected_res = (self.resource_binding.get("resource_id") or self.resource_binding.get("id")
+                            or self.resource_binding.get("uri") or self.resource_binding.get("path"))
+            if expected_res:
                 current_res = context.get("resource_id") or context.get("target_resource")
-                if expected_res and current_res and str(expected_res) != str(current_res):
+                if current_res in (None, "") or str(expected_res) != str(current_res):
                     return False
         return True
 
@@ -78,6 +84,7 @@ def derive_validity_envelope(
     current_context: dict[str, Any] | None = None,
 ) -> ValidityEnvelope:
     """Pure diagnostic derivation of the validity envelope from existing canonical owners."""
+    context_supplied = current_context is not None
     ctx = current_context or {}
     cap = capability if isinstance(capability, OperationalCapability) else OperationalCapability.from_dict(capability)
 
@@ -115,14 +122,20 @@ def derive_validity_envelope(
     # 4. Scope & Resource binding enforcement
     if cap.scope:
         for scope_k, scope_v in cap.scope.items():
-            if scope_k in ctx and str(ctx[scope_k]) != str(scope_v):
+            if scope_v in (None, "") or isinstance(scope_v, (dict, list, tuple, set)):
+                continue
+            if context_supplied and (scope_k not in ctx or ctx[scope_k] in (None, "")):
+                reasons.append(f"context_{scope_k}_missing")
+            elif context_supplied and str(ctx[scope_k]) != str(scope_v):
                 reasons.append(f"context_{scope_k}_mismatch")
 
     binding = dict(vc.resource_binding) if vc.resource_binding else {}
     if binding:
         expected_res = binding.get("resource_id") or binding.get("id") or binding.get("path")
         current_res = ctx.get("resource_id") or ctx.get("target_resource")
-        if expected_res and current_res and str(expected_res) != str(current_res):
+        if expected_res and context_supplied and current_res in (None, ""):
+            reasons.append("context_resource_binding_missing")
+        elif expected_res and str(expected_res) != str(current_res):
             reasons.append("context_resource_binding_mismatch")
 
     # 5. Preconditions
