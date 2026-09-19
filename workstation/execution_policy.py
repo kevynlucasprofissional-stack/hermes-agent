@@ -133,7 +133,24 @@ def semantic_target_family(name: str, args: dict, *, contract: dict | None = Non
 
     # Filesystem tools: write_file, patch
     if name in {'write_file', 'patch'}:
-        return 'filesystem.file'
+        path = args.get('path') or args.get('file_path') or args.get('target') or ''
+        if path:
+            import os
+            norm = os.path.normpath(str(path).strip())
+            return f'filesystem.file:{norm}'
+        return None
+
+    # Generic command execution: terminal
+    if name == 'terminal':
+        cmd = (args.get('command') or '').strip()
+        if not cmd:
+            return None
+        parts = cmd.split()
+        if len(parts) >= 2 and parts[0] in {'git', 'docker', 'npm', 'pnpm', 'yarn', 'cargo', 'hermes', 'python', 'bash', 'sh'}:
+            return f'terminal:{parts[0]}:{parts[1]}'
+        elif parts:
+            return f'terminal:{parts[0]}'
+        return None
 
     # Kanban tools
     if name.startswith('kanban_'):
@@ -173,7 +190,7 @@ def semantic_operation_fingerprint(
     tab IDs, refs @eN, or transient renderer IDs.
     """
     if contract is None:
-        _, contract = tool_contract(name)
+        _, contract = tool_contract(name, args=args)
 
     family = target_family or semantic_target_family(name, args, contract=contract, agent=agent)
     if not family:
@@ -181,7 +198,7 @@ def semantic_operation_fingerprint(
 
     canonical_op = name.removeprefix('browser_') if name.startswith('browser_') else name
     canonical_route = route or canonical_route_for_tool(name)
-    effect = tool_effect(name).value
+    effect = tool_effect(name, args=args).value
 
     payload = {
         'version': str(version),
@@ -202,7 +219,8 @@ def decisions_for_calls(agent, calls):
     Structural repetition without positive semantic homogeneity evidence may SUGGEST_COMPILE,
     but never REQUIRE_COMPILE.
     """
-    struct_counts = dict(getattr(agent, '_work_mutation_shapes', {}))
+    initial_struct_counts = dict(getattr(agent, '_work_mutation_shapes', {}))
+    struct_counts = dict(initial_struct_counts)
     sem_counts = dict(getattr(agent, '_work_mutation_sem_families', {}))
     evidence = getattr(agent, '_work_mutation_evidence', {})
     seen = set(evidence) | set(getattr(agent, '_work_completed_mutations', {}))
@@ -211,7 +229,7 @@ def decisions_for_calls(agent, calls):
 
     for call in calls:
         name, args = unwrap_call(call)
-        effect, contract = tool_contract(name)
+        effect, contract = tool_contract(name, args=args)
         decision = CompilationDecision.ALLOW_ADAPTIVE
         key = call_key(name, args)
 
@@ -242,8 +260,8 @@ def decisions_for_calls(agent, calls):
                 )
                 if evidence_count:
                     sem_counts[sem_fp] = evidence_count
-                elif not name.startswith('browser_'):
-                    sem_counts[sem_fp] = struct_counts.get(signature, 0)
+                elif not name.startswith('browser_') and signature in initial_struct_counts:
+                    sem_counts[sem_fp] = initial_struct_counts[signature]
 
             if key not in seen:
                 seen.add(key)
@@ -285,11 +303,9 @@ def decisions_for_calls(agent, calls):
             )
             candidates[candidate_key] = candidate
 
-            if (sem_fp and sem_count >= 3) or (not name.startswith('browser_') and struct_count >= 3):
+            if sem_fp and sem_count >= 3:
                 decision = CompilationDecision.REQUIRE_COMPILE
-            elif (sem_fp and sem_count >= 2) or (not name.startswith('browser_') and struct_count >= 2):
-                decision = CompilationDecision.SUGGEST_COMPILE
-            elif struct_count >= 2:
+            elif (sem_fp and sem_count >= 2) or struct_count >= 2:
                 # Structural repetition suggests compilation/learning, but never forces it
                 decision = CompilationDecision.SUGGEST_COMPILE
             else:

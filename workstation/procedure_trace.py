@@ -69,7 +69,7 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
         'arguments': arguments, 'semantic_anchor': arguments.get('semantic_anchor'),
         'before_state_ref': before_ref, 'after_state_ref': output.ref,
         'outcome': 'failed' if classify_tool_failure(name, raw if isinstance(raw, str) else json.dumps(raw))[0] else 'executed_unverified',
-        'effect': tool_effect(name).value, 'duration_ms': duration_ms,
+        'effect': tool_effect(name, args=arguments).value, 'duration_ms': duration_ms,
         'task_id': getattr(agent, '_canonical_work_task_id', None),
         'run_id': getattr(agent, '_canonical_work_run_id', None),
         'operation_id': getattr(agent, '_current_operation_id', None) or 'observation_' + uuid.uuid4().hex,

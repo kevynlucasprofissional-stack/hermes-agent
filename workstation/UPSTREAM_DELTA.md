@@ -1,6 +1,37 @@
 # Hermes Workstation upstream delta
 
 
+## HW-024 — Browser Operational Admission & Primitive Closure (2026-09-18)
+
+Downstream base: `main@63fa4244a3c5c1a30ec766fc9023437f61fdff62`.
+Branch: `fix/browser-operational-admission-p0`.
+Canonical plan: `context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md`.
+Decision: `D-021`.
+Engineering evidence: H-070.
+
+Production adaptations implemented and contract-verified:
+
+1. **Effect Truth & Dynamic Resolvers:**
+   - Files: `tools/registry.py`, `tools/effects.py`, `tools/read_preview_tool.py`, `tools/read_window_tool.py`, `tools/drive_preview_tool.py`.
+   - Invariant: `read_preview` and `read_window_below` explicitly registered with `effect=ToolEffect.PURE_READ`. ToolEntry supports dynamic `effect_resolver: Callable[[dict], Any]`. Multi-action `drive_preview` classifies `"elements"` as discovery/read and mutations as `MUTATION`. Fail-closed unknown effect defaults preserved.
+
+2. **Semantic Admission & Execution Policy:**
+   - File: `workstation/execution_policy.py`.
+   - Invariant: Structural repetition without positive semantic homogeneity never triggers `REQUIRE_COMPILE`. `write_file`/`patch` scoped to `filesystem.file:<normpath>` and `terminal` scoped to command families. Homogeneous repetition with operational closure retains compilation gating.
+
+3. **Native Chromium Plain-Text Paste & Read HTTP Primitives:**
+   - Files: `apps/desktop/electron/workstation-browser-runtime.ts`, `tools/browser_tool.py`, `workstation/operational_kernel.py`.
+   - Invariant: `browser_type` supports `mode="plain_text_paste"` with first-party synthetic DOM `ClipboardEvent("paste")` + `DataTransfer` (no system clipboard pollution) and pre-action semantic anchor re-acquisition. `browser_read_http` provides GET/HEAD only readback inside page context with loopback and private IP blocking, plus ArtifactStore spillover for large payloads.
+
+4. **Trusted Authority Narrowing & Certified Dispatch:**
+   - Files: `workstation/control_plane/lattice.py`, `workstation/control_plane/dispatcher.py`, `workstation/task_compiler.py`.
+   - Invariant: Ambient authority resolved from trusted task context; requested authority can ONLY narrow permissions (`trusted.narrow(requested)`); untrusted minting fails closed with `ASK_HUMAN`. All route execution routes through `CertifiedDispatcher` enforcing `PREPARED -> DISPATCHED -> ACKNOWLEDGED -> VERIFIED -> COMMITTED`.
+
+5. **Effect-Sensitive Timeout & SPA Readiness:**
+   - Files: `tools/browser_workstation.py`, `apps/desktop/electron/workstation-browser-runtime.ts`.
+   - Invariant: Mutating browser calls timing out raise `TIMEOUT_UNCERTAIN` (`state_changed=True`, `retryable=False`), blocking blind retry without external reconciliation. Electron snapshot performs bounded re-observation (< 1.2s total) for hydrating SPAs.
+
+
 ## HW-023 — Upstream reliability hardening P0 lane (2026-09-18)
 
 Downstream base: `main@03e06cfd8c94e5a7627c288c8eddfd5d4c5c8033`.

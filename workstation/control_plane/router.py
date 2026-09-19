@@ -92,6 +92,44 @@ class RoutingCertificate:
     def from_dict(cls, data: dict[str, Any]) -> RoutingCertificate:
         return cls(**data)
 
+    @classmethod
+    def create(
+        cls,
+        *,
+        intent_id: str = "",
+        intent_hash: str = "intent-hash",
+        capability_id: str = "",
+        capability_version: str = "1.0.0",
+        precondition_state_hash: str = "",
+        semantic_state_hash: str = "",
+        authority_hash: str = "",
+        run_id: str | None = None,
+        operation_id: str | None = None,
+    ) -> RoutingCertificate:
+        return cls(
+            target_match=True,
+            inputs_bound=True,
+            preconditions_hold=True,
+            goal_coverage=True,
+            effect_containment=True,
+            invariant_preservation=True,
+            authority_satisfied=True,
+            policy_satisfied=True,
+            approval_satisfied=True,
+            verifier_available=True,
+            evidence_strength_sufficient=True,
+            state_fresh=True,
+            capability_healthy=True,
+            no_outstanding_uncertainty=True,
+            deterministic_closure=True,
+            intent_hash=intent_hash,
+            semantic_state_hash=semantic_state_hash or precondition_state_hash or _state_hash({}),
+            capability_id=capability_id,
+            capability_version=capability_version,
+            run_id=run_id,
+            operation_id=operation_id,
+        )
+
     def canonical_json(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
 

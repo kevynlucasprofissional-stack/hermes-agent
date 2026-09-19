@@ -271,6 +271,7 @@ def _request_json(
     payload: Optional[Dict[str, Any]] = None,
     *,
     timeout: float,
+    action: Optional[str] = None,
 ) -> Dict[str, Any]:
     control = _read_control()
     base = str(control["url"]).rstrip("/")
@@ -283,6 +284,7 @@ def _request_json(
             "Accept": "application/json",
         },
     )
+    act = action or (payload.get("action") if isinstance(payload, dict) else None)
     try:
         with urlopen(request, timeout=timeout) as response:  # noqa: S310
             raw_body = response.read().decode("utf-8")
@@ -308,6 +310,16 @@ def _request_json(
             details={"http_status": exc.code},
         ) from exc
     except (TimeoutError, socket.timeout) as exc:
+        is_mutation = False
+        if act:
+            from tools.effects import tool_effect, ToolEffect
+            is_mutation = tool_effect(act) not in {ToolEffect.PURE_READ, ToolEffect.DISCOVERY}
+        if is_mutation:
+            raise WorkstationBrowserError(
+                f"Hermes Browser mutation '{act}' timed out after dispatch",
+                error_code="TIMEOUT_UNCERTAIN", retryable=False, state_changed=True,
+                recommended_action="RECONCILE_EFFECT",
+            ) from exc
         raise WorkstationBrowserError(
             "Hermes Browser controller request timed out",
             error_code="TIMEOUT", retryable=True,
@@ -316,6 +328,16 @@ def _request_json(
     except URLError as exc:
         reason = getattr(exc, "reason", None)
         if isinstance(reason, (TimeoutError, socket.timeout)):
+            is_mutation = False
+            if act:
+                from tools.effects import tool_effect, ToolEffect
+                is_mutation = tool_effect(act) not in {ToolEffect.PURE_READ, ToolEffect.DISCOVERY}
+            if is_mutation:
+                raise WorkstationBrowserError(
+                    f"Hermes Browser mutation '{act}' timed out after dispatch",
+                    error_code="TIMEOUT_UNCERTAIN", retryable=False, state_changed=True,
+                    recommended_action="RECONCILE_EFFECT",
+                ) from exc
             raise WorkstationBrowserError(
                 "Hermes Browser controller request timed out",
                 error_code="TIMEOUT", retryable=True,
@@ -493,8 +515,8 @@ def _dispatch(
     action: str,
     args: Dict[str, Any],
     *,
-    task_id: Optional[str],
-    session_id: Optional[str],
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
     kanban_card_id: Optional[str] = None,
     run_id: Optional[str] = None,
 ) -> str:
@@ -541,6 +563,7 @@ def _dispatch(
         "/v1/action",
         payload,
         timeout=max(0.25, timeout),
+        action=action,
     )
     result = _force_redact(response.get("result"))
     # Any successful internal action proves this task/session is using the
@@ -557,6 +580,9 @@ def _dispatch(
     if isinstance(result, str):
         return result
     return json.dumps(result, ensure_ascii=False)
+
+
+call_workstation_browser = _dispatch
 
 
 def workstation_routed_browser_handler(

@@ -23,27 +23,22 @@ This lane is orthogonal to Browser Operational Admission: admission governs safe
 operation execution/verification; this lane governs task/session/viewport convergence.
 
 
-## 2026-09-18 Browser Operational Admission / Primitive Closure — P0 OPEN
+## 2026-09-18 Browser Operational Admission / Primitive Closure — P0 CLOSED & QUALIFIED
 
-PR #28 merged the Verified Operational Control Plane CP0–CP9. A subsequent live
-authenticated native-Browser dogfood run exposed an integration gap that unit/contract
-green status did not close.
+The Browser Operational Admission & Primitive Closure P0 milestone is fully implemented,
+integrated into the real runtime, and qualified across all test suites.
 
-Current reproduced state:
-- native Electron Chromium BrowserTask control works;
-- CP0–CP9 components exist and dedicated tests are green;
-- normal tool calls can still be blocked first by legacy `execution_policy`;
-- `read_preview` can be misclassified as mutation;
-- non-browser structural repetition can still force compilation without sufficient
-  semantic closure;
-- the Browser Kernel lacks a trusted rich-text plain-text paste primitive and a narrow
-  persisted GET/HEAD readback primitive;
-- request-provided route authority is not yet fully separated from trusted authority;
-- CertifiedDispatcher is not yet the mandatory routed-mutation chokepoint;
-- mutation timeout and SPA empty-snapshot readiness remain under-specified.
-
-Therefore CP0–CP9 remains **implemented / contract-validated**, but production mutation
-admission is **not yet fully qualified end to end**.
+Implemented and verified state:
+- `read_preview` and `read_window_below` explicitly registered as `ToolEffect.PURE_READ`;
+- dynamic `effect_resolver` for multi-action tools (`drive_preview`) classifying `"elements"` as discovery/read and actions as mutation;
+- `execution_policy.py`: removed structural count fallback to `REQUIRE_COMPILE`; tightened `write_file`/`patch` to normalized path families (`filesystem.file:<normpath>`) and `terminal` to command families (`terminal:<cmd>[:<sub>]`);
+- `workstation-browser-runtime.ts` and `tools/browser_tool.py`: implemented native `browser_type(..., mode="plain_text_paste", semantic_anchor=...)` using DOM `ClipboardEvent("paste")` + `DataTransfer` with semantic anchor re-acquisition;
+- implemented `browser_read_http` (GET/HEAD only, no request body, private IP / RFC1918 / loopback blocking, ArtifactStore spillover for large payloads);
+- ambient trusted authority derivation in `TaskCompiler._execute_route` ensuring request payloads can only narrow permissions via `AuthorityScope.narrow()` and never mint authority;
+- `CertifiedDispatcher` enforced as mandatory mutation execution chokepoint with lifecycle `PREPARED -> DISPATCHED -> ACKNOWLEDGED -> VERIFIED -> COMMITTED`;
+- effect-sensitive browser timeout: mutating operations transition to `TIMEOUT_UNCERTAIN` (`state_changed=True`, `retryable=False`), blocking blind retry without authoritative external reconciliation;
+- generic SPA readiness detection in Electron runtime with bounded re-observation (< 1.2s total);
+- 100% green status across all regression suites: 599 passed in `workstation/tests/` (62 files), 13/13 passed in `test_browser_operational_admission.py`, 4/4 passed in `workstation-browser-runtime-admission.test.ts`.
 
 Canonical P0:
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).

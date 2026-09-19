@@ -62,10 +62,13 @@ READ_WINDOW_BELOW_SCHEMA = {
 }
 
 
+from tools.effects import ToolEffect
+
 registry.register(
     name="read_window_below",
     toolset="desktop_ui",
     schema=READ_WINDOW_BELOW_SCHEMA,
     handler=lambda args, **kw: read_window_below_tool(callback=kw.get("callback")),
     emoji="🪟",
+    effect=ToolEffect.PURE_READ,
 )

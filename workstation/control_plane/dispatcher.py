@@ -45,6 +45,8 @@ class DispatchRecord:
     acknowledged_at: str | None = None
     verified_at: str | None = None
     idempotency_key: str = ""
+    authority_scope: dict[str, Any] = field(default_factory=dict)
+    verifier_status: str = "not_verified"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -64,6 +66,8 @@ class CertifiedDispatcher:
         dispatch_fn: Callable[..., Any] | None = None,
         run_id: str | None = None,
         has_uncertain_mutation: bool = False,
+        authority_scope: Any = None,
+        verifier_fn: Callable[[Any], bool] | None = None,
     ) -> dict[str, Any]:
         """Dispatch certified decision with strict preflight revalidation."""
         cert = getattr(decision, "certificate", None)
@@ -86,15 +90,21 @@ class CertifiedDispatcher:
         if not is_fresh:
             raise DispatchError("Preflight revalidation failed: state or context drifted; certificate invalidated")
 
-        # Prepare dispatch record
+        # Prepare dispatch record in PREPARED state
         op_id = cert.operation_id or f"op-{cert.certificate_hash()[:16]}"
+        auth_dict = authority_scope.to_dict() if hasattr(authority_scope, "to_dict") else (authority_scope if isinstance(authority_scope, dict) else {})
         record = DispatchRecord(
             operation_id=op_id,
             capability_id=getattr(decision, "capability", None).id if hasattr(decision, "capability") else "composite",
-            status=DispatchStatus.DISPATCHED,
+            status=DispatchStatus.PREPARED,
             idempotency_key=op_id,
+            authority_scope=auth_dict,
         )
         self._records[op_id] = record
+
+        # Transition to DISPATCHED before executing
+        record.status = DispatchStatus.DISPATCHED
+        record.dispatched_at = utc_now()
 
         # Execute using kernel or dispatch function
         try:
@@ -108,11 +118,36 @@ class CertifiedDispatcher:
 
             record.status = DispatchStatus.ACKNOWLEDGED
             record.acknowledged_at = utc_now()
-            record.status = DispatchStatus.COMMITTED
+
+            # Verification phase: cannot advance to COMMITTED without verification
+            verified = True
+            if verifier_fn is not None:
+                try:
+                    verified = bool(verifier_fn(result))
+                except Exception:
+                    verified = False
+            elif isinstance(result, dict) and (result.get("success") is False or result.get("ok") is False or result.get("error")):
+                verified = False
+
+            if not verified:
+                record.status = DispatchStatus.UNCERTAIN
+                record.verifier_status = "failed"
+                return {
+                    "success": False,
+                    "result": result,
+                    "dispatch_record": record.to_dict(),
+                    "error": "verification_failed",
+                }
+
+            record.status = DispatchStatus.VERIFIED
             record.verified_at = utc_now()
+            record.verifier_status = "verified"
+
+            record.status = DispatchStatus.COMMITTED
             return {"success": True, "result": result, "dispatch_record": record.to_dict()}
         except Exception as exc:
             record.status = DispatchStatus.UNCERTAIN
+            record.verifier_status = "failed"
             raise DispatchError(f"Execution failed; status marked UNCERTAIN: {exc}") from exc
 
     def can_retry_operation(

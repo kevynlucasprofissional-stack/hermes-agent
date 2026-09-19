@@ -23,7 +23,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from hermes_constants import hermes_home_key
 
@@ -208,13 +208,14 @@ class ToolEntry:
         "name", "toolset", "schema", "handler", "check_fn",
         "requires_env", "is_async", "description", "emoji",
         "max_result_size_chars", "dynamic_schema_overrides",
-        "effect", "idempotency_key", "routes",
+        "effect", "idempotency_key", "routes", "effect_resolver",
     )
 
     def __init__(self, name, toolset, schema, handler, check_fn,
                  requires_env, is_async, description, emoji,
                  max_result_size_chars=None, dynamic_schema_overrides=None,
-                 effect=None, idempotency_key=None, routes=None):
+                 effect=None, idempotency_key=None, routes=None,
+                 effect_resolver=None):
         self.name = name
         self.toolset = toolset
         self.schema = schema
@@ -236,6 +237,7 @@ class ToolEntry:
         self.effect = effect
         self.idempotency_key = idempotency_key
         self.routes = routes
+        self.effect_resolver = effect_resolver
 
 
 class _PluginOverridePolicy:
@@ -783,6 +785,7 @@ class ToolRegistry:
         effect=None,
         idempotency_key: Optional[str] = None,
         routes: Optional[list] = None,
+        effect_resolver: Optional[Callable[[dict], Any]] = None,
     ):
         """Register a tool.  Called at module-import time by each tool file.
 
@@ -884,6 +887,7 @@ class ToolRegistry:
                 max_result_size_chars=max_result_size_chars,
                 dynamic_schema_overrides=dynamic_schema_overrides,
                 effect=effect, idempotency_key=idempotency_key, routes=routes,
+                effect_resolver=effect_resolver,
             )
             # Availability is now derived per-tool (_toolset_has_exposable_tools),
             # so this map no longer gates a toolset. It is still consumed by

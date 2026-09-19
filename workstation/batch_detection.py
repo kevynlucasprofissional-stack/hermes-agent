@@ -73,7 +73,7 @@ def detects_fan_out(agent, calls):
     seen = set(getattr(agent, "_work_completed_mutations", {})) | set(getattr(agent, "_work_mutation_evidence", {}))
     for call in calls:
         name, args = unwrap_call(call)
-        if name == "work_execute" or tool_effect(name) not in WRITE_EFFECTS:
+        if name == "work_execute" or tool_effect(name, args=args) not in WRITE_EFFECTS:
             continue
         key = call_key(name, args)
         if key in seen:
@@ -101,7 +101,7 @@ def record_mutation(agent, name, args, raw, *, dispatched=True, duration_ms=None
     observe_capability(capabilities, name, args, raw)
     agent._work_capabilities = capabilities
     text = raw if isinstance(raw, str) else json.dumps(raw)
-    if tool_effect(name) not in WRITE_EFFECTS:
+    if tool_effect(name, args=args) not in WRITE_EFFECTS:
         return
     failed = classify_tool_failure(name, text)[0]
     # Raw result belongs to the existing ArtifactStore, never to replan text.
@@ -130,7 +130,8 @@ def record_mutation(agent, name, args, raw, *, dispatched=True, duration_ms=None
     record.update({"evidence_ref": ref, "verifier_status": "not_verified",
                    "persisted": None, "status": "uncertain" if failed else "executed_unverified",
                    "operation_fingerprint": op_fp,
-                   "semantic_fingerprint": sem_fp})
+                   "semantic_fingerprint": sem_fp,
+                   "structural_signature": signature})
     evidence[key] = record
     agent._work_mutation_evidence = evidence
     store.store(owner, "mutation_" + key + ".json", record)
@@ -152,7 +153,7 @@ def prepare_mutation(agent, name, args):
         return
     if name == 'tool_call':
         name, args = args.get('name', ''), args.get('arguments', {})
-    if tool_effect(name) not in WRITE_EFFECTS:
+    if tool_effect(name, args=args) not in WRITE_EFFECTS:
         return
     # Middleware may have rewritten arguments after the model's admission check.
     # Recheck the final operation before persisting or crossing mutable I/O.

@@ -24,12 +24,12 @@ def test_repeatability_hint_does_not_block_stateful_browser():
 def test_threshold_is_operation_scoped():
     from workstation.execution_policy import CompilationDecision, decisions_for_calls
     a = agent()
-    calls = [call('write_file', {'path': f'{i}.json', 'content': 'x'}) for i in range(4)]
+    calls = [call('write_file', {'path': 'output.json', 'content': f'x{i}'}) for i in range(4)]
     assert decisions_for_calls(a, calls) == [CompilationDecision.ALLOW_ADAPTIVE,
         CompilationDecision.SUGGEST_COMPILE, CompilationDecision.REQUIRE_COMPILE,
         CompilationDecision.REQUIRE_COMPILE]
     for i in range(2):
-        record_mutation(a, 'write_file', {'path': f'{i}.json', 'content': 'x'}, {'ok': True})
+        record_mutation(a, 'write_file', {'path': 'output.json', 'content': f'x{i}'}, {'ok': True})
     assert decisions_for_calls(a, [calls[2]]) == [CompilationDecision.REQUIRE_COMPILE]
     assert decisions_for_calls(a, [call('browser_click', {'ref': '@e1'})]) == [CompilationDecision.ALLOW_ADAPTIVE]
 
@@ -76,11 +76,11 @@ def test_final_arguments_cannot_bypass_dispatch_threshold():
     from workstation.batch_detection import prepare_mutation
     a = agent()
     for i in range(2):
-        args = {'path': f'{i}.json', 'content': 'x'}
+        args = {'path': 'target.json', 'content': f'x{i}'}
         prepare_mutation(a, 'write_file', args)
         record_mutation(a, 'write_file', args, {'ok': True})
     with pytest.raises(RuntimeError, match='REQUIRE_COMPILE'):
-        prepare_mutation(a, 'write_file', {'path': 'middleware-rewritten.json', 'content': 'x'})
+        prepare_mutation(a, 'write_file', {'path': 'target.json', 'content': 'middleware_rewritten'})
     assert sum(a._work_mutation_shapes.values()) == 2
 
 

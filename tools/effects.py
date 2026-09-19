@@ -20,7 +20,8 @@ class ToolEffect(str, Enum):
 # Single compatibility table for built-ins predating registry effect metadata.
 _BUILTINS = {
     **dict.fromkeys(("read_file", "search_files", "browser_snapshot", "browser_get_images",
-                     "session_search", "skill_view", "skills_list", "read_terminal"), ToolEffect.PURE_READ),
+                     "session_search", "skill_view", "skills_list", "read_terminal",
+                     "read_preview", "read_window_below", "browser_read_http"), ToolEffect.PURE_READ),
     **dict.fromkeys(("tool_search", "tool_describe", "web_search", "web_extract",
                      "browser_extract_items"), ToolEffect.DISCOVERY),
     "clarify": ToolEffect.INTERACTIVE,
@@ -40,26 +41,49 @@ def builtin_effect(name):
     return _BUILTINS.get(name, ToolEffect.MUTATION)
 
 
-def tool_contract(name, *, scope=None, schema=None):
+def tool_contract(name, *, scope=None, schema=None, args=None):
     from tools.registry import registry
     entry = registry.get_entry(name, scope=scope)
+    if entry is None:
+        try:
+            import importlib
+            for candidate in (f"tools.{name}_tool", f"tools.{name}"):
+                try:
+                    importlib.import_module(candidate)
+                    entry = registry.get_entry(name, scope=scope)
+                    if entry is not None:
+                        break
+                except ImportError:
+                    pass
+        except Exception:
+            pass
     metadata = dict(schema or {})
     if entry is not None:
         metadata = {**entry.schema, "effect": entry.effect or entry.schema.get("effect"),
                     "idempotency_key": entry.idempotency_key or entry.schema.get("idempotency_key"),
                     "routes": entry.routes or entry.schema.get("routes")}
-    effect = metadata.get("effect") or metadata.get("x-hermes-effect")
-    if effect:
+    effect = None
+    if entry is not None and getattr(entry, "effect_resolver", None) is not None and args is not None:
         try:
-            effect = ToolEffect(effect)
-        except (ValueError, TypeError):
+            resolved = entry.effect_resolver(args)
+            if resolved is not None:
+                effect = ToolEffect(resolved)
+        except Exception:
             effect = ToolEffect.MUTATION
-        if effect == ToolEffect.IDEMPOTENT_WRITE and not isinstance(metadata.get("idempotency_key"), str):
-            effect = ToolEffect.MUTATION
-    elif isinstance(metadata.get("annotations"), dict) and metadata["annotations"].get("readOnlyHint") is True:
-        effect = ToolEffect.PURE_READ
-    else:
-        effect = _BUILTINS.get(name, ToolEffect.MUTATION)
+    if effect is None:
+        effect = metadata.get("effect") or metadata.get("x-hermes-effect")
+        if effect:
+            try:
+                effect = ToolEffect(effect)
+            except (ValueError, TypeError):
+                effect = ToolEffect.MUTATION
+            if effect == ToolEffect.IDEMPOTENT_WRITE and not isinstance(metadata.get("idempotency_key"), str):
+                effect = ToolEffect.MUTATION
+        elif isinstance(metadata.get("annotations"), dict) and metadata["annotations"].get("readOnlyHint") is True:
+            effect = ToolEffect.PURE_READ
+        else:
+            effect = _BUILTINS.get(name, ToolEffect.MUTATION)
+    metadata["effect"] = effect.value if isinstance(effect, ToolEffect) else str(effect)
     metadata.setdefault("name", name)
     metadata.setdefault("result_schema", None)
     metadata.setdefault("default_verifier", "external_readback" if effect in WRITE_EFFECTS else "result_contract")
@@ -72,8 +96,8 @@ def tool_contract(name, *, scope=None, schema=None):
     return effect, metadata
 
 
-def tool_effect(name, **kwargs):
-    return tool_contract(name, **kwargs)[0]
+def tool_effect(name, *, args=None, **kwargs):
+    return tool_contract(name, args=args, **kwargs)[0]
 
 
 def capability_key(provider, channel, method):

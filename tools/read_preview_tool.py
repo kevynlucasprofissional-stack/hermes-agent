@@ -81,6 +81,8 @@ READ_PREVIEW_SCHEMA = {
 }
 
 
+from tools.effects import ToolEffect
+
 registry.register(
     name="read_preview",
     toolset="desktop_ui",
@@ -91,4 +93,5 @@ registry.register(
         callback=kw.get("callback"),
     ),
     emoji="🔍",
+    effect=ToolEffect.PURE_READ,
 )
