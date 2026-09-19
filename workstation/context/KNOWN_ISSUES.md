@@ -1,32 +1,41 @@
 # Workstation Known Issues
 
-## KI-012 — Browser viewport ownership can diverge from BrowserTask after hover/restart [RESOLVED & QUALIFIED — 2026-09-18]
+## KI-012 — Browser ownership/recovery residual gaps after first corrective implementation [REOPENED — 2026-09-19]
 
-**Observed:** Browser flickers while hovering other chats; after restart a chat can
-show `Blank Page` though BrowserTask recovery metadata exists; the agent can
-continue Browser work invisibly while Browser Hub reports the task `Parked`.
+The 2026-09-18 patch resolved the original tooltip popper bug, added host fencing,
+plumbed `preferredTaskId`, improved lazy recovery and separated activity from
+visibility. Those changes are retained.
 
-**Validated code causes:** generic Radix popper occlusion catches tooltips; restored
-BrowserTasks are parked/lazy while `ensure()` can foreground `about:blank`;
-controller recovery can use a non-attached parked task; production attach drops
-runtime `preferredTaskId`; and `detach`/`setVisible` lack host fencing.
+**Residual reproduced/code-audited gaps:**
+1. `clearParkedTasks()` destroys every lifecycle task with `status === 'parked'`.
+   TaskRail may simultaneously classify one of those tasks as `working`,
+   `waiting` or `human_control`; therefore bulk cleanup can destroy active work.
+2. The Chat Browser pane initializes from `EMPTY_STATE` and can perform its first
+   `attach(..., 'chat', undefined)` before restored BrowserTasks are known. A
+   transient `about:blank` can therefore be attached before a second task-bound
+   reconciliation.
+3. Focused recovery tests start with a known `preferredTaskId`. H013 has not yet
+   proven the real renderer/preload/IPC/runtime cold-restart A/B sequence required
+   by the canonical exit criterion.
+4. Session identity proof covers live/root aliases but lacks an explicit
+   `parent_session_id` behavioral regression for BrowserPane task resolution.
+5. Native-view occlusion is centralized, but generic role/slot selectors still hold
+   authority in addition to the explicit `data-native-view-occluder="true"` marker.
 
-**Resolution:**
-1. Centralized native-view occlusion with explicit occluders (`data-native-view-occluder="true"` on dialogs/menus/popovers/selects), de-authorizing Radix tooltip poppers;
-2. Host fencing on `detach(expectedHost)` and `setVisible(visible, expectedHost)` across IPC, preload, and runtime;
-3. `preferredTaskId` wired through bridge, preload, and Chat UI with session-lineage resolution;
-4. Task-bound lazy recovery materializes the requested BrowserTask before fallback `about:blank` can claim the foreground;
-5. Independent execution activity projection (`working | waiting | human_control | idle`) in Browser Hub TaskRail without conflating `visible | parked` viewport status.
+**Prior evidence retained:** 88 focused Vitest tests, Desktop typecheck, H004 native
+Browser smoke and Work100 30/30. This evidence validates substantial implementation
+pieces but is not sufficient to close the renderer/product invariant.
 
-**Evidence:**
-- Vitest workstation-browser suite: 88 passed across 9 test files (100% green);
-- `native-view-occlusion.test.ts` (7/7 passed), `task-rail.test.ts` (5/5 passed), `workstation-browser-runtime-task.test.ts` (28/28 passed), `workstation-browser-runtime-recovery.test.ts` (2/2 passed);
-- Desktop TypeScript typecheck passed with 0 errors;
-- H004 native browser smoke probe passed (`H004_CLASSIFICATION=VALIDATED`);
-- Work100 regression benchmark passed with 30 PASS / 0 FAIL.
+**Qualification note:** current main's Workstation CI also has an unrelated
+Browser Operational Admission integration-anchor failure
+(`browser tool route anchor missing for browser_type`). Do not attribute that
+failure to KI-012, but do not describe the repository head as globally green.
+
+**Closure requires:** execution-aware bulk cleanup, no first-frame blank for a
+recoverable task, extended H013 renderer+restart proof, parent/root/live alias
+coverage, explicit occluder authority and exact candidate-head evidence.
 
 **Canonical plan:** [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
-
 
 
 ## KI-011 — Durable compiler can obstruct stateful native-browser work [POST-PR #29 AUDIT — CROSS-LAYER P0 OPEN — 2026-09-19]
