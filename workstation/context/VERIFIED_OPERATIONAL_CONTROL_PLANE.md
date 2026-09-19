@@ -1,5 +1,19 @@
 # Verified Operational Control Plane — OperationIntent, Capability Router, Await/Trigger Plane
 
+## H-076 integration — verification contract is now an explicit Control Plane obligation (2026-09-19)
+
+H-075 closed adaptive-to-deterministic handoff mechanics, but post-merge audit shows
+that verifier presence is still stronger in code than verifier proof: Router can treat a
+non-empty verifier dict as sufficient, normal certificates set state_fresh=True, and
+dispatcher integration can consume executor-produced verification.accepted.
+
+The corrective architecture is
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
+Control Plane remains the owner. It must consume typed VerificationContract /
+VerificationResult semantics rather than add another verifier subsystem. ACK remains
+separate from proof; freshness must be justified where required; verifier coverage must
+entail required predicates; STALE/CONFLICT/INCONCLUSIVE cannot COMMIT.
 
 ## Hierarchical operational learning integration — P0-P4 QUALIFIED (2026-09-19)
 
