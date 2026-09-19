@@ -1,5 +1,29 @@
 # Workstation Known Issues
 
+## KI-015 — "Verified" can still encode correlated, stale or under-specified evidence [OPEN — H-076]
+
+Post-PR #33 audit shows that the execution/control substrate is present, but verifier
+semantics remain too shallow in several production paths.
+
+Reproduced code-level risks:
+- TaskCompiler can assign E3 when verifier metadata is absent in one fallback path;
+- Router treats verifier dict presence as sufficiency and normally sets state_fresh=True;
+- Dispatcher can accept executor-produced verification.accepted through its verifier
+  callback;
+- OperationalKernel can label learned work verified from same-surface semantic
+  observation;
+- RunClosureProof accepts a non-empty verifier_contract without proving validated
+  lifecycle, freshness, fault-domain admissibility or predicate coverage;
+- Experience Compiler reduces verifier knowledge mainly to effects/minimum evidence,
+  losing reusable observer/extractor/relation/freshness/provenance detail.
+
+Required action: implement H-076 Verification Contract Synthesis. Unknown evidence must
+never upgrade itself; source disagreement preserves uncertainty; verifier candidates
+must pass discriminative positive/negative validation before promotion.
+
+Canonical:
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
 ## KI-014 — Verified adaptive procedure stays in the LLM loop instead of handing off in-flight [RESOLVED — H-075, 2026-09-19]
 
 **Resolution:**
