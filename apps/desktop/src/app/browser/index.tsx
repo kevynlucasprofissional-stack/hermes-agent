@@ -268,12 +268,12 @@ export function BrowserView() {
     [bridge]
   )
 
-  const handleClearParked = useCallback(async () => {
+  const handleClearParked = useCallback(async (taskIds: string[]) => {
     if (!bridge) {
       return
     }
 
-    await bridge.clearParkedTasks()
+    await bridge.clearParkedTasks(taskIds)
   }, [bridge])
 
   useEffect(() => {
@@ -632,7 +632,7 @@ export function BrowserView() {
         <TaskRail
           activeTaskId={activeTab?.ownerTaskId}
           onAuditTask={taskId => setAuditTaskId(prev => (prev === taskId ? null : taskId))}
-          onClearParked={() => void handleClearParked()}
+          onClearParked={taskIds => void handleClearParked(taskIds)}
           onDestroyTask={taskId => void handleDestroyTask(taskId)}
           onHideTask={taskId => void handleHideTask(taskId)}
           onParkTask={taskId => void handleParkTask(taskId)}

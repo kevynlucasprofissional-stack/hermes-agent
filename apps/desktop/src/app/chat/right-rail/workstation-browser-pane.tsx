@@ -6,7 +6,7 @@ import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrow
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
-import { $activeSessionId, $selectedStoredSessionId, $sessions, lineageAliases, sessionMatchesStoredId } from '@/store/session'
+import { $activeSessionId, $selectedStoredSessionId, $sessions, conversationAliases } from '@/store/session'
 
 export interface WorkstationBrowserPaneProps {
   onPopOut?: () => void
@@ -79,6 +79,7 @@ function formatBrowserError(error: string): string {
 export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrowserPaneProps) {
   const bridge = window.hermesDesktop?.workstationBrowser
   const [state, setState] = useState<WorkstationBrowserState>(EMPTY_STATE)
+  const [runtimeDiscovered, setRuntimeDiscovered] = useState(false)
   const [busy, setBusy] = useState(false)
   const hostRef = useRef<HTMLDivElement | null>(null)
 
@@ -93,7 +94,7 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       return []
     }
 
-    return lineageAliases(activeSessionKey, sessions)
+    return conversationAliases(activeSessionKey, sessions)
   }, [activeSessionKey, sessions])
 
   const preferredTaskId = useMemo(() => {
@@ -106,9 +107,7 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
         return false
       }
 
-      return activeSessionAliases.some(
-        alias => task.sessionHost === alias || sessionMatchesStoredId({ id: task.sessionHost! }, alias)
-      )
+      return activeSessionAliases.includes(task.sessionHost)
     })
 
     return matched?.taskId ?? null
@@ -158,7 +157,11 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     [bridge, preferredTaskId]
   )
 
-  const lastAttachedRef = useRef<{ sessionKey: string | null; preferredTaskId: string | null } | null>(null)
+  const lastAttachedRef = useRef<{
+    host: 'chat'
+    sessionKey: string | null
+    preferredTaskId: string | null
+  } | null>(null)
 
   useEffect(() => {
     if (!bridge) {
@@ -166,12 +169,27 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     }
 
     let disposed = false
+    setRuntimeDiscovered(false)
 
     const off = bridge.onState(next => {
       if (!disposed) {
         setState(next)
       }
     })
+
+    void bridge
+      .ensure()
+      .then(next => {
+        if (!disposed) {
+          setState(next)
+          setRuntimeDiscovered(true)
+        }
+      })
+      .catch(error => {
+        if (!disposed) {
+          setState(current => ({ ...current, lastError: String(error) }))
+        }
+      })
 
     return () => {
       disposed = true
@@ -182,11 +200,12 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   }, [bridge])
 
   useEffect(() => {
-    if (!bridge || !hostRef.current) {
+    if (!bridge || !hostRef.current || !runtimeDiscovered) {
       return
     }
 
     const currentKey = {
+      host: 'chat' as const,
       sessionKey: activeSessionKey,
       preferredTaskId: preferredTaskId ?? null
     }
@@ -194,14 +213,20 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     const last = lastAttachedRef.current
     const keyChanged =
       !last ||
+      last.host !== currentKey.host ||
       last.sessionKey !== currentKey.sessionKey ||
       last.preferredTaskId !== currentKey.preferredTaskId
 
-    if (keyChanged || !state.attached || state.viewportHost !== 'chat') {
+    // A deliberate Hub transfer changes viewportHost while this pane may stay
+    // mounted for a render. Do not steal the viewport back. Reattach only for
+    // new conversation ownership, or when Chat itself lost its attachment.
+    const chatNeedsReattach = !state.attached && (state.viewportHost === null || state.viewportHost === 'chat')
+
+    if (keyChanged || chatNeedsReattach) {
       lastAttachedRef.current = currentKey
       void publishBounds(true)
     }
-  }, [activeSessionKey, preferredTaskId, bridge, publishBounds, state.attached, state.viewportHost])
+  }, [activeSessionKey, preferredTaskId, bridge, publishBounds, runtimeDiscovered, state.attached, state.viewportHost])
 
   useEffect(() => {
     if (!bridge || !hostRef.current) {

@@ -16,7 +16,13 @@ import * as path from 'node:path'
 
 import { expect, test } from './test'
 
-import { type MockBackendFixture, setupMockBackend, waitForAppReady } from './fixtures'
+import {
+  buildAppEnv,
+  launchDesktop,
+  type MockBackendFixture,
+  setupMockBackend,
+  waitForAppReady
+} from './fixtures'
 
 interface ControllerFile {
   url: string
@@ -43,8 +49,15 @@ interface BrowserTaskRecord {
 }
 
 interface WorkstationBridge {
-  attach: (bounds: Record<string, number>, host?: string) => Promise<Record<string, unknown>>
+  ensure: () => Promise<Record<string, unknown>>
+  attach: (
+    bounds: Record<string, number>,
+    host?: string,
+    preferredTaskId?: string
+  ) => Promise<Record<string, unknown>>
   setBounds: (bounds: Record<string, number>, expectedHost?: string) => Promise<Record<string, unknown>>
+  detach: (expectedHost?: string) => Promise<Record<string, unknown>>
+  setVisible: (visible: boolean, expectedHost?: string) => Promise<Record<string, unknown>>
   transferViewport: (targetHost: string, bounds: Record<string, number>) => Promise<Record<string, unknown>>
   resources: () => Promise<{ runtime: string; resources: Array<Record<string, unknown>> }>
   events: (
@@ -59,7 +72,10 @@ interface WorkstationBridge {
 }
 
 interface DesktopBridgeWindow {
-  hermesDesktop: { workstationBrowser: WorkstationBridge }
+  hermesDesktop: {
+    api: <T>(request: { path: string; timeoutMs?: number }) => Promise<T>
+    workstationBrowser: WorkstationBridge
+  }
 }
 
 interface NativeViewportBounds {
@@ -251,6 +267,65 @@ async function nativeViewportSnapshot(app: MockBackendFixture['app']): Promise<N
       })
     }
   })
+}
+
+async function nativePageUrls(app: MockBackendFixture['app']): Promise<string[]> {
+  return app.evaluate(({ webContents }) =>
+    webContents
+      .getAllWebContents()
+      .filter(contents => !contents.isDestroyed())
+      .map(contents => contents.getURL())
+  )
+}
+
+async function openStoredSessionByTitle(
+  page: MockBackendFixture['page'],
+  title: string,
+  expectedPrompt?: string
+): Promise<void> {
+  const row = page.locator('[data-slot="sidebar"] button').filter({ hasText: title }).first()
+  await row.waitFor({ state: 'visible', timeout: 60_000 })
+  await row.click()
+  if (expectedPrompt) {
+    await expect.poll(() => page.locator('body').textContent(), { timeout: 30_000 }).toContain(expectedPrompt)
+  }
+}
+
+async function createRealChat(fixture: MockBackendFixture, prompt: string): Promise<{ id: string; label: string }> {
+  const newSession = fixture.page.locator('[data-slot="sidebar"] button').filter({ hasText: 'New session' }).first()
+  await newSession.waitFor({ state: 'visible', timeout: 30_000 })
+  await newSession.click()
+
+  const before = fixture.mock.receivedPrompts.length
+  const composer = fixture.page.locator('[contenteditable="true"]').first()
+  await composer.click()
+  await composer.fill(prompt)
+  await fixture.page.keyboard.press('Enter')
+  await expect.poll(() => fixture.mock.receivedPrompts.length, { timeout: 60_000 }).toBeGreaterThan(before)
+  await expect.poll(() => fixture.page.locator('body').textContent(), { timeout: 60_000 }).toContain('boot chain is working')
+
+  return expect
+    .poll(
+      async () =>
+        fixture.page.evaluate(async expected => {
+          const response = await (window as unknown as DesktopBridgeWindow).hermesDesktop.api<{
+            sessions: Array<{ id: string; preview?: string | null; title?: string | null }>
+          }>({ path: '/api/sessions?limit=50&offset=0&min_messages=1&archived=exclude&order=recent' })
+          return response.sessions.find(session => session.preview?.includes(expected))?.id
+        }, prompt),
+      { timeout: 60_000 }
+    )
+    .not.toBeUndefined()
+    .then(async () =>
+      fixture.page.evaluate(async expected => {
+        const response = await (window as unknown as DesktopBridgeWindow).hermesDesktop.api<{
+          sessions: Array<{ id: string; preview?: string | null; title?: string | null }>
+        }>({ path: '/api/sessions?limit=50&offset=0&min_messages=1&archived=exclude&order=recent' })
+        const session = response.sessions.find(row => row.preview?.includes(expected))
+        if (!session) throw new Error(`H013 real chat did not persist: ${expected}`)
+        return { id: session.id, label: session.title || session.preview || expected }
+      }, prompt)
+    )
 }
 
 function activeViewportChild(snapshot: NativeViewportSnapshot | null): NativeViewportChild {
@@ -709,5 +784,93 @@ test('sustains concurrent BrowserTasks and real backend chat turns while headles
     requested_duration_ms: SUSTAINED_DURATION_MS,
     observed_duration_ms: observedDurationMs,
     chat_turns: chatTurns
+  }
+})
+
+test('restores the selected chat BrowserTask on the first real viewport attach without foreground theft', async () => {
+  test.setTimeout(180_000)
+
+  if (!fixture) {
+    throw new Error('H013 fixture was not initialized')
+  }
+
+  // Create two chats through the real renderer/gateway, then run two Electron
+  // processes against the same BrowserSessionState and user-data.
+  const sessionA = await createRealChat(fixture, 'H013 restart Chat A')
+  const sessionB = await createRealChat(fixture, 'H013 restart Chat B')
+  const env = buildAppEnv(fixture.sandbox, { HERMES_DESKTOP_E2E_HEADLESS: '1' })
+  const controlPath = path.join(fixture.sandbox.root, 'workstation', 'Runtime', 'browser-control.json')
+
+  const urlA = `${pageBaseUrl}/restart-a`
+  const urlAWorking = `${pageBaseUrl}/restart-a-working`
+  const urlB = `${pageBaseUrl}/restart-b`
+
+  await openStoredSessionByTitle(fixture.page, sessionA.label, 'H013 restart Chat A')
+  await browserAction('h013-restart-task-a', sessionA.id, urlA)
+  await expect.poll(async () => activeViewportChild(await nativeViewportSnapshot(fixture!.app)).url).toBe(urlA)
+
+  await openStoredSessionByTitle(fixture.page, sessionB.label, 'H013 restart Chat B')
+  await browserAction('h013-restart-task-b', sessionB.id, urlB)
+  await expect.poll(async () => activeViewportChild(await nativeViewportSnapshot(fixture!.app)).url).toBe(urlB)
+
+  // A runs through the authenticated controller while B owns the viewport.
+  await browserAction('h013-restart-task-a', sessionA.id, urlAWorking)
+  expect(activeViewportChild(await nativeViewportSnapshot(fixture.app)).url).toBe(urlB)
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlAWorking)).toHaveLength(1)
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlB)).toHaveLength(1)
+
+  const firstControllerToken = controller?.token
+  await fixture.app.close()
+  const second = await launchDesktop(env)
+  fixture.app = second.app
+  fixture.page = second.page
+  await waitForAppReady(fixture, 120_000, false)
+  await expect
+    .poll(async () => (await readControllerFile(controlPath)).token, { timeout: 30_000 })
+    .not.toBe(firstControllerToken)
+  controller = await readControllerFile(controlPath)
+
+  // Chat B and its persisted preview are restored by the real renderer. Its
+  // first visible native child must already be B; A remains lazy.
+  await openStoredSessionByTitle(fixture.page, sessionB.label, 'H013 restart Chat B')
+  await expect.poll(async () => activeViewportChild(await nativeViewportSnapshot(fixture!.app)).url).toBe(urlB)
+  expect(activeViewportChild(await nativeViewportSnapshot(fixture.app)).url).not.toBe('about:blank')
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlB)).toHaveLength(1)
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlAWorking)).toHaveLength(0)
+
+  await openStoredSessionByTitle(fixture.page, sessionA.label, 'H013 restart Chat A')
+  await expect.poll(async () => activeViewportChild(await nativeViewportSnapshot(fixture!.app)).url).toBe(urlAWorking)
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlAWorking)).toHaveLength(1)
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlB)).toHaveLength(1)
+
+  await openStoredSessionByTitle(fixture.page, sessionB.label, 'H013 restart Chat B')
+  await expect.poll(async () => activeViewportChild(await nativeViewportSnapshot(fixture!.app)).url).toBe(urlB)
+  expect((await nativePageUrls(fixture.app)).filter(url => url === urlB)).toHaveLength(1)
+
+  const bounds = { x: 12, y: 18, width: 720, height: 520 }
+  const hubAfterStaleChat = await fixture.page.evaluate(async ({ bounds, taskId }) => {
+    const api = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser
+    await api.attach(bounds, 'hub', taskId)
+    await api.detach('chat')
+    return api.setVisible(false, 'chat')
+  }, { bounds, taskId: 'h013-restart-task-b' })
+  expect(hubAfterStaleChat.viewportHost).toBe('hub')
+  expect(hubAfterStaleChat.attached).toBe(true)
+
+  const chatAfterStaleHub = await fixture.page.evaluate(async ({ bounds, taskId }) => {
+    const api = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser
+    await api.attach(bounds, 'chat', taskId)
+    await api.detach('hub')
+    return api.setVisible(false, 'hub')
+  }, { bounds, taskId: 'h013-restart-task-b' })
+  expect(chatAfterStaleHub.viewportHost).toBe('chat')
+  expect(chatAfterStaleHub.attached).toBe(true)
+  expect(activeViewportChild(await nativeViewportSnapshot(fixture.app)).url).toBe(urlB)
+
+  for (const taskId of ['h013-restart-task-a', 'h013-restart-task-b']) {
+    await fixture.page.evaluate(
+      id => (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser.destroyTask(id),
+      taskId
+    )
   }
 })

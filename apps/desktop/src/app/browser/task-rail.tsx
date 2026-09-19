@@ -18,7 +18,7 @@ export interface TaskRailProps {
   onParkTask?: (taskId: string) => void
   onHideTask?: (taskId: string) => void
   onDestroyTask?: (taskId: string) => void
-  onClearParked?: () => void
+  onClearParked?: (taskIds: string[]) => void
   onAuditTask?: (taskId: string) => void
   className?: string
 }
@@ -73,6 +73,20 @@ export function getTaskExecutionActivity(
   return 'idle'
 }
 
+export function getClearableBrowserTaskIds(
+  tasks: readonly BrowserTask[],
+  dotStates: Record<string, string>,
+  sessions: readonly TaskRailSessionLookup[]
+): string[] {
+  return tasks
+    .filter(
+      task =>
+        (task.status === 'parked' || task.status === 'hidden') &&
+        getTaskExecutionActivity(task, dotStates, sessions) === 'idle'
+    )
+    .map(task => task.taskId)
+}
+
 interface TaskGroup {
   id: 'working' | 'active' | 'waiting-for-human' | 'background' | 'recent'
   title: string
@@ -123,6 +137,10 @@ export function TaskRail({
   const [collapsed, setCollapsed] = useState(false)
   const sessions = useStore($sessions)
   const dotStates = useStore($sessionDotStateById)
+  const clearableTaskIds = useMemo(
+    () => getClearableBrowserTaskIds(tasks, dotStates, sessions),
+    [tasks, dotStates, sessions]
+  )
 
   const groups: TaskGroup[] = useMemo(() => {
     const working: BrowserTask[] = []
@@ -196,16 +214,12 @@ export function TaskRail({
       <div className="flex h-9 items-center justify-between border-b border-(--ui-stroke-tertiary) px-2.5">
         <span className="font-semibold text-(--ui-text-secondary)">Task Rail ({tasks.length})</span>
         <div className="flex items-center gap-1">
-          {tasks.some(
-            t =>
-              (t.status === 'parked' || t.status === 'hidden') &&
-              getTaskExecutionActivity(t, dotStates, sessions) !== 'working'
-          ) &&
+          {clearableTaskIds.length > 0 &&
             onClearParked && (
               <Button
                 aria-label="Clear Parked Tasks"
                 className="h-6 px-1.5 text-[10px] text-(--ui-text-tertiary) hover:bg-red-500/10 hover:text-red-300"
-                onClick={onClearParked}
+                onClick={() => onClearParked(clearableTaskIds)}
                 size="xs"
                 title="Clear parked idle tasks"
                 variant="ghost"
