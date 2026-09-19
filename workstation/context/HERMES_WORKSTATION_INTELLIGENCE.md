@@ -1,5 +1,43 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-078A — Minimum Necessary First-Party Seams — 2026-09-19
+
+A arquitetura não persegue mais "zero costuras" como valor em si. O objetivo é reduzir o
+acoplamento acidental ao mínimo sem perder capacidade, qualidade, lifecycle, autoridade,
+verificação ou UX first-party.
+
+A distinção canônica é:
+
+```text
+COUPLING ACIDENTAL
+-> remover ou transformar em contrato genérico
+
+INTEGRATION POINT FIRST-PARTY
+-> preservar quando privilégio/lifecycle nativo é parte material do produto
+```
+
+A frase "Hermes não precisa saber que Workstation existe" aplica-se com força ao
+Reasoner/LLM e, quando houver contrato genérico equivalente, ao agent core. Ela não é uma
+proibição de o Hermes Work Desktop downstream possuir integração consciente com
+Workstation.
+
+O Browser é a prova operacional. O upstream moderno já possui Plugin SDK, panes,
+workspaces e docking capazes de absorver parte da apresentação. Mas isso não equivale ao
+runtime nativo que possui `WebContentsView`, BrowserTask, background execution, fencing,
+human takeover, IPC e recovery. Enquanto não houver extensão genérica equivalente, essa
+integração pode e deve permanecer first-party.
+
+A decisão para cada costura passa a ser:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+Regra de otimização: reduzir blast radius, não maximizar pureza. Uma costura pequena,
+deliberada e testada é preferível a vários `if workstation` espalhados; e uma integração
+profunda necessária é preferível a uma regressão funcional causada por um plugin layer
+insuficiente.
+
+Canonical:
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md).
+
 ## H-078 — Upstream como laboratório, Workstation como supervisor unidirecional — 2026-09-19
 
 A direção estratégica do Hermes Work foi refinada: não haverá uma escolha binária entre
