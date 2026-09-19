@@ -1,5 +1,27 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## H-076 integration — learn transformation and verifier separately (2026-09-19)
+
+Post-PR #33 audit found that the Experience Compiler preserves that verification
+occurred better than it preserves **how to verify again**. Current verifier compilation
+is still dominated by effects + minimum evidence and therefore loses observer,
+extraction, relation, temporal/freshness, failure-domain and predicate-coverage detail.
+
+The next corrective milestone is
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
+Experience Compiler must therefore split learning into two hypotheses:
+
+~~~text
+action hypothesis
+verifier hypothesis
+~~~
+
+Discovery traces may propose both. They do not validate both. Verifier promotion
+requires discriminative evidence/negative controls where safely possible, and action
+C0-C5 causal grade remains separate from verifier quality. A controlled replay cannot
+upgrade a capability/action pair when its oracle is inadmissible.
+
 Date established: 2026-09-18
 
 Status: **IMPLEMENTED / CONTRACT VALIDATED — native product qualification separate**
