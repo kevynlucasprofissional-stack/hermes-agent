@@ -1,5 +1,37 @@
 # Workstation roadmap
 
+## H-077 — Architectural Falsification / External Validity (2026-09-19) — ACTIVE
+
+Canonical program:
+[context/ARCHITECTURAL_FALSIFICATION_2026-09-19.md](context/ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
+PR #34 / H-076 remains the verified baseline (**670 passed, 2 skipped**). The next
+milestone is not another horizontal subsystem. Adversarial research plus a current-main
+audit show that the core architecture remains strong for operationally closable digital
+work, but internal proof must not be conflated with external validity.
+
+Immediate P0 (confirmed on `main@2babc8b4cf89bab217cd76b5992d192776184337`):
+- stop counting Router selection as a verified ORA transition and remove optimistic
+  `verified=True` defaults;
+- make unknown condition types fail closed in `OperationalKernel.verify_condition()`;
+- prohibit construction of terminal `VerificationEvidence` from the expected value;
+  execute a real declared observer or return INCONCLUSIVE;
+- enforce `resource_binding` against the concrete evidence resource;
+- require expected operation identity/lineage for transition claims;
+- finish deprecation/migration of legacy boolean verifier callbacks.
+
+Then P1 AFB-v0 -> P2 external metrics -> P3 model-inadequacy tripwires -> P4 derived
+validity envelope -> P5 evidence-gated decision on any new primitive.
+
+Architecture admission gate: **reproducible counterexample + material frequency/value +
+no natural existing owner + measured external improvement**.
+
+Explicitly deferred: ApplicabilityCompiler, AssumptionRegistry, PolicyCompiler,
+StrategyRegistry, TemporalIntent, WorldModelService, VerifierDB/OracleManager,
+UnknownUnknownDetector and any second Control Plane/evidence store/predicate IR.
+
+> Preserve -> harden -> measure externally -> falsify -> learn limits -> only then generalize.
+
 ## Verification Contract Synthesis / Operational Truth (2026-09-19) — H-076 IMPLEMENTED & QUALIFIED
 
 Canonical specification:
@@ -10,17 +42,10 @@ falsified the need for a separate Verifier Compiler but confirmed an epistemic
 verification gap. H-075 now transfers verified adaptive work to deterministic owners;
 H-076 defines what may legitimately count as VERIFIED.
 
-Confirmed current-main seams:
-- TaskCompiler can still default undeclared verifier strength to E3 in one path;
-- Router treats non-empty verifier metadata as sufficient and normally sets
-  state_fresh=True without a typed temporal/version proof;
-- Dispatcher integration can consume executor-produced verification.accepted;
-- OperationalKernel can certify learned external work from correlated semantic
-  observation;
-- RunClosureProof requires a non-empty verifier contract, not a validated/fresh/covered
-  verifier result;
-- Experience Compiler preserves minimum evidence/effects better than verifier identity,
-  relation, freshness, fault-domain provenance and discriminative validation.
+Historical pre-H-076 seams resolved by PR #34 included undeclared verifier-strength
+promotion, presence-based verifier admission, assumed freshness, executor self-report,
+correlated semantic observation, shallow RunClosure verifier admission and loss of
+verifier identity/validation detail. H-077 tracks only post-qualification residuals.
 
 P0-P7: eliminate false-confidence seams; typed VerificationContract +
 VerificationResult evaluator; runtime integration; RunClosure/Await integration;

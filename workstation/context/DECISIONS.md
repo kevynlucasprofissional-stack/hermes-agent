@@ -567,6 +567,39 @@ store, second predicate IR, verifier agent or LLM judge as mutation commit autho
 Canonical:
 [VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
 
+## D-025 — VERIFIED is a scoped contractual claim; external falsification precedes new horizontal primitives
+
+D-017 through D-024 remain authoritative.
+
+A Hermes `VERIFIED` result proves only the predicates that a current contract and
+admissible evidence can justify within known authority, temporal/version and
+applicability conditions. It must never be treated as a universal claim that the model
+contains every fact relevant to real-world correctness or human satisfaction.
+
+Consequences:
+- OperationIntent is the current operational specification, not a guaranteed lossless
+  encoding of the human need;
+- SemanticState is a projection and may be representationally insufficient;
+- ORA is an efficiency metric conditioned on external correctness/safety/coverage;
+- Experience Compiler must suspend/narrow/quarantine generalization when
+  counterexamples show that the abstraction does not discriminate outcomes;
+- a validity envelope is derived from existing owners before any dedicated registry;
+- new horizontal primitives require a reproduced counterexample, material value,
+  absence of a natural existing owner and measured external improvement;
+- insufficient proof preserves INCONCLUSIVE/CONFLICT/STALE/WAIT/ASK_HUMAN/WAKE_LLM
+  rather than manufacturing certainty.
+
+Do not create ApplicabilityCompiler, AssumptionRegistry, PolicyCompiler, TemporalIntent,
+WorldModelService, VerifierDB/OracleManager, UnknownUnknownDetector, a second Control
+Plane, evidence store or predicate IR merely to encode H-077 research vocabulary.
+
+> **INTERNAL PROOF != EXTERNAL VALIDITY.**
+
+> **NO OBSERVED CONTRADICTION != COMPLETE MODEL.**
+
+Canonical:
+[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.

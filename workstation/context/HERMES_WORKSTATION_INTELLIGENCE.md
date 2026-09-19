@@ -1,5 +1,116 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-077 — Falsificação arquitetural, validade externa e envelope de validade — 2026-09-19
+
+O H-076 foi implementado e qualificado no `main@2babc8b4cf89bab217cd76b5992d192776184337`, mas a investigação
+adversarial posterior muda o **critério de progresso** do Hermes.
+
+A arquitetura central não foi falsificada para trabalho operacional digital observável.
+Ela foi falsificada apenas se interpretada como ontologia universal capaz de converter
+qualquer certificado interno em verdade completa sobre o mundo e a intenção humana.
+
+Leitura segura:
+
+```text
+Human Need
+-> OperationIntent (especificação operacional corrente)
+-> SemanticState (projeção parcial)
+-> Capability/Contract
+-> Evidence/Verification
+-> claim condicionado
+-> reuse apenas dentro de envelope demonstrado
+```
+
+Portanto, manter OperationIntent, SemanticState, Router, Dispatcher,
+OperationalCapability, VOT, Await, Experience Compiler, RunClosure e compilação
+progressiva; mas não confundir `VERIFIED` com "tudo que importa está correto".
+
+### Cinco seams pós-H-076 confirmados
+
+1. **ORA pode se auto-inflar:** routing de Executable/ComposedDecision chama
+   `record_transition(verified=True)` antes de existir outcome; transition APIs ainda
+   têm `verified=True` como default.
+2. **Condition fail-open:** `OperationalKernel.verify_condition()` retorna True para
+   tipo desconhecido.
+3. **Auto-evidência residual:** sem `verification_evidence`, o kernel pode fabricar
+   VerificationEvidence owner-declared usando o próprio valor esperado e metadados do
+   contrato. Ausência de evidência deve executar observer real ou virar INCONCLUSIVE.
+4. **Resource binding incompleto:** `resource_binding` existe, mas não participa
+   efetivamente da admissibilidade da evidência.
+5. **Causal identity incompleta:** transition claim aceita qualquer `operation_id`
+   não-vazio; deve provar identidade com o `expected_operation_id` e lineage/fencing.
+
+Esses pontos formam o **P0 — Truthful Core Cleanup** e devem ser resolvidos nos owners
+atuais, sem novo subsistema.
+
+### Mudança estratégica
+
+```text
+Preservar
+-> endurecer
+-> medir externamente
+-> falsificar
+-> aprender limites
+-> só então generalizar
+```
+
+Depois do P0, o próximo artefato é o **AFB-v0 — Architectural Falsification Benchmark**,
+com hidden oracle separado da verificação interna, counterfactual pairs, concorrência,
+stale/version races, source disagreement, temporal/path dependence, composição global,
+semantic drift e holdouts pós-promoção.
+
+As métricas devem formar vetor, não score único: FCOR + Certification Coverage +
+External Outcome Correctness + False Abstention + Hidden-Assumption Robustness +
+Model-Inadequacy Detection Recall + Verifier Sensitivity + Conflict Detection Recall +
+Recovery Correctness + ReuseReliability(N) + time-to-detection + human burden + ORA +
+custo.
+
+Regra: primeiro limitar falsa certificação / garantir safety / coverage; depois
+maximizar ORA e reduzir custo/latência/interrupção.
+
+### Model inadequacy, não detector mágico de unknown unknowns
+
+O Hermes não pode observar magicamente uma variável ausente. O alvo correto é detectar
+quando as variáveis conhecidas deixam de explicar outcomes:
+
+```text
+state/fingerprint/PRE iguais + mesma ação
+mas PASS em alguns casos e FAIL em outros
+-> abstração insuficiente
+-> suspender generalização
+-> buscar nova observação
+-> quarantine se consequente
+-> WAKE_LLM / ASK_HUMAN quando necessário
+```
+
+Nunca inventar automaticamente uma PRE para racionalizar o erro.
+
+### Validity Envelope e gate de arquitetura
+
+Envelope de validade é conceito obrigatório, mas ainda não uma nova classe/registry.
+Deve ser derivado de intent, CapabilityFormalContract, VerificationContract,
+authority/effect budget, resource/operation binding, temporal basis, fingerprints,
+provenance, evidence history e counterexamples.
+
+Nenhuma nova primitive horizontal entra sem:
+1. counterexample reproduzível;
+2. frequência/impacto material;
+3. prova de que não existe owner natural atual;
+4. melhoria medida em outcome externo.
+
+Adiados: ApplicabilityCompiler, AssumptionRegistry, PolicyCompiler, StrategyRegistry,
+TemporalIntent, WorldModelService, VerifierDB, OracleManager, UnknownUnknownDetector,
+segundo Control Plane, segundo evidence store e segundo predicate IR.
+
+> **O objetivo da verificação não é provar que o Hermes está certo; é delimitar
+> precisamente o que a evidência permite afirmar.**
+
+> **O objetivo da aprendizagem não é automatizar toda experiência; é descobrir quais
+> experiências podem ser reutilizadas sem queda de confiabilidade externa.**
+
+Canônico:
+[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
 ## H-076 — Verification Contract Synthesis / verdade operacional — 2026-09-19
 
 Depois do merge do H-075 no main@e010c8981a4bdeb89ac94479e0d7e891d48eadae,

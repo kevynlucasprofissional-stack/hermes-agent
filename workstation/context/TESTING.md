@@ -1,5 +1,39 @@
 # Workstation Testing
 
+## H-077 / AFB-v0 external-validity qualification gate — ACTIVE
+
+Canonical:
+[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
+### P0 truthful-core RED/GREEN requirements
+
+Before AFB-v0 expansion, tests must prove:
+- Router selection alone cannot increment a verified-transition numerator;
+- transition recording has no optimistic verified default;
+- unknown condition types fail closed;
+- no verifier can synthesize terminal evidence from the value it is trying to prove;
+- missing evidence either invokes a real declared observer or yields INCONCLUSIVE;
+- wrong/missing resource binding cannot verify;
+- wrong operation identity cannot satisfy a transition claim;
+- legacy boolean verifier compatibility cannot become canonical terminal truth.
+
+### AFB-v0 benchmark requirements
+
+The evaluator/oracle must be separated from the internal verifier under test.
+
+Required task families: hidden state/counterfactual pairs; stale/version races;
+concurrent lost update; source disagreement; non-idempotent mutation + lost ACK/restart;
+temporal MAINTAIN; global composition invariant; semantic drift without schema drift;
+intent ambiguity; closed-loop dynamic queue; post-promotion holdout reuse.
+
+Report at minimum: FCOR, Certification Coverage, External Outcome Correctness, False
+Abstention Rate, Hidden-Assumption Robustness, Model-Inadequacy Detection Recall,
+Verifier Sensitivity, Conflict Detection Recall, Unsafe Mutation Rate, Recovery
+Correctness and ReuseReliability(N). ORA/VOLC are secondary efficiency metrics.
+
+A green internal regression suite is necessary but not sufficient for H-077
+qualification.
+
 ## H-071 corrective local candidate receipt — 2026-09-19
 
 - focused control-plane/admission: 27 passed;

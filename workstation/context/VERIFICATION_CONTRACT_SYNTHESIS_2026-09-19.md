@@ -623,3 +623,22 @@ rule that certifies it forever.**
   separately identified positive/negative receipts.
 - Focused affected suites: **109 passed**.
 - Full Workstation regression: **670 passed, 2 skipped in 287.52s**.
+
+## Post-qualification boundary — H-077
+
+H-076 remains implemented and its typed verification semantics remain authoritative.
+A post-qualification audit on `main@2babc8b4cf89bab217cd76b5992d192776184337` found narrower residuals that H-076 did
+not fully close: routing-time ORA verification accounting, unknown-condition fail-open
+behavior, owner-declared evidence synthesis from the expected value, unenforced resource
+binding and operation-ID presence being weaker than expected operation identity.
+
+These are tracked as KI-016 / H-077 P0 and do not justify a Verifier Compiler or any
+second verification subsystem.
+
+The larger H-077 conclusion is outside the claim H-076 can prove internally: even a
+correct VerificationContract proves only its covered proposition. External validity and
+model completeness require independent falsification.
+
+Canonical follow-on:
+[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+

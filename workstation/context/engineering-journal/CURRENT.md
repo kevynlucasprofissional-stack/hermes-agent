@@ -1,5 +1,47 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-077 — Architectural falsification / external validity / post-H-076 residual audit (2026-09-19)
+
+**Classification:** CORE ARCHITECTURE PRESERVED / UNIVERSAL EXTERNAL-VALIDITY CLAIM
+FALSIFIED / P0 RESIDUALS REPRODUCED / AFB-v0 NEXT.
+
+**Baseline:** `main@2babc8b4cf89bab217cd76b5992d192776184337` after PR #34/H-076 (**670 passed, 2 skipped**).
+
+**Hypothesis under attack:** after H-076, a green internal certificate is still not
+sufficient evidence that all materially relevant real-world/human conditions were
+represented. The next milestone should falsify the operational model against independent
+outcomes rather than add another compiler/registry.
+
+**Current-main RED evidence:**
+- routing-time verified-transition accounting for Executable/ComposedDecision and
+  optimistic `verified=True` defaults;
+- unknown condition type returns True in `OperationalKernel.verify_condition()`;
+- no supplied evidence can become owner-declared VerificationEvidence synthesized from
+  `verification_expected` plus contract-declared quality;
+- `VerificationContract.resource_binding` is not enforced by the evaluator;
+- transition proof tests non-empty `operation_id`, not equality with an expected
+  operation identity.
+
+**Refined implementation hypothesis:** close these five seams inside existing owners,
+then create AFB-v0 as an external/adversarial harness. Do not introduce a second control
+plane or validity/assumption registry.
+
+**AFB-v0 falsifiers:** hidden-state pairs, stale/version races, concurrent lost updates,
+source conflict, non-idempotent restart, temporal MAINTAIN, composition emergence,
+semantic drift without schema change, intent ambiguity and dynamic closed-loop queues.
+
+**Metric hypothesis:** FCOR must be reported with Certification Coverage and reliability;
+ORA is optimized only after external-quality/safety constraints hold.
+
+**Primitive admission rule:** no new horizontal primitive without a reproducible
+counterexample, material frequency/value, absence of a natural existing owner and a
+measured external improvement.
+
+Canonical:
+[../ARCHITECTURAL_FALSIFICATION_2026-09-19.md](../ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
+---
+
 ## H-076 — Verification Contract Synthesis / operational truth audit (2026-09-19)
 
 **Active implementation experiment (baseline `main@14ef1e3ed1f05bec41c70469e231d3b9354439d7`):**

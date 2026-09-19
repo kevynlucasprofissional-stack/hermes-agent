@@ -1,5 +1,30 @@
 # Workstation Known Issues
 
+## KI-016 — Post-H-076 false-confidence residuals can still overstate operational truth [OPEN — H-077]
+
+H-076 is implemented and qualified, but current `main@2babc8b4cf89bab217cd76b5992d192776184337` still reproduces
+narrower seams that can make metrics or verification more optimistic than observation
+justifies.
+
+Reproduced:
+- routing decisions for Executable/ComposedDecision count as
+  `record_transition(verified=True)` before execution/verifier outcome;
+- transition APIs default `verified=True`;
+- unknown condition types in `OperationalKernel.verify_condition()` return True;
+- absent `verification_evidence` can be replaced by constructed owner-declared
+  VerificationEvidence whose value comes from the expected proposition and whose
+  quality metadata comes from the contract;
+- `resource_binding` is not enforced by `evaluate_verification()`;
+- transition causality checks non-empty `operation_id` instead of binding evidence to
+  the expected operation identity.
+
+Required action: H-077 P0 Truthful Core Cleanup. No new persistence owner is required.
+After P0, external validity remains a research/benchmark concern addressed by AFB-v0,
+not by declaring KI-016 solved through more internal unit coverage alone.
+
+Canonical:
+[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
 ## KI-015 — "Verified" could encode correlated, stale or under-specified evidence [RESOLVED — H-076]
 
 Post-PR #33 audit shows that the execution/control substrate is present, but verifier

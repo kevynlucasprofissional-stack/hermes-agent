@@ -1,24 +1,37 @@
 # Current State
 
+## 2026-09-19 H-077 Architectural Falsification / External Validity — ACTIVE
+
+Baseline: `main@2babc8b4cf89bab217cd76b5992d192776184337` after PR #34/H-076.
+
+H-076 is implemented and qualified; the current boundary is now **external validity and
+post-H-076 truthful-core residuals**, not verifier typing in general.
+
+Current-main reproduced residuals:
+1. routing selection still records executable/composed decisions as `verified=True`
+   and transition APIs retain optimistic True defaults;
+2. `OperationalKernel.verify_condition()` still returns True for an unknown condition type;
+3. absent evidence can be replaced by constructed owner-declared VerificationEvidence
+   from the expected value and contract metadata;
+4. `VerificationContract.resource_binding` is represented but not enforced by
+   `evaluate_verification()`;
+5. transition proof checks only for non-empty evidence `operation_id`, not identity
+   with the expected operation.
+
+Sequence: P0 truthful core cleanup -> P1 AFB-v0 -> P2 external outcome metrics -> P3
+model-inadequacy tripwires -> P4 derived validity envelope -> P5 evidence-gated decision
+on any new primitive.
+
+Canonical:
+[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+
 ## 2026-09-19 H-076 Verification Contract Synthesis — IMPLEMENTED & QUALIFIED
 
-PR #33 successfully landed the H-075 adaptive-to-deterministic handoff. A post-merge
-truth audit on main@e010c8981a4bdeb89ac94479e0d7e891d48eadae confirms that the next
-boundary is epistemic, not scheduling: Hermes can hand off after "verification", but
-verification is not yet uniformly typed enough to prove source authority/trust,
-failure-domain separation, temporal validity, semantic relation and predicate/goal
-coverage.
-
-Current-main confirmed gaps include the TaskCompiler undeclared-E3 fallback,
-presence-based Router verifier admission, default state_fresh=True, executor-result
-verification callbacks, correlated semantic-observer verification for learned
-capabilities, shallow RunClosure verifier admission, and Experience Compiler loss of
-verifier identity/validation detail.
-
-Target: typed VerificationContract + canonical VerificationResult, deterministic
-evaluator, conservative evidence/freshness/fault-domain admission, discriminative
-negative-control validation, and Experience Compiler synthesis of verifier candidates
-that remain CANDIDATE until independently validated.
+The post-PR #33 audit established the H-076 verification-semantics gap. PR #34 then
+implemented the typed VerificationContract/VerificationResult path, conservative
+admission, discriminative validation and verifier synthesis. Those pre-H-076 findings
+remain historical rationale, not the current open boundary. The current open boundary
+is H-077, documented above.
 
 H-075 remains implemented and qualified as a handoff mechanism. H-076 now strengthens
 the truth contract it consumes. Evidence: 109 focused tests; full Workstation
