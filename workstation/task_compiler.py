@@ -930,15 +930,10 @@ class TaskCompiler:
 
         semantic_state = request.get("semantic_state") or {}
 
-        # Resolve ambient trusted authority
+        # Resolve ambient trusted authority. Model/request data is never a trust root;
+        # request["authority"] may only narrow this owner-supplied scope below.
         trusted_authority = None
-        if "trusted_authority" in request and request["trusted_authority"] is not None:
-            raw_trusted = request["trusted_authority"]
-            if isinstance(raw_trusted, AuthorityScope):
-                trusted_authority = raw_trusted
-            elif isinstance(raw_trusted, dict):
-                trusted_authority = AuthorityScope.from_dict(raw_trusted)
-        elif getattr(self, "trusted_authority", None) is not None:
+        if getattr(self, "trusted_authority", None) is not None:
             trusted_authority = getattr(self, "trusted_authority")
         elif canonical_task_id or task_id:
             try:
@@ -952,26 +947,8 @@ class TaskCompiler:
                     conn.close()
             except Exception:
                 pass
-            if trusted_authority is None:
-                trusted_authority = AuthorityScope(
-                    level=AuthorityLevel.EXTERNAL_REVERSIBLE,
-                    allowed_actions={"*"},
-                    allowed_resources={"*"},
-                )
-        elif session_id:
-            trusted_authority = AuthorityScope(
-                level=AuthorityLevel.EXTERNAL_REVERSIBLE,
-                allowed_actions={"*"},
-                allowed_resources={"*"},
-            )
-
         if trusted_authority is None:
-            return {
-                "success": False,
-                "routing_decision": "ASK_HUMAN",
-                "reason": "untrusted_authority_minting: execution without verifiable trusted authority is forbidden",
-                "missing_authority": None,
-            }
+            trusted_authority = AuthorityScope(level=AuthorityLevel.READ)
 
         # Narrow against requested authority if provided
         raw_requested = request.get("authority")
@@ -996,7 +973,8 @@ class TaskCompiler:
         registry = getattr(self, "capability_registry", None)
         if registry is None:
             registry = OperationalCapabilityRegistry(artifacts=self.artifacts)
-        router = CapabilityRouter(registry)
+        from workstation.control_plane.composition import CompositionEngine
+        router = CapabilityRouter(registry, composition_engine=CompositionEngine(registry))
 
         decision = router.route(intent, semantic_state, authority)
 
@@ -1039,6 +1017,13 @@ class TaskCompiler:
                     run_id=getattr(self, "canonical_run_id", None) or request.get("run_id"),
                     has_uncertain_mutation=getattr(self, "has_uncertain_mutation", False) or request.get("has_uncertain_mutation", False),
                     authority_scope=authority,
+                    verifier_fn=lambda result: bool(
+                        isinstance(result, dict)
+                        and result.get("success") is True
+                        and result.get("capability_id") == decision.capability.id
+                        and result.get("capability_version") == decision.capability.version
+                        and result.get("verification", {}).get("accepted") is True
+                    ),
                 )
                 exec_res = dispatch_res.get("result", {})
                 if not dispatch_res.get("success", True):
@@ -1075,17 +1060,76 @@ class TaskCompiler:
             if dispatcher is None:
                 dispatcher = CertifiedDispatcher(kernel=getattr(self, "kernel", None))
 
+            bindings = request.get("composition_bindings")
+            if not isinstance(bindings, dict):
+                return {
+                    "success": False,
+                    "routing_decision": "WAKE_LLM",
+                    "reason": "composition_inputs_unbound",
+                    "plan": [c.id for c in decision.plan],
+                    "certificate_hash": cert_hash,
+                    "mutations_dispatched": 0,
+                }
+
+            kernel = getattr(self, "kernel", None)
+            if kernel is None:
+                from workstation.operational_kernel import OperationalKernel
+                kernel = OperationalKernel(registry=registry, artifacts=self.artifacts)
+
+            confirmed_steps = []
+
+            def _run_composition():
+                for cap in decision.plan:
+                    step_inputs = bindings.get(cap.id)
+                    if not isinstance(step_inputs, dict):
+                        return {
+                            "success": False,
+                            "status": "NEEDS_REASONING",
+                            "reason": "composition_inputs_unbound",
+                            "capability_id": cap.id,
+                            "confirmed_steps": list(confirmed_steps),
+                        }
+                    step_result = kernel.execute_capability(
+                        cap,
+                        step_inputs,
+                        dispatch=dispatch,
+                        context=request.get("execution_context") or {},
+                        owner=str(canonical_task_id or task_id or session_id),
+                    )
+                    if (not isinstance(step_result, dict)
+                            or step_result.get("success") is not True
+                            or step_result.get("verification", {}).get("accepted") is not True):
+                        return {
+                            "success": False,
+                            "status": step_result.get("status", "NEEDS_REASONING") if isinstance(step_result, dict) else "NEEDS_REASONING",
+                            "reason": step_result.get("reason", "composition_step_not_verified") if isinstance(step_result, dict) else "composition_step_not_verified",
+                            "capability_id": cap.id,
+                            "confirmed_steps": list(confirmed_steps),
+                            "step_result": step_result,
+                        }
+                    confirmed_steps.append({"id": cap.id, "version": cap.version, "result": step_result})
+                return {"success": True, "plan": [c.id for c in decision.plan], "confirmed_steps": confirmed_steps}
+
             try:
                 dispatch_res = dispatcher.dispatch(
                     decision,
                     current_state=semantic_state,
-                    dispatch_fn=lambda: {"success": True, "plan": [c.id for c in decision.plan]},
+                    dispatch_fn=_run_composition,
                     run_id=getattr(self, "canonical_run_id", None) or request.get("run_id"),
                     has_uncertain_mutation=getattr(self, "has_uncertain_mutation", False) or request.get("has_uncertain_mutation", False),
                     authority_scope=authority,
+                    verifier_fn=lambda result: bool(
+                        isinstance(result, dict)
+                        and result.get("success") is True
+                        and len(result.get("confirmed_steps", [])) == len(decision.plan)
+                        and all(step.get("result", {}).get("verification", {}).get("accepted") is True
+                                for step in result.get("confirmed_steps", []))
+                    ),
                 )
+                composition_result = dispatch_res.get("result", {})
                 return {
-                    "success": True,
+                    **composition_result,
+                    "success": bool(dispatch_res.get("success")),
                     "routing_decision": "COMPOSE",
                     "plan": [c.id for c in decision.plan],
                     "certificate_hash": cert_hash,
@@ -1108,11 +1152,12 @@ class TaskCompiler:
             }
 
         if isinstance(decision, HumanDecision):
+            missing_authority = getattr(decision, "missing_authority", None)
             return {
                 "success": False,
                 "routing_decision": "ASK_HUMAN",
                 "reason": decision.reason,
-                "missing_authority": decision.missing_authority.to_dict() if decision.missing_authority else None,
+                "missing_authority": missing_authority.to_dict() if missing_authority else None,
             }
 
         # ReasoningDecision
@@ -1124,7 +1169,7 @@ class TaskCompiler:
             expected="Executable capability match",
             observed=decision.reason,
             safe_to_resume=False,
-            context={"intent_id": intent.id, "unmatched_goals": [g.to_dict() for g in decision.unmatched_goals]},
+            context={"intent_id": intent.id, "unmatched_goals": [g.to_dict() for g in getattr(decision, "unmatched_goals", [])]},
         )
         return {
             **handoff,
@@ -1196,6 +1241,7 @@ class TaskCompiler:
         envelope = {'status': result.get('status', 'COMPLETED'), 'task_id': owner,
             'capability_id': cap.id, 'capability_version': cap.version,
             'output': projected_output, 'savings': result.get('savings', {}),
+            'verification': sanitize(result.get('verification') or {'accepted': False, 'source': 'none'}),
             'metrics': {'executor_llm_calls': 0}}
         if result.get('success'):
             ref = self.artifacts.store(owner, plan.id + '_result.json', sanitize(envelope))

@@ -3885,7 +3885,8 @@ def browser_read_http(
 
     Allowed methods: GET, HEAD only.
     Request body: none.
-    Destination safety: blocked for localhost / loopback and RFC1918 private subnets.
+    Destination safety is enforced by the canonical URL-safety owner before
+    dispatch. Relative URLs are resolved and same-origin checked by Chromium.
     """
     method = (method or "GET").strip().upper()
     if method not in {"GET", "HEAD"}:
@@ -3897,71 +3898,33 @@ def browser_read_http(
 
     raw_url = (url or "").strip()
     parsed = urlsplit(raw_url)
-    if parsed.scheme.lower() not in {"http", "https"}:
+    if parsed.scheme and parsed.scheme.lower() not in {"http", "https"}:
         return json.dumps({
             "success": False,
             "status": 400,
             "error": f"Invalid protocol '{parsed.scheme}': only http and https are allowed",
         })
 
-    host = (parsed.hostname or "").lower()
-    if host in {"localhost", "127.0.0.1", "::1", "0.0.0.0"} or host.endswith(".local"):
-        return json.dumps({
-            "success": False,
-            "status": 403,
-            "error": f"Blocked forbidden destination: {host}",
-        })
+    if parsed.scheme:
+        from tools.url_safety import is_safe_url, normalize_url_for_request
+        raw_url = normalize_url_for_request(raw_url)
+        if not is_safe_url(raw_url):
+            return json.dumps({"success": False, "status": 403,
+                               "error": "Blocked unsafe destination by canonical URL policy"})
 
-    ipv4_match = re.match(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$", host)
-    if ipv4_match:
-        b0, b1 = int(ipv4_match.group(1)), int(ipv4_match.group(2))
-        if b0 == 10 or (b0 == 172 and 16 <= b1 <= 31) or (b0 == 192 and b1 == 168) or (b0 == 169 and b1 == 254):
-            return json.dumps({
-                "success": False,
-                "status": 403,
-                "error": f"Blocked private subnet destination: {host}",
-            })
+    forbidden_headers = {
+        "authorization", "cookie", "proxy-authorization", "host", "origin", "referer",
+    }
+    supplied_headers = headers or {}
+    blocked = [name for name in supplied_headers
+               if name.lower() in forbidden_headers or name.lower().startswith(("sec-", "x-forwarded-"))]
+    if blocked:
+        return json.dumps({"success": False, "status": 400,
+                           "error": f"Forbidden browser authority header(s): {', '.join(sorted(blocked))}"})
 
     def _fallback():
-        import requests
-        try:
-            resp = requests.request(method, raw_url, headers=headers or {}, timeout=15)
-            content_type = resp.headers.get("content-type", "")
-            text = resp.text if method != "HEAD" else ""
-            parsed_json = None
-            if "application/json" in content_type:
-                try:
-                    parsed_json = resp.json()
-                except Exception:
-                    pass
-            out = {
-                "success": resp.ok,
-                "status": resp.status_code,
-                "ok": resp.ok,
-                "url": resp.url,
-                "content_type": content_type,
-                "text": text[:500000] if method != "HEAD" else "",
-                "json": parsed_json,
-            }
-            if len(text) > 16384:
-                try:
-                    from workstation.artifacts import ArtifactStore
-                    from workstation.reference_plane import content_reference
-                    store = ArtifactStore()
-                    owner = task_id or session_id or "default"
-                    ref_info = content_reference(store, owner, out)
-                    out["text"] = f"[Payload spilled to artifact: {ref_info.get('artifact_ref')}]"
-                    out["artifact_ref"] = ref_info.get("artifact_ref")
-                except Exception:
-                    pass
-            return json.dumps(out, ensure_ascii=False)
-        except Exception as exc:
-            return json.dumps({
-                "success": False,
-                "status": 0,
-                "ok": False,
-                "error": str(exc),
-            })
+        return json.dumps({"success": False, "status": 503, "ok": False,
+                           "error": "Browser-session readback runtime unavailable"})
 
     args = {"url": raw_url, "method": method, "headers": headers or {}}
     kw = {"task_id": task_id, "session_id": session_id, **kwargs}
@@ -3975,12 +3938,19 @@ def browser_read_http(
                 store = ArtifactStore()
                 owner = task_id or session_id or "default"
                 ref_info = content_reference(store, owner, data)
-                data["text"] = f"[Payload spilled to artifact: {ref_info.get('artifact_ref')}]"
+                preview = str(data["text"])[:4096]
+                data["text"] = preview + f"\n[Full payload: {ref_info.get('artifact_ref')}]"
+                data["json"] = None
                 data["artifact_ref"] = ref_info.get("artifact_ref")
                 return json.dumps(data, ensure_ascii=False)
         except Exception:
             pass
     return res
+
+
+def _browser_read_http_unavailable() -> str:
+    return json.dumps({"success": False, "status": 503, "ok": False,
+                       "error": "Browser-session readback runtime unavailable"})
 
 
 def browser_back(task_id: Optional[str] = None) -> str:
@@ -5854,14 +5824,7 @@ registry.register(
         "browser_read_http",
         args,
         kw,
-        lambda: browser_read_http(
-            url=args.get("url", ""),
-            method=args.get("method", "GET"),
-            headers=args.get("headers"),
-            task_id=kw.get("task_id"),
-            session_id=kw.get("session_id"),
-            **kw,
-        ),
+        _browser_read_http_unavailable,
     ),
     check_fn=check_browser_read_http_requirements,
     effect=ToolEffect.PURE_READ,

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+import hashlib
 import itertools
 import json
 import time
@@ -41,6 +42,8 @@ class CompositionCertificate:
     semantic_state_hash: str = ""
     router_policy_version: str = "1.0.0"
     created_at: str = field(default_factory=utc_now)
+    run_id: str | None = None
+    operation_id: str | None = None
 
     def is_valid(self) -> bool:
         return (
@@ -56,6 +59,10 @@ class CompositionCertificate:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+    def certificate_hash(self) -> str:
+        canonical = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _get_contract(cap: OperationalCapability) -> CapabilityFormalContract | None:

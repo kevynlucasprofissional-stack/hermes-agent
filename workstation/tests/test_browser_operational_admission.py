@@ -120,13 +120,13 @@ def test_p0_3_browser_read_http_allowed_methods_and_forbidden_destinations():
     local_res = json.loads(browser_read_http(url="http://127.0.0.1:8000/api", method="GET"))
     assert local_res["success"] is False
     assert local_res["status"] == 403
-    assert "Blocked forbidden destination" in local_res["error"]
+    assert "canonical URL policy" in local_res["error"]
 
     # 4. Rejects RFC1918 private IP
     priv_res = json.loads(browser_read_http(url="http://192.168.1.1/admin", method="GET"))
     assert priv_res["success"] is False
     assert priv_res["status"] == 403
-    assert "Blocked private subnet destination" in priv_res["error"]
+    assert "canonical URL policy" in priv_res["error"]
 
 
 def test_p0_3_browser_read_http_is_pure_read():
@@ -148,6 +148,44 @@ def test_p0_3_browser_read_http_is_pure_read():
     ]
     decisions = decisions_for_calls(agent, calls)
     assert all(d == CompilationDecision.ALLOW_ADAPTIVE for d in decisions)
+
+
+def test_browser_read_http_blocks_authority_headers_and_fails_closed_without_runtime(monkeypatch):
+    import tools.browser_tool as browser_module
+
+    blocked = json.loads(browser_module.browser_read_http(
+        url="https://example.com/api", headers={"Authorization": "Bearer secret"}
+    ))
+    assert blocked["success"] is False
+    assert "Forbidden browser authority header" in blocked["error"]
+
+    monkeypatch.setattr(browser_module, "_workstation_or_legacy",
+                        lambda _action, _args, _kw, fallback: fallback())
+    unavailable = json.loads(browser_module.browser_read_http(url="https://example.com/api"))
+    assert unavailable["success"] is False
+    assert unavailable["status"] == 503
+    assert "Browser-session readback runtime unavailable" in unavailable["error"]
+
+
+def test_browser_read_http_large_payload_persists_complete_artifact(monkeypatch, tmp_path):
+    import tools.browser_tool as browser_module
+    from workstation.artifacts import ArtifactStore
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    complete = "payload:" + ("z" * 20000)
+    native_result = json.dumps({
+        "success": True, "status": 200, "ok": True,
+        "url": "https://example.com/api", "content_type": "text/plain",
+        "text": complete, "json": None,
+    })
+    monkeypatch.setattr(browser_module, "_workstation_or_legacy",
+                        lambda _action, _args, _kw, fallback: native_result)
+
+    projected = json.loads(browser_module.browser_read_http(url="https://example.com/api", task_id="large-read"))
+    assert len(projected["text"]) < 5000
+    assert projected["artifact_ref"].startswith("artifact://")
+    persisted = ArtifactStore().read_json(projected["artifact_ref"])
+    assert persisted["text"] == complete
 
 
 def test_p0_5_authority_narrowing_cannot_expand():
@@ -197,30 +235,60 @@ def test_p0_5_authority_narrowing_cannot_expand():
     assert effective_wild.allowed_resources == {"/data/*"}
 
 
-def test_p0_5_untrusted_authority_minting_fails_closed():
+@pytest.mark.parametrize("task_id,session_id,request_trusted", [
+    (None, "session-only", None),
+    ("task-without-grant", "task-session", None),
+    (None, "request-escalation", {"level": 3, "allowed_actions": ["*"], "allowed_resources": ["*"]}),
+])
+def test_p0_5_untrusted_authority_minting_fails_closed(task_id, session_id, request_trusted):
     """_execute_route without verifiable trusted authority fails closed with ASK_HUMAN."""
     from workstation.task_compiler import TaskCompiler
     from workstation.control_plane.intent import OperationIntent
+    from workstation.control_plane.ir import CREATE, EXISTS
+    from workstation.control_plane.contract import CapabilityFormalContract
+    from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
+    from workstation.operational_capabilities import CapabilityLifecycle, OperationalCapability, OperationalCapabilityRegistry
     from workstation.artifacts import ArtifactStore
 
     store = ArtifactStore()
     compiler = TaskCompiler(artifacts=store)
-    intent = OperationIntent(id="intent-test-auth", target="Update config")
+    registry = OperationalCapabilityRegistry(artifacts=store)
+    registry.register(OperationalCapability(
+        id="cap.config.create", name="create config", version="1.0.0",
+        lifecycle=CapabilityLifecycle.PROMOTED,
+        formal_contract=CapabilityFormalContract(
+            operation_family="config.create", target_family="config",
+            typed_postconditions=[EXISTS("config")],
+            effect_footprint=[CREATE("config")],
+            authority_required=AuthorityScope(
+                level=AuthorityLevel.LOCAL_MUTATION,
+                allowed_actions={"create"}, allowed_resources={"config"},
+            ),
+            verifier={"kind": "exists", "evidence_strength": "E2"},
+        ),
+    ))
+    compiler.capability_registry = registry
+    intent = OperationIntent(
+        id="intent-test-auth", target="config",
+        goal=EXISTS("config"), effect_budget=[CREATE("config")],
+    )
 
     req = {
         "operation_intent": intent.to_dict(),
         "authority": {"level": 3, "allowed_actions": ["*"]},
     }
+    if request_trusted is not None:
+        req["trusted_authority"] = request_trusted
     result = compiler._execute_route(
         req,
-        task_id=None,
-        session_id=None,
+        task_id=task_id,
+        session_id=session_id,
         dispatch=lambda n, a: {"success": True},
         canonical_task_id=None,
     )
     assert result["success"] is False
     assert result["routing_decision"] == "ASK_HUMAN"
-    assert "untrusted_authority_minting" in result["reason"]
+    assert "authority" in result["reason"].lower()
 
 
 def test_p0_6_certified_dispatcher_lifecycle_and_verification():
@@ -255,6 +323,7 @@ def test_p0_6_certified_dispatcher_lifecycle_and_verification():
         current_state={},
         dispatch_fn=lambda: {"success": True, "data": "output"},
         run_id="run-1",
+        verifier_fn=lambda result: result.get("data") == "output",
     )
     assert res["success"] is True
     record = res["dispatch_record"]
@@ -279,10 +348,50 @@ def test_p0_6_certified_dispatcher_lifecycle_and_verification():
         current_state={},
         dispatch_fn=lambda: {"success": False, "error": "verification_mismatch"},
         run_id="run-1",
+        verifier_fn=lambda result: False,
     )
     assert res_failed["success"] is False
     assert res_failed["dispatch_record"]["status"] == DispatchStatus.UNCERTAIN
     assert res_failed["dispatch_record"]["verifier_status"] == "failed"
+
+
+def test_p0_ack_without_verifier_stays_acknowledged_and_ack_only_is_explicit():
+    """A successful ACK is non-terminal unless a trusted contract explicitly accepts it."""
+    from workstation.control_plane.dispatcher import CertifiedDispatcher, DispatchStatus
+    from workstation.control_plane.router import ExecutableDecision, RoutingCertificate, _state_hash
+    from workstation.operational_capabilities import OperationalCapability
+
+    cap = OperationalCapability(id="cap.ack", name="ack", version="1.0.0")
+
+    def decision(intent_id):
+        cert = RoutingCertificate.create(
+            intent_id=intent_id,
+            intent_hash="intent-hash",
+            capability_id=cap.id,
+            capability_version=cap.version,
+            semantic_state_hash=_state_hash({}),
+            authority_hash="auth-hash",
+            run_id="run-ack",
+        )
+        return ExecutableDecision(capability=cap, certificate=cert)
+
+    dispatcher = CertifiedDispatcher()
+    pending = dispatcher.dispatch(
+        decision("intent-ack-pending"), current_state={},
+        dispatch_fn=lambda: {"success": True}, run_id="run-ack",
+    )
+    assert pending["success"] is False
+    assert pending["error"] == "needs_verification"
+    assert pending["dispatch_record"]["status"] == DispatchStatus.ACKNOWLEDGED
+    assert pending["dispatch_record"]["verifier_status"] == "needs_verification"
+
+    terminal = dispatcher.dispatch(
+        decision("intent-ack-terminal"), current_state={},
+        dispatch_fn=lambda: {"success": True}, run_id="run-ack",
+        ack_is_terminal_evidence=True,
+    )
+    assert terminal["success"] is True
+    assert terminal["dispatch_record"]["status"] == DispatchStatus.COMMITTED
 
 
 def test_p0_7_effect_sensitive_timeout_read_vs_mutation(monkeypatch):

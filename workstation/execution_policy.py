@@ -140,16 +140,10 @@ def semantic_target_family(name: str, args: dict, *, contract: dict | None = Non
             return f'filesystem.file:{norm}'
         return None
 
-    # Generic command execution: terminal
+    # Generic command syntax is telemetry, not semantic identity. Mandatory
+    # compilation requires an owner-declared family or an exact promoted
+    # capability, both handled above/by operational-closure admission.
     if name == 'terminal':
-        cmd = (args.get('command') or '').strip()
-        if not cmd:
-            return None
-        parts = cmd.split()
-        if len(parts) >= 2 and parts[0] in {'git', 'docker', 'npm', 'pnpm', 'yarn', 'cargo', 'hermes', 'python', 'bash', 'sh'}:
-            return f'terminal:{parts[0]}:{parts[1]}'
-        elif parts:
-            return f'terminal:{parts[0]}'
         return None
 
     # Kanban tools
@@ -303,7 +297,14 @@ def decisions_for_calls(agent, calls):
             )
             candidates[candidate_key] = candidate
 
-            if sem_fp and sem_count >= 3:
+            closure = _operational_closure_proven(
+                agent, name=name, args=args, route=route,
+                semantic_family=sem_family, semantic_fingerprint=sem_fp,
+                contract=contract,
+            )
+            candidate.metrics['operational_closure'] = closure
+
+            if sem_fp and sem_count >= 3 and closure:
                 decision = CompilationDecision.REQUIRE_COMPILE
             elif (sem_fp and sem_count >= 2) or struct_count >= 2:
                 # Structural repetition suggests compilation/learning, but never forces it
@@ -317,3 +318,25 @@ def decisions_for_calls(agent, calls):
     agent._work_mutation_evidence = evidence
     return decisions
 
+
+def _operational_closure_proven(agent, *, name, args, route, semantic_family,
+                                semantic_fingerprint, contract) -> bool:
+    """Ask canonical runtime owners for explicit deterministic replay closure.
+
+    Absence of any proof is deliberately false: the repetition detector is not
+    allowed to infer authority, a verifier, or a certified dispatch path.
+    """
+    resolver = getattr(agent, 'operational_closure_for_call', None)
+    if callable(resolver):
+        proof = resolver(name, args)
+    else:
+        proofs = getattr(agent, '_work_operational_closures', {}) or {}
+        proof = proofs.get(semantic_fingerprint) or proofs.get(semantic_family)
+    if not isinstance(proof, dict):
+        return False
+    required = (
+        'deterministic_representation', 'executable_primitive', 'compatible_route',
+        'authority_policy_compatible', 'verifier_readback', 'certified_dispatch',
+        'uncertainty_clear',
+    )
+    return all(proof.get(key) is True for key in required) and proof.get('route', route) == route

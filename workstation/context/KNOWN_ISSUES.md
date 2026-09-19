@@ -71,7 +71,12 @@ coverage, explicit occluder authority and exact candidate-head evidence.
 **Canonical plan:** [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
 
 
-## KI-011 — Durable compiler can obstruct stateful native-browser work [POST-PR #29 AUDIT — CROSS-LAYER P0 OPEN — 2026-09-19]
+## KI-011 — Durable compiler can obstruct stateful native-browser work [CORRECTIVE IMPLEMENTED — EXACT-HEAD CI PENDING — 2026-09-19]
+
+**Current correction:** H-071 closes the reproduced code gaps: real verified composition,
+ACK/evidence separation, trusted authority origin, operational-closure admission, strict
+terminal identity, native same-origin readback without process fallback, repaired anchor
+and real Electron dogfood. Local gates are green; required exact-head CI remains open.
 
 **2026-09-18 post-PR #28 reopening:** authenticated Trello dogfooding on current
 native Electron Chromium reproduced the product class after the earlier policy hardening.

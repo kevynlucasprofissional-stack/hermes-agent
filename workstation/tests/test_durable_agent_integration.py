@@ -16,8 +16,15 @@ def make_agent():
          patch("hermes_cli.config.load_config", return_value={}), \
          patch("hermes_cli.config.load_config_readonly", return_value={}), \
          patch("run_agent.OpenAI"):
-        return AIAgent(api_key="test-key", base_url="https://openrouter.ai/api/v1",
-                       quiet_mode=True, skip_memory=True, skip_context_files=True)
+        agent = AIAgent(api_key="test-key", base_url="https://openrouter.ai/api/v1",
+                        quiet_mode=True, skip_memory=True, skip_context_files=True)
+        agent.operational_closure_for_call = lambda _name, _args: {
+            "deterministic_representation": True, "executable_primitive": True,
+            "compatible_route": True, "authority_policy_compatible": True,
+            "verifier_readback": True, "certified_dispatch": True,
+            "uncertainty_clear": True,
+        }
+        return agent
 
 
 def test_real_agent_dispatch_routes_100_items_without_model(tmp_path, monkeypatch):

@@ -294,10 +294,17 @@ def test_task_compiler_work_execute_route_action(clean_env):
             verifier={"kind": "fs_stat"},
         ),
         implementation={"steps": [{"primitive": "mkdir", "args": {"path": "new_folder"}}]},
+        postconditions=[{"type": "file_exists", "path": "new_folder"}],
     )
     registry.register(cap)
 
     compiler = TaskCompiler(artifacts=artifacts)
+    compiler.capability_registry = registry
+    compiler.trusted_authority = AuthorityScope(
+        level=AuthorityLevel.LOCAL_MUTATION,
+        allowed_actions={"create"},
+        allowed_resources={"*"},
+    )
 
     intent_dict = {
         "id": "intent-mkdir",
@@ -322,3 +329,104 @@ def test_task_compiler_work_execute_route_action(clean_env):
     assert result.get("routing_decision") in {"EXECUTE", "EXECUTABLE"}
     assert result.get("capability_id") == "fs.mkdir_task"
     assert "certificate_hash" in result
+
+
+def test_task_compiler_composition_executes_in_order_and_preserves_confirmed_drift(clean_env, monkeypatch):
+    """COMPOSE calls the existing kernel; a later drift never erases confirmed steps."""
+    from workstation.task_compiler import TaskCompiler
+    from workstation.control_plane.composition import CompositionCertificate
+    from workstation.control_plane.router import CapabilityRouter, ComposedDecision, _state_hash
+
+    artifacts, registry = clean_env
+    caps = [
+        OperationalCapability(id="compose.c1", name="C1", version="1.0.0"),
+        OperationalCapability(id="compose.c2", name="C2", version="2.0.0"),
+    ]
+    cert = CompositionCertificate(
+        plan_ids=[cap.id for cap in caps], plan_versions=[cap.version for cap in caps],
+        chain_verified=True, goal_coverage=True, effect_containment=True,
+        authority_satisfied=True, invariant_preservation=True, no_causal_threats=True,
+        verifier_closure=True, deterministic_closure=True,
+        intent_hash="compose-intent", semantic_state_hash=_state_hash({}),
+    )
+    monkeypatch.setattr(CapabilityRouter, "route", lambda *_args, **_kwargs:
+                        ComposedDecision(plan=caps, certificate=cert))
+
+    class RecordingKernel:
+        def __init__(self):
+            self.calls = []
+            self.drift_second = False
+
+        def execute_capability(self, cap, inputs, **_kwargs):
+            self.calls.append((cap.id, inputs))
+            if self.drift_second and cap.id == "compose.c2":
+                return {"success": False, "status": "NEEDS_REASONING", "reason": "semantic_drift"}
+            return {"success": True, "capability_id": cap.id, "capability_version": cap.version,
+                    "verification": {"accepted": True, "source": "test_readback"}}
+
+    kernel = RecordingKernel()
+    compiler = TaskCompiler(artifacts=artifacts)
+    compiler.capability_registry = registry
+    compiler.kernel = kernel
+    compiler.trusted_authority = AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION,
+                                                 allowed_actions={"*"}, allowed_resources={"*"})
+    request = {
+        "operation_intent": {"id": "compose-intent"},
+        "semantic_state": {},
+        "composition_bindings": {"compose.c1": {"x": 1}, "compose.c2": {"x": 2}},
+    }
+    result = compiler._execute_route(request, task_id="task-compose", session_id="session-compose",
+                                     dispatch=lambda *_args: {"success": True})
+    assert result["success"] is True
+    assert [call[0] for call in kernel.calls] == ["compose.c1", "compose.c2"]
+    assert result["dispatch_record"]["status"] == "COMMITTED"
+
+    kernel.calls.clear()
+    kernel.drift_second = True
+    drifted = compiler._execute_route(request, task_id="task-compose", session_id="session-compose",
+                                      dispatch=lambda *_args: {"success": True})
+    assert drifted["success"] is False
+    assert [step["id"] for step in drifted["confirmed_steps"]] == ["compose.c1"]
+    assert drifted["dispatch_record"]["status"] != "COMMITTED"
+
+
+def test_task_compiler_composition_unbound_and_stale_dispatch_nothing(clean_env, monkeypatch):
+    from workstation.task_compiler import TaskCompiler
+    from workstation.control_plane.composition import CompositionCertificate
+    from workstation.control_plane.router import CapabilityRouter, ComposedDecision, _state_hash
+
+    artifacts, registry = clean_env
+    cap = OperationalCapability(id="compose.bound", name="Bound", version="1.0.0")
+    cert = CompositionCertificate(
+        plan_ids=[cap.id], plan_versions=[cap.version], chain_verified=True,
+        goal_coverage=True, effect_containment=True, authority_satisfied=True,
+        invariant_preservation=True, no_causal_threats=True, verifier_closure=True,
+        deterministic_closure=True, intent_hash="intent", semantic_state_hash=_state_hash({}),
+    )
+    monkeypatch.setattr(CapabilityRouter, "route", lambda *_args, **_kwargs:
+                        ComposedDecision(plan=[cap], certificate=cert))
+
+    class NeverKernel:
+        calls = 0
+        def execute_capability(self, *_args, **_kwargs):
+            self.calls += 1
+            return {"success": True}
+
+    kernel = NeverKernel()
+    compiler = TaskCompiler(artifacts=artifacts)
+    compiler.capability_registry = registry
+    compiler.kernel = kernel
+    compiler.trusted_authority = AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION,
+                                                 allowed_actions={"*"}, allowed_resources={"*"})
+    unbound = compiler._execute_route(
+        {"operation_intent": {"id": "intent"}, "semantic_state": {}},
+        task_id="t", session_id="s", dispatch=lambda *_args: {})
+    assert unbound["success"] is False and unbound["reason"] == "composition_inputs_unbound"
+    assert kernel.calls == 0
+
+    stale = compiler._execute_route(
+        {"operation_intent": {"id": "intent"}, "semantic_state": {"changed": True},
+         "composition_bindings": {cap.id: {}}},
+        task_id="t", session_id="s", dispatch=lambda *_args: {})
+    assert stale["success"] is False
+    assert kernel.calls == 0

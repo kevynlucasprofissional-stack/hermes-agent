@@ -295,6 +295,12 @@ test('browser_read_http executes GET and returns structured JSON/text', async ()
   assert.equal(httpResult.content_type, 'application/json')
   assert.deepEqual(httpResult.json, { status: 'ok', id: 123 })
 
+  const relativeHead = (await executeControlRequest({
+    action: 'browser_read_http', task_id: 'task-http-1',
+    arguments: { url: '/api/v1/resource', method: 'HEAD' }
+  })) as Record<string, unknown>
+  assert.equal(relativeHead.status, 200)
+
   await runtime.destroy()
 })
 
@@ -331,14 +337,14 @@ test('browser_read_http rejects mutation methods, request body, and loopback des
     })
   }, /request body not permitted/)
 
-  // 3. Rejects localhost / 127.0.0.1
+  // 3. Rejects cross-origin destinations by default (including loopback/private)
   await assert.rejects(async () => {
     await executeControlRequest({
       action: 'browser_read_http',
       task_id: 'task-http-sec',
       arguments: { url: 'http://127.0.0.1:8080/secret', method: 'GET' }
     })
-  }, /blocked loopback destination/)
+  }, /cross-origin browser readback denied/)
 
   // 4. Rejects RFC1918 private IP
   await assert.rejects(async () => {
@@ -347,7 +353,21 @@ test('browser_read_http rejects mutation methods, request body, and loopback des
       task_id: 'task-http-sec',
       arguments: { url: 'http://192.168.1.50/admin', method: 'GET' }
     })
-  }, /blocked private subnet destination/)
+  }, /cross-origin browser readback denied/)
+
+  await assert.rejects(async () => {
+    await executeControlRequest({
+      action: 'browser_read_http', task_id: 'task-http-sec',
+      arguments: { url: 'https://other.example/api', method: 'GET' }
+    })
+  }, /cross-origin browser readback denied/)
+
+  await assert.rejects(async () => {
+    await executeControlRequest({
+      action: 'browser_read_http', task_id: 'task-http-sec',
+      arguments: { url: '/api', method: 'GET', headers: { Authorization: 'secret' } }
+    })
+  }, /forbidden request header/)
 
   await runtime.destroy()
 })

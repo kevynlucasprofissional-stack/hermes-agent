@@ -160,6 +160,7 @@ export interface WorkstationControllerError {
     | 'INVALID_ARGUMENT'
     | 'FORBIDDEN_DESTINATION'
     | 'NETWORK_ERROR'
+    | 'PAYLOAD_TOO_LARGE'
     | 'CONTROLLER_DOWN'
   message: string
   retryable: boolean
@@ -257,6 +258,13 @@ function workstationControllerFault(
       retry_after_ms: 500,
       state_changed: false,
       recommended_action: 'RETRY_READ',
+      details: {}
+    },
+    PAYLOAD_TOO_LARGE: {
+      retryable: false,
+      retry_after_ms: 0,
+      state_changed: false,
+      recommended_action: 'NARROW_READBACK',
       details: {}
     },
     CONTROLLER_DOWN: {
@@ -3011,15 +3019,22 @@ export class WorkstationBrowserRuntime {
       throw workstationControllerFault('INVALID_ARGUMENT', 'url_required')
     }
 
+    const currentUrl = entry.view.webContents.getURL()
+    const relativeTarget = !/^[a-z][a-z0-9+.-]*:/i.test(rawUrl) && !rawUrl.startsWith('//')
     let parsed: URL
     try {
-      parsed = new URL(rawUrl)
+      parsed = new URL(rawUrl, currentUrl)
     } catch {
       throw workstationControllerFault('INVALID_ARGUMENT', 'invalid_url')
     }
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       throw workstationControllerFault('FORBIDDEN_DESTINATION', 'only http and https protocols allowed')
+    }
+
+    const currentOrigin = new URL(currentUrl).origin
+    if (parsed.origin !== currentOrigin) {
+      throw workstationControllerFault('FORBIDDEN_DESTINATION', 'cross-origin browser readback denied')
     }
 
     const method = String(args.method ?? 'GET').toUpperCase()
@@ -3033,19 +3048,19 @@ export class WorkstationBrowserRuntime {
 
     // Destination safety checks: block localhost, private networks
     const host = parsed.hostname.toLowerCase()
-    if (
+    if (!relativeTarget && (
       host === 'localhost' ||
       host === '127.0.0.1' ||
       host === '::1' ||
       host === '0.0.0.0' ||
       host.endsWith('.local')
-    ) {
+    )) {
       throw workstationControllerFault('FORBIDDEN_DESTINATION', `blocked loopback destination: ${host}`)
     }
 
     // RFC1918 IPv4 checks
     const ipv4Match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(host)
-    if (ipv4Match) {
+    if (ipv4Match && !relativeTarget) {
       const b0 = Number(ipv4Match[1])
       const b1 = Number(ipv4Match[2])
       if (
@@ -3059,10 +3074,18 @@ export class WorkstationBrowserRuntime {
     }
 
     const wc = entry.view.webContents
-    const headers = (args.headers && typeof args.headers === 'object') ? args.headers : {}
+    const headers = (args.headers && typeof args.headers === 'object') ? args.headers as Record<string, unknown> : {}
+    const forbiddenHeader = Object.keys(headers).find(name => {
+      const lower = name.toLowerCase()
+      return ['authorization', 'cookie', 'proxy-authorization', 'host', 'origin', 'referer'].includes(lower)
+        || lower.startsWith('sec-') || lower.startsWith('x-forwarded-')
+    })
+    if (forbiddenHeader) {
+      throw workstationControllerFault('INVALID_ARGUMENT', `forbidden request header: ${forbiddenHeader}`)
+    }
 
     const fetchScript = `(async function () {
-      var targetUrl = ${JSON.stringify(rawUrl)};
+      var targetUrl = ${JSON.stringify(parsed.href)};
       var method = ${JSON.stringify(method)};
       var headers = ${JSON.stringify(headers)};
       try {
@@ -3090,7 +3113,7 @@ export class WorkstationBrowserRuntime {
           ok: ok,
           url: resp.url || targetUrl,
           content_type: contentType,
-          text: text ? text.slice(0, 500000) : undefined,
+          text: text || undefined,
           json: json
         };
       } catch (err) {
@@ -3114,6 +3137,11 @@ export class WorkstationBrowserRuntime {
 
     if (!res?.success) {
       throw workstationControllerFault('NETWORK_ERROR', res?.error || 'http_fetch_failed')
+    }
+
+    const hardMaxChars = 2_000_000
+    if ((res.text?.length ?? 0) > hardMaxChars) {
+      throw workstationControllerFault('PAYLOAD_TOO_LARGE', `browser readback exceeds ${hardMaxChars} characters`)
     }
 
     return {

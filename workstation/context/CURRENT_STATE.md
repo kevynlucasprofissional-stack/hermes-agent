@@ -1,5 +1,12 @@
 # Current State
 
+## 2026-09-19 H-071 corrective candidate — LOCAL GATES GREEN / EXACT-HEAD CI PENDING
+
+P0-A..H are implemented on `codex/browser-operational-admission-closure` from clean
+`main@6328894c0a5f51a61da772593842c25d377d553f`. Canonical owners remain unchanged.
+Evidence: Workstation 607 passed / 2 skipped; Electron 1791 passed / 5 skipped;
+typecheck, H004, H013 2/2, Work100 30/30 and integration dry-run green. Exact-head CI
+remains the final qualification gate.
 
 ## 2026-09-18 Hierarchical Operational Learning — ARCHITECTURE VALIDATED / IMPLEMENTATION OPEN
 

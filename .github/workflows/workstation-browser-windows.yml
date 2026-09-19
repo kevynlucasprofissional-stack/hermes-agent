@@ -239,7 +239,16 @@ jobs:
             ${{ runner.temp }}/hermes-desktop-browser-load.json
           if-no-files-found: ignore
       - name: Candidate diff check
-        run: git diff --check origin/main...HEAD
+        shell: pwsh
+        run: |
+          $base = "${{ github.event.pull_request.base.sha }}"
+          if ([string]::IsNullOrWhiteSpace($base)) {
+            $base = (git rev-parse HEAD^).Trim()
+          } else {
+            git fetch --no-tags origin $base
+            if ($LASTEXITCODE -ne 0) { throw "Unable to fetch exact candidate base $base." }
+          }
+          git diff --check "$base...HEAD"
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
       - name: BrowserSessionState ESLint

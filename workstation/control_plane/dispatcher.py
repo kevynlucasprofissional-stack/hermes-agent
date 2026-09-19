@@ -68,6 +68,7 @@ class CertifiedDispatcher:
         has_uncertain_mutation: bool = False,
         authority_scope: Any = None,
         verifier_fn: Callable[[Any], bool] | None = None,
+        ack_is_terminal_evidence: bool = False,
     ) -> dict[str, Any]:
         """Dispatch certified decision with strict preflight revalidation."""
         cert = getattr(decision, "certificate", None)
@@ -76,17 +77,26 @@ class CertifiedDispatcher:
 
         # Preflight revalidation
         current_state_h = _state_hash(current_state)
-        current_cap_version = getattr(decision, "capability", None)
-        cap_v = current_cap_version.version if current_cap_version else getattr(cert, "capability_version", "")
-
-        is_fresh = revalidate_certificate(
-            cert,
-            current_intent_hash=cert.intent_hash,
-            current_state_hash=current_state_h,
-            current_cap_version=cap_v,
-            run_id=run_id,
-            has_uncertain_mutation=has_uncertain_mutation,
-        )
+        current_capability = getattr(decision, "capability", None)
+        if isinstance(decision, ComposedDecision):
+            current_versions = [cap.version for cap in decision.plan]
+            is_fresh = (
+                not has_uncertain_mutation
+                and current_state_h == cert.semantic_state_hash
+                and current_versions == cert.plan_versions
+                and (not run_id or not cert.run_id or run_id == cert.run_id)
+                and cert.is_valid()
+            )
+        else:
+            cap_v = current_capability.version if current_capability else getattr(cert, "capability_version", "")
+            is_fresh = revalidate_certificate(
+                cert,
+                current_intent_hash=cert.intent_hash,
+                current_state_hash=current_state_h,
+                current_cap_version=cap_v,
+                run_id=run_id,
+                has_uncertain_mutation=has_uncertain_mutation,
+            )
         if not is_fresh:
             raise DispatchError("Preflight revalidation failed: state or context drifted; certificate invalidated")
 
@@ -120,14 +130,28 @@ class CertifiedDispatcher:
             record.acknowledged_at = utc_now()
 
             # Verification phase: cannot advance to COMMITTED without verification
-            verified = True
+            verified = False
             if verifier_fn is not None:
                 try:
                     verified = bool(verifier_fn(result))
                 except Exception:
                     verified = False
-            elif isinstance(result, dict) and (result.get("success") is False or result.get("ok") is False or result.get("error")):
-                verified = False
+            elif ack_is_terminal_evidence:
+                # This exception is deliberately opt-in at a trusted contract
+                # boundary. A successful-looking tool payload is only an ACK.
+                verified = not (
+                    isinstance(result, dict)
+                    and (result.get("success") is False or result.get("ok") is False or result.get("error"))
+                )
+
+            if verifier_fn is None and not ack_is_terminal_evidence:
+                record.verifier_status = "needs_verification"
+                return {
+                    "success": False,
+                    "result": result,
+                    "dispatch_record": record.to_dict(),
+                    "error": "needs_verification",
+                }
 
             if not verified:
                 record.status = DispatchStatus.UNCERTAIN

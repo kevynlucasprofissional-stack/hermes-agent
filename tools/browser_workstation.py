@@ -141,6 +141,7 @@ _WORKSTATION_SCHEMA_TOOLS = frozenset({
     "browser_snapshot",
     "browser_click",
     "browser_type",
+    "browser_read_http",
     "browser_scroll",
     "browser_back",
     "browser_press",

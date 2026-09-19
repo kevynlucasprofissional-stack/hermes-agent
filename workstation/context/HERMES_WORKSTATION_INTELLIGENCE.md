@@ -1,5 +1,12 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Fechamento corretivo H-071 — candidato local verde; CI exato pendente — 2026-09-19
+
+Plano composto agora executa em ordem; ACK não vira verificação; o kernel só emite
+evidência aceita após readback/postcondition declarado ou observação semântica aprendida;
+request apenas restringe grants confiáveis; e `REQUIRE_COMPILE` exige closure operacional.
+O readback HTTP mantém cookies/sessão do Chromium, same-origin por default e payload
+integral no ArtifactStore. O fixture Electron real comprovou persistência, replay e drift.
 
 ## Aprendizado operacional hierárquico e amortização de raciocínio — 2026-09-18
 
@@ -86,7 +93,6 @@ verificação, aumentar uncertain mutations ou esconder drift.
 
 Plano canônico:
 `workstation/context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md`.
-
 
 ## Auditoria pós-PR #29 — fechamento operacional ainda aberto — 2026-09-19
 

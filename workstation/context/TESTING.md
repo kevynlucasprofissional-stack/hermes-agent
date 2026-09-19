@@ -1,5 +1,16 @@
 # Workstation Testing
 
+## H-071 corrective local candidate receipt — 2026-09-19
+
+- focused control-plane/admission: 27 passed;
+- full Workstation: 607 passed, 0 failed, 2 skipped;
+- Electron: 1791 passed, 0 failed, 5 skipped (127 passed / 1 skipped files);
+- admission Vitest 4/4; Desktop typecheck and core-integration check passed;
+- H004 validated; H013 2/2; Work100 30 PASS / 0 gaps / 0 failures.
+
+Required exact-head GitHub Actions remain pending; local evidence does not by itself
+authorize `QUALIFIED/CLOSED`.
+
 ## Browser Ownership & Recovery Reconciliation regression gate — CORRECTIVE QUALIFICATION OPEN (2026-09-19)
 
 Canonical target:

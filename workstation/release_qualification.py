@@ -359,7 +359,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(payload + "\n", encoding="utf-8")
-    print(payload)
+    # Windows CI commonly leaves stdout on cp1252. Keep the report file as
+    # human-readable UTF-8, but make the console receipt portable rather than
+    # failing an otherwise completed qualification on symbols such as checkmarks.
+    print(json.dumps(report.to_dict(), ensure_ascii=True, indent=2))
     return 0 if report.accepted else 1
 
 

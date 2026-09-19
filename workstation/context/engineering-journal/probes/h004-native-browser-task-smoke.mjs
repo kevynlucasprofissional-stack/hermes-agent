@@ -150,7 +150,28 @@ function waitForClose(server: http.Server): Promise<void> {
   return new Promise(resolve => server.close(() => resolve()))
 }
 async function startLocalPage(): Promise<{ url: string; close: () => Promise<void> }> {
-  const server = http.createServer((_req, res) => {
+  const persistedDescriptions = new Map<string, string>()
+  const server = http.createServer((req, res) => {
+    const requestUrl = new URL(req.url || '/', 'http://h004.local')
+    if (requestUrl.pathname === '/save' && req.method === 'POST') {
+      const chunks: Buffer[] = []
+      req.on('data', chunk => chunks.push(Buffer.from(chunk)))
+      req.on('end', () => {
+        persistedDescriptions.set(requestUrl.searchParams.get('item') || '1', Buffer.concat(chunks).toString('utf8'))
+        res.writeHead(204); res.end()
+      })
+      return
+    }
+    if (requestUrl.pathname === '/api/description') {
+      const authenticated = String(req.headers.cookie || '').includes('h004_session=authenticated')
+      const item = requestUrl.searchParams.get('item') || '1'
+      const body = JSON.stringify({ authenticated, item, description: persistedDescriptions.get(item) || 'initial' })
+      res.writeHead(authenticated ? 200 : 401, {
+        'content-type': 'application/json', 'content-length': Buffer.byteLength(body)
+      })
+      res.end(body)
+      return
+    }
     const html = '<!doctype html>' +
       '<html><head><meta charset="utf-8"><title>Hermes Impl4 H004</title></head>' +
       '<body style="font-family:sans-serif;padding:40px;margin:0">' +
@@ -160,10 +181,24 @@ async function startLocalPage(): Promise<{ url: string; close: () => Promise<voi
       '<input id="field" type="text" value="native-smoke"/>' +
       '<button id="action-btn" onclick="document.getElementById(\'action-result\').innerText = \'action-fired\'">Click Me</button>' +
       '<p id="action-result">idle</p>' +
+      '<button id="edit-rich" data-testid="edit-rich">Edit</button>' +
+      '<div id="rich-host"></div>' +
       '<div style="height:2500px"></div>' +
       '<p id="bottom-marker">Bottom marker</p>' +
       '<script>' +
       'let count = 0;' +
+      'document.cookie="h004_session=authenticated; SameSite=Lax";' +
+      'const h004Item=' + JSON.stringify(requestUrl.searchParams.get('item') || '1') + ';' +
+      'const h004Drift=' + JSON.stringify(requestUrl.searchParams.get('drift') === '1') + ';' +
+      'setTimeout(() => {' +
+      ' const host=document.getElementById("rich-host");' +
+      ' if(h004Drift){host.innerHTML="<p data-testid=drift-marker>Editor unavailable</p>";return;}' +
+      ' host.innerHTML="<div contenteditable=true role=textbox data-testid=rich-editor></div><button data-testid=save-rich>Save</button>";' +
+      ' host.querySelector("[data-testid=save-rich]").onclick=async()=>{' +
+      '  await fetch("/save?item="+encodeURIComponent(h004Item),{method:"POST",body:host.querySelector("[data-testid=rich-editor]").innerText});' +
+      '  window.__h004Saved=true;' +
+      ' };' +
+      '}, 180);' +
       'setInterval(() => {' +
       '  count++;' +
       '  const el = document.getElementById("timer");' +
@@ -175,7 +210,8 @@ async function startLocalPage(): Promise<{ url: string; close: () => Promise<voi
     res.writeHead(200, {
       'content-type': 'text/html; charset=utf-8',
       'content-length': Buffer.byteLength(html),
-      'cache-control': 'no-store'
+      'cache-control': 'no-store',
+      'set-cookie': 'h004_session=authenticated; SameSite=Lax'
     })
     res.end(html)
   })
@@ -186,7 +222,7 @@ async function startLocalPage(): Promise<{ url: string; close: () => Promise<voi
   const address = server.address()
   if (!address || typeof address === 'string') throw new Error('local test server failed to bind')
   return {
-    url: 'http://127.0.0.1:' + address.port + '/?access_token=h004-page-url-secret',
+    url: 'http://127.0.0.1:' + address.port + '/?item=1&access_token=h004-page-url-secret',
     close: () => waitForClose(server)
   }
 }
@@ -406,6 +442,99 @@ app.whenReady().then(async () => {
       taskId,
       tabId,
       snapshotSuccess: actionResult.success
+    }))
+
+    // Real WebContents operational admission proof: delayed hydration,
+    // contenteditable ClipboardEvent paste, Save, session-cookie readback.
+    await sleep(350)
+    const snapshot2Res = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_snapshot', task_id: taskId, arguments: {} })
+    })
+    const snapshot2 = await snapshot2Res.json()
+    const elements = snapshot2.result?.elements || []
+    const editor = elements.find((el: any) => el.testid === 'rich-editor')
+    const save = elements.find((el: any) => el.testid === 'save-rich')
+    assert(editor?.ref && save?.ref, 'delayed rich editor controls were not inventoried')
+    const exactText = 'Line one\nLine two\nLine three'
+    const pasteRes = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_type', task_id: taskId, arguments: {
+        ref: editor.ref, text: exactText, mode: 'plain_text_paste',
+        semantic_anchor: { type: 'testid', value: 'rich-editor' }
+      } })
+    })
+    assert(pasteRes.ok && (await pasteRes.json()).success === true, 'real rich paste failed')
+    const saveRes = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_click', task_id: taskId, arguments: { ref: save.ref } })
+    })
+    assert(saveRes.ok && (await saveRes.json()).success === true, 'real rich save click failed')
+    for (let i = 0; i < 20 && !(await wc.executeJavaScript('Boolean(window.__h004Saved)', true)); i++) await sleep(25)
+    const readRes = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_read_http', task_id: taskId,
+        arguments: { url: '/api/description', method: 'GET' } })
+    })
+    const readback = await readRes.json()
+    assert(readback.success === true, 'same-origin Browser readback failed: ' + JSON.stringify(readback))
+    assert(readback.result?.json?.authenticated === true, 'Browser session cookie was not included')
+    assert(readback.result?.json?.description === exactText, 'persisted rich text readback mismatch')
+
+    // Deterministic equivalent-item replay: same primitive chain, no planner/model.
+    await wc.loadURL(new URL('/?item=2', page.url).toString())
+    await sleep(350)
+    const replaySnapshotRes = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_snapshot', task_id: taskId, arguments: {} })
+    })
+    const replaySnapshot = await replaySnapshotRes.json()
+    const replayElements = replaySnapshot.result?.elements || []
+    const replayEditor = replayElements.find((el: any) => el.testid === 'rich-editor')
+    const replaySave = replayElements.find((el: any) => el.testid === 'save-rich')
+    assert(replayEditor?.ref && replaySave?.ref, 'equivalent replay controls missing')
+    for (const [action, actionArguments] of [
+      ['browser_type', { ref: replayEditor.ref, text: exactText, mode: 'plain_text_paste', semantic_anchor: { type: 'testid', value: 'rich-editor' } }],
+      ['browser_click', { ref: replaySave.ref }]
+    ] as const) {
+      const response = await fetch(control.url + '/v1/action', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, task_id: taskId, arguments: actionArguments })
+      })
+      assert(response.ok && (await response.json()).success === true, 'equivalent replay action failed: ' + action)
+    }
+    for (let i = 0; i < 20 && !(await wc.executeJavaScript('Boolean(window.__h004Saved)', true)); i++) await sleep(25)
+    const replayReadRes = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_read_http', task_id: taskId,
+        arguments: { url: '/api/description?item=2', method: 'GET' } })
+    })
+    const replayReadback = await replayReadRes.json()
+    assert(replayReadback.result?.json?.description === exactText, 'equivalent replay readback mismatch')
+
+    // Third item drifts before mutation. Previously confirmed item effects remain.
+    await wc.loadURL(new URL('/?item=3&drift=1', page.url).toString())
+    await sleep(350)
+    const driftSnapshotRes = await fetch(control.url + '/v1/action', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'browser_snapshot', task_id: taskId, arguments: {} })
+    })
+    const driftSnapshot = await driftSnapshotRes.json()
+    assert(!(driftSnapshot.result?.elements || []).some((el: any) => el.testid === 'rich-editor'),
+      'drift item unexpectedly retained executable editor')
+    for (const item of ['1', '2']) {
+      const priorReadRes = await fetch(control.url + '/v1/action', {
+        method: 'POST', headers: { 'Authorization': 'Bearer ' + control.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'browser_read_http', task_id: taskId,
+          arguments: { url: '/api/description?item=' + item, method: 'GET' } })
+      })
+      const priorReadback = await priorReadRes.json()
+      assert(priorReadback.result?.json?.description === exactText,
+        'drift lost previously confirmed effect for item ' + item)
+    }
+    console.log('H004_OPERATIONAL_ADMISSION_PASS', JSON.stringify({
+      taskId, exactNewlines: true, authenticated: true, persisted: true,
+      deterministicReplay: true, driftPreservedPriorEffects: true, plannerCalls: 0
     }))
 
     console.log('H004_B_DESTROY_BEGIN')
