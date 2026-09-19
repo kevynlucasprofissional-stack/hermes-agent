@@ -1,5 +1,79 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Auditoria pós-PR #29 — fechamento operacional ainda aberto — 2026-09-19
+
+O PR #29 melhorou a base, mas a revisão pós-merge separou **presença de mecanismo**
+de **prova de propriedade operacional**. O novo princípio de leitura é:
+
+~~~text
+certificate/route
+  -> execução real
+  -> ACK
+  -> evidência do efeito
+  -> verifier
+  -> COMMITTED
+~~~
+
+Nenhuma seta pode ser omitida por conveniência.
+
+Descobertas atuais:
+
+1. **COMPOSE falso:** `TaskCompiler._execute_route()` pode enviar ao
+   `CertifiedDispatcher` uma função que apenas retorna a lista de capabilities do
+   plano. Se isso produz `success=True`, o sistema pode declarar composição
+   `COMMITTED` sem executar C1 -> C2 -> C3. Composição precisa executar o grafo
+   determinístico ou permanecer não-terminal (`COMPOSITION_READY/PLANNED`).
+
+2. **ACK não é verificação:** `CertifiedDispatcher` ainda assume verificação positiva
+   quando não recebeu `verifier_fn` e o resultado não declarou erro. O default correto
+   é conservador: ACK sem evidência suficiente permanece ACKNOWLEDGED /
+   NEEDS_VERIFICATION. Somente contrato formal que autorize evidência ACK-only pode
+   fechar sem readback.
+
+3. **Authority ainda pode ser sintetizada:** `AuthorityScope.narrow()` está correto,
+   mas a origem do scope ainda é permissiva. Request `trusted_authority` e defaults
+   `EXTERNAL_REVERSIBLE + * + *` derivados apenas de task/session não são trust roots.
+   Intenção/request pode restringir; grant confiável vem de MessageEnvelope/TaskRun,
+   policy e approval persistidos.
+
+4. **Homogeneidade não é closure:** `sem_fp + sem_count >= 3` ainda pode gerar
+   `REQUIRE_COMPILE` mesmo sem Capability/primitiva/verifier executável. D-021 exige:
+   homogeneidade + representação determinística + authority/policy compatível +
+   verifier/readback + certified dispatch. Sem isso, `SUGGEST_COMPILE` e execução
+   adaptativa bounded continuam permitidos.
+
+5. **Browser readback precisa preservar semântica de sessão:** `browser_read_http`
+   deve ser same-origin por default, policy-gated para cross-origin, usar a política
+   canônica de URL/destination safety, limitar headers e persistir payload completo
+   antes de truncar a projeção. Para BrowserTask bound, ausência do runtime nativo
+   falha fechado; fallback por `requests.request` muda a semântica e não é readback
+   autenticado da sessão.
+
+6. **Executor arbitrário exige identidade mais forte:** famílias como
+   `terminal:python:-m` ou `terminal:bash:-c` não sustentam mandatory compilation.
+   Sem operation_family owner-declared/equivalente semanticamente comprovado,
+   repetição de terminal é no máximo sinal para Experience Compiler.
+
+7. **Qualificação é uma propriedade do candidate head:** PR #29 tinha evidência local
+   forte, mas Workstation CI e Workstation Browser Windows falharam no mesmo anchor
+   `browser_type` de `apply_core_integration.py --check`. O downstream não pode
+   registrar CLOSED/QUALIFIED enquanto integration/product gates do mesmo head falham
+   ou são pulados.
+
+8. **Mocks não substituem dogfood de runtime:** o próximo recibo deve exercitar
+   Electron/WebContents real com editor contenteditable/rich-text, ClipboardEvent,
+   delayed hydration, cookie de sessão, endpoint same-origin, save + readback,
+   verifier e replay determinístico sem LLM intermediário.
+
+Regra canônica pós-auditoria:
+
+> **LLM descobre. Router autoriza. Runtime realmente executa. ACK reconhece. Evidência
+> prova. Verifier confirma. Só então o Workstation faz commit.**
+
+A correção não pede um novo control plane. Ela fecha a implementação existente contra
+D-020/D-021, o Experience Compiler, o Operational Kernel e o Canonical Reliability Gate.
+
+
 ## Browser ownership, recovery e verdade visual — 2026-09-18
 
 A investigação de flicker + restart revelou um problema de reconciliação entre
