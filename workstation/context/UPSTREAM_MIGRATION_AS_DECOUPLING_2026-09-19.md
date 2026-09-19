@@ -5,6 +5,185 @@ Status: **ACTIVE STRATEGIC MIGRATION PROGRAM**
 Downstream baseline when established: `main@378b5a2df35ac05fe37a606298502d7bb974786d`  
 Upstream candidate observed during analysis: `NousResearch/hermes-agent@1f4fbd5145d641c3a815dc97332103679e6139d9`
 
+## H-078B — Code-to-code migration specification (2026-09-19)
+
+A deeper three-tree audit (common ancestor vs downstream vs upstream) materially refines
+H-078. The problem is not "merge ~13k commits". It is **preserve causal Workstation
+properties while moving them to the modern upstream owners**.
+
+Audited structural picture:
+
+- downstream changed 467 files since the common ancestor;
+- upstream changed 10,165;
+- only 129 paths were changed by both sides;
+- 338 downstream-changed paths do not collide with upstream at the same path;
+- 254 of those non-overlapping files are under `workstation/`;
+- the overlap is concentrated in bridges: Desktop, tests, tools, agent, root files and CLI.
+
+Therefore the Workstation runtime itself is comparatively protected. The migration risk is
+in the bridges.
+
+### Immediate downstream prerequisite
+
+The H-078 branch was created before H-077/H-077.1 landed. At this refresh the downstream
+`main` observed on GitHub is
+`9f4ce89e56e204b3c8119d4b937be4462d0dfeaf`, while PR #35 is still based on an older
+main and is not mergeable. **Do not start upstream integration from the current PR head.**
+First reconcile H-078 with the then-current downstream main so H-077 truthful-core,
+external-validity and qualification invariants are part of the migration baseline.
+
+### Upstream pin rule
+
+The deep audit used
+`ea94d88e25d7699115a668c1757433361f3420dd` as a research snapshot. The upstream moved
+during the investigation and has continued moving; a later GitHub refresh observed
+`af2e9a4313f9a8a96618207ae111f9e824241949`.
+
+The research SHA is **not** the automatic integration target. At implementation start:
+
+```text
+fetch upstream
+-> choose one exact SHA
+-> record it in the integration branch/docs
+-> PIN IT
+-> do not chase upstream/main until the migration cycle closes
+```
+
+### Semantic seams, not file dispositions
+
+A path can contain multiple seams with different destinations. In particular,
+`agent/tool_executor.py` simultaneously contains:
+
+- uncertain-before-I/O checkpoint -> **UPSTREAM_ABSTRACT**;
+- post-effect mutation observation -> **REMOVE** via raw `post_tool_call`;
+- raw-result capture -> **REMOVE** via raw `post_tool_call`;
+- durable internal persistence suppression -> **UPSTREAM_ABSTRACT**.
+
+Accordingly `workstation/first_party_seams.json` v2 stores semantic concerns with
+`symbol_or_concern`, semantic owner, current behavior, required ordering, disposition,
+replacement, parity tests and sunset condition.
+
+### Causal extension points that must exist before old seams are removed
+
+The first migration needs a small generic contract set, with generic names and no
+`if workstation` branches:
+
+1. **turn_admission** — after session/task/turn identity exists, before compaction,
+   auxiliary/provider work or route-sensitive execution;
+2. **tool_batch_admission** — sees the complete assistant tool-call batch before any member
+   dispatch; supports EXECUTE/FILTER/REWRITE/SYNTHETIC_RESULT/DEFER-HANDOFF;
+3. **pre_authorized_dispatch** (name flexible) — FINAL args + authorization/guardrails
+   passed + immediately before real external I/O;
+4. **execution persistence disposition** — PERSIST/DEFER/OWNER_MANAGED (or equivalent) so
+   compiled internal steps do not become accidental conversational turns;
+5. **completion_admission** — can reject a terminal candidate before canonical DONE;
+6. **TurnRoutePolicy** — one turn-scoped authority policy consulted by primary provider,
+   auxiliary provider, browser, terminal, MCP and tool dispatch;
+7. **TaskCompletionAdmission provider chain** — generalize the upstream PR acceptance
+   prepare/revalidate/record-before-DONE pattern;
+8. **browser-control capability registry** — extend the broker generically rather than
+   adding Workstation conditionals for extra browser capabilities;
+9. **TurnIngress** — trusted origin/authority/session metadata; user text is not authority.
+
+### `run_agent.py` is a migration source, not a future integration owner
+
+Do not preserve the downstream `run_agent.py` monolith. Extract the semantics currently
+inside it and land them in the new upstream owners:
+
+```text
+turn_tool_round.py
+    -> generic batch admission
+
+tool executor / dispatch boundary
+    -> authorized pre-effect hook
+    -> execution persistence policy
+
+Hermes first-party adapter
+    -> progressive compilation
+    -> human handoff
+    -> route policy production
+    -> Workstation observation
+
+workstation/*
+    -> domain truth / Control Plane / verification / learning
+```
+
+### Tool dispatch causal invariant
+
+The mutation checkpoint must be exactly:
+
+```text
+final args
+-> authorization + guardrails passed
+-> PRE-AUTHORIZED-DISPATCH CHECKPOINT
+-> REAL I/O
+-> raw terminal result
+-> post_tool_call Workstation observer
+-> spill/truncate/conversation persistence
+```
+
+Checkpointing earlier can persist a mutation that never happened. Checkpointing later can
+repeat an external mutation after process death. Ordering is part of correctness.
+
+### Completion invariant
+
+Workstation finalization is not a notification. It is admission:
+
+```text
+prepare acceptance outside txn
+-> capture owner/run/state snapshot
+-> canonical write txn
+-> revalidate same owner/run/state
+-> record acceptance receipt
+-> only then commit DONE
+```
+
+The modern upstream PR-acceptance store is the reference implementation pattern.
+
+### Browser convergence rule
+
+Use the modern upstream `BrowserControlBroker` for routing, controller identity,
+dispatch and bound-but-unavailable fail-closed behavior. Keep Workstation ownership of
+BrowserTask/page lifecycle, native Chromium, human-control lease, persistence, semantic
+anchors, recovery and Experience Compiler observations.
+
+Migration is **dual-control, never dual-mutation-execution**:
+
+```text
+old route = authoritative execution
+
+new broker/controller route in shadow:
+  classify
+  resolve task/lane/controller
+  predict capability + fail-closed outcome
+  DO NOT execute mutation
+
+compare
+-> switch authority only after parity
+```
+
+Reads may be compared more aggressively; mutation paths must never click/type/submit twice.
+
+### First implementation target
+
+Create a first-party Hermes integration layer such as:
+
+```text
+workstation/integrations/hermes/
+    adapter.py
+    turn_admission.py
+    tool_batch_admission.py
+    tool_observer.py
+    completion_admission.py
+    browser_controller.py
+    api.py
+```
+
+or an equivalent `plugins/workstation/` façade. The façade translates Hermes <->
+Workstation; domain truth stays in `workstation/`. Never move the Control Plane into the
+plugin.
+
+
 ## Executive decision
 
 Hermes Work will **adapt to the current Hermes upstream while using that migration to
@@ -148,25 +327,37 @@ to reduce the diff against upstream.**
 
 ## Current seam map and intended disposition
 
-The initial machine-readable registry is `workstation/first_party_seams.json`.
+The old path-level map is superseded by
+`workstation/first_party_seams.json` **v2**. File-level dispositions are only the
+conservative audit envelope; implementation decisions are made per semantic concern.
 
-High-value examples:
+Key outcomes from the deep audit:
 
-- `agent/conversation_loop.py` -> **REMOVE candidate** through generic lifecycle/LLM
-  supervision after shadow parity.
-- `agent/tool_executor.py` -> **REMOVE candidate** through
-  `tool_request/tool_execution` middleware and tool lifecycle hooks.
-- `agent/turn_finalizer.py` -> **UPSTREAM_ABSTRACT candidate** if current verification /
-  finalization hooks are not strong enough.
-- `tools/browser_tool.py` -> **UPSTREAM_ABSTRACT candidate**: generic Browser provider /
-  native-browser boundary, Workstation Browser behind it.
-- `apps/desktop/electron/main.ts` Workstation Browser runtime bootstrap ->
-  **PRESERVE_FIRST_PARTY candidate** while no equivalent native-view provider exists.
-- `apps/desktop/electron/preload.ts` Workstation Browser privileged IPC ->
-  **PRESERVE_FIRST_PARTY candidate** under the same condition.
-- Workstation-specific Right Rail routing -> **UPSTREAM_ABSTRACT candidate** because the
-  modern Desktop Plugin SDK may now provide enough UI placement primitives; preserve the
-  current path until parity is demonstrated.
+- `run_agent.py`: **UPSTREAM_ABSTRACT**, then cease using it as a Workstation integration
+  owner;
+- `conversation_loop.prepare_turn_work`: **UPSTREAM_ABSTRACT** unless the new turn
+  lifecycle is proven early enough; `project_for_provider`: **REMOVE** through
+  `llm_request` middleware;
+- `tool_executor.prepare_mutation`: **UPSTREAM_ABSTRACT** at the exact pre-I/O causal
+  boundary; `record_mutation` and `capture_raw_result`: **REMOVE** through raw
+  `post_tool_call`; internal durable persistence: **UPSTREAM_ABSTRACT**;
+- `turn_finalizer`: **UPSTREAM_ABSTRACT** as completion admission, not observer;
+- `kanban_db`: **UPSTREAM_ABSTRACT** into a generic two-phase completion-admission
+  provider;
+- Browser routing: converge on `BrowserControlBroker`; keep BrowserTask/native-runtime
+  semantics Workstation-owned; create a generic broker capability registry for extra
+  capabilities;
+- `model_tools.py` forced Browser schemas: **REMOVE** after controller-driven capability
+  exposure;
+- `toolsets.py` hard-coded `work_execute`: **REMOVE** through plugin tool registration;
+- `web_server.py` Workstation routes: **REMOVE** into plugin dashboard API, with temporary
+  aliases only if compatibility requires them;
+- `cli.py` trusted MessageEnvelope: **UPSTREAM_ABSTRACT** into generic `TurnIngress`;
+- `agent/turn_constraints.py`: **UPSTREAM_ABSTRACT** into generic `TurnRoutePolicy`;
+- Electron `main.ts` native runtime bootstrap and `preload.ts` privileged typed IPC:
+  **PRESERVE_FIRST_PARTY**, but concentrate them into the narrowest bootstrap/bridge;
+- Browser Right Rail presentation: **UPSTREAM_ABSTRACT/REMOVE** through generic pane/
+  workspace contributions once parity is proven.
 
 ## Two classification layers
 
@@ -245,6 +436,23 @@ Required proof includes, where relevant:
 - normal Hermes tool use remains supervised without explicit `work_execute`;
 - UI placement/visibility/background continuity remains equivalent;
 - upstream regression tests plus Workstation qualification gates stay green.
+
+## Pre-migration hard gate added by H-078B
+
+Before P1 begins:
+
+1. reconcile the H-078 branch with the then-current downstream `main` (including
+   H-077/H-077.1);
+2. refresh upstream, choose one exact SHA and pin it for the full cycle;
+3. run/refresh the semantic seam inventory;
+4. make `run_agent.py` and every mixed-concern path explicit in the registry;
+5. create the Hermes adapter skeleton and the missing generic contracts before deleting any
+   old seam;
+6. prove shadow parity concern-by-concern;
+7. for Browser/tool mutations, shadow may predict but must not execute a second effect.
+
+Only after these conditions are true may the integration branch begin replacing owners.
+
 
 ## Implementation plan
 
