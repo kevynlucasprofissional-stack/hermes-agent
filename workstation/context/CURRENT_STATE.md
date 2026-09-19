@@ -1,5 +1,48 @@
 # Current State
 
+
+## 2026-09-18 Hierarchical Operational Learning — ARCHITECTURE VALIDATED / IMPLEMENTATION OPEN
+
+A current-main architecture audit confirmed that Hermes Work already implements
+the major substrate for amortizing operational reasoning: accepted-run Experience
+Compiler mining, VOT/state abstraction, causal grades/replay, OperationalCapability
+runtime, capability dependencies, Router/certificates, reasoning handoff and
+Await/Trigger contracts.
+
+The desired direction is therefore **not a replacement architecture**. The current
+open work is to close four integration seams:
+
+1. **learned Capability -> Router:** Experience Compiler candidates do not yet
+   conservatively derive/populate the typed `CapabilityFormalContract` required
+   by CapabilityRouter, so exact fingerprint reuse and semantic intent routing are
+   only partially unified;
+2. **hierarchical composition:** runtime dependencies/composition exist, but
+   verified capability-invocation sequences are not yet mined as higher-level
+   dependency-based composite candidates;
+3. **non-resident wait:** persistent AwaitCondition exists, while TaskCompiler
+   still performs resident event waits/bounded polling and TriggerCoordinator does
+   not yet execute a durable continuation;
+4. **Control Plane truth:** H-071 remains prerequisite work: composition must execute
+   for real, ACK is not proof, authority cannot be synthesized, and all decision
+   branches must preserve the actual typed contracts.
+
+Canonical atomicity is the smallest **semantically closed** verified transition,
+not the fewest clicks/tool calls.
+
+Target progression:
+
+~~~text
+Experience -> VOT -> OperationalCapability -> Composite Capability
+-> Deterministic Workflow -> Await/Event -> Reasoning Boundary
+~~~
+
+New measurement target: Operational Reasoning Amortization (ORA), paired with
+LLM calls per verified transition, reuse, wait residency, drift and uncertainty.
+
+Canonical reference:
+[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+
 ## 2026-09-19 Browser Ownership & Recovery Reconciliation — IMPLEMENTATION LANDED / POST-IMPLEMENTATION AUDIT REOPENED
 
 The 2026-09-18 implementation materially improved Browser ownership/recovery and its
