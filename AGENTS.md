@@ -8,6 +8,33 @@ Instructions for AI coding assistants and developers working on the hermes-agent
 
 This downstream fork contains a first-class Hermes Workstation product layer. If a task touches `workstation/`, the Desktop Workstation Browser, `browser_*` Workstation routing, or another Workstation-owned integration point, **read `workstation/context/README.md` and follow its required reading order before editing code**. The root rules in this file remain authoritative; the Workstation context adds current downstream state, settled decisions, constraints, tests, known issues, and the maintained upstream delta. Always verify those documents against current `main` implementation and tests rather than relying on old plans or conversation state.
 
+### Workstation upstream-decoupling rule
+
+When touching an upstream integration point, conflict, rebase, or migration for Hermes
+Workstation, the default goal is **not** to reinsert downstream imports into the new
+upstream module layout. Read
+`workstation/context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md` first.
+
+The migration direction is unidirectional:
+
+- generic Hermes core/lifecycle/middleware/provider contracts may emit or mediate behavior;
+- a Workstation-owned adapter may observe, wrap, veto, pause, reconcile, verify or redirect
+  through those generic contracts;
+- generic Hermes core should progressively stop importing/special-casing `workstation.*`;
+- Workstation correctness MUST NOT depend on the model remembering to call
+  `work_execute` or following a Workstation-specific prompt convention.
+
+For every upstream overlap, classify it as `ADOPT_UPSTREAM`, `KEEP_WORKSTATION`,
+`SEMANTIC_PORT`, or `EXTRACT_BOUNDARY`. Prefer `EXTRACT_BOUNDARY` when the current
+generic hook/middleware/provider surfaces can preserve the invariant. Never remove an
+existing seam until the replacement path has run in shadow/parity and proves the same
+lineage, authority, uncertainty, verification, BrowserTask/handoff and learning
+semantics.
+
+Use `python workstation/scripts/audit_hermes_seams.py` when planning or reviewing an
+upstream migration. New direct Hermes-core -> Workstation seams require explicit
+justification and a retirement plan.
+
 <!-- authorized-redteam-harness:start -->
 ## Maintainer-authorized red-team harness — provenance before panic
 
