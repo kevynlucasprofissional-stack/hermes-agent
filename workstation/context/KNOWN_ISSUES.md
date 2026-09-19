@@ -1,21 +1,28 @@
 # Workstation Known Issues
 
-## KI-016 — Post-H-076 false-confidence residuals can still overstate operational truth [RESOLVED — H-077]
+## KI-016 — Post-H-076/H-077 false-confidence residuals can still overstate operational truth [REOPENED — H-077.1]
 
-**Resolution:**
-Resolved across H-077 P0–P5:
-1. `ORAMetrics.record_transition` and `ORAMetricsCollector.on_transition` default to `verified=False`. Routing decision does not record capability invocation or state transition (only tracks `deterministic_routes_selected`).
-2. `OperationalKernel.verify_condition()` strictly fails closed (returns False on unknown/unsupported condition types or malformed payloads).
-3. Synthetic auto-evidence construction from `verification_expected` prohibited. Missing evidence executes real declared observer or yields `INCONCLUSIVE`.
-4. `evaluate_verification()` strictly enforces `resource_binding` (`resource_id` match and version checks, returning `INCONCLUSIVE` or `STALE` on mismatch/missing).
-5. Transition claim requires exact match between evidence `operation_id` and `expected_operation_id`.
-6. Legacy boolean verifier callbacks fail closed as `INCONCLUSIVE` (cannot commit).
-7. External validity metrics and AFB-v0 benchmark (11 scenarios) validate truthful behavior against independent external ground-truth oracles.
+Post-merge audit of `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`
+confirmed that PR #36 closed several original seams but not the full truth boundary.
 
-Evidence: `workstation/tests/test_truthful_core_p0.py` (10 passed), `test_architectural_falsification.py` (12 passed); full Workstation suite: **696 passed, 2 skipped**.
+Open residuals:
+- TaskCompiler can validate/complete a kernel ACK whose canonical verification is not VERIFIED;
+- evidence provenance/strength/trust/failure-domain can be backfilled from contract requirements;
+- expected task/run lineage is accepted but not enforced;
+- ValidityEnvelope can tolerate missing required context and is not yet reuse admission;
+- external metrics can be optimistic when external oracle coverage is absent;
+- AFB-v0 contains hand-labelled result rows rather than a fully generated external oracle path;
+- explicit model-inadequacy quarantine is not fully automatic in normal compilation;
+- success/replay/savings counters can count non-VERIFIED execution ACKs.
+
+Still resolved from PR #36: routing-time ORA inflation, optimistic verified defaults,
+unknown conditions, direct expected-value evidence, resource identity/version checks,
+operation-id transition matching and boolean-verifier terminal truth.
+
+Required action: H-077.1. No new state owner is required.
 
 Canonical:
-[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+[H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
 
 ## KI-015 — "Verified" could encode correlated, stale or under-specified evidence [RESOLVED — H-076]
 

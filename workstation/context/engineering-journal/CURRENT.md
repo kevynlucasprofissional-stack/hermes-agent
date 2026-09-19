@@ -1,6 +1,31 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-077 — Truthful Core, AFB-v0, External Validity & Validity Envelope (2026-09-19) — IMPLEMENTED & QUALIFIED
+## H-077.1 — Post-merge truthful-core qualification falsification — 2026-09-19
+
+**Status:** ACTIVE / BLOCKING CORRECTIVE QUALIFICATION.  
+**Audit baseline:** `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`.
+
+**Hypothesis:** PR #36 fully qualified H-077.  
+**Result:** refuted as a full qualification claim; core implementation retained.
+
+Reproduced evidence:
+- ACK/non-VERIFIED kernel result can be consumed by TaskCompiler as validated terminal completion;
+- evidence provenance can still be inferred from verifier-contract requirements;
+- expected task/run lineage is not enforced;
+- ValidityEnvelope is fail-open for some missing required context and not yet reuse admission;
+- external-validity denominators can hide low oracle coverage;
+- AFB-v0 is adversarial regression coverage, not yet the fully generated hidden-oracle harness claimed;
+- explicit model-inadequacy tripwire is not fully automatic in normal compilation;
+- success/replay/savings accounting can remain optimistic for non-VERIFIED ACKs.
+
+Decision: reopen KI-016 and execute H-077.1 inside existing owners. First blocking
+experiment: prove TaskCompiler cannot complete an ACK whose canonical verification is
+INCONCLUSIVE.
+
+Canonical:
+[../H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](../H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
+
+## H-077 — Truthful Core, AFB-v0, External Validity & Validity Envelope (2026-09-19) — CORE LANDED / QUALIFICATION REOPENED
 
 **Classification:** CORE ARCHITECTURE PRESERVED / TRUTHFUL CORE HARDENED / AFB-v0 BENCHMARKED / EXTERNAL VALIDITY METRICS IMPLEMENTED / ZERO NEW PRIMITIVES CREATED.
 

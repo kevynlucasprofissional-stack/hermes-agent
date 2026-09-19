@@ -600,6 +600,30 @@ Plane, evidence store or predicate IR merely to encode H-077 research vocabulary
 Canonical:
 [ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
 
+### D-025 implementation compliance note — H-077.1 post-merge audit (2026-09-19)
+
+PR #36 does not supersede D-025 and H-077.1 does not create a new architecture decision.
+The audit found implementation paths still inconsistent with D-025:
+
+- TaskCompiler terminal completion must consume canonical verification truth, not kernel ACK;
+- VerificationContract judges an observation receipt but may not mint its evidence
+  strength/trust/source/failure-domain provenance;
+- known task/run/operation lineage must be checked;
+- the derived validity envelope must fail closed on missing required applicability
+  dimensions and gate reuse through an existing owner;
+- external metrics must expose external adjudication coverage and never improve merely
+  because ground truth is absent;
+- external falsification requires system result and independent oracle result to be
+  produced separately;
+- non-discriminable outcomes suspend generalization without invented hidden PREs;
+- execution ACK, verified success and verified replay are separate accounting concepts.
+
+Canonical corrective program:
+[H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
+
+No Applicability/Assumption/Oracle/WorldModel registry or second control plane is
+authorized by this compliance note.
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.

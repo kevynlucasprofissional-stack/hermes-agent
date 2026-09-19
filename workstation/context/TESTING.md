@@ -1,33 +1,40 @@
 # Workstation Testing
 
-## H-077 / AFB-v0 external-validity qualification gate — QUALIFIED (2026-09-19)
+## H-077.1 truthful-core qualification gate — CORRECTIVE QUALIFICATION OPEN (2026-09-19)
 
 Canonical:
-[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+[H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
 
-### Qualification Receipts
-- **P0 Truthful Core Suite:** `workstation/tests/test_truthful_core_p0.py` — **10 passed in 0.35s** (100%).
-- **P1 AFB-v0 Benchmark Suite:** `workstation/tests/test_architectural_falsification.py` — **12 passed in 0.23s** (100%).
-- **P3 Model-Inadequacy Tripwires Suite:** `workstation/tests/test_model_inadequacy_tripwires.py` — **4 passed in 0.20s** (100%).
-- **Full Workstation Regression Suite:** `workstation/tests` — **696 passed, 2 skipped in 353.44s** (100% pass rate).
+PR #36 focused/full receipts are retained as regression evidence, but post-merge
+falsification found behaviors outside those tests.
 
-### P0 truthful-core RED/GREEN requirements — MET & VERIFIED
-- Router selection alone cannot increment a verified-transition numerator (verified);
-- transition recording has no optimistic verified default (verified: defaults to False);
-- unknown condition types fail closed (verified: returns False);
-- no verifier can synthesize terminal evidence from the value it is trying to prove (verified);
-- missing evidence either invokes a real declared observer or yields INCONCLUSIVE (verified);
-- wrong/missing resource binding cannot verify (verified: fails closed with INCONCLUSIVE/STALE);
-- wrong operation identity cannot satisfy a transition claim (verified: requires expected_operation_id);
-- legacy boolean verifier compatibility cannot become canonical terminal truth (verified: yields INCONCLUSIVE).
+Required RED/GREEN proof:
+- TaskCompiler cannot validate/complete INCONCLUSIVE, FAILED, STALE or CONFLICT kernel
+  results; VERIFIED closes the same path once;
+- weak observation cannot inherit E3/trusted-owner/source/failure-domain provenance from
+  VerificationContract requirements;
+- wrong/missing task_id/run_id/operation_id fails when expected lineage is required;
+- missing required tenant/target/resource/applicability context fails closed and prevents
+  deterministic reuse;
+- FCOR uses externally adjudicated certified outcomes and reports
+  external_oracle_coverage separately;
+- external correctness/reuse/recovery do not use optimistic missing-truth defaults;
+- AFB-v0.1 rows are generated from real system result + independently executed hidden
+  oracle, not hand-labelled;
+- include counterfactual pair, source disagreement, lost ACK/non-idempotence,
+  temporal MAINTAIN, composition emergence, semantic drift same schema, goal shift,
+  dynamic queue and post-promotion holdout;
+- normal Experience Compiler contradiction flow automatically marks model inadequacy and
+  suspends promotion/generalization without inventing PRE;
+- ACK, verified success and verified deterministic replay/savings are separate counters.
 
-### AFB-v0 benchmark requirements — MET & VERIFIED
-- Evaluator/oracle separated from internal verifiers under test across all 11 scenarios (A–K).
-- External Validity Metrics evaluated: FCOR, Certification Coverage, ReuseReliability(N),
-  External Correctness, Oracle Agreement Rate, False Abstention Rate, Hidden-Assumption
-  Robustness, Model-Inadequacy Recall, False-Safe Rate, Unsafe Mutation Rate, Conflict
-  Detection Recall, Recovery Correctness, Verifier Sensitivity, and ORA ratio.
-- Invariant held: FCOR is never reported in isolation; missing denominators return None.
+Qualification order:
+focused H-077.1 -> H-076/H-075 regressions -> durable/control-plane regressions ->
+full Workstation -> affected Browser/Electron gates if touched -> exact-head required CI.
+
+Historical evidence includes PR #36's local 696 passed / 2 skipped and post-merge
+Workstation CI observing 698 passing contract tests plus 255 durable seam regressions.
+Those baselines do not replace the new negative controls.
 
 ## H-071 corrective local candidate receipt — 2026-09-19
 

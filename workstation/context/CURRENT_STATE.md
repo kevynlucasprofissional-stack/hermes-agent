@@ -1,31 +1,21 @@
 # Current State
 
-## 2026-09-19 H-077 Truthful Core, AFB-v0 & External Validity — IMPLEMENTED & QUALIFIED
+## 2026-09-19 H-077.1 Truthful Core Qualification Closure — ACTIVE / BLOCKING
 
-Baseline: `main@378b5a2df35ac05fe37a606298502d7bb974786d` after PR #34/H-076.
+Audited main: `92a3acb51e87af85a9f380ee04d2cf47d7900ca5` after PR #36.
 
-H-077 is implemented and qualified across all phases P0–P5. Internal proof is strictly
-scoped, verifiable against independent external ground-truth oracles, and bounded by
-derived validity envelopes:
+Current classification: **H-077 core implemented / qualification partial**. Post-merge
+falsification reproduced: ACK -> terminal completion through TaskCompiler; contract-
+backfilled evidence provenance; unenforced task/run lineage; fail-open/diagnostic-only
+ValidityEnvelope; optimistic external denominators without oracle coverage; AFB-v0
+hand-labelled aggregation instead of a fully generated hidden-oracle harness; incomplete
+automatic model-inadequacy integration; and optimistic success/replay accounting.
 
-1. **P0 (Truthful Core Cleanup):** Eliminated metrics auto-inflation; fail-closed condition
-   verification; prohibited synthetic evidence from expected values; strictly enforced
-   resource binding; required exact causal operation identity; fail-closed boolean verifier legacy.
-2. **P1 (AFB-v0 Benchmark):** 11 adversarial falsification scenarios (A through K) with
-   independent ground-truth oracles verifying truthful-core resistance.
-3. **P2 (External Validity Metrics):** Comprehensive external correctness and concordance
-   evaluator in `workstation/evaluation.py` (FCOR bound to coverage & reliability triad; no invented denominators).
-4. **P3 (Model-Inadequacy Tripwires):** Explicit tripwire `model_inadequacy_non_discriminable_outcome`
-   firing on non-discriminable counterexamples, suspending generalization, quarantining capabilities,
-   and blocking automatic promotion.
-5. **P4 (Derived Validity Envelope):** Pure diagnostic projection `ValidityEnvelope` and
-   `derive_validity_envelope()` over existing canonical owners without new storage.
-6. **P5 (Primitive Gate):** Zero new runtime primitives created (`NOVAS PRIMITIVES CRIADAS: nenhuma`).
+Canonical corrective plan:
+[H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
 
-Receipts: Full Workstation suite: **696 passed, 2 skipped in 353.44s** (100% pass rate).
-
-Canonical:
-[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+PR #36 receipts remain useful regression evidence but no longer authorize a full
+QUALIFIED claim.
 
 ## 2026-09-19 H-076 Verification Contract Synthesis — IMPLEMENTED & QUALIFIED
 

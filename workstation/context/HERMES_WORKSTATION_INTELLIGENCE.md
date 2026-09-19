@@ -1,101 +1,43 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## H-077 — Truthful Core, AFB-v0, External Validity & Validity Envelope — QUALIFICADO (2026-09-19)
+## H-077.1 — Fechamento de Qualificação do Truthful Core — ATIVO (2026-09-19)
 
-O H-077 foi integralmente implementado e qualificado no branch de trabalho, consolidando o
-princípio de que `VERIFIED(C, A, E, W)` é uma reivindicação contratual escopada, não verdade absoluta.
+A base do PR #36 permanece válida, mas a qualificação plena do H-077 foi reaberta por
+falsificação pós-merge.
 
-Receipt de Qualificação: Suite completa `workstation/tests`: **696 passed, 2 skipped in 353.44s**.
-
-### Fechamento dos Cinco Seams do Truthful Core (P0):
-1. **ORA não se auto-infla:** `record_transition` e `on_transition` defaultam para `verified=False`.
-   `on_routing_decision()` não computa transições como verificadas prematuramente (apenas `deterministic_routes_selected`).
-2. **Condition fail-closed:** `OperationalKernel.verify_condition()` estritamente retorna `False` para
-   tipos desconhecidos, não-dict ou payloads malformados.
-3. **Auto-evidência residual eliminada:** Proibida sintetização de evidência a partir de `verification_expected`.
-   Sem evidência real fornecida, executa observer real declarado ou retorna `INCONCLUSIVE`.
-4. **Resource binding estrito:** `evaluate_verification()` valida identidade (`resource_id`) e versão (`expected_version`).
-   Mismatch retorna `INCONCLUSIVE` ou `STALE`.
-5. **Causal identity estrita:** Transition claims exigem match exato entre `evidence.operation_id` e `expected_operation_id`.
-   Callbacks legados booleanos falham closed como `INCONCLUSIVE`.
-
-### AFB-v0 (P1), Métricas Externas (P2), Tripwires (P3) e Envelope (P4):
-- **AFB-v0:** 11 cenários adversários com oráculos independentes (`test_architectural_falsification.py`, 12 passed).
-- **Métricas de Validade Externa:** `ExternalValidityMetrics` em `workstation/evaluation.py` implementando
-  FCOR, Cobertura, ReuseReliability(N), Concordância, etc. FCOR nunca reportado isolado (`as_triad()`).
-- **Tripwires de Inadequação:** `model_inadequacy_non_discriminable_outcome` suspende generalização,
-  quarentena a capacidade e bloqueia promoção em `ExperiencePromotionPolicy`.
-- **Validity Envelope:** Projeção diagnóstica pura `ValidityEnvelope` em `workstation/control_plane/validity_envelope.py`
-  sem nova camada de persistência.
-- **Gate de Primitives:** Zero novas primitives de runtime (`NOVAS PRIMITIVES CRIADAS: nenhuma`).
-
-### Mudança estratégica
+Regra central:
 
 ```text
-Preservar
--> endurecer
--> medir externamente
--> falsificar
--> aprender limites
--> só então generalizar
+ACK de execução != VERIFIED != conclusão terminal != outcome externo correto
 ```
 
-Depois do P0, o próximo artefato é o **AFB-v0 — Architectural Falsification Benchmark**,
-com hidden oracle separado da verificação interna, counterfactual pairs, concorrência,
-stale/version races, source disagreement, temporal/path dependence, composição global,
-semantic drift e holdouts pós-promoção.
+Gap prioritário: TaskCompiler pode fechar WorkItem/WorkPlan com
+`OperationalKernel.success=True` mesmo quando `verification_result.verified=False`.
 
-As métricas devem formar vetor, não score único: FCOR + Certification Coverage +
-External Outcome Correctness + False Abstention + Hidden-Assumption Robustness +
-Model-Inadequacy Detection Recall + Verifier Sensitivity + Conflict Detection Recall +
-Recovery Correctness + ReuseReliability(N) + time-to-detection + human burden + ORA +
-custo.
+Pontos que permanecem válidos: routing sem auto-inflação de ORA, condition fail-closed,
+expected value não vira evidence.value, resource/operation binding, bool verifier
+fail-closed, substrato de métricas externas, metadata de model inadequacy,
+ValidityEnvelope puro e gate contra novas primitives.
 
-Regra: primeiro limitar falsa certificação / garantir safety / coverage; depois
-maximizar ORA e reduzir custo/latência/interrupção.
+Fechamento necessário:
+1. terminal truth e contadores de sucesso/replay;
+2. provenance de evidence emitida pela observação real, não herdada do contrato;
+3. task/run/operation lineage completa;
+4. ValidityEnvelope fail-closed integrado ao reuse admission existente;
+5. métricas externas com denominadores adjudicados + external_oracle_coverage;
+6. AFB-v0.1 com resultado interno e hidden oracle produzidos independentemente;
+7. contradição não discriminável integrada automaticamente ao Experience Compiler.
 
-### Model inadequacy, não detector mágico de unknown unknowns
-
-O Hermes não pode observar magicamente uma variável ausente. O alvo correto é detectar
-quando as variáveis conhecidas deixam de explicar outcomes:
-
-```text
-state/fingerprint/PRE iguais + mesma ação
-mas PASS em alguns casos e FAIL em outros
--> abstração insuficiente
--> suspender generalização
--> buscar nova observação
--> quarantine se consequente
--> WAKE_LLM / ASK_HUMAN quando necessário
-```
-
-Nunca inventar automaticamente uma PRE para racionalizar o erro.
-
-### Validity Envelope e gate de arquitetura
-
-Envelope de validade é conceito obrigatório, mas ainda não uma nova classe/registry.
-Deve ser derivado de intent, CapabilityFormalContract, VerificationContract,
-authority/effect budget, resource/operation binding, temporal basis, fingerprints,
-provenance, evidence history e counterexamples.
-
-Nenhuma nova primitive horizontal entra sem:
-1. counterexample reproduzível;
-2. frequência/impacto material;
-3. prova de que não existe owner natural atual;
-4. melhoria medida em outcome externo.
-
-Adiados: ApplicabilityCompiler, AssumptionRegistry, PolicyCompiler, StrategyRegistry,
-TemporalIntent, WorldModelService, VerifierDB, OracleManager, UnknownUnknownDetector,
-segundo Control Plane, segundo evidence store e segundo predicate IR.
-
-> **O objetivo da verificação não é provar que o Hermes está certo; é delimitar
-> precisamente o que a evidência permite afirmar.**
-
-> **O objetivo da aprendizagem não é automatizar toda experiência; é descobrir quais
-> experiências podem ser reutilizadas sem queda de confiabilidade externa.**
+Não criar ApplicabilityCompiler, AssumptionRegistry, WorldModelService, OracleManager,
+VerifierDB, segundo Control Plane/evidence store ou score epistemológico 0–100.
 
 Canônico:
-[ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+[H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
+
+## H-077 — Truthful Core / External Validity — CORE IMPLEMENTADO / QUALIFICAÇÃO PARCIAL
+
+PR #36 é baseline/regressão positiva. Os novos contraexemplos impedem chamar o lane de
+plenamente QUALIFIED até o H-077.1 fechar.
 
 ## H-076 — Verification Contract Synthesis / verdade operacional — 2026-09-19
 

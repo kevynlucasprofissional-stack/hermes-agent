@@ -1,8 +1,8 @@
 # Architectural Falsification / External Validity — H-077
 
 Date established: 2026-09-19  
-Status: **CANONICAL RESEARCH + CORRECTIVE IMPLEMENTATION PROGRAM / ACTIVE**  
-Current baseline: `main@2babc8b4cf89bab217cd76b5992d192776184337` (PR #34 / H-076 merged and qualified)
+Status: **CORE IMPLEMENTED / QUALIFICATION PARTIAL — H-077.1 CORRECTIVE CLOSURE ACTIVE**  
+Current audited baseline: `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5` (PR #36 merged; post-merge qualification reopened)
 
 ## Executive decision
 
@@ -38,6 +38,20 @@ The product objective is not "eliminate reasoning". It is:
 
 > **eliminate unnecessary reasoning without eliminating the ability to detect when
 > reasoning must return.**
+
+## Post-implementation falsification — H-077.1
+
+PR #36 landed substantial truthful-core work, but the stronger closure claim did not
+survive post-merge review. The corrective companion is
+[H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
+
+Residual classes: ACK -> terminal completion bypass; contract-derived evidence provenance;
+unenforced task/run lineage; fail-open/diagnostic-only applicability envelope; external
+metrics that can hide missing oracle coverage; adversarial tests that do not yet form a
+fully generated hidden-oracle harness; incomplete automatic model-inadequacy integration;
+and optimistic success/replay accounting.
+
+This falsifies the **qualification claim**, not the H-077 architectural direction.
 
 ## What survives
 

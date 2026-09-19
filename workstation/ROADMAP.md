@@ -1,39 +1,32 @@
 # Workstation roadmap
 
-## H-077 — Truthful Core, AFB-v0 & External Validity (2026-09-19) — IMPLEMENTED & QUALIFIED
+## H-077.1 — Truthful Core Qualification Closure (2026-09-19) — ACTIVE / BLOCKING
 
-Canonical program:
-[context/ARCHITECTURAL_FALSIFICATION_2026-09-19.md](context/ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
+Canonical:
+[context/H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](context/H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
 
-H-077 is implemented and qualified across all phases P0–P5 (696 passed, 2 skipped).
-The core architecture remains strong for operationally closable digital work; internal
-proof is strictly scoped and bound to independent external observation.
+Post-merge audit of PR #36 retained the H-077 architecture but reopened qualification.
+Blocking sequence: terminal truth/counters -> observation receipt + lineage -> fail-closed
+validity-envelope reuse admission -> adjudicated external metrics -> AFB-v0.1 hidden-oracle
+harness -> automatic model inadequacy -> exact-head qualification.
 
-Delivered Phases:
-- **P0 (Truthful Core Cleanup):** Eliminated metrics auto-inflation; fail-closed condition
-  verification; prohibited synthetic evidence construction from expected value; strictly
-  enforced resource_binding (identity + version); required exact operation_id matching
-  for causal transition claims; deprecated boolean verifier callbacks fail closed.
-- **P1 (AFB-v0 Architectural Falsification Benchmark):** 11 adversarial scenarios (A–K)
-  with independent ground-truth oracles verifying truthful-core resistance against
-  phantom proofs, masked drift, concurrency, no-ops, broken dependencies, envelope violations,
-  hidden assumptions, side-effects, cumulative drift, and race conditions.
-- **P2 (External Validity Metrics):** Implemented ExternalValidityMetrics and
-  evaluate_external_validity() in workstation/evaluation.py with strict invariants:
-  FCOR is never reported in isolation (bound to Coverage and ReuseReliability), and absent
-  observations return None (no invented denominators).
-- **P3 (Model-Inadequacy Tripwires):** Non-discriminable counterexamples fire
-  model_inadequacy_non_discriminable_outcome, suspend generalization, quarantine capability,
-  block automatic promotion, and record in ORAMetrics.
-- **P4 (Derived Validity Envelope):** Pure diagnostic projection ValidityEnvelope and
-  derive_validity_envelope() projecting validated operational bounds without new storage.
-- **P5 (Primitive Gate):** Zero new horizontal runtime primitives created.
+Do not introduce new horizontal registries/services to close these seams.
 
-Architecture admission gate held: **reproducible counterexample + material frequency/value +
-no natural existing owner + measured external improvement**. All deferred primitives
-(ApplicabilityCompiler, AssumptionRegistry, etc.) remain strictly rejected.
+## H-077 — Truthful Core, AFB-v0 & External Validity (2026-09-19) — CORE IMPLEMENTED / QUALIFICATION PARTIAL
 
-> Preserve -> harden -> measure externally -> falsify -> learn limits -> only then generalize.
+PR #36 remains the implementation baseline. Routing/ORA correction, fail-closed
+conditions, resource/operation binding, boolean-verifier fail-close, external-validity
+metric substrate, model-inadequacy metadata, pure ValidityEnvelope projection and the
+no-new-primitives gate remain valid.
+
+Qualification is reopened because TaskCompiler can close ACK/non-VERIFIED results,
+evidence provenance is still partly inferred from contract requirements, task/run
+lineage is not enforced, the validity envelope is not yet a fail-closed reuse gate,
+external metrics can hide low oracle coverage, AFB-v0 is not yet a generated external
+harness, model-inadequacy integration is incomplete, and generic success/replay counters
+can remain optimistic.
+
+Historical PR #36 pass receipts remain regression evidence, not closure evidence.
 
 ## Verification Contract Synthesis / Operational Truth (2026-09-19) — H-076 IMPLEMENTED & QUALIFIED
 
