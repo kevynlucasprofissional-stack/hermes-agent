@@ -1,5 +1,30 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-027 — Minimum necessary first-party seams
+
+H-078 no longer treats every source-level Workstation integration as debt. The downstream
+must minimize **accidental coupling**, not abolish first-party integration required for the
+product.
+
+Seam dispositions:
+- `REMOVE` when generic hooks/middleware/providers/plugins preserve full behavior;
+- `UPSTREAM_ABSTRACT` when a small generic boundary is missing;
+- `PRESERVE_FIRST_PARTY` when native/privileged lifecycle is materially required.
+
+Reference case: Workstation Browser native Electron runtime. Presentation seams should move
+onto modern upstream pane/plugin surfaces where parity is proven, while main/preload
+integration may remain deliberate until upstream exposes an equivalent native-view
+provider/lifecycle contract.
+
+Guardrails:
+- no unclassified new upstream-owned Workstation seam;
+- no capability regression for architectural purity;
+- preserved seams must be narrow, contract/E2E-tested, registered in
+  `first_party_seams.json`, recorded in `UPSTREAM_DELTA.md`, and re-evaluated each
+  upstream cycle.
+
+See `context/FIRST_PARTY_SEAM_POLICY.md` and D-027.
+
 ## HW-026 — Upstream migration as decoupling
 
 Strategic patch-surface rule for the next upstream migration: every conflict touching a
