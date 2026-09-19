@@ -647,6 +647,40 @@ the first-party adapter/laboratory, followed later by standalone process/UI pack
 Canonical:
 [UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
 
+## D-027 — First-party seam minimization, not zero-seam purity
+
+D-026 remains authoritative, with this clarification.
+
+Hermes Work does **not** adopt a blanket objective of eliminating every source-level seam
+from the downstream Hermes distribution. The target is the **minimum necessary first-party
+seam surface** consistent with full Workstation capability, correctness, lifecycle
+control and integrated UX.
+
+The Reasoner must not need to remember Workstation, and generic Hermes core should prefer
+generic hooks/middleware/providers/plugins over Workstation-specific knowledge. But the
+first-party Desktop distribution may deliberately retain narrow source-level integration
+when extension surfaces cannot preserve equivalent semantics.
+
+Every source seam is classified as:
+- `REMOVE`: generic current surfaces are sufficient;
+- `UPSTREAM_ABSTRACT`: capability is legitimate, but a small generic extension boundary
+  is missing and should be created/used;
+- `PRESERVE_FIRST_PARTY`: privileged lifecycle/native integration is materially required
+  and must remain narrow, documented and tested.
+
+The Workstation Browser is the reference constraint: modern upstream pane/plugin APIs may
+replace presentation-layer seams, but they are not presumed equivalent to Electron
+main-process ownership of persistent `WebContentsView`, BrowserTask lifecycle,
+background execution, human takeover, fencing, viewport transfer, native IPC and recovery.
+
+No proven Workstation capability may be downgraded merely to achieve a smaller diff or
+"plugin purity".
+
+Every preserved seam must satisfy the first-party seam budget in
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md), be tracked in
+`workstation/first_party_seams.json` / `UPSTREAM_DELTA.md`, have behavioral evidence,
+and be re-evaluated on each upstream migration.
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
