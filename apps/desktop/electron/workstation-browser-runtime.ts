@@ -2870,6 +2870,11 @@ export class WorkstationBrowserRuntime {
               if (sel) { sel.removeAllRanges(); sel.addRange(range); }
             } catch (e) {}
           }
+          try {
+            if (document.queryCommandSupported && document.queryCommandSupported('selectAll')) {
+              document.execCommand('selectAll', false, null);
+            }
+          } catch (e) {}
         }
 
         var text = ${JSON.stringify(text)};

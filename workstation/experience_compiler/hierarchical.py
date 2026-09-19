@@ -235,7 +235,7 @@ class HierarchicalExperienceCompiler:
                 "steps": [],  # child execution is driven via dependencies
                 "output": {"success": True, "deps": "$deps"},
             },
-            lifecycle=CapabilityLifecycle.PROMOTED,
+            lifecycle=CapabilityLifecycle.DISCOVERED,
             drift_state="healthy",
             formal_contract=formal_contract,
             family_id=fam_id,
@@ -251,3 +251,14 @@ class HierarchicalExperienceCompiler:
             },
         )
         return self.registry.register(composite_cap)
+
+    def promote_composite(self, capability: OperationalCapability) -> OperationalCapability:
+        """Promote a discovered composite capability via causal replay / ExperiencePromotionPolicy."""
+        from workstation.experience_compiler.promotion import ExperiencePromotionPolicy
+        from workstation.operational_capabilities import CapabilityValidationError
+
+        admission = ExperiencePromotionPolicy().evaluate(capability)
+        if not admission.admitted:
+            raise CapabilityValidationError(f"composite promotion denied: {', '.join(admission.reasons)}")
+        capability.lifecycle = CapabilityLifecycle.PROMOTED
+        return self.registry.register(capability)

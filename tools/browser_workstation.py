@@ -512,6 +512,103 @@ def _force_redact(value: Any) -> Any:
     return value
 
 
+def resolve_browser_type_text(
+    args: Dict[str, Any],
+    *,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    max_bytes: int = 1024 * 1024,
+    artifact_store: Optional[Any] = None,
+) -> None:
+    """Resolve text_ref / artifact_ref at trusted Python boundary before IPC.
+
+    Invariants:
+    - text and text_ref/artifact_ref are mutually exclusive. Exactly one must be supplied.
+    - Resolves artifact from ArtifactStore.
+    - Enforces task/run ownership: rejects references to artifacts owned by different tasks.
+    - Limits size to <= 1MB (or max_bytes).
+    - Validates MIME type to text/* or json.
+    - Injects resolved text into args["text"] and removes text_ref / artifact_ref.
+    """
+    has_text = "text" in args and args["text"] is not None
+    text_ref = args.get("text_ref") or args.get("artifact_ref")
+
+    if has_text and text_ref:
+        raise ValueError("Mutually exclusive: provide either 'text' or 'text_ref'/'artifact_ref', not both")
+    if not has_text and not text_ref:
+        raise ValueError("Missing input: either 'text' or 'text_ref'/'artifact_ref' must be provided")
+
+    if has_text:
+        text_str = str(args["text"])
+        if len(text_str.encode("utf-8")) > max_bytes:
+            raise ValueError(f"Text payload oversized: exceeds limit of {max_bytes} bytes")
+        return
+
+    if not isinstance(text_ref, str) or not text_ref.strip():
+        raise ValueError("Invalid artifact reference: must be non-empty string")
+
+    if artifact_store is not None:
+        store = artifact_store
+    else:
+        from workstation.artifacts import ArtifactStore
+        store = ArtifactStore()
+    owner = task_id or session_id
+
+    # Enforce task ownership: reject cross-task references
+    if text_ref.startswith("artifact://tasks/"):
+        path_after = text_ref[len("artifact://tasks/") :]
+        ref_owner = path_after.split("/")[0]
+        if owner and ref_owner != str(owner):
+            raise ValueError(
+                f"Cross-task artifact reference rejected: artifact belongs to task '{ref_owner}', but current task is '{owner}'"
+            )
+
+    resolved_path = store.resolve_ref(text_ref)
+    if not resolved_path or not resolved_path.exists():
+        raise ValueError(f"Artifact reference not found: {text_ref}")
+
+    # Inspect metadata if available
+    meta_ref = text_ref + ".meta.json"
+    meta_path = store.resolve_ref(meta_ref)
+    if meta_path and meta_path.exists():
+        try:
+            meta = store.read_json(meta_ref)
+            size = meta.get("size_bytes", 0)
+            media_type = str(meta.get("media_type") or "text/plain").lower()
+            if size > max_bytes:
+                raise ValueError(f"Artifact payload oversized: {size} bytes exceeds limit of {max_bytes} bytes")
+            if media_type and not (
+                media_type.startswith("text/")
+                or media_type in {"application/json", "application/octet-stream"}
+            ):
+                raise ValueError(f"Invalid MIME type '{media_type}': expected text/* or json")
+        except ValueError:
+            raise
+        except Exception:
+            pass
+
+    content = store.read(text_ref)
+    if content is None:
+        raise ValueError(f"Artifact reference is empty or not readable: {text_ref}")
+
+    if isinstance(content, bytes):
+        if len(content) > max_bytes:
+            raise ValueError(f"Artifact payload oversized: {len(content)} bytes exceeds limit of {max_bytes} bytes")
+        resolved_text = content.decode("utf-8", errors="replace")
+    elif isinstance(content, str):
+        if len(content.encode("utf-8")) > max_bytes:
+            raise ValueError(f"Artifact payload oversized: exceeds limit of {max_bytes} bytes")
+        resolved_text = content
+    else:
+        resolved_text = json.dumps(content, ensure_ascii=False)
+        if len(resolved_text.encode("utf-8")) > max_bytes:
+            raise ValueError(f"Artifact payload oversized: exceeds limit of {max_bytes} bytes")
+
+    args["text"] = resolved_text
+    args.pop("text_ref", None)
+    args.pop("artifact_ref", None)
+
+
 def _dispatch(
     action: str,
     args: Dict[str, Any],
@@ -523,6 +620,8 @@ def _dispatch(
 ) -> str:
     if action == "browser_navigate":
         _validate_navigation(args)
+    if action == "browser_type":
+        resolve_browser_type_text(args, task_id=task_id, session_id=session_id)
     key = _task_key(task_id, session_id)
     try:
         timeout = float(os.getenv("HERMES_WORKSTATION_BROWSER_TIMEOUT", str(_DEFAULT_TIMEOUT_SECONDS)))

@@ -1,30 +1,50 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-075 — In-Flight Operationalization falsification + Trello-shaped dogfood audit (2026-09-19)
+## H-075 — In-Flight Operationalization falsification, implementation & qualification (2026-09-19)
 
-**Classification:** PARTIALLY FALSIFIED / REFINED HYPOTHESIS VALIDATED BY CURRENT-MAIN CODE AUDIT / IMPLEMENTATION OPEN.
+**Classification:** IMPLEMENTED & QUALIFIED (Phases P0–P6 Complete, 21 In-Flight Tests Passed, 647 Full Suite Passed).
 
+**Context & Falsification:**
 On main@e36b0f0febed96240fa13bbcb78f1cc13c7c0b24:
 - missing deterministic executor — REFUTED by DurableBatchRunner;
 - missing checkpoints — REFUTED by TaskCompiler/OperationalKernel;
 - missing closure predicate — REFUTED by _operational_closure_proven;
 - missing rich-editor primitive — MOSTLY REFUTED by plain_text_paste;
-- automatic adaptive-to-compiled in-run handoff — CONFIRMED MISSING;
-- browser_console semantic transparency — CONFIRMED MISSING;
-- ArtifactStore-to-Browser text reference — CONFIRMED MISSING;
-- durable causal hierarchical promotion and production telemetry — STILL OPEN.
+- automatic adaptive-to-compiled in-run handoff — CONFIRMED GAP (NOW CLOSED);
+- browser_console semantic transparency — CONFIRMED GAP (NOW CLOSED);
+- ArtifactStore-to-Browser text reference — CONFIRMED GAP (NOW CLOSED);
+- durable causal hierarchical promotion and production telemetry — CONFIRMED GAP (NOW CLOSED).
 
-Dogfood session 20260919_015451_5d017a synchronized 12 Trello descriptions and
-discovered due mechanics but exhausted the iteration budget with five dues and final
-state publication pending. About 109 distinct tool calls were observed, about 55
-browser_console; at least 35 were post-discovery repetition.
-
-**Refined hypothesis:** the missing layer is an **In-Flight Operationalization Handoff**
-that converts newly verified adaptive knowledge into a run-scoped compiled segment and
-hands remaining equivalent work to existing deterministic owners before TaskRun end.
-
-No new scheduler. Run-local reuse remains fenced to the same TaskRun and never grants
-global promotion.
+**Implementation Architecture (Phases P0–P6):**
+- **P0 — Truth Seams & Contracts:**
+  - `workstation/task_compiler.py`: Decision seams (`WaitDecision`, `HumanDecision`, `ReasoningDecision`, `ComposedDecision`) strictly consume real dataclass fields.
+  - `workstation/control_plane/composition.py`: Composed execution requires authoritative final-goal verification, dependency satisfaction, and verifier closure.
+  - `workstation/experience_compiler/promotion.py`: Conservative derivation failing closed on multiple/incompatible families or unproven authority origin.
+  - Receipts: `test_control_plane_integration.py` (12 passed), `test_learned_capability_routing.py` (7 passed).
+- **P1 — RunClosureProof & Utility Admission:**
+  - `workstation/run_closure.py`: Implemented `RunClosureProof` with 21 canonical fields, `compute_expected_operational_utility()`, and `evaluate_run_local_closure()` enforcing 10 admission conditions.
+  - Receipts: `test_run_closure.py` (2 passed).
+- **P2 — Adaptive-to-Compiled Handoff & Prefix Recovery:**
+  - `workstation/run_closure.py`: `HandoffWakeCondition`, `ExecutionEnvelope`, `RunScopedCapability`, `synthesize_in_flight_work_execute_request()`, `execute_in_flight_handoff()`, and `recover_verified_prefix()`.
+  - `workstation/operational_capabilities.py` & `workstation/control_plane/router.py`: `RunScopedCapability` strictly excluded from global promoted index.
+  - Receipts: `test_in_flight_handoff.py` (6 passed).
+- **P3 — Browser Lowering & Artifact Data Plane:**
+  - `tools/browser_workstation.py` & `tools/browser_tool.py`: `resolve_browser_type_text()` enforcing mutual exclusivity, ownership check, <=1MB size, and text/json MIME.
+  - `workstation/artifacts.py`: `media_type` parameter added to `ArtifactStore.store()`.
+  - `apps/desktop/electron/workstation-browser-runtime.ts`: `selectAll` fallback for rich editors.
+  - `workstation/procedure_trace.py`: opaque adaptive execution tracking (rejecting `browser_console` from candidate steps).
+  - Receipts: `test_browser_lowering_and_artifacts.py` (4 passed).
+- **P4 — Durable Invocations & Causal Composite Promotion:**
+  - `workstation/operational_kernel.py`: Invocations persisted to `ArtifactStore` and `ExecutionJournal` with lineage (`task_id`, `run_id`, `operation_id`, `authority_scope`); `load_invocations(task_id)` across restarts; child drift/pin enforcement.
+  - `workstation/experience_compiler/hierarchical.py`: `propose_composite` marks candidate as `DISCOVERED`; `promote_composite` enforces `ExperiencePromotionPolicy` (causal replay and counterexample verification).
+  - Receipts: `test_hierarchical_causal_promotion.py` (4 passed).
+- **P5 — Non-Resident Await & Production Telemetry:**
+  - `workstation/task_compiler.py`: Connected `WaitDecision` to `AwaitConditionStore` with `worker_released=True`, releasing worker processes on semantic waits and resuming via `handle_event()`.
+  - `workstation/control_plane/metrics.py`: `ORAMetricsCollector` and `ORAMetrics` wired directly into `OperationalKernel.execute_capability` and `TaskCompiler` recording real transitions, waits, and reasoning re-entry rates.
+  - Receipts: `test_non_resident_await_telemetry.py` (4 passed).
+- **P6 — 12-Item Trello-Shaped Benchmark Qualification:**
+  - `workstation/tests/test_trello_benchmark_qualification.py`: 12-item benchmark passing end-to-end with canary + replay, handoff of remaining 10 items, large >50KB artifact ref resolution, deliberate anomaly handling with `AttentionPacket`, prefix recovery, and clean resume without duplicate replays.
+  - Full workstation suite regression: **647 passed, 2 skipped in 287.92s**.
 
 Canonical:
 [../IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](../IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).

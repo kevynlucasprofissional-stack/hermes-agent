@@ -2213,7 +2213,15 @@ BROWSER_TOOL_SCHEMAS = [
                 },
                 "text": {
                     "type": "string",
-                    "description": "The text to type into the field"
+                    "description": "The text to type into the field. Mutually exclusive with text_ref / artifact_ref."
+                },
+                "text_ref": {
+                    "type": "string",
+                    "description": "Artifact reference (artifact://tasks/{task_id}/...) containing text to type. Mutually exclusive with text."
+                },
+                "artifact_ref": {
+                    "type": "string",
+                    "description": "Alias for text_ref."
                 },
                 "clear": {
                     "type": "boolean",
@@ -2240,7 +2248,7 @@ BROWSER_TOOL_SCHEMAS = [
                     }
                 }
             },
-            "required": ["ref", "text"]
+            "required": ["ref"]
         }
     },
     {
@@ -3757,26 +3765,34 @@ def browser_click(ref: str, task_id: Optional[str] = None) -> str:
 
 def browser_type(
     ref: str,
-    text: str,
+    text: Optional[str] = None,
     clear: bool = True,
     append: bool = False,
     mode: str = "insert_text",
     semantic_anchor: Optional[Dict[str, Any]] = None,
-    task_id: Optional[str] = None
+    task_id: Optional[str] = None,
+    text_ref: Optional[str] = None,
+    artifact_ref: Optional[str] = None,
 ) -> str:
     """
     Type text into an input field.
 
     Args:
         ref: Element reference (e.g., "@e3")
-        text: Text to type
+        text: Text to type (mutually exclusive with text_ref / artifact_ref)
         clear: Whether to clear existing text first (default True)
         append: Whether to append to existing text (default False)
         task_id: Task identifier for session isolation
+        text_ref: Artifact reference containing text to type
+        artifact_ref: Alias for text_ref
 
     Returns:
         JSON string with type result
     """
+    from tools.browser_workstation import resolve_browser_type_text
+    args_proxy = {"ref": ref, "text": text, "text_ref": text_ref, "artifact_ref": artifact_ref}
+    resolve_browser_type_text(args_proxy, task_id=task_id)
+    text = args_proxy["text"]
     if _is_camofox_mode():
         from tools.browser_camofox import camofox_type
         return camofox_type(ref, text, task_id)
@@ -5803,7 +5819,9 @@ registry.register(
             args,
             fallback=lambda: browser_type(
                 ref=args.get("ref", ""),
-                text=args.get("text", ""),
+                text=args.get("text"),
+                text_ref=args.get("text_ref"),
+                artifact_ref=args.get("artifact_ref"),
                 clear=args.get("clear", True),
                 append=args.get("append", False),
                 mode=args.get("mode", "insert_text"),

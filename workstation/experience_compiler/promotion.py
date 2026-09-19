@@ -64,6 +64,11 @@ def derive_formal_contract(capability, traces=None):
     if not target_families and m.get('targets'):
         target_families = list(m['targets'])
 
+    if len(set(op_families)) > 1 or len(set(m.get('families', []))) > 1:
+        return None
+    if len(set(target_families)) > 1 or len(set(m.get('targets', []))) > 1:
+        return None
+
     op_family = op_families[0] if op_families else (
         capability.implementation.get('steps', [{}])[-1].get('primitive', '')
         if isinstance(capability.implementation, dict) else ''
@@ -123,15 +128,15 @@ def derive_formal_contract(capability, traces=None):
             o.get('authority_scope') for o in origins
             if isinstance(o, dict) and o.get('authority_scope')
         ]
+        if not scopes and isinstance(capability.provenance, dict) and capability.provenance.get('authority_scope'):
+            scopes = [capability.provenance['authority_scope']]
+        if not scopes and isinstance(m.get('explicit_authority_scope'), dict):
+            scopes = [m['explicit_authority_scope']]
+
         if scopes:
-            authority_required = AuthorityScope.from_dict(scopes[0])
-        elif m.get('authority_origins') and set(m['authority_origins']) <= {'user', 'system'}:
-            authority_required = AuthorityScope(
-                level=AuthorityLevel.LOCAL_MUTATION,
-                allowed_actions={op_family, capability.route},
-                allowed_resources={target_family},
-            )
+            authority_required = AuthorityScope.from_dict(scopes[0]) if isinstance(scopes[0], dict) else scopes[0]
         else:
+            # Learned mutation without trusted explicit authority scope does NOT become generically routable
             return None
 
     # 6. Verifier

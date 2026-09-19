@@ -298,6 +298,13 @@ class OperationalCapabilityRegistry:
         """Register a new or updated operational capability."""
         if not capability.id:
             raise CapabilityValidationError("Capability must have a non-empty id")
+        is_run_scoped = (
+            getattr(capability, "run_scoped", False)
+            or (isinstance(capability.provenance, dict) and capability.provenance.get("run_scoped"))
+            or capability.id.startswith("run_scoped_")
+        )
+        if is_run_scoped and capability.lifecycle == CapabilityLifecycle.PROMOTED:
+            raise CapabilityValidationError("RunScopedCapability cannot enter the global PROMOTED index")
         capability.updated_at = _utc_now()
         sanitized = sanitize(capability.to_dict())
         sha = digest(sanitized)
@@ -310,7 +317,10 @@ class OperationalCapabilityRegistry:
                 'semantic_fingerprint', 'compatibility_fingerprint', 'trust_class', 'taint', 'learning_metadata',
                 'formal_contract', 'family_id')
             contract_digest = digest({k: sanitized.get(k) for k in contract_fields})
-            learned = capability.provenance.get('source') == 'experience_compiler'
+            learned = (
+                capability.provenance.get('source') in {'experience_compiler', 'hierarchical_experience_compiler'}
+                or bool(capability.learning_metadata.get('composite'))
+            )
             if old and old.get('immutable_contract') and old['immutable_contract'] != contract_digest:
                 raise CapabilityValidationError('historically promoted learned contract is immutable; create a new version')
             if learned and capability.lifecycle == CapabilityLifecycle.PROMOTED and not (old and old.get('immutable_contract')):

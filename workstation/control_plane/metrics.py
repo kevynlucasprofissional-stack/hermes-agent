@@ -266,6 +266,36 @@ class ORAMetrics:
         self.wake_reasons[r_str] = self.wake_reasons.get(r_str, 0) + 1
         self.llm_wake_count += 1
 
+    def record_transition(self, verified: bool = True, reasoned: bool = False) -> None:
+        """Record a state transition outcome."""
+        if not verified:
+            self.unverified_transitions += 1
+        elif reasoned:
+            self.verified_transitions_reasoned += 1
+        else:
+            self.verified_transitions_deterministic += 1
+
+    def record_capability_invocation(self, is_composite: bool = False) -> None:
+        """Record an atomic or composite capability invocation."""
+        if is_composite:
+            self.composite_capability_invocations += 1
+        else:
+            self.atomic_capability_invocations += 1
+        self.total_capability_invocations += 1
+
+    def record_wait(self, is_non_resident: bool = True, duration_seconds: float = 0.0) -> None:
+        """Record a resident or non-resident wait."""
+        if is_non_resident:
+            self.non_resident_wait_count += 1
+            self.non_resident_wait_duration_seconds += duration_seconds
+        else:
+            self.resident_wait_count += 1
+        self.total_wait_duration_seconds += duration_seconds
+
+    def record_routing_event(self) -> None:
+        """Record a routing decision event."""
+        self.total_routing_events += 1
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["ora_ratio"] = self.ora_ratio
@@ -273,3 +303,68 @@ class ORAMetrics:
         d["wait_non_residency_rate"] = self.wait_non_residency_rate
         d["wake_llm_rate"] = self.wake_llm_rate
         return d
+
+
+class ORAMetricsCollector:
+    """Collects and attributes real operational execution events to ORAMetrics."""
+
+    def __init__(self, metrics: ORAMetrics | None = None) -> None:
+        self.metrics = metrics or ORAMetrics()
+
+    def on_transition(self, verified: bool = True, reasoned: bool = False) -> None:
+        self.metrics.record_transition(verified=verified, reasoned=reasoned)
+
+    def on_capability_invocation(self, capability: Any) -> None:
+        is_composite = (
+            getattr(capability, "route", "") == "composite"
+            or bool(getattr(capability, "dependencies", []))
+            or (
+                isinstance(getattr(capability, "learning_metadata", {}), dict)
+                and bool(capability.learning_metadata.get("composite"))
+            )
+        )
+        self.metrics.record_capability_invocation(is_composite=is_composite)
+
+    def on_wait(self, condition: Any, duration_seconds: float = 0.0) -> None:
+        from workstation.control_plane.waiting import is_non_resident_wait
+        non_resident = is_non_resident_wait(condition) if condition else True
+        self.metrics.record_wait(is_non_resident=non_resident, duration_seconds=duration_seconds)
+
+    def on_wake_reason(self, reason: str | WakeReason) -> None:
+        self.metrics.record_wake_reason(reason)
+
+    def on_routing_decision(self, decision: Any) -> None:
+        self.metrics.record_routing_event()
+        from workstation.control_plane.router import (
+            ComposedDecision,
+            ExecutableDecision,
+            HumanDecision,
+            ReasoningDecision,
+            WaitDecision,
+        )
+        if isinstance(decision, ReasoningDecision):
+            reason_str = str(getattr(decision, "reason", "")).lower()
+            if "drift" in reason_str:
+                wake_r = WakeReason.SCHEMA_DRIFT
+            elif "uncertain" in reason_str:
+                wake_r = WakeReason.UNCERTAIN_MUTATION
+            elif getattr(decision, "open_condition", None):
+                wake_r = WakeReason.OPEN_CONDITION
+            else:
+                wake_r = WakeReason.UNEXPECTED_FAILURE
+            self.on_wake_reason(wake_r)
+        elif isinstance(decision, WaitDecision):
+            cond = getattr(decision, "await_condition", None)
+            self.on_wait(cond)
+        elif isinstance(decision, HumanDecision):
+            self.on_wake_reason(WakeReason.HUMAN_INTERVENTION)
+        elif isinstance(decision, ComposedDecision):
+            self.metrics.record_capability_invocation(is_composite=True)
+            self.metrics.record_transition(verified=True, reasoned=False)
+        elif isinstance(decision, ExecutableDecision):
+            is_comp = (
+                getattr(decision.capability, "route", "") == "composite"
+                or bool(getattr(decision.capability, "dependencies", []))
+            )
+            self.metrics.record_capability_invocation(is_composite=is_comp)
+            self.metrics.record_transition(verified=True, reasoned=False)

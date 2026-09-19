@@ -124,11 +124,16 @@ class CapabilityInvocation:
     timestamp: float = 0.0
 
     def to_dict(self) -> dict:
-        return normalized(asdict(self))
+        d = normalized(asdict(self))
+        d['timestamp'] = self.timestamp
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> 'CapabilityInvocation':
-        return cls(**normalized(data))
+        ts = data.get('timestamp', 0.0)
+        clean = normalized(data)
+        clean['timestamp'] = ts
+        return cls(**clean)
 
 
 @dataclass

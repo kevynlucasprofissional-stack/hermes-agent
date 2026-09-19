@@ -244,7 +244,9 @@ class CompositionEngine:
         granted_authority: AuthorityScope,
         runtime_state: dict[str, Any],
     ) -> ComposedDecision | None:
-        if not plan:
+        # 0. Chain dependency verification
+        chain_verified = _plan_satisfies_dependencies(plan)
+        if not chain_verified:
             return None
 
         # 1. Causal threat detection & reordering
@@ -254,6 +256,12 @@ class CompositionEngine:
             if not reordered:
                 return None
             plan = reordered
+            threats = detect_causal_threats(plan)
+            if threats:
+                return None
+            chain_verified = _plan_satisfies_dependencies(plan)
+            if not chain_verified:
+                return None
 
         # 2. Effect Union Containment (Goal Non-Expansion)
         all_effects: list[Effect] = []
@@ -295,18 +303,40 @@ class CompositionEngine:
                  else getattr(c.formal_contract, "verifier", None) or c.verifier_contract)
             for c in plan
         )
+        if not verifier_closure:
+            return None
+
+        # 6. Goal coverage: final capability's postconditions must entail intent.goal
+        last_contract = _get_contract(plan[-1])
+        if not last_contract or not last_contract.typed_postconditions:
+            return None
+        post_and = AND(*last_contract.typed_postconditions) if len(last_contract.typed_postconditions) > 1 else last_contract.typed_postconditions[0]
+        goal_coverage = bool(entails(post_and, intent.goal))
+        if not goal_coverage:
+            return None
+
+        deterministic_closure = bool(
+            chain_verified
+            and goal_coverage
+            and effect_containment
+            and invariant_preservation
+            and verifier_closure
+            and not threats
+        )
+        if not deterministic_closure:
+            return None
 
         cert = CompositionCertificate(
             plan_ids=[c.id for c in plan],
             plan_versions=[c.version for c in plan],
-            chain_verified=True,
-            goal_coverage=True,
+            chain_verified=chain_verified,
+            goal_coverage=goal_coverage,
             effect_containment=effect_containment,
             authority_satisfied=True,
             invariant_preservation=invariant_preservation,
             no_causal_threats=True,
             verifier_closure=verifier_closure,
-            deterministic_closure=True,
+            deterministic_closure=deterministic_closure,
             intent_hash=operation_intent_hash(intent),
             semantic_state_hash=_state_hash(semantic_state),
             router_policy_version="1.0.0",

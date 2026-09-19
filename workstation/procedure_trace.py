@@ -63,7 +63,11 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
     scope = {'host': parsed.hostname, 'path_family': re.sub(r'/\d+(?=/|$)', '/:number', parsed.path or '/')} if parsed.hostname else {}
     sem_fp = semantic_operation_fingerprint(name, arguments, route=route, scope=scope)
     op_fp = sem_fp or structural_signature(name, arguments)
-    record = {'tool': name, 'action': name.removeprefix('browser_'),
+    is_console = name in {'browser_console', 'console'} or arguments.get('action') == 'console'
+    trace_action = 'opaque_adaptive_execution' if is_console else name.removeprefix('browser_')
+    trace_replayable = False if is_console else (not any(k in args for k in _TRANSIENT) or bool(arguments.get('semantic_anchor')))
+    record = {'tool': name, 'action': trace_action,
+        'execution_class': 'opaque_adaptive_execution' if is_console else 'semantic',
         'route': canonical_route_for_tool(name, runtime=selected_runtime), 'operation_fingerprint': op_fp,
         'semantic_fingerprint': sem_fp,
         'arguments': arguments, 'semantic_anchor': arguments.get('semantic_anchor'),
@@ -77,7 +81,7 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
         'scope': scope,
         'runtime': decoded.get('runtime', route) if isinstance(decoded, dict) else route,
         'provider_usage': sanitize(getattr(agent, '_current_provider_usage', None)),
-        'replayable': not any(k in args for k in _TRANSIENT) or bool(arguments.get('semantic_anchor'))}
+        'replayable': trace_replayable}
     if len(traces) >= 64:
         agent._work_procedure_trace_truncated = True
         return
@@ -102,7 +106,13 @@ def candidate_steps(traces):
     """Only semantic actions can enter existing promotion; never arbitrary code."""
     steps = []
     for trace in traces:
-        if trace['outcome'] != 'executed_unverified' or not trace['replayable']:
+        if (
+            trace.get('execution_class') == 'opaque_adaptive_execution'
+            or trace.get('action') == 'opaque_adaptive_execution'
+            or trace.get('tool') in {'browser_console', 'console'}
+            or trace['outcome'] != 'executed_unverified'
+            or not trace.get('replayable', True)
+        ):
             return []
         anchor = trace.get('semantic_anchor') or {}
         action = trace['action']

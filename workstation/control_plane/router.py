@@ -252,6 +252,8 @@ class CapabilityIndex:
         self._by_family_id: dict[str, list[OperationalCapability]] = {}
 
     def index(self, cap: OperationalCapability) -> None:
+        if getattr(cap, "run_scoped", False) or (isinstance(getattr(cap, "provenance", None), dict) and cap.provenance.get("run_scoped")) or getattr(cap, "id", "").startswith("run_scoped_"):
+            return
         if cap.formal_contract:
             fc = cap.formal_contract
             op_fam = fc.get("operation_family") if isinstance(fc, dict) else getattr(fc, "operation_family", "")

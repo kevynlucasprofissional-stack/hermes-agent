@@ -1,7 +1,7 @@
 # In-Flight Operationalization — Adaptive-to-Deterministic Handoff
 
 Date established: 2026-09-19
-Status: **CANONICAL CORRECTIVE ARCHITECTURE / IMPLEMENTATION OPEN**
+Status: **CANONICAL CORRECTIVE ARCHITECTURE / IMPLEMENTATION COMPLETE & VERIFIED (2026-09-19)**
 Audit baseline: main@e36b0f0febed96240fa13bbcb78f1cc13c7c0b24
 
 ## Finding after falsification
@@ -249,6 +249,27 @@ No compilation before the procedure is known.
 No live third-party mutation as the sole qualification gate.
 
 ## Success criterion
-
+ 
 > **Few reasoning re-entries per verified transition after closure, while every mutable
 > effect remains fenced, verified, checkpointed and recoverable.**
+
+## Verification Receipts (Phases P0–P6)
+
+1. **P0 (Truth Seams & Contracts):**
+   - `workstation/tests/test_control_plane_integration.py`: 12 passed
+   - `workstation/tests/test_learned_capability_routing.py`: 7 passed
+2. **P1 (RunClosureProof & Utility Admission):**
+   - `workstation/tests/test_run_closure.py`: 2 passed
+3. **P2 (Adaptive -> Compiled Handoff & Prefix Recovery):**
+   - `workstation/tests/test_in_flight_handoff.py`: 6 passed
+4. **P3 (Browser Lowering & Artifact Data Plane):**
+   - `workstation/tests/test_browser_lowering_and_artifacts.py`: 4 passed
+5. **P4 (Durable Invocations & Causal Hierarchical Promotion):**
+   - `workstation/tests/test_hierarchical_causal_promotion.py`: 4 passed
+6. **P5 (Non-Resident Await & Production Telemetry):**
+   - `workstation/tests/test_non_resident_await_telemetry.py`: 4 passed
+7. **P6 (12-Item Trello-Shaped Benchmark Qualification):**
+   - `workstation/tests/test_trello_benchmark_qualification.py`: 1 passed (12 items, canary+replay, batch handoff, >50KB artifact ref, deliberate anomaly, recovery prefix, and clean resume without duplicate replays)
+8. **Full Workstation Suite Regression:**
+   - `python -m pytest -q -o pythonpath=. workstation/tests`: **647 passed, 2 skipped in 287.92s**.
+
