@@ -1,5 +1,18 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-029 — Pinned-upstream structural adoption lane
+
+The 69-conflict local merge is now the canonical implementation lane for actual upstream
+adoption. The patch policy is:
+- upstream structure wins by default in upstream-owned owners;
+- H-078B causal contracts are semantic ports;
+- Workstation domain truth stays under `workstation/`;
+- native Desktop seams remain only where extension surfaces cannot preserve lifecycle;
+- no conflict cluster is closed without targeted tests and final ancestry proof.
+
+This entry documents policy only; it does not claim any conflict is resolved.
+
+
 ## HW-029 — First-Party Workstation Adapter Implementation Manifest
 
 Implementation of H-078B decouples Hermes core from Workstation.

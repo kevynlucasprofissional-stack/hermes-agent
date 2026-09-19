@@ -1,6 +1,33 @@
 # Workstation roadmap
 
-## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED
+## H-078C — Actual Upstream Baseline Adoption / 69-Conflict Resolution (2026-09-19) — ACTIVE
+
+Canonical plan:
+[context/UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md](context/UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md).
+
+H-078B is reclassified as **semantic decoupling implemented/verified on the old downstream
+structure**, not completion of the upstream baseline migration. GitHub confirms
+`main@1192c016...` is still 13,313 commits behind the pinned upstream
+`6a078969...` with merge-base `057dcdf...`.
+
+The local three-way merge is correctly running on
+`integration/upstream-6a078969-h078b` with `MERGE_HEAD=6a078969...` and currently has
+69 `UU` conflicts. Five critical clusters dominate: agent decomposition, tool causal
+dispatch, Browser broker/routing, Kanban completion admission and Desktop native lifecycle.
+
+New hard rule: **adopt upstream structural owners first, then semantic-port H-078B
+properties. Dependency-clean downstream monoliths are not a reason to preserve old
+structure.**
+
+Before any resolution, safeguard the three pre-existing unstaged changes reported in
+`workstation/operational_kernel.py`,
+`workstation/tests/test_experience_compiler.py` and
+`workstation/tests/test_operational_capabilities.py`.
+
+Completion requires pinned-upstream ancestry proof, not only green tests.
+
+
+## H-078B — Semantic Decoupling Preparation (2026-09-19) — IMPLEMENTED / VERIFIED ON PRE-UPSTREAM STRUCTURE
 
 The H-078B Code-to-Code Upstream Migration / Semantic Decoupling has been fully implemented and
 empirically validated.

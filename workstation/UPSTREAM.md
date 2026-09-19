@@ -1,5 +1,26 @@
 # Upstream strategy
 
+## H-078C active integration cycle
+
+Pinned target for the active cycle:
+`6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170`.
+
+Local integration branch:
+`integration/upstream-6a078969-h078b`.
+
+The first actual merge produced 69 UU conflicts. Resolve them by owner/semantic cluster,
+not alphabetically and not with blanket ours/theirs.
+
+Mandatory final ancestry gates:
+
+```bash
+git merge-base --is-ancestor 6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170 <qualified-head>
+git rev-list --count <qualified-head>..6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170
+```
+
+The second command must return `0` before H-078C can close.
+
+
 ## H-078B synchronization rule (2026-09-19)
 
 For the next major sync:

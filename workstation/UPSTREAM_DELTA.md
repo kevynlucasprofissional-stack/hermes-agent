@@ -1,5 +1,24 @@
 # Hermes Workstation upstream delta
 
+## HW-029 — Actual pinned-upstream merge / conflict resolution (2026-09-19)
+
+The real merge of `6a078969...` into the H-078B downstream baseline has begun locally and
+produced 69 UU conflicts. This proves the remaining delta is concentrated in structural
+owners, not only import seams.
+
+Important observed deltas:
+- downstream H-078B generic admission/observer contracts must survive;
+- upstream agent/turn decomposition should replace historical downstream god-file shape;
+- downstream Browser broker dynamic capability registration is a useful **generic semantic
+  port**, not justification to keep the entire downstream broker;
+- Workstation completion admission should compose with upstream
+  `prepare_acceptance()/record_acceptance()`;
+- Desktop native runtime remains a narrow first-party seam.
+
+No runtime authority is considered migrated until the local merge is resolved and
+qualified.
+
+
 ## HW-029 — First-Party Workstation Adapter and Generic Core Decoupling (2026-09-19)
 
 H-078B implementation has been completed, eliminating all direct Workstation imports from the generic

@@ -1,5 +1,17 @@
 # H-078 — Upstream Migration as Decoupling / Minimum Necessary First-Party Seams
 
+## H-078C — Actual upstream baseline adoption is now the active execution lane
+
+The first real merge against the pinned upstream exposed 69 local UU conflicts and proved
+that H-078B's generic-contract work did not itself adopt the upstream commit history or
+modern owner decomposition. H-078B remains valid as semantic decoupling preparation;
+actual baseline adoption, conflict resolution and ancestry qualification are tracked in
+[UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md](UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md).
+
+Do not call the upstream migration complete until the pinned SHA is an ancestor of the
+qualified integration head/main.
+
+
 Date established: 2026-09-19  
 Status: **ACTIVE STRATEGIC MIGRATION PROGRAM**  
 Downstream baseline when established: `main@378b5a2df35ac05fe37a606298502d7bb974786d`  
