@@ -1,5 +1,52 @@
 # Hermes Workstation upstream delta
 
+## HW-028 — Semantic seam registry / causal upstream migration (2026-09-19)
+
+H-078B refines HW-026/HW-027 after a three-tree code-to-code audit.
+
+The canonical machine-readable registry is now
+`hermes.workstation.first-party-seams.v2`. The policy unit is no longer merely a file:
+each path may contain multiple semantic concerns with independent owners, required causal
+ordering, dispositions, replacements, parity tests and sunset conditions.
+
+Newly explicit high-risk seams:
+
+- `run_agent.py` batch admission / execution scope / route authority;
+- `tool_executor.prepare_mutation` exact authorized-pre-I/O checkpoint;
+- internal compiled execution persistence ownership;
+- completion admission before canonical DONE;
+- trusted TurnIngress and turn-scoped route authority.
+
+Newly strengthened REMOVE paths:
+
+- post-effect/raw-result observation -> raw `post_tool_call`;
+- provider wire projection -> `llm_request` middleware;
+- `work_execute` -> plugin tool registration;
+- Workstation web APIs -> plugin dashboard router;
+- forced Browser schemas -> broker/controller capability exposure.
+
+Browser target becomes:
+
+```text
+generic browser_tool
+-> browser_extension_router
+-> BrowserControlBroker
+-> WorkstationBrowserController
+-> Workstation Electron native runtime
+```
+
+The broker owns routing/controller identity/dispatch/fail-closed; Workstation owns
+BrowserTask/page/native Chromium/human control/persistence/semantics/recovery.
+
+Migration shadow rule: reads may be compared; **mutations are executed once only**. The
+shadow path may resolve/predict controller and fail-closed outcome but cannot perform the
+second click/type/submit.
+
+The downstream H-078 branch must be reconciled with current main before integration, and
+the upstream SHA must be freshly selected/pinned for the cycle rather than inherited from
+the research snapshot.
+
+
 ## HW-027 — Minimum necessary first-party seam policy (2026-09-19)
 
 Decision: D-027. Policy:
