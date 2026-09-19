@@ -1,5 +1,37 @@
 # Hermes Workstation upstream delta
 
+## HW-026 — Upstream Migration as Decoupling / seam-retirement program (2026-09-19)
+
+Decision: D-026. Canonical:
+`context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md`.
+
+This delta changes how future downstream deltas are integrated. The next upstream sync
+must not mechanically reconstruct old Workstation imports inside the upstream's newly
+decomposed modules. Each touched overlap is classified as `ADOPT_UPSTREAM`,
+`KEEP_WORKSTATION`, `SEMANTIC_PORT`, or `EXTRACT_BOUNDARY`.
+
+Current high-value inward seams observed on the downstream baseline:
+- `agent/conversation_loop.py` -> Workstation turn preparation/routing/continuation;
+- `agent/tool_executor.py` -> durable execution, mutation preparation/recording and raw
+  result capture;
+- `agent/turn_finalizer.py` -> Workstation completion/procedure learning;
+- `tools/browser_tool.py` -> Workstation Browser routing and Workstation-owned
+  artifact/task helpers.
+
+The preferred target for these seams is the generic Hermes extension surface already
+present in the fork/upstream: lifecycle hooks plus `tool_request/tool_execution` and
+`llm_request/llm_execution` middleware, with browser/provider boundaries where
+appropriate. Workstation becomes the subscriber/supervisor; generic Hermes core should
+not know Workstation identity.
+
+Initial migration guardrail:
+`workstation/scripts/audit_hermes_seams.py` reports direct generic-core ->
+`workstation.*` imports and edge references so a migration can prove the inward seam
+surface is shrinking.
+
+This is not yet a claim that any runtime seam has been retired. Old paths remain
+authoritative until shadow/parity and Workstation qualification prove the replacement.
+
 ## HW-025 — H-071 Browser operational admission corrective closure (2026-09-19)
 
 Downstream base: `main@6328894c0a5f51a61da772593842c25d377d553f`.
