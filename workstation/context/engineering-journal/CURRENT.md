@@ -1,5 +1,40 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-076 — Verification Contract Synthesis / operational truth audit (2026-09-19)
+
+**Classification:** VERIFIER-COMPILER SUBSYSTEM MOSTLY FALSIFIED / VERIFICATION-SEMANTICS GAP CONFIRMED / IMPLEMENTATION OPEN.
+
+**Baseline:** main@e010c8981a4bdeb89ac94479e0d7e891d48eadae after PR #33.
+
+The three converging analyses established that Hermes already owns the right
+verification surfaces but still lacks a typed, provenance-aware contract that proves
+why an observation is admissible evidence for specific effects/postconditions/goals.
+
+Post-merge falsification found:
+- undeclared verifier metadata can still be promoted to E3 in TaskCompiler;
+- same-surface semantic observation can share the mutation failure domain;
+- Router verifier sufficiency is still presence-based and freshness is usually a
+  boolean assumption rather than a revision/temporal proof;
+- dispatcher callbacks can consume executor self-report verification;
+- RunClosureProof admits any non-empty verifier_contract;
+- Experience Compiler loses observer/extractor/relation/freshness/failure-domain
+  identity when compiling verifier knowledge;
+- causal replay quality inherits oracle quality.
+
+**Refined hypothesis:** extend CapabilityFormalContract.verifier into a typed
+VerificationContract and use a deterministic VerificationEvaluator. Experience
+Compiler may propose verifier candidates, but discovery evidence cannot validate them.
+Action and oracle are learned separately and bound only after separate falsification.
+
+**Critical new property — Verifier Sensitivity:** a verifier must not only recognize a
+correct effect; it must reject absence/corruption/staleness/conflict of the effect in
+the failure modes relevant to the EffectClass.
+
+Canonical:
+[../VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](../VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
+---
+
 ## H-075 — In-Flight Operationalization falsification, implementation & qualification (2026-09-19)
 
 **Classification:** IMPLEMENTED & QUALIFIED (Phases P0–P6 Complete, 21 In-Flight Tests Passed, 647 Full Suite Passed).
