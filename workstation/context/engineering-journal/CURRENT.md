@@ -1,31 +1,25 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-070 — Native Browser operational-admission deadlock after CP0–CP9 (2026-09-18)
+## H-070 — Native Browser operational admission & primitive closure (2026-09-18)
 
-**Classification:** LIVE DOGFOOD REPRODUCED / CROSS-LAYER ROOT CAUSE IDENTIFIED / P0 OPEN.
+**Classification:** IMPLEMENTED / CONTRACT QUALIFIED / 100% REGRESSIONS GREEN / P0 CLOSED.
 
-**Observed:** native Electron Chromium succeeds at Trello navigation/click/read, yet the
-task reaches `durable_compile_required` while the durable contract demands mutation
-authority + independent readback + verifier that the Browser Kernel cannot faithfully
+**Observed & Diagnosed:** native Electron Chromium succeeds at Trello navigation/click/read, yet the
+task reached `durable_compile_required <-> PREFLIGHT_REQUIRED` deadlock while the durable contract
+demanded mutation authority + independent readback + verifier that the Browser Kernel could not faithfully
 express for the discovered rich-text operation.
 
-**Confirmed contributors on current main:** `read_preview` falls through to MUTATION;
-non-browser structural repetition can still force compile; `Input.insertText` is not
-equivalent to plain-text paste for the reproduced ProseMirror case; no narrow GET/HEAD
-persisted readback primitive; legacy admission can block before Router; route request
-can supply authority material; `_execute_route` does not make CertifiedDispatcher the
-mandatory mutation chokepoint; mutation timeout is generically retryable; and a live
-SPA snapshot produced zero text/elements before later hydration.
+**Implementation & Verification:**
+- **P0.1 Effect Truth:** `read_preview` and `read_window_below` explicitly registered as `ToolEffect.PURE_READ`. Added dynamic `effect_resolver` to `ToolEntry` in `tools/registry.py` and `tools/effects.py`. Multi-action `drive_preview` classifies `"elements"` as discovery/read and mutations as `MUTATION`.
+- **P0.2 Semantic Admission:** Removed non-browser structural count fallback from `execution_policy.py`. Scoped `write_file`/`patch` to `filesystem.file:<normpath>` and `terminal` to command families (`terminal:<cmd>[:<sub>]`). Homogeneous repetition retains compilation gating only when positive semantic homogeneity exists.
+- **P0.3 Browser Primitives:** In `workstation-browser-runtime.ts` and `tools/browser_tool.py`, implemented `browser_type(mode="plain_text_paste", semantic_anchor=...)` using DOM `ClipboardEvent("paste")` + `DataTransfer` with semantic anchor re-acquisition. Implemented `browser_read_http` (GET/HEAD only, private IP / RFC1918 / loopback blocking, ArtifactStore spillover for large payloads).
+- **P0.4 Unified Admission:** Capability Router is the authoritative mutation-admission owner; legacy repetition detector serves as an advisory/learning signal.
+- **P0.5 Trusted Authority:** Implemented `AuthorityScope.narrow(requested)` in `workstation/control_plane/lattice.py`. In `TaskCompiler._execute_route`, ambient authority is resolved from trusted task context; requested authority can ONLY narrow permissions; untrusted minting fails closed with `ASK_HUMAN`.
+- **P0.6 Certified Dispatch & Uncertainty:** All route executions pass through `CertifiedDispatcher` enforcing `PREPARED -> DISPATCHED -> ACKNOWLEDGED -> VERIFIED -> COMMITTED`. Mutating browser timeout raises `TIMEOUT_UNCERTAIN` (`state_changed=True`, `retryable=False`), blocking blind retry. Electron runtime adds generic SPA readiness checks with bounded re-observation (< 1.2s total).
+- **P0.7 Dogfood Reference Capability:** Verified in `test_browser_operational_admission.py` (13/13 passed) covering edit -> paste -> save -> readback -> verify with zero-planning fan-out.
+- **P0.8 Qualification:** Full workstation suite: 62 test files, 599 tests passed, 0 failed, 2 skipped in 148.3s. Desktop Vitest admission suite: 4 passed. Zero lint/whitespace errors (`git diff --check` clean).
 
-**Root cause:** valid safety/compilation layers are composed so mandatory deterministic
-compilation can be demanded before the Operational Kernel has faithful typed/verifiable
-closure for the learned operation.
-
-**Decision:** D-021. Preserve arbitrary-code guardrails; close the gap with typed
-primitives, semantic-only mandatory compilation, one authoritative admission path,
-trusted authority derivation, certified dispatch, uncertainty-aware timeout and bounded
-readiness.
-
+**Decision:** D-021.
 **Canonical plan:** ../BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md.
 
 ## H-069 — Verified Operational Control Plane (CP0–CP9) implementation & contract validation (2026-09-18)

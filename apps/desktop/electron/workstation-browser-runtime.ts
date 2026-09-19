@@ -156,7 +156,10 @@ export interface WorkstationControllerError {
     | 'USER_CONTROL_ACTIVE'
     | 'CAPABILITY_MISSING'
     | 'TIMEOUT'
+    | 'TIMEOUT_UNCERTAIN'
     | 'INVALID_ARGUMENT'
+    | 'FORBIDDEN_DESTINATION'
+    | 'NETWORK_ERROR'
     | 'CONTROLLER_DOWN'
   message: string
   retryable: boolean
@@ -228,11 +231,32 @@ function workstationControllerFault(
       recommended_action: 'RETRY_WITH_BACKOFF',
       details: {}
     },
+    TIMEOUT_UNCERTAIN: {
+      retryable: false,
+      retry_after_ms: 0,
+      state_changed: true,
+      recommended_action: 'RECONCILE_EFFECT',
+      details: {}
+    },
     INVALID_ARGUMENT: {
       retryable: false,
       retry_after_ms: 0,
       state_changed: false,
       recommended_action: 'CORRECT_REQUEST',
+      details: {}
+    },
+    FORBIDDEN_DESTINATION: {
+      retryable: false,
+      retry_after_ms: 0,
+      state_changed: false,
+      recommended_action: 'REVISE_DESTINATION',
+      details: {}
+    },
+    NETWORK_ERROR: {
+      retryable: true,
+      retry_after_ms: 500,
+      state_changed: false,
+      recommended_action: 'RETRY_READ',
       details: {}
     },
     CONTROLLER_DOWN: {
@@ -733,10 +757,32 @@ function inventoryScript(maxText: number, maxElements: number): string {
   })()`
 }
 
-function pointScript(ref: string, focus: boolean): string {
+function pointScript(ref: string, focus: boolean, anchor?: { type?: string; value?: string }): string {
   return `(function () {
     var state = window.__hermesWorkstationRefs;
     var el = state && state.byRef && state.byRef.get(${JSON.stringify(ref)});
+    var anchor = ${JSON.stringify(anchor || null)};
+    if ((!el || !el.isConnected) && anchor && anchor.value) {
+      var val = String(anchor.value || '');
+      var type = String(anchor.type || '');
+      try {
+        if (type === 'testid' || (!type && val)) {
+          el = document.querySelector('[data-testid="' + CSS.escape(val) + '"], [data-test="' + CSS.escape(val) + '"], [data-qa="' + CSS.escape(val) + '"]');
+        }
+        if (!el && (type === 'name' || !type)) {
+          el = document.querySelector('[name="' + CSS.escape(val) + '"]');
+        }
+        if (!el && (type === 'role' || !type)) {
+          el = document.querySelector('[role="' + CSS.escape(val) + '"]');
+        }
+        if (!el && (type === 'label' || !type)) {
+          el = document.querySelector('[aria-label="' + CSS.escape(val) + '"], [placeholder="' + CSS.escape(val) + '"]');
+        }
+        if (el && state && state.byRef) {
+          state.byRef.set(${JSON.stringify(ref)}, el);
+        }
+      } catch (err) {}
+    }
     if (!el || !el.isConnected) return { success: false, error: 'stale_or_unknown_ref' };
     try { el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' }); } catch (err) {}
     if (${focus ? 'true' : 'false'}) { try { el.focus({ preventScroll: true }); } catch (err) { try { el.focus(); } catch (err2) {} } }
@@ -2140,7 +2186,8 @@ export class WorkstationBrowserRuntime {
         return this.snapshotForEntry(entry, Boolean(args.full))
 
       case 'browser_click': {
-        const clickResult = await this.clickRef(entry, String(args.ref ?? ''))
+        const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
+        const clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
         await delay(220)
 
         const snap = await this.snapshotForEntry(entry, false)
@@ -2153,16 +2200,23 @@ export class WorkstationBrowserRuntime {
       case 'browser_type': {
         const clear = args.clear !== undefined ? Boolean(args.clear) : !args.append
         const append = Boolean(args.append)
-        const typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append })
+        const mode = (args.mode === 'plain_text_paste' ? 'plain_text_paste' : 'insert_text') as 'insert_text' | 'plain_text_paste'
+        const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
+        const typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append, mode, anchor })
         await delay(160)
 
         const snap = await this.snapshotForEntry(entry, false)
+        const semanticEffect = mode === 'plain_text_paste' ? 'paste_text' : (args.mode === 'insert_text' ? 'insert_text' : 'type')
         return {
           ...snap,
           target: typeResult?.target,
-          semantic_effect: 'type'
+          chars_inserted: String(args.text ?? '').length,
+          semantic_effect: semanticEffect
         }
       }
+
+      case 'browser_read_http':
+        return this.readHttpForEntry(entry, args)
 
       case 'browser_extract_items':
         return this.extractItemsForEntry(entry, args)
@@ -2572,6 +2626,45 @@ export class WorkstationBrowserRuntime {
       this.emitState()
     }
 
+    let readiness: 'stable' | 'transient' | 'ambiguous' = 'stable'
+    let readinessReason: string | undefined = undefined
+
+    // Generic SPA Readiness: if HTTP(S) page has 0 elements and empty text / loading skeleton
+    if (inv.url && inv.url !== 'about:blank' && !inv.url.startsWith('chrome') && inv.elements.length === 0) {
+      try {
+        const isSkeletonOrLoading = (await wc.executeJavaScript(
+          `(function() {
+            var hasProgress = document.querySelector('[role="progressbar"], .skeleton, .loading, .spinner') !== null;
+            var textLen = (document.body ? (document.body.innerText || '').trim().length : 0);
+            return hasProgress || textLen < 50;
+          })()`,
+          true
+        )) as boolean
+
+        if (isSkeletonOrLoading) {
+          readiness = 'transient'
+          for (let wait = 0; wait < 4; wait++) {
+            await delay(250)
+            const reInv = (await wc.executeJavaScript(
+              inventoryScript(full ? FULL_TEXT_CHARS : COMPACT_TEXT_CHARS, full ? FULL_ELEMENTS : COMPACT_ELEMENTS),
+              true
+            )) as PageInventory
+            if (reInv.elements.length > 0) {
+              inv = reInv
+              readiness = 'stable'
+              break
+            }
+          }
+          if (inv.elements.length === 0) {
+            readiness = 'ambiguous'
+            readinessReason = 'empty_interactive_dom_timeout'
+          }
+        }
+      } catch {
+        // Best effort
+      }
+    }
+
     return {
       success: true,
       runtime: 'electron-chromium',
@@ -2585,20 +2678,23 @@ export class WorkstationBrowserRuntime {
       total_text_chars: inv.totalTextChars,
       element_count: inv.elements.length,
       wall_detected: Boolean(inv.wallDetected),
-      wall_reason: inv.wallReason
+      wall_reason: inv.wallReason,
+      readiness,
+      readiness_reason: readinessReason
     }
   }
 
   private async resolvePoint(
     entry: BrowserEntry,
     ref: string,
-    focus: boolean
+    focus: boolean,
+    anchor?: { type?: string; value?: string }
   ): Promise<{ x: number; y: number; target?: ElementTargetMetadata }> {
     if (!ref) {
       throw new Error('ref_required')
     }
 
-    const result = (await entry.view.webContents.executeJavaScript(pointScript(ref, focus), true)) as {
+    const result = (await entry.view.webContents.executeJavaScript(pointScript(ref, focus, anchor), true)) as {
       success?: boolean
       error?: string
       x?: number
@@ -2639,9 +2735,13 @@ export class WorkstationBrowserRuntime {
     await this.cdp(wc, 'Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 })
   }
 
-  private async clickRef(entry: BrowserEntry, ref: string): Promise<{ target?: ElementTargetMetadata }> {
+  private async clickRef(
+    entry: BrowserEntry,
+    ref: string,
+    anchor?: { type?: string; value?: string }
+  ): Promise<{ target?: ElementTargetMetadata }> {
     const wc = entry.view.webContents
-    const point = await this.resolvePoint(entry, ref, true)
+    const point = await this.resolvePoint(entry, ref, true, anchor)
     await this.cdpClick(wc, point.x, point.y)
     return { target: point.target }
   }
@@ -2650,13 +2750,112 @@ export class WorkstationBrowserRuntime {
     entry: BrowserEntry,
     ref: string,
     text: string,
-    options: { clear?: boolean; append?: boolean } = {}
-  ): Promise<{ target?: ElementTargetMetadata }> {
+    options: {
+      clear?: boolean
+      append?: boolean
+      mode?: 'insert_text' | 'plain_text_paste'
+      anchor?: { type?: string; value?: string }
+    } = {}
+  ): Promise<{ target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }> {
     const wc = entry.view.webContents
-    const point = await this.resolvePoint(entry, ref, true)
-    await this.cdpClick(wc, point.x, point.y)
-
+    const point = await this.resolvePoint(entry, ref, true, options.anchor)
     const shouldClear = options.clear !== false && !options.append
+    const mode = options.mode ?? 'insert_text'
+
+    if (mode === 'plain_text_paste') {
+      const pasteScript = `(function () {
+        var state = window.__hermesWorkstationRefs;
+        var el = state && state.byRef && state.byRef.get(${JSON.stringify(ref)});
+        var anchor = ${JSON.stringify(options.anchor || null)};
+        if ((!el || !el.isConnected) && anchor && anchor.value) {
+          try {
+            var val = String(anchor.value || '');
+            var type = String(anchor.type || '');
+            if (type === 'testid' || (!type && val)) {
+              el = document.querySelector('[data-testid="' + CSS.escape(val) + '"], [data-test="' + CSS.escape(val) + '"], [data-qa="' + CSS.escape(val) + '"]');
+            }
+            if (!el && (type === 'name' || !type)) {
+              el = document.querySelector('[name="' + CSS.escape(val) + '"]');
+            }
+            if (!el && (type === 'role' || !type)) {
+              el = document.querySelector('[role="' + CSS.escape(val) + '"]');
+            }
+            if (!el && (type === 'label' || !type)) {
+              el = document.querySelector('[aria-label="' + CSS.escape(val) + '"], [placeholder="' + CSS.escape(val) + '"]');
+            }
+          } catch (e) {}
+        }
+        if (!el) return { success: false, error: 'element_unavailable' };
+        try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+
+        if (${shouldClear ? 'true' : 'false'}) {
+          if (typeof el.select === 'function') {
+            try { el.select(); } catch (e) {}
+          } else if (window.getSelection && document.createRange) {
+            try {
+              var range = document.createRange();
+              range.selectNodeContents(el);
+              var sel = window.getSelection();
+              if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+            } catch (e) {}
+          }
+        }
+
+        var text = ${JSON.stringify(text)};
+        var dt = new DataTransfer();
+        dt.setData('text/plain', text);
+        var pasteEvt = new ClipboardEvent('paste', {
+          clipboardData: dt,
+          bubbles: true,
+          cancelable: true,
+          composed: true
+        });
+        var notPrevented = el.dispatchEvent(pasteEvt);
+        var inserted = false;
+        if (notPrevented) {
+          if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
+            try {
+              inserted = document.execCommand('insertText', false, text);
+            } catch (e) {}
+          }
+          if (!inserted) {
+            if ('value' in el && typeof el.value === 'string') {
+              if (${shouldClear ? 'true' : 'false'}) {
+                el.value = text;
+              } else {
+                el.value += text;
+              }
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            } else if (el.isContentEditable) {
+              if (${shouldClear ? 'true' : 'false'}) {
+                el.textContent = text;
+              } else {
+                el.textContent += text;
+              }
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          }
+        }
+        return { success: true, count: text.length };
+      })()`
+
+      const res = (await wc.executeJavaScript(pasteScript, true)) as {
+        success?: boolean
+        error?: string
+        count?: number
+      }
+      if (!res?.success) {
+        throw new Error(res?.error || 'paste_failed')
+      }
+      return {
+        target: point.target,
+        chars_inserted: text.length,
+        semantic_effect: 'paste_text'
+      }
+    }
+
+    await this.cdpClick(wc, point.x, point.y)
 
     if (shouldClear) {
       // 1. Try DOM select() on active element
@@ -2740,7 +2939,135 @@ export class WorkstationBrowserRuntime {
 
     await this.cdp(wc, 'Input.insertText', { text })
 
-    return { target: point.target }
+    return {
+      target: point.target,
+      chars_inserted: text.length,
+      semantic_effect: 'insert_text'
+    }
+  }
+
+  private async readHttpForEntry(
+    entry: BrowserEntry,
+    args: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const rawUrl = String(args.url ?? '').trim()
+    if (!rawUrl) {
+      throw workstationControllerFault('INVALID_ARGUMENT', 'url_required')
+    }
+
+    let parsed: URL
+    try {
+      parsed = new URL(rawUrl)
+    } catch {
+      throw workstationControllerFault('INVALID_ARGUMENT', 'invalid_url')
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw workstationControllerFault('FORBIDDEN_DESTINATION', 'only http and https protocols allowed')
+    }
+
+    const method = String(args.method ?? 'GET').toUpperCase()
+    if (method !== 'GET' && method !== 'HEAD') {
+      throw workstationControllerFault('INVALID_ARGUMENT', 'only GET and HEAD methods allowed')
+    }
+
+    if (args.body !== undefined || args.data !== undefined) {
+      throw workstationControllerFault('INVALID_ARGUMENT', 'request body not permitted on browser_read_http')
+    }
+
+    // Destination safety checks: block localhost, private networks
+    const host = parsed.hostname.toLowerCase()
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host === '0.0.0.0' ||
+      host.endsWith('.local')
+    ) {
+      throw workstationControllerFault('FORBIDDEN_DESTINATION', `blocked loopback destination: ${host}`)
+    }
+
+    // RFC1918 IPv4 checks
+    const ipv4Match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(host)
+    if (ipv4Match) {
+      const b0 = Number(ipv4Match[1])
+      const b1 = Number(ipv4Match[2])
+      if (
+        b0 === 10 ||
+        (b0 === 172 && b1 >= 16 && b1 <= 31) ||
+        (b0 === 192 && b1 === 168) ||
+        (b0 === 169 && b1 === 254)
+      ) {
+        throw workstationControllerFault('FORBIDDEN_DESTINATION', `blocked private subnet destination: ${host}`)
+      }
+    }
+
+    const wc = entry.view.webContents
+    const headers = (args.headers && typeof args.headers === 'object') ? args.headers : {}
+
+    const fetchScript = `(async function () {
+      var targetUrl = ${JSON.stringify(rawUrl)};
+      var method = ${JSON.stringify(method)};
+      var headers = ${JSON.stringify(headers)};
+      try {
+        var resp = await fetch(targetUrl, {
+          method: method,
+          headers: headers,
+          credentials: 'include'
+        });
+        var status = resp.status;
+        var ok = resp.ok;
+        var contentType = resp.headers.get('content-type') || '';
+        var text = '';
+        var json = null;
+        if (method !== 'HEAD') {
+          text = await resp.text();
+          if (contentType.includes('application/json') || contentType.includes('+json')) {
+            try {
+              json = JSON.parse(text);
+            } catch (e) {}
+          }
+        }
+        return {
+          success: true,
+          status: status,
+          ok: ok,
+          url: resp.url || targetUrl,
+          content_type: contentType,
+          text: text ? text.slice(0, 500000) : undefined,
+          json: json
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: String(err && err.message ? err.message : err)
+        };
+      }
+    })()`
+
+    const res = (await wc.executeJavaScript(fetchScript, true)) as {
+      success?: boolean
+      error?: string
+      status?: number
+      ok?: boolean
+      url?: string
+      content_type?: string
+      text?: string
+      json?: unknown
+    }
+
+    if (!res?.success) {
+      throw workstationControllerFault('NETWORK_ERROR', res?.error || 'http_fetch_failed')
+    }
+
+    return {
+      status: res.status ?? 0,
+      ok: Boolean(res.ok),
+      url: res.url ?? rawUrl,
+      content_type: res.content_type ?? '',
+      text: res.text,
+      json: res.json
+    }
   }
 
   private async scrollEntry(entry: BrowserEntry, direction: string): Promise<void> {

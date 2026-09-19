@@ -8430,13 +8430,13 @@ class AIAgent:
                 from workstation.task_compiler import discovery_guidance
                 from workstation.batch_detection import mutation_summary
                 from tools.effects import unwrap_call, tool_effect
-                blocked_name, _ = unwrap_call(call)
+                blocked_name, blocked_args = unwrap_call(call)
                 messages.append(make_tool_result_message(call.function.name, json.dumps({
                     "status": "replan", "code": "durable_compile_required",
                     "summary": "Repetitive work requires work_execute. Compile remaining items and verified steps once; these calls did not execute. Prior completed mutations are preserved and must not be replayed.",
                     **discovery_guidance(self), **mutation_summary(self),
                     "bootstrap_code": "GUARD_BOOTSTRAP_BLOCKED" if blocked_name in {"terminal", "browser_console", "browser_exec"} else None,
-                    "blocked_action": blocked_name, "detected_effect": tool_effect(blocked_name).value,
+                    "blocked_action": blocked_name, "detected_effect": tool_effect(blocked_name, args=blocked_args).value,
                     "reason": "Use structured read/discovery tools to prepare the plan; arbitrary execution cannot assert read-only authority.",
                 }), call.id, effect_disposition="none"))
             return

@@ -213,6 +213,21 @@ ACT_PREVIEW_SCHEMA = {
 }
 
 
+from tools.effects import ToolEffect
+
+
+def drive_preview_effect(args: dict) -> ToolEffect:
+    """Action-sensitive effect resolver for drive_preview."""
+    if not isinstance(args, dict):
+        return ToolEffect.MUTATION
+    verb = (args.get("action") or "").strip().lower()
+    if verb == "elements":
+        return ToolEffect.DISCOVERY
+    if verb in ACTIONS:
+        return ToolEffect.MUTATION
+    return ToolEffect.MUTATION
+
+
 registry.register(
     name="drive_preview",
     toolset="desktop_ui",
@@ -231,4 +246,6 @@ registry.register(
         callback=kw.get("callback"),
     ),
     emoji="🖱️",
+    effect=ToolEffect.MUTATION,
+    effect_resolver=drive_preview_effect,
 )

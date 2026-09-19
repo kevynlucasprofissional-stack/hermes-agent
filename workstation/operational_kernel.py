@@ -248,17 +248,36 @@ class OperationalKernel:
             if not ref:
                 raise CapabilityDriftError(f"Target ref could not be resolved for click: {inputs}")
             return dispatch("browser_click", {"ref": ref})
-        if primitive in {"browser_type", "type", "fill"}:
+        if primitive in {"browser_type", "type", "fill", "paste_text_semantic", "paste", "plain_text_paste"}:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")
             ref = inputs.get("ref")
-            if not ref and inputs.get("anchor"):
+            anchor = inputs.get("anchor") or inputs.get("semantic_anchor")
+            if not ref and anchor:
                 snap = dispatch("browser_snapshot", {"full": False})
                 elements = snap.get("elements", []) if isinstance(snap, dict) else []
-                ref = self._find_ref_by_anchor(elements, inputs["anchor"])
-            if not ref:
+                ref = self._find_ref_by_anchor(elements, anchor)
+            if not ref and not anchor:
                 raise CapabilityDriftError(f"Target ref could not be resolved for type: {inputs}")
-            return dispatch("browser_type", {"ref": ref, "text": inputs.get("text", ""), "clear": inputs.get("clear", True)})
+            default_mode = "plain_text_paste" if primitive in {"paste_text_semantic", "paste", "plain_text_paste"} else "insert_text"
+            type_payload = {
+                "ref": ref or "@e1",
+                "text": inputs.get("text", ""),
+                "clear": inputs.get("clear", True),
+            }
+            if "mode" in inputs or primitive in {"paste_text_semantic", "paste", "plain_text_paste"}:
+                type_payload["mode"] = inputs.get("mode", default_mode)
+            if anchor:
+                type_payload["semantic_anchor"] = anchor
+            return dispatch("browser_type", type_payload)
+        if primitive in {"browser_read_http", "read_http"}:
+            if not dispatch:
+                raise RuntimeError("Browser primitive requires dispatch function")
+            return dispatch("browser_read_http", {
+                "url": inputs["url"],
+                "method": inputs.get("method", "GET"),
+                "headers": inputs.get("headers", {}),
+            })
         if primitive in {"browser_press", "press"}:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")

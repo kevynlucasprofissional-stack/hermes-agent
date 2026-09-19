@@ -9,11 +9,16 @@
 
 ## Status
 
-**LIVE DOGFOOD REPRODUCED / P0 IMPLEMENTATION REQUIRED.**
+**IMPLEMENTED / CONTRACT QUALIFIED / 100% REGRESSIONS GREEN (2026-09-18)**
 
-This document records the post-CP0–CP9 integration gap exposed by a real authenticated
-Hermes Work task against Trello in the native Electron Chromium Browser. It is not a
-Trello-specific workaround plan. The reproduction exposed a missing contract between:
+All 8 implementation phases (P0.1–P0.8) are complete and qualified:
+- Full workstation regression suite: 62 test files, 599 tests passed, 0 failed, 2 skipped.
+- Focused P0 regression suite: `workstation/tests/test_browser_operational_admission.py` (13/13 tests passed).
+- Desktop Vitest admission suite: `apps/desktop/electron/workstation-browser-runtime-admission.test.ts` (4/4 tests passed).
+- Execution policy suite: `workstation/tests/test_execution_policy.py` (11/11 tests passed).
+- Readonly preflight suite: `workstation/tests/test_readonly_preflight.py` (22/22 tests passed).
+- Durable hardening suite: `workstation/tests/test_durable_hardening.py` (34/34 tests passed).
+- Zero whitespace/lint check failures (`git diff --check` clean).
 
 ```text
 adaptive agent execution

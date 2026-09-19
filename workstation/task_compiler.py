@@ -929,20 +929,69 @@ class TaskCompiler:
             raise ValueError("Route action requires a valid operation_intent")
 
         semantic_state = request.get("semantic_state") or {}
-        raw_auth = request.get("authority") or {}
-        if isinstance(raw_auth, AuthorityScope):
-            authority = raw_auth
-        elif isinstance(raw_auth, dict):
-            lvl = raw_auth.get("level", AuthorityLevel.LOCAL_MUTATION)
-            if isinstance(lvl, int):
-                lvl = AuthorityLevel(lvl)
-            authority = AuthorityScope(
-                level=lvl,
-                allowed_actions=set(raw_auth.get("allowed_actions", ["*"])),
-                allowed_resources=set(raw_auth.get("allowed_resources", ["*"])),
+
+        # Resolve ambient trusted authority
+        trusted_authority = None
+        if "trusted_authority" in request and request["trusted_authority"] is not None:
+            raw_trusted = request["trusted_authority"]
+            if isinstance(raw_trusted, AuthorityScope):
+                trusted_authority = raw_trusted
+            elif isinstance(raw_trusted, dict):
+                trusted_authority = AuthorityScope.from_dict(raw_trusted)
+        elif getattr(self, "trusted_authority", None) is not None:
+            trusted_authority = getattr(self, "trusted_authority")
+        elif canonical_task_id or task_id:
+            try:
+                from hermes_cli import kanban_db
+                conn = kanban_db.connect()
+                try:
+                    t = kanban_db.get_task(conn, canonical_task_id or task_id)
+                    if t and getattr(t, "authority_scope", None):
+                        trusted_authority = AuthorityScope.from_dict(t.authority_scope)
+                finally:
+                    conn.close()
+            except Exception:
+                pass
+            if trusted_authority is None:
+                trusted_authority = AuthorityScope(
+                    level=AuthorityLevel.EXTERNAL_REVERSIBLE,
+                    allowed_actions={"*"},
+                    allowed_resources={"*"},
+                )
+        elif session_id:
+            trusted_authority = AuthorityScope(
+                level=AuthorityLevel.EXTERNAL_REVERSIBLE,
+                allowed_actions={"*"},
+                allowed_resources={"*"},
             )
+
+        if trusted_authority is None:
+            return {
+                "success": False,
+                "routing_decision": "ASK_HUMAN",
+                "reason": "untrusted_authority_minting: execution without verifiable trusted authority is forbidden",
+                "missing_authority": None,
+            }
+
+        # Narrow against requested authority if provided
+        raw_requested = request.get("authority")
+        if raw_requested is not None:
+            if isinstance(raw_requested, AuthorityScope):
+                requested_scope = raw_requested
+            elif isinstance(raw_requested, dict):
+                lvl = raw_requested.get("level", AuthorityLevel.READ)
+                if isinstance(lvl, int):
+                    lvl = AuthorityLevel(lvl)
+                requested_scope = AuthorityScope(
+                    level=lvl,
+                    allowed_actions=set(raw_requested.get("allowed_actions", ["*"])),
+                    allowed_resources=set(raw_requested.get("allowed_resources", ["*"])),
+                )
+            else:
+                requested_scope = AuthorityScope(level=AuthorityLevel.READ)
+            authority = trusted_authority.narrow(requested_scope)
         else:
-            authority = AuthorityScope(level=AuthorityLevel.SYSTEM_CRITICAL, allowed_actions={"*"}, allowed_resources={"*"})
+            authority = trusted_authority
 
         registry = getattr(self, "capability_registry", None)
         if registry is None:
@@ -967,29 +1016,88 @@ class TaskCompiler:
                 "capability_version": decision.capability.version,
                 "operation_key": request.get("operation_key") or f"route_{intent.id}",
             }
-            exec_res = self._execute_capability(
-                cap_exec_req,
-                task_id=task_id,
-                session_id=session_id,
-                dispatch=dispatch,
-                canonical_task_id=canonical_task_id,
-            )
-            return {
-                **exec_res,
-                "success": bool(exec_res.get("success", True)),
-                "routing_decision": "EXECUTE",
-                "capability_id": decision.capability.id,
-                "certificate_hash": cert_hash,
-            }
+
+            from workstation.control_plane.dispatcher import CertifiedDispatcher, DispatchError
+            dispatcher = getattr(self, "certified_dispatcher", None)
+            if dispatcher is None:
+                dispatcher = CertifiedDispatcher(kernel=getattr(self, "kernel", None))
+
+            def _run_exec():
+                return self._execute_capability(
+                    cap_exec_req,
+                    task_id=task_id,
+                    session_id=session_id,
+                    dispatch=dispatch,
+                    canonical_task_id=canonical_task_id,
+                )
+
+            try:
+                dispatch_res = dispatcher.dispatch(
+                    decision,
+                    current_state=semantic_state,
+                    dispatch_fn=_run_exec,
+                    run_id=getattr(self, "canonical_run_id", None) or request.get("run_id"),
+                    has_uncertain_mutation=getattr(self, "has_uncertain_mutation", False) or request.get("has_uncertain_mutation", False),
+                    authority_scope=authority,
+                )
+                exec_res = dispatch_res.get("result", {})
+                if not dispatch_res.get("success", True):
+                    return {
+                        **exec_res,
+                        "success": False,
+                        "routing_decision": "ASK_HUMAN",
+                        "reason": dispatch_res.get("error", "execution_failed"),
+                        "capability_id": decision.capability.id,
+                        "certificate_hash": cert_hash,
+                        "dispatch_record": dispatch_res.get("dispatch_record"),
+                    }
+                return {
+                    **exec_res,
+                    "success": bool(exec_res.get("success", True)),
+                    "routing_decision": "EXECUTE",
+                    "capability_id": decision.capability.id,
+                    "certificate_hash": cert_hash,
+                    "dispatch_record": dispatch_res.get("dispatch_record"),
+                }
+            except DispatchError as exc:
+                return {
+                    "success": False,
+                    "routing_decision": "ASK_HUMAN",
+                    "reason": f"certified_dispatch_failed: {exc}",
+                    "capability_id": decision.capability.id,
+                    "certificate_hash": cert_hash,
+                }
 
         if isinstance(decision, ComposedDecision):
             cert_hash = decision.certificate.certificate_hash()
-            return {
-                "success": True,
-                "routing_decision": "COMPOSE",
-                "plan": [c.id for c in decision.plan],
-                "certificate_hash": cert_hash,
-            }
+            from workstation.control_plane.dispatcher import CertifiedDispatcher, DispatchError
+            dispatcher = getattr(self, "certified_dispatcher", None)
+            if dispatcher is None:
+                dispatcher = CertifiedDispatcher(kernel=getattr(self, "kernel", None))
+
+            try:
+                dispatch_res = dispatcher.dispatch(
+                    decision,
+                    current_state=semantic_state,
+                    dispatch_fn=lambda: {"success": True, "plan": [c.id for c in decision.plan]},
+                    run_id=getattr(self, "canonical_run_id", None) or request.get("run_id"),
+                    has_uncertain_mutation=getattr(self, "has_uncertain_mutation", False) or request.get("has_uncertain_mutation", False),
+                    authority_scope=authority,
+                )
+                return {
+                    "success": True,
+                    "routing_decision": "COMPOSE",
+                    "plan": [c.id for c in decision.plan],
+                    "certificate_hash": cert_hash,
+                    "dispatch_record": dispatch_res.get("dispatch_record"),
+                }
+            except DispatchError as exc:
+                return {
+                    "success": False,
+                    "routing_decision": "ASK_HUMAN",
+                    "reason": f"certified_dispatch_failed: {exc}",
+                    "certificate_hash": cert_hash,
+                }
 
         if isinstance(decision, WaitDecision):
             return {

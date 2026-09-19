@@ -65,6 +65,7 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Tuple, Union
 from pathlib import Path
+from urllib.parse import urlsplit
 from agent.redact import redact_cdp_url
 from hermes_constants import (
     agent_browser_runnable,
@@ -2223,9 +2224,48 @@ BROWSER_TOOL_SCHEMAS = [
                     "type": "boolean",
                     "description": "Whether to append text to the end of the input instead of replacing it (default: false).",
                     "default": False
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["insert_text", "plain_text_paste"],
+                    "description": "Insertion mode: 'insert_text' for keystroke dispatch, or 'plain_text_paste' for rich editors (ProseMirror, Draft.js, contenteditable) that require synthetic paste events.",
+                    "default": "insert_text"
+                },
+                "semantic_anchor": {
+                    "type": "object",
+                    "description": "Optional semantic anchor for robust re-acquisition if @ref is stale.",
+                    "properties": {
+                        "type": {"type": "string", "enum": ["testid", "name", "role", "label"]},
+                        "value": {"type": "string"}
+                    }
                 }
             },
             "required": ["ref", "text"]
+        }
+    },
+    {
+        "name": "browser_read_http",
+        "description": "Perform a read-only HTTP GET or HEAD request within the active browser session context, leveraging cookies and session credentials. Only GET and HEAD methods are permitted; request bodies and internal/loopback network targets are blocked.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "Target HTTP/HTTPS URL to read within the browser session context."
+                },
+                "method": {
+                    "type": "string",
+                    "enum": ["GET", "HEAD"],
+                    "description": "HTTP method (GET or HEAD only; default: GET).",
+                    "default": "GET"
+                },
+                "headers": {
+                    "type": "object",
+                    "description": "Optional custom headers to pass with the request.",
+                    "additionalProperties": {"type": "string"}
+                }
+            },
+            "required": ["url"]
         }
     },
     {
@@ -3720,6 +3760,8 @@ def browser_type(
     text: str,
     clear: bool = True,
     append: bool = False,
+    mode: str = "insert_text",
+    semantic_anchor: Optional[Dict[str, Any]] = None,
     task_id: Optional[str] = None
 ) -> str:
     """
@@ -3829,6 +3871,116 @@ def browser_scroll(direction: str, task_id: Optional[str] = None) -> str:
         "scrolled": direction
     }
     return json.dumps(_copy_fallback_warning(response, result), ensure_ascii=False)
+
+
+def browser_read_http(
+    url: str,
+    method: str = "GET",
+    headers: Optional[Dict[str, str]] = None,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    **kwargs,
+) -> str:
+    """Read an HTTP/HTTPS resource within the browser session context.
+
+    Allowed methods: GET, HEAD only.
+    Request body: none.
+    Destination safety: blocked for localhost / loopback and RFC1918 private subnets.
+    """
+    method = (method or "GET").strip().upper()
+    if method not in {"GET", "HEAD"}:
+        return json.dumps({
+            "success": False,
+            "status": 400,
+            "error": f"Invalid method '{method}': browser_read_http only allows GET and HEAD",
+        })
+
+    raw_url = (url or "").strip()
+    parsed = urlsplit(raw_url)
+    if parsed.scheme.lower() not in {"http", "https"}:
+        return json.dumps({
+            "success": False,
+            "status": 400,
+            "error": f"Invalid protocol '{parsed.scheme}': only http and https are allowed",
+        })
+
+    host = (parsed.hostname or "").lower()
+    if host in {"localhost", "127.0.0.1", "::1", "0.0.0.0"} or host.endswith(".local"):
+        return json.dumps({
+            "success": False,
+            "status": 403,
+            "error": f"Blocked forbidden destination: {host}",
+        })
+
+    ipv4_match = re.match(r"^(\d+)\.(\d+)\.(\d+)\.(\d+)$", host)
+    if ipv4_match:
+        b0, b1 = int(ipv4_match.group(1)), int(ipv4_match.group(2))
+        if b0 == 10 or (b0 == 172 and 16 <= b1 <= 31) or (b0 == 192 and b1 == 168) or (b0 == 169 and b1 == 254):
+            return json.dumps({
+                "success": False,
+                "status": 403,
+                "error": f"Blocked private subnet destination: {host}",
+            })
+
+    def _fallback():
+        import requests
+        try:
+            resp = requests.request(method, raw_url, headers=headers or {}, timeout=15)
+            content_type = resp.headers.get("content-type", "")
+            text = resp.text if method != "HEAD" else ""
+            parsed_json = None
+            if "application/json" in content_type:
+                try:
+                    parsed_json = resp.json()
+                except Exception:
+                    pass
+            out = {
+                "success": resp.ok,
+                "status": resp.status_code,
+                "ok": resp.ok,
+                "url": resp.url,
+                "content_type": content_type,
+                "text": text[:500000] if method != "HEAD" else "",
+                "json": parsed_json,
+            }
+            if len(text) > 16384:
+                try:
+                    from workstation.artifacts import ArtifactStore
+                    from workstation.reference_plane import content_reference
+                    store = ArtifactStore()
+                    owner = task_id or session_id or "default"
+                    ref_info = content_reference(store, owner, out)
+                    out["text"] = f"[Payload spilled to artifact: {ref_info.get('artifact_ref')}]"
+                    out["artifact_ref"] = ref_info.get("artifact_ref")
+                except Exception:
+                    pass
+            return json.dumps(out, ensure_ascii=False)
+        except Exception as exc:
+            return json.dumps({
+                "success": False,
+                "status": 0,
+                "ok": False,
+                "error": str(exc),
+            })
+
+    args = {"url": raw_url, "method": method, "headers": headers or {}}
+    kw = {"task_id": task_id, "session_id": session_id, **kwargs}
+    res = _workstation_or_legacy("browser_read_http", args, kw, fallback=_fallback)
+    if isinstance(res, str) and len(res) > 16384:
+        try:
+            data = json.loads(res)
+            if isinstance(data, dict) and data.get("text") and len(str(data["text"])) > 16384:
+                from workstation.artifacts import ArtifactStore
+                from workstation.reference_plane import content_reference
+                store = ArtifactStore()
+                owner = task_id or session_id or "default"
+                ref_info = content_reference(store, owner, data)
+                data["text"] = f"[Payload spilled to artifact: {ref_info.get('artifact_ref')}]"
+                data["artifact_ref"] = ref_info.get("artifact_ref")
+                return json.dumps(data, ensure_ascii=False)
+        except Exception:
+            pass
+    return res
 
 
 def browser_back(task_id: Optional[str] = None) -> str:
@@ -5538,6 +5690,7 @@ def browser_extract_items(
 # Registry
 # ---------------------------------------------------------------------------
 from tools.registry import registry, tool_error
+from tools.effects import ToolEffect
 from tools.browser_extension_router import (
     extension_controller_available,
     routed_browser_handler,
@@ -5594,6 +5747,10 @@ def check_browser_click_requirements() -> bool:
 
 def check_browser_type_requirements() -> bool:
     return check_browser_routed_requirements("browser_type")
+
+
+def check_browser_read_http_requirements() -> bool:
+    return check_browser_routed_requirements("browser_read_http")
 
 
 def check_browser_scroll_requirements() -> bool:
@@ -5674,12 +5831,41 @@ registry.register(
         lambda: routed_browser_handler(
             "browser_type",
             args,
-            fallback=lambda: browser_type(ref=args.get("ref", ""), text=args.get("text", ""), clear=args.get("clear", True), append=args.get("append", False), task_id=kw.get("task_id")),
+            fallback=lambda: browser_type(
+                ref=args.get("ref", ""),
+                text=args.get("text", ""),
+                clear=args.get("clear", True),
+                append=args.get("append", False),
+                mode=args.get("mode", "insert_text"),
+                semantic_anchor=args.get("semantic_anchor"),
+                task_id=kw.get("task_id"),
+            ),
             **_browser_router_kw(kw),
         ),
     ),
     check_fn=check_browser_type_requirements,
     emoji="⌨️",
+)
+registry.register(
+    name="browser_read_http",
+    toolset="browser",
+    schema=_BROWSER_SCHEMA_MAP["browser_read_http"],
+    handler=lambda args, **kw: _workstation_or_legacy(
+        "browser_read_http",
+        args,
+        kw,
+        lambda: browser_read_http(
+            url=args.get("url", ""),
+            method=args.get("method", "GET"),
+            headers=args.get("headers"),
+            task_id=kw.get("task_id"),
+            session_id=kw.get("session_id"),
+            **kw,
+        ),
+    ),
+    check_fn=check_browser_read_http_requirements,
+    effect=ToolEffect.PURE_READ,
+    emoji="🌐",
 )
 registry.register(
     name="browser_scroll",

@@ -48,6 +48,57 @@ class AuthorityScope:
             channels=set(data.get("channels", [])),
         )
 
+    def narrow(self, requested: AuthorityScope) -> AuthorityScope:
+        """Narrow trusted authority with requested scope.
+
+        Invariant: requested authority can ONLY reduce permissions, never expand them.
+        effective.level = min(trusted.level, requested.level)
+        effective.allowed_actions = trusted & requested
+        effective.allowed_resources = trusted & requested
+        """
+        effective_level = AuthorityLevel(min(int(self.level), int(requested.level)))
+
+        if "*" in self.allowed_actions:
+            effective_actions = set(requested.allowed_actions)
+        elif "*" in requested.allowed_actions:
+            effective_actions = set(self.allowed_actions)
+        else:
+            effective_actions = {
+                a for a in requested.allowed_actions
+                if _action_subsumed(a, self.allowed_actions)
+            }
+
+        if "*" in self.allowed_resources:
+            effective_resources = set(requested.allowed_resources)
+        elif "*" in requested.allowed_resources:
+            effective_resources = set(self.allowed_resources)
+        else:
+            effective_resources = {
+                r for r in requested.allowed_resources
+                if _resource_subsumed(r, self.allowed_resources)
+            }
+
+        if not self.channels:
+            effective_channels = set()
+        elif "*" in self.channels:
+            effective_channels = set(requested.channels)
+        elif "*" in requested.channels:
+            effective_channels = set(self.channels)
+        else:
+            effective_channels = set(self.channels) & set(requested.channels)
+
+        return AuthorityScope(
+            level=effective_level,
+            allowed_actions=effective_actions,
+            allowed_resources=effective_resources,
+            channels=effective_channels,
+        )
+
+
+def authority_narrow(trusted: AuthorityScope, requested: AuthorityScope) -> AuthorityScope:
+    """Narrow trusted authority with requested scope."""
+    return trusted.narrow(requested)
+
 
 def _resource_subsumed(resource: str, allowed_set: set[str]) -> bool:
     if "*" in allowed_set:
