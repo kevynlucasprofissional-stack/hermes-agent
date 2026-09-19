@@ -1,5 +1,19 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-028 — Semantic seam migration manifest
+
+The H-078 code-to-code refinement upgrades the seam manifest from path-level intent to
+semantic concern-level migration metadata while keeping path-level audit budgets.
+
+New manifest properties include semantic owner, current behavior, required ordering,
+replacement, parity tests and sunset condition. `run_agent.py` is now explicit as a
+high-risk source seam; `agent/tool_executor.py` is explicitly mixed rather than a single
+REMOVE candidate.
+
+No runtime behavior is switched by HW-028. It is migration-spec hardening before the
+upstream integration branch exists.
+
+
 ## HW-027 — Minimum necessary first-party seams
 
 H-078 no longer treats every source-level Workstation integration as debt. The downstream
