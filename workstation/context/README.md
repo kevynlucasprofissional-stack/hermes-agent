@@ -1,5 +1,13 @@
 # Hermes Workstation — Coding-Agent Context
 
+## Active upstream integration note
+
+For the current H-078C pinned-upstream merge/conflict-resolution cycle, read
+[UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md](UPSTREAM_CONFLICT_RESOLUTION_2026-09-19.md)
+before resolving any upstream conflict. It refines H-078B with the empirical 69-conflict
+merge state, structural-owner rule and ancestry completion gates.
+
+
 This directory is the operational entry point for coding agents working on the downstream Hermes Workstation surface. It does **not** replace the repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) or duplicate the architecture documents in `workstation/`.
 
 ## Required reading order
