@@ -1,5 +1,22 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-026 — Upstream migration as decoupling
+
+Strategic patch-surface rule for the next upstream migration: every conflict touching a
+Workstation integration seam must attempt to reduce permanent core coupling rather than
+simply transplant the old patch into the upstream's new owner.
+
+Canonical implementation direction:
+- generic Hermes lifecycle/middleware/provider contracts remain upstream-owned;
+- Workstation-owned adapters subscribe to those contracts;
+- direct Hermes -> Workstation imports are migration debt and should shrink;
+- normal Hermes behavior must remain supervised without requiring the model to call
+  `work_execute`;
+- old direct seams are removed only after shadow/parity evidence;
+- `workstation/scripts/audit_hermes_seams.py` is the initial read-only guardrail.
+
+See `context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md` and D-026.
+
 ## HW-025 — Browser operational admission corrective closure
 
 Extends canonical dispatcher, compiler, kernel, execution-policy, Browser runtime and
