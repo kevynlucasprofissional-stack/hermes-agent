@@ -600,6 +600,53 @@ Plane, evidence store or predicate IR merely to encode H-077 research vocabulary
 Canonical:
 [ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
 
+## D-026 — Synchronize upstream while extracting seams; Workstation supervises Hermes unidirectionally
+
+D-017 through D-025 remain authoritative.
+
+Hermes Work will adapt to the current `NousResearch/hermes-agent` upstream, but this
+migration is also the beginning of Runtime Independence. We will not first reproduce the
+old patch topology on the new upstream and only later attempt a separation.
+
+The canonical direction is:
+
+```text
+Hermes generic runtime
+  -> generic lifecycle / middleware / provider events
+  -> Workstation-owned Hermes adapter
+  -> Work Runtime / Control Plane
+```
+
+Generic Hermes core must progressively stop importing or special-casing Workstation.
+Workstation may depend on stable/generic Hermes extension contracts; the reverse
+dependency is migration debt.
+
+Most importantly, removing direct seams must **not** mean that Hermes must "remember" to
+use Workstation. Workstation participation cannot depend on prompt compliance, model
+choice, or the model selecting `work_execute`. The Workstation must observe normal Hermes
+execution and, through generic contracts, be able to intervene, pause, modify, wrap,
+reconcile, verify and compile experience where its policy requires.
+
+`work_execute` remains a valid explicit Capability/Intent fast path and external API;
+it is not the activation mechanism on which Workstation correctness depends.
+
+For upstream conflicts use exactly one classification:
+`ADOPT_UPSTREAM`, `KEEP_WORKSTATION`, `SEMANTIC_PORT`, or `EXTRACT_BOUNDARY`.
+Prefer `EXTRACT_BOUNDARY` when existing generic `pre/post_tool_call`,
+`tool_request/tool_execution`, `llm_request/llm_execution`, API/session lifecycle or
+browser-provider surfaces can own the integration.
+
+No seam is retired before shadow/parity evidence proves that lineage, effect/authority,
+uncertainty, verification, BrowserTask ownership, human handoff and Experience Compiler
+observations survive. Upstream structure is authoritative for generic Hermes; Workstation
+semantics remain authoritative for Workstation-owned invariants.
+
+The migration target is not two diverging products. It is one Work Runtime with Hermes as
+the first-party adapter/laboratory, followed later by standalone process/UI packaging.
+
+Canonical:
+[UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
