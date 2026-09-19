@@ -1,5 +1,116 @@
 # CURRENT — Workstation Engineering Journal
 
+
+## H-073 — Hierarchical operational learning / reasoning amortization architecture audit (2026-09-19)
+
+**Classification:** ARCHITECTURE SYNTHESIS VALIDATED / FOUR INTEGRATION GAPS CONFIRMED / IMPLEMENTATION OPEN.
+
+**Audit basis:** current `main` after Experience Compiler + Verified Operational
+Control Plane implementation, with direct review of `experience_compiler/*`,
+`operational_capabilities.py`, `operational_kernel.py`, `task_compiler.py`,
+`control_plane/{router,composition,dispatcher,waiting}.py`, `kanban.py` and
+their focused tests.
+
+**Question:** does Hermes Work actually converge toward a system where repeated
+verified action patterns progressively leave the LLM reasoning path, become
+deterministic operational knowledge, compose into larger capabilities, wait without
+resident reasoning, and wake the LLM only at unresolved semantic boundaries?
+
+**Result:** **yes in architectural direction and substantial substrate; not yet as
+one closed product loop.** The desired abstraction is a clarification/extension of
+the current design, not a competing architecture.
+
+### Confirmed findings
+
+- **H-073-A — correct atomicity is VOT, not the smallest gesture.**
+  The existing Experience Compiler definition is stronger than a literal
+  microautomation model: learn the smallest semantically closed, parameterizable,
+  executable and verifiable transition with positive reuse value. Do not create
+  one capability per click/tool call by default.
+
+- **H-073-B — real accepted experience already reaches automatic mining.**
+  `workstation/kanban.py` projects accepted canonical runs into
+  `ExperienceCorpus` and calls `ExperienceCompiler(...).mine()` after commit.
+  This is not documentation-only.
+
+- **H-073-C — learned capability and semantic Router are partially disconnected.**
+  Experience Compiler emits learned `OperationalCapability` objects with learned
+  pre/postconditions, verifier contract and fingerprints, but does not currently
+  derive/populate `formal_contract`. CapabilityRouter skips capabilities lacking
+  that typed formal contract. Exact fingerprint reuse works; broad semantic
+  OperationIntent routing does not automatically consume every promoted learned
+  capability.
+
+- **H-073-D — runtime composition exists, hierarchical learned composition does not.**
+  Capability dependencies and `CompositionEngine` exist, and a learned atomic
+  capability can be reused inside larger flows. There is no first-class
+  CapabilityInvocation corpus/miner that observes recurring A -> B -> C capability
+  sequences and promotes a causally proven dependency-based composite.
+
+- **H-073-E — persistent wait abstraction exists but production waiting remains resident.**
+  `AwaitCondition` and `TriggerCoordinator` encode the right durable/event model,
+  but TaskCompiler still uses `RuntimeEventBus.wait()` or bounded
+  `time.sleep()` polling in the main step loop. The LLM can be absent, but a worker
+  remains resident. TriggerCoordinator confirms/deletes a condition; it does not yet
+  reconstruct and execute the stored continuation.
+
+- **H-073-F — control-plane truth gaps block trustworthy hierarchy.**
+  H-071 remains a prerequisite: false COMPOSE, ACK-as-verification and authority
+  minting must be closed before composite learning can trust execution outcomes.
+  Additional route branches must use the actual decision fields
+  (`await_condition`, `scope`, `open_condition/attention_packet`) rather than
+  stale accessor assumptions.
+
+### Chosen synthesis
+
+Preserve the existing architecture and complete this hierarchy:
+
+~~~text
+trusted primitives
+  -> VOT / OperationalCapability
+  -> Composite OperationalCapability
+  -> Deterministic Workflow
+  -> AwaitCondition / event
+  -> OpenCondition / AttentionPacket
+  -> WAKE_LLM only for unresolved semantics
+~~~
+
+The output vocabulary of one compilation level may become the observed vocabulary
+of the next, but every level must independently prove semantic closure and causal
+support. Frequency is candidate evidence, never promotion authority.
+
+### Required implementation sequence
+
+1. **P0:** close H-071 / Browser Operational Admission truth seams.
+2. **P1:** derive conservative `CapabilityFormalContract` for eligible learned
+   capabilities and prove `OperationIntent -> Router -> learned capability`.
+3. **P2:** make AwaitCondition own non-resident continuation; persist/fence
+   continuation, release executor, re-enter Router after event + authoritative
+   state confirmation; scheduled polling only as fallback observer.
+4. **P3:** capture CapabilityInvocation traces and reuse EC causal/replay/promotion
+   machinery to create dependency-based composite candidates.
+5. **P4:** add Operational Reasoning Amortization metrics and shadow rollout.
+
+### Metric hypothesis
+
+**ORA = verified semantic transitions executed with zero LLM intervention /
+total verified semantic transitions.**
+
+Desired trend: ORA rises and LLM calls per verified transition falls without
+verification quality loss, increased uncertain mutation rate or hidden drift.
+
+**Refuting evidence that would change this plan:** if current main already derives
+formal contracts for learned candidates in a different canonical owner, already
+performs non-resident continuation resume through AwaitCondition, or already mines
+CapabilityInvocation sequences, this milestone must collapse into regression
+proof instead of adding duplicate mechanisms. The audit found no such production
+closure.
+
+**Canonical specification:**
+[../HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](../HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+---
+
 ## H-072 — Browser Ownership & Recovery post-implementation audit (2026-09-19)
 
 **Classification:** IMPLEMENTATION BASE RETAINED / CORRECTIVE P0 REOPENED / PRODUCT QUALIFICATION OPEN.
