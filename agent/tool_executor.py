@@ -230,8 +230,8 @@ def _flush_session_db_after_tool_progress(
     Flush the already-appended assistant/tool messages immediately so the
     transcript survives destructive-but-valid tool calls.
     """
-    from workstation.task_compiler import durable_execution_active
-    if durable_execution_active():
+    from agent.execution_persistence import get_persistence_disposition, ExecutionPersistenceDisposition
+    if get_persistence_disposition() == ExecutionPersistenceDisposition.OWNER_MANAGED:
         # Private item messages are not independent conversational turns.
         # The runner owns persistence/checkpoints; the outer tool result is
         # flushed normally after the runtime boundary exits.
@@ -635,8 +635,13 @@ def _run_agent_tool_execution_middleware(
             state["args"] = final_args
 
         def _begin() -> None:
-            from workstation.batch_detection import prepare_mutation
-            prepare_mutation(agent, function_name, final_args)
+            from agent.pre_dispatch import dispatch_pre_authorized_checkpoint
+            dispatch_pre_authorized_checkpoint(
+                function_name,
+                final_args,
+                tool_call_id,
+                {"agent": agent, "task_id": effective_task_id},
+            )
             _begin_tool_execution(
                 agent,
                 function_name=function_name,
@@ -1832,10 +1837,15 @@ def execute_tool_calls_concurrent(agent, assistant_message, messages: list, effe
         agent._touch_activity(f"tool completed: {name} ({tool_duration:.1f}s){_status_suffix}")
 
         display_function_result = function_result
-        from workstation.batch_detection import record_mutation
-        record_mutation(agent, name, args, function_result, dispatched=r is not None and not blocked, duration_ms=tool_duration * 1000)
-        from workstation.task_compiler import capture_raw_result
-        capture_raw_result(tool_call_id, function_result)
+        from agent.post_tool import dispatch_raw_post_tool_observation
+        dispatch_raw_post_tool_observation(
+            name,
+            args,
+            tool_call_id,
+            function_result,
+            tool_duration,
+            {"agent": agent, "task_id": effective_task_id, "dispatched": r is not None and not blocked},
+        )
         function_result = maybe_persist_tool_result(
             content=function_result,
             tool_name=name,
@@ -2759,10 +2769,15 @@ def execute_tool_calls_sequential(agent, assistant_message, messages: list, effe
             logging.debug("Tool result (%d chars): %s", len(_log_result), _log_result)
 
         display_function_result = function_result
-        from workstation.batch_detection import record_mutation
-        record_mutation(agent, function_name, function_args, function_result, dispatched=_execution_dispatched and not _execution_blocked, duration_ms=tool_duration * 1000)
-        from workstation.task_compiler import capture_raw_result
-        capture_raw_result(tool_call_id, function_result)
+        from agent.post_tool import dispatch_raw_post_tool_observation
+        dispatch_raw_post_tool_observation(
+            function_name,
+            function_args,
+            tool_call_id,
+            function_result,
+            tool_duration,
+            {"agent": agent, "task_id": effective_task_id, "dispatched": _execution_dispatched and not _execution_blocked},
+        )
         function_result = maybe_persist_tool_result(
             content=function_result,
             tool_name=function_name,

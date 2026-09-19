@@ -1,5 +1,85 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-029 — First-Party Workstation Adapter Implementation Manifest
+
+Implementation of H-078B decouples Hermes core from Workstation.
+
+Touched core modules:
+- `agent/turn_ingress.py`: generic turn ingress metadata (origin, trust class, session).
+- `agent/turn_admission.py`: turn admission registration & invocation.
+- `agent/tool_batch_admission.py`: tool batch admission provider registry & actions.
+- `agent/scoped_execution.py`: scoped execution provider registry & context boundary.
+- `agent/pre_dispatch.py`: pre-authorized dispatch checkpoint hooks.
+- `agent/post_tool.py`: raw post-tool observation hooks.
+- `agent/execution_persistence.py`: execution persistence disposition provider & context.
+- `agent/turn_route_policy.py`: route policy contracts & enforcement.
+- `agent/completion_admission.py`: completion candidate admission provider registry.
+- `agent/compression_admission.py`: compression bypass provider registry.
+- `agent/conversation_projection.py`: provider wire projection registry.
+- `agent/task_completion_admission.py`: task acceptance admission provider registry.
+- `workstation/integrations/hermes/`: adapter façade translating all generic contracts into Workstation kernel calls.
+- Decoupled core files: `run_agent.py`, `agent/conversation_loop.py`, `agent/tool_executor.py`,
+  `agent/turn_finalizer.py`, `agent/turn_constraints.py`, `agent/chat_completion_helpers.py`,
+  `agent/conversation_compression.py`, `cli.py`, `gateway/run.py`, `hermes_cli/kanban_db.py`,
+  `hermes_cli/web_server.py`, `tools/file_tools.py`, `tools/tool_search.py`, `tools/close_preview_tool.py` (0 direct imports each).
+
+
+## HW-028 — Semantic seam migration manifest
+
+The H-078 code-to-code refinement upgrades the seam manifest from path-level intent to
+semantic concern-level migration metadata while keeping path-level audit budgets.
+
+New manifest properties include semantic owner, current behavior, required ordering,
+replacement, parity tests and sunset condition. `run_agent.py` is now explicit as a
+high-risk source seam; `agent/tool_executor.py` is explicitly mixed rather than a single
+REMOVE candidate.
+
+No runtime behavior is switched by HW-028. It is migration-spec hardening before the
+upstream integration branch exists.
+
+
+## HW-027 — Minimum necessary first-party seams
+
+H-078 no longer treats every source-level Workstation integration as debt. The downstream
+must minimize **accidental coupling**, not abolish first-party integration required for the
+product.
+
+Seam dispositions:
+- `REMOVE` when generic hooks/middleware/providers/plugins preserve full behavior;
+- `UPSTREAM_ABSTRACT` when a small generic boundary is missing;
+- `PRESERVE_FIRST_PARTY` when native/privileged lifecycle is materially required.
+
+Reference case: Workstation Browser native Electron runtime. Presentation seams should move
+onto modern upstream pane/plugin surfaces where parity is proven, while main/preload
+integration may remain deliberate until upstream exposes an equivalent native-view
+provider/lifecycle contract.
+
+Guardrails:
+- no unclassified new upstream-owned Workstation seam;
+- no capability regression for architectural purity;
+- preserved seams must be narrow, contract/E2E-tested, registered in
+  `first_party_seams.json`, recorded in `UPSTREAM_DELTA.md`, and re-evaluated each
+  upstream cycle.
+
+See `context/FIRST_PARTY_SEAM_POLICY.md` and D-027.
+
+## HW-026 — Upstream migration as decoupling
+
+Strategic patch-surface rule for the next upstream migration: every conflict touching a
+Workstation integration seam must attempt to reduce permanent core coupling rather than
+simply transplant the old patch into the upstream's new owner.
+
+Canonical implementation direction:
+- generic Hermes lifecycle/middleware/provider contracts remain upstream-owned;
+- Workstation-owned adapters subscribe to those contracts;
+- direct Hermes -> Workstation imports are migration debt and should shrink;
+- normal Hermes behavior must remain supervised without requiring the model to call
+  `work_execute`;
+- old direct seams are removed only after shadow/parity evidence;
+- `workstation/scripts/audit_hermes_seams.py` is the initial read-only guardrail.
+
+See `context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md` and D-026.
+
 ## HW-025 — Browser operational admission corrective closure
 
 Extends canonical dispatcher, compiler, kernel, execution-policy, Browser runtime and

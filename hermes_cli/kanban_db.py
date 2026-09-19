@@ -5612,27 +5612,9 @@ def complete_task(
     ws = (metadata or {}).get("workstation")
     owned = conn.execute("SELECT created_by FROM tasks WHERE id=?", (task_id,)).fetchone()
     hybrid_owned = conn.execute("SELECT 1 FROM hybrid_card_delegations WHERE agent_task_id=? LIMIT 1", (task_id,)).fetchone()
-    if ((owned and owned[0] == "workstation") or hybrid_owned) and not isinstance(ws, dict):
+    from agent.task_completion_admission import admit_task_completion
+    if not admit_task_completion(conn, task_id, ws, owned, bool(hybrid_owned)):
         return False
-    if isinstance(ws, dict):
-        from workstation.contracts import AcceptanceContract, AcceptanceEvaluator, EvidenceRef, OutcomeStatus, TaskOutcome
-        data = ws.get("outcome")
-        if not isinstance(data, dict) or ws.get("acceptance_approved") is not True:
-            return False
-        try:
-            outcome = TaskOutcome(**{**data, "status": OutcomeStatus(data["status"]),
-                                     "evidence_refs": [EvidenceRef(**e) for e in data.get("evidence_refs", [])]})
-            saved = conn.execute("SELECT contract_json FROM task_acceptance_contracts WHERE task_id=?", (task_id,)).fetchone()
-            contract = AcceptanceContract(**json.loads(saved[0])) if saved else AcceptanceContract()
-            if outcome.task_id != task_id or AcceptanceEvaluator().evaluate(outcome, contract):
-                return False
-            if contract.policy == "evidence":
-                from agent.verification_evidence import outcome_verifiers_recorded
-                if not outcome_verifiers_recorded(task_id, outcome.session_id, outcome.verifier_results,
-                                                  ws.get("verification_event_ids", [])):
-                    return False
-        except (TypeError, ValueError, KeyError):
-            return False
     now = int(time.time())
     # Fail before validating cards or staging artifacts; re-check inside the
     # final write transaction below to close the parent-reopen race.

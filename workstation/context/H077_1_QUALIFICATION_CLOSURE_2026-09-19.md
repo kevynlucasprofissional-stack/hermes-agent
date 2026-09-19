@@ -1,7 +1,7 @@
 # H-077.1 — Truthful Core Qualification Closure
 
 Date established: 2026-09-19  
-Status: **ACTIVE CORRECTIVE QUALIFICATION / H-077 CORE RETAINED**  
+Status: **IMPLEMENTATION COMPLETE / EXACT-HEAD QUALIFICATION PENDING**  
 Audit baseline: `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5` (PR #36 merged)  
 Parent decision: D-025 — scoped VERIFIED + external falsification before new horizontal primitives
 
@@ -104,6 +104,16 @@ score.
 
 Only restore `IMPLEMENTED & QUALIFIED` after all reproduced residuals are closed with
 behavior tests and exact-head CI.
+
+## Implementation receipt
+
+H-077.1 now makes TaskCompiler terminal completion depend on canonical `VERIFIED`,
+separates execution acknowledgement, derives raw-observer provenance conservatively,
+fences explicit task/run/op lineage, fail-closes required validity-envelope context,
+uses external adjudication denominators, and records an AFB-v0.1 system-plus-oracle row.
+The normal compiler marks non-discriminable counterexamples as model inadequacy and
+blocks promotion. No horizontal primitive or parallel owner was added. Exact-head CI
+remains the only gate for the `QUALIFIED/CLOSED` claim.
 
 > Preserve owners -> harden truth boundaries -> independently adjudicate -> measure only
 > what was observed -> falsify -> learn limits -> generalize inside a proven envelope.

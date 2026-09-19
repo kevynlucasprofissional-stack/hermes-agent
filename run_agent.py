@@ -8402,120 +8402,60 @@ class AIAgent:
         while side-effect ordering is preserved.
         """
         tool_calls = assistant_message.tool_calls
-        from workstation.execution_policy import CompilationDecision, decisions_for_calls
-        decisions = decisions_for_calls(self, tool_calls)
-        if any(d in {CompilationDecision.REQUIRE_COMPILE, CompilationDecision.REQUIRE_HUMAN} for d in decisions):
-            from agent.tool_dispatch_helpers import make_tool_result_message
-            self._work_compile_replans = getattr(self, "_work_compile_replans", 0) + 1
-            # Refused writes did not execute. Keep the discovery dispatcher live;
-            # ordinary no-progress/tool-budget guards still bound repeated refusal.
-            for call, decision in zip(tool_calls, decisions):
-                # Discovery and human clarification remain possible even when
-                # a single provider response also proposes uncompiled writes.
-                if decision not in {CompilationDecision.REQUIRE_COMPILE, CompilationDecision.REQUIRE_HUMAN}:
-                    from types import SimpleNamespace
-                    self._execute_tool_calls(SimpleNamespace(tool_calls=[call]), messages, effective_task_id, api_call_count)
-                    continue
-                if decision == CompilationDecision.REQUIRE_HUMAN:
-                    from hermes_constants import get_hermes_home
-                    from workstation.runtime import HumanHandoffManager
-                    handoff = HumanHandoffManager(get_hermes_home() / 'workstation' / 'human_handoffs.json').request(
-                        task_id=effective_task_id, session_id=self._conversation_root_id() or self.session_id,
-                        reason='uncertain_mutation_requires_review', scope={'tool_call_id': call.id})
-                    messages.append(make_tool_result_message(call.function.name, json.dumps({
-                        'status': 'NEEDS_REASONING', 'code': 'uncertain_mutation_requires_review',
-                        'safe_to_resume': False, 'handoff_id': handoff.handoff_id,
-                    }), call.id, effect_disposition='none'))
-                    continue
-                from workstation.task_compiler import discovery_guidance
-                from workstation.batch_detection import mutation_summary
-                from tools.effects import unwrap_call, tool_effect
-                blocked_name, blocked_args = unwrap_call(call)
-                messages.append(make_tool_result_message(call.function.name, json.dumps({
-                    "status": "replan", "code": "durable_compile_required",
-                    "summary": "Repetitive work requires work_execute. Compile remaining items and verified steps once; these calls did not execute. Prior completed mutations are preserved and must not be replayed.",
-                    **discovery_guidance(self), **mutation_summary(self),
-                    "bootstrap_code": "GUARD_BOOTSTRAP_BLOCKED" if blocked_name in {"terminal", "browser_console", "browser_exec"} else None,
-                    "blocked_action": blocked_name, "detected_effect": tool_effect(blocked_name, args=blocked_args).value,
-                    "reason": "Use structured read/discovery tools to prepare the plan; arbitrary execution cannot assert read-only authority.",
-                }), call.id, effect_disposition="none"))
+        if not tool_calls:
             return
+
+        from agent.tool_batch_admission import admit_tool_batch, BatchAdmissionAction
+        admission_result = admit_tool_batch(self, tool_calls, {"task_id": effective_task_id})
+        if admission_result is not None:
+            has_intervention = any(d.action != BatchAdmissionAction.EXECUTE for d in admission_result.decisions)
+            if has_intervention:
+                from agent.tool_dispatch_helpers import make_tool_result_message
+                from types import SimpleNamespace
+                for call, decision in zip(tool_calls, admission_result.decisions):
+                    if decision.action == BatchAdmissionAction.EXECUTE:
+                        self._execute_tool_calls(SimpleNamespace(tool_calls=[call]), messages, effective_task_id, api_call_count)
+                        continue
+                    messages.append(make_tool_result_message(
+                        call.function.name,
+                        decision.synthetic_result or "{}",
+                        call.id,
+                        effect_disposition="none",
+                    ))
+                return
 
         # Allow _vprint during tool execution even with stream consumers
         self._executing_tools = True
-        from workstation.task_compiler import execution_context
-        from types import SimpleNamespace
-
-        def _durable_dispatch(name, args, task_id, call_id):
-            if self._interrupt_requested or getattr(self, "_tool_guardrail_halt_decision", None):
-                raise InterruptedError("Durable work interrupted")
-            if name not in self.valid_tool_names:
-                from tools.tool_search import scoped_deferrable_names
-                scoped = scoped_deferrable_names(get_tool_definitions(
-                    enabled_toolsets=self.enabled_toolsets, disabled_toolsets=self.disabled_toolsets,
-                    quiet_mode=True, skip_tool_search_assembly=True))
-                if "tool_call" not in self.valid_tool_names or name not in scoped:
-                    raise ValueError(f"Tool outside session scope: {name}")
-                args = {"name": name, "arguments": args}
-                name = "tool_call"
-            call = SimpleNamespace(id=call_id, type="function", function=SimpleNamespace(
-                name=name, arguments=json.dumps(args)))
-            item_messages = []
-            from agent.tool_executor import execute_tool_calls_sequential
-            execute_tool_calls_sequential(self, SimpleNamespace(tool_calls=[call]), item_messages, task_id, finalize=False)
-            results = [m for m in item_messages if m.get("role") == "tool"]
-            if not results:
-                raise RuntimeError("Scoped dispatcher produced no tool result")
-            from workstation.task_compiler import take_raw_result
-            return take_raw_result(call_id, results[-1]["content"])
-
-        self._work_capabilities = getattr(self, "_work_capabilities", {})
-        _work_context = execution_context(_durable_dispatch, self._conversation_root_id() or self.session_id or "",
-                                         self._tool_guardrails.mark_verified_progress,
-                                         getattr(self, "_work_user_constraints", {}),
-                                         getattr(self, "_current_provider_usage", None),
-                                         getattr(self, "_work_completed_mutations", {}),
-                                         event_bus=getattr(self, "_workstation_event_bus", None),
-                                         canonical_task_id=getattr(self, "_canonical_work_task_id", None),
-                                         mutation_evidence=getattr(self, "_work_mutation_evidence", {}),
-                                         capabilities=getattr(self, "_work_capabilities", {}))
-        _work_context.__enter__()
-        try:
-            if len(tool_calls) <= 1:
-                return self._execute_tool_calls_sequential(
-                    assistant_message, messages, effective_task_id, api_call_count
-                )
-
-            from agent.tool_dispatch_helpers import _plan_tool_batch_segments
-            _active_env = get_active_env(effective_task_id)
-            _exec_cwd = Path(_active_env.cwd) if _active_env is not None and _active_env.cwd else None
-            segments = _plan_tool_batch_segments(tool_calls, execution_cwd=_exec_cwd)
-
-            if len(segments) == 1:
-                kind = segments[0][0]
-                if kind == "parallel":
-                    return self._execute_tool_calls_concurrent(
+        from agent.scoped_execution import scoped_execution
+        with scoped_execution(self, effective_task_id, messages):
+            try:
+                if len(tool_calls) <= 1:
+                    return self._execute_tool_calls_sequential(
                         assistant_message, messages, effective_task_id, api_call_count
                     )
-                return self._execute_tool_calls_sequential(
-                    assistant_message, messages, effective_task_id, api_call_count
-                )
 
-            from agent.tool_executor import execute_tool_calls_segmented
-            return execute_tool_calls_segmented(
-                self, assistant_message, messages, effective_task_id, api_call_count,
-                segments=segments,
-            )
-        finally:
-            from workstation.task_compiler import operational_references
-            refs = operational_references()
-            if refs:
-                for message in reversed(messages):
-                    if message.get("role") == "tool":
-                        message["_hermes_operational_refs"] = refs
-                        break
-            _work_context.__exit__(None, None, None)
-            self._executing_tools = False
+                from agent.tool_dispatch_helpers import _plan_tool_batch_segments
+                _active_env = get_active_env(effective_task_id)
+                _exec_cwd = Path(_active_env.cwd) if _active_env is not None and _active_env.cwd else None
+                segments = _plan_tool_batch_segments(tool_calls, execution_cwd=_exec_cwd)
+
+                if len(segments) == 1:
+                    kind = segments[0][0]
+                    if kind == "parallel":
+                        return self._execute_tool_calls_concurrent(
+                            assistant_message, messages, effective_task_id, api_call_count
+                        )
+                    return self._execute_tool_calls_sequential(
+                        assistant_message, messages, effective_task_id, api_call_count
+                    )
+
+                from agent.tool_executor import execute_tool_calls_segmented
+                return execute_tool_calls_segmented(
+                    self, assistant_message, messages, effective_task_id, api_call_count,
+                    segments=segments,
+                )
+            finally:
+                self._executing_tools = False
 
     def _dispatch_delegate_task(self, function_args: dict) -> str:
         """Single call site for delegate_task dispatch.
@@ -8560,16 +8500,8 @@ class AIAgent:
                      skip_tool_execution_middleware: bool = False) -> str:
         """Forwarder — see ``agent.agent_runtime_helpers.invoke_tool``."""
         from agent.agent_runtime_helpers import invoke_tool
-        context = getattr(self, "_turn_constraints", None)
-        if context is not None and function_name != "work_execute":
-            from tools.effects import tool_contract
-            from workstation.routing import require_allowed_route, canonical_route_for_tool, NATIVE_BROWSER_TOOLS
-            target = function_args.get("name", "") if function_name == "tool_call" else function_name
-            _, contract = tool_contract(target)
-            require_allowed_route(canonical_route_for_tool(target,
-                runtime='internal' if target in NATIVE_BROWSER_TOOLS else None), context.routes)
-            for route in contract.get("routes") or []:
-                require_allowed_route(route, context.routes)
+        from agent.turn_constraints import guard_tool_call
+        guard_tool_call(self, function_name, function_args)
         return invoke_tool(
             self,
             function_name,

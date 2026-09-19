@@ -10,6 +10,7 @@ import posixpath
 import sys
 import threading
 from pathlib import Path, PurePosixPath
+from typing import Any, Callable, Dict, List, Optional
 
 from agent.file_safety import get_read_block_error
 from tools.binary_extensions import (
@@ -1627,12 +1628,28 @@ def _special_file_kind(path) -> str | None:
     return "a special (non-regular) file"
 
 
+_URI_SCHEME_READ_HANDLERS: dict[str, Any] = {}
+_FILE_READ_PROJECTIONS: list[Any] = []
+
+
+def register_uri_scheme_read_handler(scheme: str, handler: Any) -> None:
+    _URI_SCHEME_READ_HANDLERS[scheme] = handler
+
+
+def register_file_read_projection(handler: Any) -> None:
+    if handler not in _FILE_READ_PROJECTIONS:
+        _FILE_READ_PROJECTIONS.append(handler)
+
+
 def read_file_tool(path: str, offset: int = 1, limit: int = 2000, task_id: str = "default") -> str:
     """Read a file with pagination and line numbers."""
     try:
-        if path.startswith("artifact://"):
-            from workstation.artifacts import ArtifactStore
-            return json.dumps(ArtifactStore().resolve_structured(path, max_content_bytes=_get_max_read_chars()), ensure_ascii=False)
+        if "://" in path:
+            scheme = path.split("://", 1)[0]
+            if scheme in _URI_SCHEME_READ_HANDLERS:
+                return _URI_SCHEME_READ_HANDLERS[scheme](
+                    path, offset=offset, limit=limit, task_id=task_id, max_content_bytes=_get_max_read_chars()
+                )
         offset, limit = normalize_read_pagination(offset, limit)
 
         # ── Device path guard ─────────────────────────────────────────
@@ -1801,8 +1818,8 @@ def read_file_tool(path: str, offset: int = 1, limit: int = 2000, task_id: str =
         # instead of re-sending the same content.  Saves context tokens.
         resolved_str = str(_resolved)
         dedup_key = (resolved_str, offset, limit)
-        from workstation.task_compiler import durable_execution_active
-        _durable_read = durable_execution_active()
+        from agent.execution_persistence import get_persistence_disposition, ExecutionPersistenceDisposition
+        _durable_read = (get_persistence_disposition() == ExecutionPersistenceDisposition.OWNER_MANAGED)
         with _read_tracker_lock:
             task_data = _read_tracker.setdefault(task_id, {
                 "last_key": None, "consecutive": 0,
@@ -1924,14 +1941,10 @@ def read_file_tool(path: str, offset: int = 1, limit: int = 2000, task_id: str =
         if _durable_read and not result_dict.get("error"):
             file_state.record_read(task_id, resolved_str,
                                    partial=(offset > 1) or bool(result_dict.get("truncated")))
-            from workstation.reference_plane import ReadCache
-            from workstation.artifacts import ArtifactStore
-            projection = ReadCache(ArtifactStore(), task_id).project(
-                {"path": resolved_str, "offset": offset, "limit": limit}, result_dict)
-            # A fresh authorized read determines the content hash, including
-            # same-size edits with restored mtime. Never trust stat alone.
-            if projection["cache_hit"]:
-                return json.dumps(projection, ensure_ascii=False)
+            for handler in _FILE_READ_PROJECTIONS:
+                proj = handler(task_id, resolved_str, offset, limit, result_dict)
+                if proj is not None:
+                    return proj
             return json.dumps(result_dict, ensure_ascii=False)
 
         # Large-file hint: if the file is big and the caller didn't ask

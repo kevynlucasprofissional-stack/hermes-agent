@@ -1,0 +1,581 @@
+{
+  "schema": "hermes.workstation.first-party-seams.v2",
+  "policy": "minimum-necessary-first-party-seams",
+  "established": "2026-09-19",
+  "refined": "2026-09-19-code-to-code-audit",
+  "rule": "Classify semantic concerns, not whole files. Preserve causal properties in the narrowest modern upstream owner.",
+  "invariant": "UPSTREAM STRUCTURE + WORKSTATION SEMANTICS + MINIMUM NECESSARY FIRST-PARTY SEAMS + NO CAPABILITY REGRESSION FOR PURITY",
+  "research_baselines": {
+    "common_ancestor": "057dcdf236f8a6a26721c10fcc6ccb72726e272a",
+    "downstream_audit_snapshot": "92a3acb51e87af85a9f380ee04d2cf47d7900ca5",
+    "downstream_main_latest_observed": "9f4ce89e56e204b3c8119d4b937be4462d0dfeaf",
+    "upstream_deep_audit_snapshot": "ea94d88e25d7699115a668c1757433361f3420dd",
+    "upstream_latest_observed_during_repo_refresh": "af2e9a4313f9a8a96618207ae111f9e824241949",
+    "note": "The upstream deep-audit SHA is a research snapshot only. At implementation start fetch upstream, choose one exact SHA, pin it, and do not move it until the migration cycle closes."
+  },
+  "dispositions": [
+    "REMOVE",
+    "UPSTREAM_ABSTRACT",
+    "PRESERVE_FIRST_PARTY"
+  ],
+  "entries": [
+    {
+      "id": "FPS-CONV-001",
+      "path": "agent/conversation_loop.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "turn admission + LLM-request projection owned by a first-party Hermes adapter",
+      "rationale": "The file contains multiple independent seams with different destinations; it must not be classified as one REMOVE unit.",
+      "concerns": [
+        {
+          "id": "SEAM-CONV-INGRESS",
+          "symbol_or_concern": "prepare_turn_work / canonical WorkIntent+TaskRun binding",
+          "semantic_owner": "generic turn_admission -> workstation/integrations/hermes",
+          "current_behavior": "Binds MessageEnvelope, WorkIntent, canonical_task_id/run_id and repeatability state in the old conversation-loop prologue.",
+          "required_ordering": "After Hermes establishes session/task/turn identity and before compaction, auxiliary/provider work, or any route-sensitive action.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "generic turn_admission lifecycle boundary; Workstation adapter translates ingress into MessageEnvelope/WorkIntent",
+          "parity_tests": [
+            "same canonical task/run binding",
+            "authority available before auxiliary/provider calls",
+            "no duplicate WorkIntent creation"
+          ],
+          "sunset_condition": "direct prepare_turn_work import is removed only after timing parity is proven"
+        },
+        {
+          "id": "SEAM-CONV-PROJECTION",
+          "symbol_or_concern": "project_for_provider",
+          "semantic_owner": "Workstation LLM request middleware",
+          "current_behavior": "Projects a wire-only conversation copy, injects authenticated durable handoff, and removes already-covered work_execute history without mutating persisted transcript.",
+          "required_ordering": "After canonical transcript exists and immediately before provider request construction/execution.",
+          "disposition": "REMOVE",
+          "replacement": "llm_request middleware / WorkstationLLMRequestMiddleware",
+          "parity_tests": [
+            "persisted transcript byte/semantic equivalence",
+            "wire context equivalence",
+            "prompt-cache behavior preserved",
+            "durable handoff remains authenticated",
+            "unrelated live exchange preserved"
+          ],
+          "sunset_condition": "remove direct seam after shadow projection parity"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-TOOL-001",
+      "path": "agent/tool_executor.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "split causal execution seams across generic pre-dispatch, post-tool observation and persistence-disposition contracts",
+      "rationale": "prepare_mutation, post-result observation and durable internal persistence have different causal positions and cannot share one REMOVE disposition.",
+      "concerns": [
+        {
+          "id": "SEAM-TOOL-PRE-EFFECT",
+          "symbol_or_concern": "prepare_mutation / uncertain-before-I/O checkpoint",
+          "semantic_owner": "generic tool dispatch lifecycle -> Workstation mutation journal",
+          "current_behavior": "Persists mutation=uncertain and persisted=unknown before an authorized external side effect leaves the process.",
+          "required_ordering": "FINAL args -> authorization/guardrails passed -> checkpoint -> REAL I/O. Never before final args/authorization and never after I/O.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "pre_authorized_dispatch / before_effect_commit generic hook",
+          "parity_tests": [
+            "blocked calls create no uncertain mutation",
+            "final mutated args are journaled",
+            "process death after I/O before ACK cannot cause blind retry",
+            "no duplicate dispatch"
+          ],
+          "sunset_condition": "direct prepare_mutation call removed only when the generic hook occupies the same causal boundary"
+        },
+        {
+          "id": "SEAM-TOOL-POST-EFFECT",
+          "symbol_or_concern": "record_mutation",
+          "semantic_owner": "Workstation post-tool observer",
+          "current_behavior": "Records dispatched effect/result observation after execution.",
+          "required_ordering": "Raw terminal result available before conversation spill/truncate/persistence projection.",
+          "disposition": "REMOVE",
+          "replacement": "post_tool_call observer",
+          "parity_tests": [
+            "dispatch/block status preserved",
+            "duration/effect lineage preserved",
+            "uncertainty reconciliation unchanged"
+          ],
+          "sunset_condition": "post_tool_call proves raw terminal parity"
+        },
+        {
+          "id": "SEAM-TOOL-RAW-RESULT",
+          "symbol_or_concern": "capture_raw_result",
+          "semantic_owner": "Workstation procedure trace / Experience Compiler observer",
+          "current_behavior": "Captures the raw tool result before model-facing persistence/truncation.",
+          "required_ordering": "Immediately after tool terminal result and before spill/truncate/tool-message projection.",
+          "disposition": "REMOVE",
+          "replacement": "post_tool_call observer",
+          "parity_tests": [
+            "raw untruncated result observed",
+            "tool_call_id/operation lineage preserved",
+            "timeout/cancel/error terminal states distinguishable"
+          ],
+          "sunset_condition": "raw-result parity proven"
+        },
+        {
+          "id": "SEAM-TOOL-PERSISTENCE",
+          "symbol_or_concern": "durable_execution_active SessionDB suppression",
+          "semantic_owner": "generic execution scope persistence policy",
+          "current_behavior": "Internal compiled steps do not flush as independent conversational turns; the durable runner owns checkpoints/persistence.",
+          "required_ordering": "Persistence decision applies before assistant/tool message flush for each internal compiled step.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "ExecutionVisibility/PersistenceDisposition = PERSIST|DEFER|OWNER_MANAGED",
+          "parity_tests": [
+            "no transcript pollution",
+            "no duplicate SessionDB rows",
+            "replay/checkpoint semantics unchanged",
+            "prompt-cache prefix stable"
+          ],
+          "sunset_condition": "direct durable_execution_active branch removed after owner-managed persistence parity"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-RUN-001",
+      "path": "run_agent.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "retire run_agent.py as Workstation integration owner; move semantics to decomposed upstream owners plus Hermes adapter",
+      "rationale": "The downstream monolith contains high-value Workstation semantics, but preserving the monolith would defeat upstream decomposition.",
+      "concerns": [
+        {
+          "id": "SEAM-RUN-BATCH",
+          "symbol_or_concern": "_execute_tool_calls decisions_for_calls / progressive compilation batch gate",
+          "semantic_owner": "agent/turn_tool_round.py generic admission -> Workstation adapter",
+          "current_behavior": "Classifies the whole assistant tool-call batch as EXECUTE/REQUIRE_COMPILE/REQUIRE_HUMAN before dispatch.",
+          "required_ordering": "After the model proposes the complete tool batch and before any member is dispatched.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "tool_batch_admission supporting EXECUTE|FILTER|REWRITE|SYNTHETIC_RESULT|DEFER/HANDOFF",
+          "parity_tests": [
+            "batch pattern decisions preserved",
+            "discovery reads can pass while repeated mutations compile",
+            "no member executes before admission"
+          ],
+          "sunset_condition": "run_agent batch policy removed after turn_tool_round admission parity"
+        },
+        {
+          "id": "SEAM-RUN-EXEC-SCOPE",
+          "symbol_or_concern": "durable dispatch / execution_context",
+          "semantic_owner": "generic scoped executor context -> Workstation deterministic dispatcher",
+          "current_behavior": "Carries deterministic execution context, operational references and mutation/effect lineage into tool dispatch.",
+          "required_ordering": "Bound before admitted deterministic dispatch and released after terminal observation.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "generic execution scope/context consumed by executor and adapter",
+          "parity_tests": [
+            "operation/task/run lineage preserved",
+            "durable dispatch remains scoped",
+            "no state leaks between turns"
+          ],
+          "sunset_condition": "run_agent-owned execution context disappears"
+        },
+        {
+          "id": "SEAM-RUN-ROUTES",
+          "symbol_or_concern": "turn-scoped route enforcement",
+          "semantic_owner": "generic TurnRoutePolicy",
+          "current_behavior": "Prevents provider/tool/browser/auxiliary routes forbidden by operational authority.",
+          "required_ordering": "Policy established at turn admission and consulted before every primary, auxiliary and tool route.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "ContextVar-backed TurnRoutePolicy",
+          "parity_tests": [
+            "forbidden routes fail closed",
+            "auxiliary provider obeys same policy",
+            "mutation-specific route policy preserved"
+          ],
+          "sunset_condition": "route enforcement no longer depends on run_agent Workstation branches"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-FINAL-001",
+      "path": "agent/turn_finalizer.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic completion admission contract",
+      "rationale": "Workstation finalization is an acceptance gate, not a fire-and-forget observer.",
+      "concerns": [
+        {
+          "id": "SEAM-COMPLETION-ADMISSION",
+          "symbol_or_concern": "WorkstationKanbanBridge.finalize_turn_candidate",
+          "semantic_owner": "generic completion_admission -> WorkstationAcceptanceProvider",
+          "current_behavior": "Checks canonical task/run, WorkPlan/WorkItems, evidence, verification, acceptance and procedure trace before admitting completion.",
+          "required_ordering": "Before canonical DONE/terminal commit; rejection must prevent completion.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "completion_admission lifecycle/provider contract",
+          "parity_tests": [
+            "rejected candidate cannot become DONE",
+            "run fencing preserved",
+            "procedure/evidence acceptance preserved"
+          ],
+          "sunset_condition": "direct Workstation finalizer import removed after admission can veto terminal commit"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-KANBAN-001",
+      "path": "hermes_cli/kanban_db.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generalize upstream two-phase acceptance into TaskCompletionAdmission providers",
+      "rationale": "Modern upstream already proves the prepare-outside-txn/revalidate-inside-txn/record-before-DONE pattern for PR acceptance.",
+      "concerns": [
+        {
+          "id": "SEAM-KANBAN-ACCEPT",
+          "symbol_or_concern": "Workstation acceptance before complete_task DONE",
+          "semantic_owner": "TaskCompletionAdmission provider registry",
+          "current_behavior": "Workstation acceptance must participate in the canonical completion transaction.",
+          "required_ordering": "prepare outside write txn -> snapshot owner/run/state -> begin txn -> revalidate snapshot -> record receipt -> terminal DONE update.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "PRAcceptanceProvider + WorkstationAcceptanceProvider behind one generic admission chain",
+          "parity_tests": [
+            "atomicity",
+            "same-run fencing",
+            "acceptance receipt before DONE",
+            "parent/reopen race remains closed"
+          ],
+          "sunset_condition": "kanban_db has no Workstation-specific import"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-BROWSER-001",
+      "path": "tools/browser_tool.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "BrowserControlBroker/controller routing plus Workstation-owned Browser semantics",
+      "rationale": "Upstream now owns controller routing/identity/dispatch/fail-closed; Workstation should retain task/page/native-runtime semantics.",
+      "concerns": [
+        {
+          "id": "SEAM-BROWSER-ROUTE",
+          "symbol_or_concern": "Workstation browser backend selection",
+          "semantic_owner": "upstream browser_extension_router + BrowserControlBroker",
+          "current_behavior": "Routes browser_* calls to the Workstation Chromium path with fail-closed BrowserTask semantics.",
+          "required_ordering": "Resolve exact session/task/principal lane before dispatch; bound-but-unavailable must fail closed.",
+          "disposition": "REMOVE",
+          "replacement": "register WorkstationBrowserController with upstream broker and route through browser_extension_router",
+          "parity_tests": [
+            "never-registered lane may fallback",
+            "registered-but-offline lane fails closed",
+            "same BrowserTask/controller selected"
+          ],
+          "sunset_condition": "generic browser_tool contains no Workstation route conditional"
+        },
+        {
+          "id": "SEAM-BROWSER-DOMAIN",
+          "symbol_or_concern": "Workstation artifacts/task-domain result shaping",
+          "semantic_owner": "Workstation browser adapter/runtime",
+          "current_behavior": "Adds Workstation-owned BrowserTask/artifact/reference semantics to generic Browser calls.",
+          "required_ordering": "After controller result, before domain observation is committed.",
+          "disposition": "REMOVE",
+          "replacement": "move shaping/observation to WorkstationBrowserController/adapter",
+          "parity_tests": [
+            "BrowserTask refs preserved",
+            "evidence/reference plane unchanged"
+          ],
+          "sunset_condition": "generic browser_tool returns generic result while adapter owns Workstation projection"
+        },
+        {
+          "id": "SEAM-BROWSER-CAP-REG",
+          "symbol_or_concern": "extra Workstation browser capabilities",
+          "semantic_owner": "generic browser-control capability registry",
+          "current_behavior": "Workstation runtime supports capabilities beyond the broker built-in set (console/extract/images/vision/extensions/rich readback).",
+          "required_ordering": "Capabilities must be negotiated/registered before schema exposure and dispatch.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "broker capability registry for built-in + registered capabilities",
+          "parity_tests": [
+            "schema only advertises routable capabilities",
+            "unknown/unnegotiated capability fails closed"
+          ],
+          "sunset_condition": "no if-workstation capability list in broker"
+        }
+      ],
+      "current_direct_imports": 6
+    },
+    {
+      "id": "FPS-BROWSER-LEGACY",
+      "path": "tools/browser_workstation.py",
+      "disposition": "REMOVE",
+      "target": "transform legacy Python loopback router into WorkstationBrowserController/adapter",
+      "rationale": "The native Electron runtime remains; the bespoke Hermes-side routing layer should shrink as the upstream broker becomes the routing owner.",
+      "concerns": [
+        {
+          "id": "SEAM-BROWSER-LEGACY-BRIDGE",
+          "symbol_or_concern": "loopback descriptor / workstation_routed_browser_handler",
+          "semantic_owner": "WorkstationBrowserController",
+          "current_behavior": "Bridges Hermes browser calls through loopback HTTP to the Electron runtime.",
+          "required_ordering": "Single authoritative execution path during migration; mutation shadow path must never dispatch.",
+          "disposition": "REMOVE",
+          "replacement": "controller registered with BrowserControlBroker",
+          "parity_tests": [
+            "dual-control predictions match old route",
+            "no dual mutation I/O",
+            "timeout/cancel semantics preserved"
+          ],
+          "sunset_condition": "legacy Hermes route is deleted after controller authority switch"
+        }
+      ],
+      "current_direct_imports": 5
+    },
+    {
+      "id": "FPS-MODEL-001",
+      "path": "model_tools.py",
+      "disposition": "REMOVE",
+      "target": "controller-driven schema availability",
+      "rationale": "Forced Workstation Browser schemas should become unnecessary when the registered controller declares availability.",
+      "concerns": [
+        {
+          "id": "SEAM-MODEL-BROWSER-SCHEMA",
+          "symbol_or_concern": "workstation_schema_tools_for_current_session import",
+          "semantic_owner": "upstream browser controller availability",
+          "current_behavior": "Forces Browser schemas into Desktop sessions.",
+          "required_ordering": "Schema assembly must consult bound controller capability before model tool definitions are finalized.",
+          "disposition": "REMOVE",
+          "replacement": "extension_controller_available(action) / broker capability registry",
+          "parity_tests": [
+            "Desktop browser schemas remain visible when routable",
+            "offline bound lane does not advertise false capability"
+          ],
+          "sunset_condition": "model_tools has no Workstation browser import"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-TOOLSET-001",
+      "path": "toolsets.py",
+      "disposition": "REMOVE",
+      "target": "first-party Workstation plugin registers work_execute",
+      "rationale": "Modern plugin context supports tool registration; work_execute is explicitly not a core tool.",
+      "concerns": [
+        {
+          "id": "SEAM-TOOLSET-WORKEXEC",
+          "symbol_or_concern": "desktop_ui manual work_execute membership",
+          "semantic_owner": "plugins/workstation tool registration",
+          "current_behavior": "Hard-codes work_execute into a generic upstream-owned toolset.",
+          "required_ordering": "Plugin/tool registration completes before toolset/schema discovery.",
+          "disposition": "REMOVE",
+          "replacement": "PluginContext.register_tool(name='work_execute', toolset='workstation', ...)",
+          "parity_tests": [
+            "work_execute remains available in first-party Desktop",
+            "headless/plugin discovery behavior defined"
+          ],
+          "sunset_condition": "toolsets.py has no Workstation tool name"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-WEB-001",
+      "path": "hermes_cli/web_server.py",
+      "disposition": "REMOVE",
+      "target": "plugins/workstation/dashboard/plugin_api.py",
+      "rationale": "Modern upstream mounts plugin dashboard routers; Workstation API ownership need not live in the generic web server.",
+      "concerns": [
+        {
+          "id": "SEAM-WEB-API",
+          "symbol_or_concern": "/api/workstation/resources|events|tasks/*/cockpit",
+          "semantic_owner": "Workstation plugin/API adapter",
+          "current_behavior": "Generic web_server owns Workstation resources, event projection and cockpit endpoints.",
+          "required_ordering": "Router must be mounted in every Desktop/headless mode that currently exposes these surfaces.",
+          "disposition": "REMOVE",
+          "replacement": "/api/plugins/workstation/* plus optional temporary compatibility aliases",
+          "parity_tests": [
+            "auth/session scoping",
+            "Desktop and headless availability",
+            "resource/event projection parity"
+          ],
+          "sunset_condition": "generic web_server contains no Workstation route implementation"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-CLI-001",
+      "path": "cli.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic trusted TurnIngress envelope",
+      "rationale": "User text is not authority; origin/trust/session provenance cannot be replaced by pre_llm_call prose.",
+      "concerns": [
+        {
+          "id": "SEAM-CLI-INGRESS",
+          "symbol_or_concern": "MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK,...)",
+          "semantic_owner": "generic TurnIngress -> Workstation adapter",
+          "current_behavior": "CLI stamps content with origin, authority and session provenance before run_conversation.",
+          "required_ordering": "Trusted ingress metadata must exist before turn admission and any authority-sensitive work.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "TurnIngress{origin,trust/authority_class,session_id,metadata}",
+          "parity_tests": [
+            "spoofed text cannot grant authority",
+            "session/origin provenance preserved"
+          ],
+          "sunset_condition": "cli.py no longer imports workstation.contracts"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-ROUTE-001",
+      "path": "agent/turn_constraints.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic ContextVar-backed TurnRoutePolicy",
+      "rationale": "Route authorization is a generic operational authority primitive, not intrinsically Workstation-specific.",
+      "concerns": [
+        {
+          "id": "SEAM-ROUTE-POLICY",
+          "symbol_or_concern": "allowed/forbidden and mutation route constraints",
+          "semantic_owner": "agent/turn_route_policy.py",
+          "current_behavior": "Central policy guards primary/auxiliary/browser/terminal/tool routes for the active turn.",
+          "required_ordering": "Published at turn admission; consulted before every route and mutation route.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "TurnRoutePolicy with allowed_routes/forbidden_routes/mutation_allowed_routes/mutation_forbidden_routes",
+          "parity_tests": [
+            "auxiliary_client obeys policy",
+            "browser/terminal/provider routes share same source",
+            "mutation route violations fail closed"
+          ],
+          "sunset_condition": "Workstation only produces policy; Hermes core owns generic enforcement"
+        }
+      ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-VAULT-001",
+      "path": "tools/vault_tools.py",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "workstation.vault PKM local-first model tools",
+      "rationale": "First-party Obsidian-compatible Markdown vault engine model tool integration.",
+      "concerns": [
+        {
+          "id": "SEAM-VAULT-ENGINE",
+          "symbol_or_concern": "workstation.vault.VaultManager / get_default_vault_manager",
+          "semantic_owner": "workstation.vault",
+          "current_behavior": "Provides vault_search, vault_read, vault_write, vault_append, vault_backlinks, vault_graph.",
+          "required_ordering": "Tool execution time.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "preserve first-party tool surface",
+          "parity_tests": ["vault tools operate correctly"],
+          "sunset_condition": "none"
+        }
+      ],
+      "current_direct_imports": 1
+    },
+    {
+      "id": "FPS-WS-EXT-001",
+      "path": "tools/workstation_extensions.py",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "Workstation runtime extension tools",
+      "rationale": "First-party Workstation model tools exposing journal, policy, and contracts inspection.",
+      "concerns": [
+        {
+          "id": "SEAM-WS-EXT",
+          "symbol_or_concern": "workstation.contracts, extensions, journal, policy",
+          "semantic_owner": "workstation kernel",
+          "current_behavior": "Exposes workstation extension inspection tools.",
+          "required_ordering": "Tool execution time.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "preserve first-party tool surface",
+          "parity_tests": ["extension tools operate correctly"],
+          "sunset_condition": "none"
+        }
+      ],
+      "current_direct_imports": 4
+    },
+    {
+      "id": "FPS-WS-WORK-001",
+      "path": "tools/workstation_work.py",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "Workstation work_execute tool",
+      "rationale": "First-party Workstation work_execute tool driving compiled durable batch execution.",
+      "concerns": [
+        {
+          "id": "SEAM-WS-WORKEXEC",
+          "symbol_or_concern": "workstation.task_compiler, config",
+          "semantic_owner": "workstation.task_compiler",
+          "current_behavior": "Executes compiled durable work batches through work_execute.",
+          "required_ordering": "Tool execution time.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "preserve first-party tool surface",
+          "parity_tests": ["work_execute runs durable batches"],
+          "sunset_condition": "none"
+        }
+      ],
+      "current_direct_imports": 2
+    },
+    {
+      "id": "FPS-DESKTOP-MAIN",
+      "path": "apps/desktop/electron/main.ts",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "one narrow installWorkstationNativeRuntime bootstrap",
+      "rationale": "Persistent native WebContentsView lifecycle is not equivalent to renderer plugin panes.",
+      "concerns": [
+        {
+          "id": "SEAM-DESKTOP-NATIVE",
+          "symbol_or_concern": "native Workstation Browser runtime bootstrap",
+          "semantic_owner": "first-party Desktop native runtime",
+          "current_behavior": "Bootstraps persistent Electron Chromium session, control server, BrowserTask state, CDP, parking, takeover, transfer and IPC.",
+          "required_ordering": "Must initialize at native main-process lifecycle before renderer-only plugin surfaces can depend on it.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "concentrate into installWorkstationNativeRuntime(...)",
+          "parity_tests": [
+            "persistent session",
+            "background continuity",
+            "take/release control",
+            "viewport transfer",
+            "recovery"
+          ],
+          "sunset_condition": "reevaluate only when upstream exposes equivalent generic native-view lifecycle"
+        }
+      ]
+    },
+    {
+      "id": "FPS-DESKTOP-PRELOAD",
+      "path": "apps/desktop/electron/preload.ts",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "one narrow typed Workstation IPC bridge",
+      "rationale": "Privileged native BrowserTask control must cross preload safely.",
+      "concerns": [
+        {
+          "id": "SEAM-DESKTOP-IPC",
+          "symbol_or_concern": "Workstation native Browser IPC",
+          "semantic_owner": "first-party Desktop preload bridge",
+          "current_behavior": "Exposes typed privileged operations required by the native browser runtime.",
+          "required_ordering": "Bridge exists before renderer invokes native browser lifecycle/control.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "workstation: createTypedBridge(...)",
+          "parity_tests": [
+            "typed IPC surface",
+            "least privilege",
+            "task/run fencing"
+          ],
+          "sunset_condition": "reevaluate only when upstream native SDK provides equivalent safe typed IPC"
+        }
+      ]
+    },
+    {
+      "id": "FPS-DESKTOP-UI",
+      "path": "apps/desktop/src/app/session/hooks/use-preview-routing.ts",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic Plugin SDK contributed pane/workspace routing",
+      "rationale": "Presentation can likely move to upstream pane/workspace primitives even while the native runtime remains first-party.",
+      "concerns": [
+        {
+          "id": "SEAM-DESKTOP-RIGHTRAIL",
+          "symbol_or_concern": "workstation.browser.open -> chat Right Rail reveal",
+          "semantic_owner": "generic desktop pane/workspace contribution",
+          "current_behavior": "Automatically opens the Workstation Browser beside the correct chat/session.",
+          "required_ordering": "Event routing must preserve visible-session ownership and never hijack background sessions.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "registered pane + openWorkspace/dock-right/revealPane/paneVisibility",
+          "parity_tests": [
+            "same-session reveal",
+            "no background-session hijack",
+            "Hub<->Chat transfer",
+            "pane visibility parity"
+          ],
+          "sunset_condition": "remove Workstation-specific preview routing after UI parity"
+        }
+      ]
+    }
+  ]
+}

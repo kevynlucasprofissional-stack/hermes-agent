@@ -87,6 +87,7 @@ class ExperienceCompiler:
         if len(contracts) != 1:
             raise ValueError('incompatible route/runtime/effect scope')
         model = infer_action_model(successes, failures)
+        non_discriminable = bool(model.unresolved_counterexamples)
         if not model.effects:
             raise ValueError('no stable verified semantic effect')
         slices = [[t[i] for i in operational_slice(dependency_graph(t, model.effects))] for t in successes]
@@ -143,7 +144,12 @@ class ExperienceCompiler:
             if existing.semantic_fingerprint == semantic and existing.compatibility_fingerprint == compatible:
                 self._dedupes += 1
                 if existing.lifecycle == CapabilityLifecycle.PROMOTED:
-                    if model.unresolved_counterexamples:
+                    if non_discriminable:
+                        existing.learning_metadata['model_inadequacy_detected'] = True
+                        existing.learning_metadata['model_inadequacy_reason'] = 'model_inadequacy_non_discriminable_outcome'
+                        existing.learning_metadata['unresolved_counterexamples'] = max(
+                            existing.learning_metadata.get('unresolved_counterexamples', 0), model.unresolved_counterexamples)
+                        self.registry.register(existing)
                         return self.registry.record_drift(existing.id, 'new unresolved experience counterexample', version=existing.version)
                     return existing
                 existing.causal_grade = max(existing.causal_grade,
@@ -212,6 +218,8 @@ class ExperienceCompiler:
                 'provenance_complete': all(s.provenance.task_id and s.provenance.run_id and s.provenance.operation_id for s in evidence_samples),
                 'utility': utility, 'drift_rate': len(failures)/(len(successes)+len(failures)),
                 'unresolved_counterexamples': model.unresolved_counterexamples,
+                'model_inadequacy_detected': non_discriminable,
+                'model_inadequacy_reason': ('model_inadequacy_non_discriminable_outcome' if non_discriminable else ''),
                 'node_classes': [n.classification.value for n in nodes],
                 'sample_refs': [s.to_dict()['sample_id'] for s in evidence_samples],
                 'verifier_fingerprint': verifier_candidate.fingerprint(),

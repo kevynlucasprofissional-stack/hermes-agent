@@ -1,6 +1,6 @@
 # Workstation Testing
 
-## H-077.1 truthful-core qualification gate — CORRECTIVE QUALIFICATION OPEN (2026-09-19)
+## H-077.1 truthful-core qualification gate — IMPLEMENTATION COMPLETE / EXACT-HEAD CI PENDING (2026-09-19)
 
 Canonical:
 [H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).

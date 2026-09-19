@@ -173,6 +173,21 @@ def browser_control_developer_mode(config: Optional[dict] = None) -> bool:
     return extension_control.get("developer_mode", False) is True
 
 
+#: Registered dynamic controller capabilities.
+_ADDITIONAL_REGISTERED_CAPABILITIES: set[str] = set()
+
+
+def register_browser_control_capability(capability: str) -> None:
+    """Register an additional supported browser capability generically."""
+    if isinstance(capability, str) and capability.strip():
+        _ADDITIONAL_REGISTERED_CAPABILITIES.add(capability.strip())
+
+
+def get_registered_browser_control_capabilities() -> frozenset[str]:
+    """Return all dynamically registered browser capabilities."""
+    return frozenset(_ADDITIONAL_REGISTERED_CAPABILITIES)
+
+
 def filter_browser_control_capabilities(
     value: Any,
     *,
@@ -183,13 +198,18 @@ def filter_browser_control_capabilities(
     A malformed non-list value has no capabilities. Unknown or non-string
     entries are ignored; registration rejects an empty returned set.
 
-    Base and artifact capabilities always pass. Developer capabilities
-    (``browser_evaluate``, ``browser_cdp``) pass only when Developer Mode
-    is explicitly enabled — either passed in or read from the live config.
+    Base, artifact, and generically registered capabilities always pass.
+    Developer capabilities (``browser_evaluate``, ``browser_cdp``) pass
+    only when Developer Mode is explicitly enabled — either passed in or
+    read from the live config.
     """
     if not isinstance(value, list):
         return frozenset()
-    allowed = frozenset(BROWSER_CONTROL_CAPABILITIES | BROWSER_CONTROL_ARTIFACT_CAPABILITIES)
+    allowed = frozenset(
+        BROWSER_CONTROL_CAPABILITIES
+        | BROWSER_CONTROL_ARTIFACT_CAPABILITIES
+        | _ADDITIONAL_REGISTERED_CAPABILITIES
+    )
     if developer_mode is None:
         developer_mode = browser_control_developer_mode()
     if developer_mode is True:

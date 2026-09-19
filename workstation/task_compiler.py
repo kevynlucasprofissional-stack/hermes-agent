@@ -1387,11 +1387,12 @@ class TaskCompiler:
         def scoped_dispatch(name, args):
             return dispatch(name, args, task_id, f'{item.id}_{name}')
         exec_context = {
-            'task_id': owner, 'session_id': session_id,
+            'task_id': owner, 'run_id': run_id or '', 'session_id': session_id,
+            'enforce_lineage': True,
             'capability_pins': self.store.get_plan(plan.id).metadata['capability_pins'],
             'durable_store': self.store, 'durable_item_id': item.id, 'primitive_admission': admit,
         }
-        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'resource_id', 'resource_version'):
+        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'resource_id', 'resource_version', 'operation_id', 'expected_task_id', 'expected_run_id'):
             if k in request:
                 exec_context[k] = request[k]
         result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner, context=exec_context)
@@ -1406,8 +1407,11 @@ class TaskCompiler:
                 'status': 'INCONCLUSIVE', 'reason': 'missing_canonical_verification_result'
             }),
             'metrics': {'executor_llm_calls': 0}}
-        if result.get('success'):
-            ref = self.artifacts.store(owner, plan.id + '_result.json', sanitize(envelope))
+        verification = result.get('verification_result') or {}
+        terminal_verified = (str(verification.get('status', '')).upper() == 'VERIFIED'
+                             and verification.get('accepted') is True)
+        ref = self.artifacts.store(owner, plan.id + ('_result.json' if terminal_verified else '_handoff.json'), sanitize(envelope))
+        if terminal_verified:
             self.store.mark_item_persisted(item.id, ref.ref)
             self.store.mark_item_validated(item.id, {'valid': True, 'capability_version': cap.version,
                                                     'evidence_ref': ref.ref})
@@ -1416,9 +1420,11 @@ class TaskCompiler:
             self.store.update_plan_metadata(plan.id, {'capability_result_ref': ref.ref})
         else:
             self.store.update_plan_state(plan.id, 'blocked')
-            ref = self.artifacts.store(owner, plan.id + '_handoff.json', sanitize(result))
+            self.store.mark_item_persisted(item.id, ref.ref)
             envelope.update({k: v for k, v in result.items() if k != 'output'})
-        return {**envelope, 'plan_id': plan.id, 'results_ref': ref.ref, 'success': bool(result.get('success'))}
+        return {**envelope, 'plan_id': plan.id, 'results_ref': ref.ref,
+                'execution_acknowledged': bool(result.get('execution_acknowledged', False)),
+                'success': terminal_verified}
 
     def resume(self, plan_id: str, *, session_id: str, dispatch: Callable,
                progress: Callable | None = None, provider_usage: dict | None = None,

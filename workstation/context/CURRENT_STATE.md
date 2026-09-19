@@ -1,6 +1,103 @@
 # Current State
 
-## 2026-09-19 H-077.1 Truthful Core Qualification Closure — ACTIVE / BLOCKING
+## 2026-09-19 H-078B Code-to-Code Migration & Semantic Decoupling — COMPLETE / ACTIVE
+
+The H-078B semantic decoupling and code migration has been fully executed and empirically verified.
+
+Current architectural state:
+- **Zero Direct Workstation Imports in Core**:
+  `run_agent.py` (0), `agent/conversation_loop.py` (0), `agent/tool_executor.py` (0),
+  `agent/turn_finalizer.py` (0), `agent/turn_constraints.py` (0), `agent/chat_completion_helpers.py` (0),
+  `agent/conversation_compression.py` (0), `cli.py` (0), `gateway/run.py` (0),
+  `hermes_cli/kanban_db.py` (0), `hermes_cli/web_server.py` (0), `tools/file_tools.py` (0),
+  `tools/tool_search.py` (0), `tools/close_preview_tool.py` (0).
+- **Generic Core Lifecycles (`agent/`)**:
+  Generic upstream-safe extension points provide turn ingress (`TurnIngress`), turn admission (`admit_turn`),
+  batch admission (`admit_tool_batch`), scoped execution (`scoped_execution`), pre-authorized dispatch
+  checkpoints (`dispatch_pre_authorized_checkpoint`), raw post-tool observations (`dispatch_raw_post_tool_observation`),
+  persistence disposition (`ExecutionPersistenceDisposition`), turn route policy (`TurnRoutePolicy`),
+  completion admission (`admit_completion`), compression bypass (`should_bypass_compression`),
+  wire projection (`project_messages_for_provider`), and task completion admission (`admit_task_completion`).
+- **First-Party Adapter Façade (`workstation/integrations/hermes/`)**:
+  All Workstation capabilities (Progressive Compilation, durable dispatch, mutation journals,
+  procedure traces, kanban completion contracts, browser capabilities, and continuation projections)
+  are wired cleanly through generic registries upon installation (`install_workstation_adapter`).
+- **Seam Audit Verification**:
+  `workstation/scripts/audit_hermes_seams.py --strict` passes with:
+  `Direct core seams: 18 (all classified first-party tools), unclassified: 0, budget regressions: 0`.
+- **Runtime Independence Verified**:
+  Verified via `workstation/tests/test_h078b_runtime_independence.py` that a foreign / alternate reasoner
+  can drive the entire Workstation kernel through the generic lifecycle contracts without ever importing `run_agent.py`.
+- **All Core Test Suites Green**:
+  Passed H-077.1 qualification closure, architectural falsification, control plane integration,
+  canonical work loop, continuity, durable agent integration, and generic seam suites.
+
+
+## 2026-09-19 H-078A Minimum Necessary First-Party Seams — ACTIVE
+
+H-078 was refined after a second code audit and the Browser/UX counterexample. The project
+will **not** use "zero downstream source seams" as a success metric.
+
+Modern upstream now exposes stronger generic hooks/middleware/providers and a Desktop
+Plugin SDK with pane/workspace docking. These should absorb accidental Workstation
+coupling wherever full parity exists.
+
+At the same time, current Workstation Browser behavior still includes privileged native
+Electron responsibilities that are not equivalent to a renderer plugin: persistent
+`WebContentsView`, BrowserTask/page ownership, background continuity, human control,
+stale-run fencing, Hub/Chat transfer, native IPC and recovery. Those are legitimate
+first-party seam candidates until a generic upstream abstraction can preserve them.
+
+New policy:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+The initial classification registry is `workstation/first_party_seams.json`. It is a
+starting inventory, not a claim that the audit is complete. The next upstream migration
+must expand/revise it from the actual pinned-SHA overlap analysis.
+
+No capability may be removed merely to improve diff purity.
+
+Canonical:
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md).
+
+## 2026-09-19 H-078 Upstream Migration as Decoupling — ACTIVE STRATEGIC LANE
+
+The fork remains at `main@378b5a2df35ac05fe37a606298502d7bb974786d` while the
+upstream continues to advance. The architecture decision is now settled: **the next
+upstream migration must also reduce Workstation coupling**.
+
+The Workstation will use Hermes as the first-party laboratory/reference agent while moving
+toward a Workstation-owned runtime boundary. Generic Hermes core should not need
+Workstation-specific knowledge. Instead, Workstation will consume generic lifecycle,
+middleware and provider surfaces to observe and supervise normal Hermes behavior.
+
+Current code audit confirms direct inward seams that must be retired progressively:
+`agent/conversation_loop.py`, `agent/tool_executor.py`,
+`agent/turn_finalizer.py`, and `tools/browser_tool.py` directly import Workstation
+behavior. Product-edge integrations in Web/Kanban/Desktop are lower-priority adapter
+boundaries rather than equivalent core coupling.
+
+A key feasibility finding is that both the current fork and modern upstream already expose
+generic `pre_tool_call/post_tool_call`, `pre_verify`, API request/response lifecycle and
+behavior-changing `tool_request/tool_execution` and
+`llm_request/llm_execution` middleware. These are the preferred bridge for a
+Workstation-owned supervisory adapter.
+
+Immediate H-078 work:
+1. freeze one upstream SHA when migration execution starts;
+2. generate seam inventory with `workstation/scripts/audit_hermes_seams.py`;
+3. classify every overlap as ADOPT_UPSTREAM / KEEP_WORKSTATION / SEMANTIC_PORT /
+   EXTRACT_BOUNDARY;
+4. run new supervisory paths in shadow before removing old direct seams;
+5. prove ordinary Hermes tool use remains supervised even when the model never calls
+   `work_execute`.
+
+Canonical:
+[UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
+## 2026-09-19 H-077.1 Truthful Core Qualification Closure — IMPLEMENTED / QUALIFIED
+
+## 2026-09-19 H-077 Architectural Falsification / External Validity — QUALIFIED
 
 Audited main: `92a3acb51e87af85a9f380ee04d2cf47d7900ca5` after PR #36.
 

@@ -334,10 +334,12 @@ def test_task_compiler_work_execute_route_action(clean_env):
         value=expected_fp,
         evidence_strength=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
         trust_class="trusted_owner",
-        observed_at=now,
-        read_after_write=True,
-        covered_predicates=(expected_fp,),
-    )
+            observed_at=now,
+            read_after_write=True,
+            covered_predicates=(expected_fp,),
+            task_id="task-test-route",
+            operation_id="op-route-mkdir",
+        )
 
     result = compiler.execute(
         {
@@ -346,7 +348,8 @@ def test_task_compiler_work_execute_route_action(clean_env):
             "semantic_state": {"new_folder": {"exists": False}},
             "authority": {"level": 1, "allowed_actions": ["create"], "allowed_resources": ["*"]},
             "verification_evidence": [ev],
-            "verification_expected": expected_fp,
+                "verification_expected": expected_fp,
+                "operation_id": "op-route-mkdir",
         },
         task_id="task-test-route",
         session_id="sess-route-1",

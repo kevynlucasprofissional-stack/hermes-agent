@@ -931,6 +931,14 @@ def dispatch_tool_search(args: Dict[str, Any],
     return json.dumps(result, ensure_ascii=False)
 
 
+_TOOL_SEARCH_PROJECTIONS: list[Any] = []
+
+
+def register_tool_search_projection(handler: Any) -> None:
+    if handler not in _TOOL_SEARCH_PROJECTIONS:
+        _TOOL_SEARCH_PROJECTIONS.append(handler)
+
+
 def dispatch_tool_describe(args: Dict[str, Any],
                            *,
                            current_tool_defs: List[Dict[str, Any]]) -> str:
@@ -947,20 +955,10 @@ def dispatch_tool_describe(args: Dict[str, Any],
     for td in deferrable:
         fn = td.get("function") or {}
         if fn.get("name") == name:
-            from gateway.session_context import get_session_env
-            if get_session_env("HERMES_SESSION_SOURCE", "") == "desktop":
-                from workstation.reference_plane import schema_projection
-                from workstation.artifacts import ArtifactStore
-                from tools.registry import registry
-                from hermes_constants import hermes_home_key
-                session = get_session_env("HERMES_SESSION_ID", "")
-                if session:
-                    import hashlib
-                    scope = hashlib.sha256(session.encode()).hexdigest()
-                    projection = schema_projection(ArtifactStore(), f"schemas_{scope}", fn,
-                        f"{hermes_home_key()}:{registry._generation}", full=args.get("full") is True)
-                    if projection["cache_hit"] and not args.get("full"):
-                        return json.dumps(projection, ensure_ascii=False)
+            for handler in _TOOL_SEARCH_PROJECTIONS:
+                proj = handler(name, fn, args)
+                if proj is not None:
+                    return proj
             return json.dumps({
                 "name": name,
                 "description": fn.get("description", ""),

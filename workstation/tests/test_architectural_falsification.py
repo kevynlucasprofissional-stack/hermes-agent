@@ -378,7 +378,7 @@ def test_scenario_g_validity_envelope_violation():
     assert envelope.is_valid({"tenant_id": "beta", "target_family": "workstation"}) is False
     assert envelope.is_valid({"tenant_id": "alpha", "target_family": "cloud_aws"}) is False
     # Only valid within the certified envelope
-    assert envelope.is_valid({"tenant_id": "alpha", "target_family": "workstation"}) is True
+    assert envelope.is_valid({"tenant_id": "alpha", "os": "linux", "target_family": "workstation"}) is True
 
 
 # ===========================================================================

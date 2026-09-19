@@ -265,6 +265,9 @@ class ExternalValidityMetrics:
     fcor: float | None = None
     certification_coverage: float | None = None
     reuse_reliability: float | None = None
+    external_oracle_coverage: float | None = None
+    certified_external_oracle_coverage: float | None = None
+    external_reuse_reliability: float | None = None
 
     # Concordance & Validity
     external_correctness: float | None = None
@@ -294,6 +297,16 @@ class ExternalValidityMetrics:
             "reuse_reliability": self.reuse_reliability,
         }
 
+    def as_external_validity_vector(self) -> dict[str, float | None]:
+        return {
+            "fcor": self.fcor,
+            "certification_coverage": self.certification_coverage,
+            "external_oracle_coverage": self.external_oracle_coverage,
+            "certified_external_oracle_coverage": self.certified_external_oracle_coverage,
+            "external_correctness": self.external_correctness,
+            "external_reuse_reliability": self.external_reuse_reliability,
+        }
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "total_runs": self.total_runs,
@@ -302,6 +315,9 @@ class ExternalValidityMetrics:
             "fcor": self.fcor,
             "certification_coverage": self.certification_coverage,
             "reuse_reliability": self.reuse_reliability,
+            "external_oracle_coverage": self.external_oracle_coverage,
+            "certified_external_oracle_coverage": self.certified_external_oracle_coverage,
+            "external_reuse_reliability": self.external_reuse_reliability,
             "external_correctness": self.external_correctness,
             "oracle_agreement_rate": self.oracle_agreement_rate,
             "false_abstention_rate": self.false_abstention_rate,
@@ -322,7 +338,7 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
 
     Invariants:
     - Never invent denominators: missing observations return None, not 0.0.
-    - FCOR is strictly defined as false certifications over total certifications.
+    - FCOR uses only independently adjudicated internal certifications.
     - Must preserve observational provenance counts.
     """
     if not runs:
@@ -355,16 +371,18 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
 
     int_ver_runs = [r for r in runs if is_internally_verified(r) is True]
     ext_succ_runs = [r for r in runs if is_externally_successful(r) is True]
+    externally_adjudicated = [r for r in runs if is_externally_successful(r) is not None]
+    adjudicated_certifications = [r for r in int_ver_runs if is_externally_successful(r) is not None]
 
-    # FCOR: False Certification Overhang Rate = (Internal Verified & External Failed) / Internal Verified
-    fcor_num = sum(1 for r in int_ver_runs if is_externally_successful(r) is False)
-    fcor = ratio(fcor_num, len(int_ver_runs))
+    # FCOR observed = (Internal Verified & External Failed) / adjudicated certifications.
+    fcor_num = sum(1 for r in adjudicated_certifications if is_externally_successful(r) is False)
+    fcor = ratio(fcor_num, len(adjudicated_certifications))
 
     # Certification coverage = Internal Verified / Total Runs
     cert_coverage = ratio(len(int_ver_runs), total_runs)
 
-    # External correctness = External Success / Total Runs
-    ext_correctness = ratio(len(ext_succ_runs), total_runs)
+    # External correctness only speaks about cases the oracle actually judged.
+    ext_correctness = ratio(len(ext_succ_runs), len(externally_adjudicated))
 
     # Oracle agreement rate: where both are observed
     comparable = [r for r in runs if is_internally_verified(r) is not None and is_externally_successful(r) is not None]
@@ -408,11 +426,11 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
 
     # Recovery correctness
     recovery_runs = [r for r in runs if r.get("recovery_attempted") is True]
-    recovery_succ = sum(
-        1 for r in recovery_runs
-        if r.get("recovery_external_success") is True or (is_externally_successful(r) is True and r.get("recovery_succeeded", True))
-    )
-    recovery_correctness = ratio(recovery_succ, len(recovery_runs))
+    recovery_adjudicated = [r for r in recovery_runs if r.get("recovery_external_success") is not None
+                            or is_externally_successful(r) is not None]
+    recovery_succ = sum(1 for r in recovery_adjudicated if r.get("recovery_external_success") is True
+                        or is_externally_successful(r) is True)
+    recovery_correctness = ratio(recovery_succ, len(recovery_adjudicated))
 
     # Verifier sensitivity
     neg_control_runs = [r for r in runs if r.get("is_negative_control") is True]
@@ -421,8 +439,13 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
 
     # Reuse reliability (N)
     reuse_runs = [r for r in runs if r.get("is_reuse") is True or r.get("reuse_iteration", 0) > 0]
-    reuse_succ = sum(1 for r in reuse_runs if r.get("reuse_success") is True or (is_externally_successful(r) is True and is_internally_verified(r) is True))
+    reuse_succ = sum(1 for r in reuse_runs if r.get("reuse_success") is True and is_internally_verified(r) is True)
     reuse_reliability = ratio(reuse_succ, len(reuse_runs))
+    externally_adjudicated_reuses = [r for r in reuse_runs if is_externally_successful(r) is not None]
+    external_reuse_reliability = ratio(
+        sum(1 for r in externally_adjudicated_reuses if is_externally_successful(r) is True and is_internally_verified(r) is True),
+        len(externally_adjudicated_reuses),
+    )
 
     # ORA ratio
     ora_runs_det = sum(r.get("deterministic_transitions", 0) for r in runs if "deterministic_transitions" in r)
@@ -435,6 +458,8 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
         "internal_verified": len(int_ver_runs),
         "external_success": len(ext_succ_runs),
         "fcor_numerator": fcor_num,
+        "externally_adjudicated_runs": len(externally_adjudicated),
+        "externally_adjudicated_certifications": len(adjudicated_certifications),
         "comparable_runs": len(comparable),
         "hidden_assumption_violations": len(hidden_viol_runs),
         "true_model_inadequacy_cases": len(true_inadequacy_runs),
@@ -444,6 +469,7 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
         "recoveries_attempted": len(recovery_runs),
         "negative_controls": len(neg_control_runs),
         "reuse_runs": len(reuse_runs),
+        "externally_adjudicated_reuses": len(externally_adjudicated_reuses),
     }
 
     return ExternalValidityMetrics(
@@ -453,6 +479,9 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
         fcor=fcor,
         certification_coverage=cert_coverage,
         reuse_reliability=reuse_reliability,
+        external_oracle_coverage=ratio(len(externally_adjudicated), total_runs),
+        certified_external_oracle_coverage=ratio(len(adjudicated_certifications), len(int_ver_runs)),
+        external_reuse_reliability=external_reuse_reliability,
         external_correctness=ext_correctness,
         oracle_agreement_rate=agreement_rate,
         false_abstention_rate=false_abstention_rate,
@@ -466,4 +495,3 @@ def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMe
         ora_ratio=ora_ratio,
         counts=counts,
     )
-

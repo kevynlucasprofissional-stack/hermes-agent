@@ -1,6 +1,120 @@
 # Workstation roadmap
 
-## H-077.1 — Truthful Core Qualification Closure (2026-09-19) — ACTIVE / BLOCKING
+## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED
+
+The H-078B Code-to-Code Upstream Migration / Semantic Decoupling has been fully implemented and
+empirically validated.
+
+Key achievements:
+- **Core Decoupling (Zero Direct Imports)**: `run_agent.py`, `agent/conversation_loop.py`,
+  `agent/tool_executor.py`, `agent/turn_finalizer.py`, `agent/turn_constraints.py`,
+  `agent/chat_completion_helpers.py`, `agent/conversation_compression.py`, `cli.py`,
+  `gateway/run.py`, `hermes_cli/kanban_db.py`, `hermes_cli/web_server.py`, `tools/file_tools.py`,
+  `tools/tool_search.py`, and `tools/close_preview_tool.py` now have exactly **0** direct imports
+  from `workstation`.
+- **Generic Core Abstractions**: Added generic, upstream-safe extension points in `agent/`:
+  `turn_ingress.py`, `turn_admission.py`, `tool_batch_admission.py`, `scoped_execution.py`,
+  `pre_dispatch.py`, `post_tool.py`, `execution_persistence.py`, `turn_route_policy.py`,
+  `completion_admission.py`, `compression_admission.py`, `conversation_projection.py`,
+  and `task_completion_admission.py`.
+- **First-Party Workstation Adapter**: Established `workstation/integrations/hermes/` wiring all
+  Workstation capabilities through generic registries (`install_workstation_adapter`).
+- **Seam Policy Audit**: Strict policy audit passes with 0 unclassified seams and 0 budget
+  regressions (`audit_hermes_seams.py --strict`).
+- **Runtime Independence Verified**: An alternate reasoner (`AlternateReasoner`) successfully
+  drives the Workstation runtime through all lifecycle boundaries with zero imports from `run_agent.py`.
+- **Qualification Ladder Green**: Passed full regression suites including H-077.1 qualification
+  closure (`test_h0771_qualification_closure.py`), architectural falsification (`test_architectural_falsification.py`),
+  control plane integration (`test_control_plane_integration.py`), canonical work loop & continuity
+  (`test_canonical_work_loop.py`, `test_canonical_continuity.py`), durable agent integration
+  (`test_durable_agent_integration.py`), and seam tests (`test_h078b_generic_seams.py`, `test_h078b_runtime_independence.py`).
+
+2. refresh/pin one upstream SHA and create a separate integration branch;
+3. adopt upstream decomposition first; do not preserve old god-files as owners;
+4. create `workstation/integrations/hermes/` or equivalent first-party plugin façade;
+5. add generic `turn_admission`, `tool_batch_admission`,
+   `pre_authorized_dispatch`, execution-persistence disposition and
+   `completion_admission`;
+6. generalize `TurnRoutePolicy`, trusted `TurnIngress` and
+   `TaskCompletionAdmission`;
+7. port Progressive Compilation/human handoff/route authority out of `run_agent.py`;
+8. move post-tool mutation/raw-result learning to raw `post_tool_call`;
+9. converge Browser routing on `BrowserControlBroker` with a generic capability registry;
+10. move Workstation APIs and `work_execute` registration into plugin surfaces;
+11. concentrate remaining Desktop native seams into bootstrap + typed IPC bridge;
+12. switch authority seam-by-seam only after parity; mutation shadow must never execute a
+    duplicate effect.
+
+Canonical causal invariant:
+
+```text
+final args -> authorization/guards -> uncertain checkpoint -> REAL I/O
+-> raw post_tool_call -> spill/truncate/persist
+```
+
+Canonical completion invariant:
+
+```text
+prepare -> ownership snapshot -> txn -> revalidate -> acceptance receipt -> DONE
+```
+
+The v2 seam registry is now semantic: mixed files such as `tool_executor.py` contain
+concerns with independent dispositions and sunset conditions.
+
+
+## H-078 — Upstream Migration as Decoupling / Minimum Necessary First-Party Seams (2026-09-19) — ACTIVE STRATEGIC LANE
+
+Canonical program:
+[context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
+Seam policy:
+[context/FIRST_PARTY_SEAM_POLICY.md](context/FIRST_PARTY_SEAM_POLICY.md).
+
+Decision: **adapt Hermes Work to the current upstream while removing accidental coupling
+and minimizing first-party seams without sacrificing capability, lifecycle control,
+correctness or integrated UX.**
+
+The target is not "zero source changes". The Reasoner and generic agent core should avoid
+Workstation-specific knowledge where generic hooks/middleware/providers can preserve the
+same semantics. The first-party Hermes Work Desktop may deliberately retain narrow native
+integration seams when plugin/extension surfaces cannot provide equivalent behavior.
+
+Every upstream overlap:
+`ADOPT_UPSTREAM | KEEP_WORKSTATION | SEMANTIC_PORT | EXTRACT_BOUNDARY`.
+
+Every remaining first-party seam:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+The Browser is the reference case: use modern upstream Plugin SDK/pane surfaces for UI
+integration when they preserve parity, but do not sacrifice the persistent native
+`WebContentsView`, BrowserTask ownership, background continuity, human takeover, fencing,
+Hub/Chat transfer or recovery merely to make the downstream diff smaller.
+
+Sequence:
+P0 seam policy + registry -> P1 pinned upstream baseline migration -> P2 supervisory adapter
+shadow mode -> P3 tool-execution minimization -> P4 turn/finalizer minimization -> P5
+Browser generic boundary + justified native seams -> P6 Session/Kanban/API/Desktop edge
+minimization -> P7 Work Gateway -> P8 Hermes-less qualification.
+
+Gate: **shadow parity before seam removal; evidence before seam preservation.** A seam may
+remain only when its first-party privilege is materially necessary, concentrated,
+documented, tested and re-evaluated on every upstream cycle.
+
+Canonical rule:
+
+```text
+UPSTREAM STRUCTURE
++ WORKSTATION SEMANTICS
++ MINIMUM NECESSARY FIRST-PARTY SEAMS
++ NO CAPABILITY REGRESSION FOR PURITY
+```
+
+H-077 remains orthogonal: it governs external validity/truth claims; H-078 governs how the
+first-party Workstation integrates with Hermes while moving toward Runtime Independence.
+
+## H-077.1 — Truthful Core Qualification Closure (2026-09-19) — IMPLEMENTED / QUALIFIED
+
+## H-077 — Architectural Falsification / External Validity (2026-09-19) — QUALIFIED
 
 Canonical:
 [context/H077_1_QUALIFICATION_CLOSURE_2026-09-19.md](context/H077_1_QUALIFICATION_CLOSURE_2026-09-19.md).
