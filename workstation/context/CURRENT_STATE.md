@@ -1,17 +1,46 @@
 # Current State
 
-## 2026-09-18 Browser Ownership & Recovery Reconciliation — IMPLEMENTED & VALIDATED
+## 2026-09-19 Browser Ownership & Recovery Reconciliation — IMPLEMENTATION LANDED / POST-IMPLEMENTATION AUDIT REOPENED
 
-The Browser Ownership & Recovery Reconciliation milestone is fully implemented, verified,
-and qualified across all test suites.
+The 2026-09-18 implementation materially improved Browser ownership/recovery and its
+focused regressions remain valid evidence. It is **not yet fully product-qualified**.
 
-Implemented and verified state:
-- Centralized `useNativeViewOcclusion` (`apps/desktop/src/app/browser/native-view-occlusion.ts`) with selector `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Radix tooltip wrappers no longer trigger occlusion; hover flicker eliminated.
-- Host fencing added to `detach(expectedHost)` and `setVisible(visible, expectedHost)` across IPC, preload, and `WorkstationBrowserRuntime`. Viewports cannot be hidden or detached by racing stale callers from another host.
-- `preferredTaskId` fully plumbed through `WorkstationBrowserBridge`, `electron/preload.ts`, and `workstation-browser-pane.tsx`. Resolves preferred tasks deterministically via session lineage and aliases.
-- Task-bound lazy recovery: `WorkstationBrowserRuntime.attach()` recovers pending task tabs from `pendingSessionTabs` via `rawEntryForTask(preferredTaskId, true)` before fallback `about:blank`, restores safe URLs, prevents cross-session leakage, and preserves 1 page per task.
-- Decoupled visibility (`visible | parked`) from execution activity (`working | waiting | human_control | idle`) in Browser Hub TaskRail (`getTaskExecutionActivity`).
-- 100% green status across all regression suites: 88 Vitest tests passed across 9 test files, `npm run typecheck` clean, H004 native browser smoke passed, and Work100 passed 30/30.
+Landed baseline:
+- `preferredTaskId` is plumbed through renderer/preload/IPC/runtime;
+- host fencing protects `detach` and `setVisible` from cross-host stale cleanup;
+- task-bound lazy recovery can materialize restored task tabs before the runtime's
+  final blank fallback when a preferred task is already known;
+- Chat without an owned task no longer silently inherits another session's task tab;
+- Browser Hub projects execution activity separately from viewport visibility;
+- tooltip popper wrappers no longer independently trigger the original hover flicker.
+
+Post-implementation audit findings on
+`main@6328894c0a5f51a61da772593842c25d377d553f`:
+- **bulk clear mismatch:** TaskRail can classify `parked + working` correctly, but
+  runtime `clearParkedTasks()` still destroys every parked task, so a visible Clear
+  action enabled by one idle parked task can also destroy another working/waiting/
+  human-controlled parked BrowserTask;
+- **cold-mount blank window:** `WorkstationBrowserPane` begins with empty local
+  Browser state, so its first attach can occur without `preferredTaskId`; the
+  renderer may briefly attach/create an unowned `about:blank` before the returned
+  task list triggers the second, task-bound attach;
+- **qualification gap:** current H013 does not yet exercise the required real
+  renderer restart flow and its local bridge type still omits `preferredTaskId`;
+- **alias proof gap:** BrowserPane resolution is proven for live/root lineage but does
+  not explicitly cover `parent_session_id` as a behavioral contract;
+- **occlusion contract remains broader than intended:** generic roles/slots still have
+  Chromium-hiding authority alongside `data-native-view-occluder="true"`;
+- **global main is not fully green:** Workstation contract tests pass, but the
+  separate Browser Operational Admission lane currently fails
+  `apply_core_integration.py --check` on the `browser_type` anchor. This does not
+  invalidate the ownership implementation, but it makes any repository-wide
+  "100% regressions green" wording false.
+
+Prior evidence retained, not treated as final closure: 88 focused Vitest tests,
+Desktop typecheck, H004 and Work100 30/30.
+
+Current classification: **corrective P0 open** until the renderer/restart E2E,
+execution-aware cleanup and alias/occlusion contracts pass on the candidate head.
 
 Canonical reference:
 [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
