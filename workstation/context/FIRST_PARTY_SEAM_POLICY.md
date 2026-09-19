@@ -1,5 +1,29 @@
 # H-078A — Minimum Necessary First-Party Seams
 
+## H-078B policy refinement — semantic granularity and causal equivalence
+
+A file-level seam disposition is only an audit envelope. The implementation unit is the
+**semantic concern**.
+
+The machine-readable v2 registry therefore records, for each concern:
+
+`symbol_or_concern`, `semantic_owner`, `current_behavior`, `required_ordering`,
+`disposition`, `replacement`, `parity_tests`, and `sunset_condition`.
+
+"Equivalent" means causal equivalence, not merely similar output. Examples:
+
+- uncertain mutation checkpoint must occur after final args + authorization/guards and
+  before external I/O;
+- raw-result observation must occur before spill/truncate/provider projection;
+- completion admission must be able to reject before canonical DONE;
+- route policy must be established before every provider/tool/auxiliary route;
+- trusted ingress authority must not be reconstructed from user prose.
+
+Browser shadow migration has an additional hard rule: a mutation can have only one
+authoritative executor. Shadow code may classify/resolve/predict, but may not execute the
+same external mutation a second time.
+
+
 Date established: 2026-09-19  
 Status: **ACTIVE POLICY**  
 Parent program: [UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md)
