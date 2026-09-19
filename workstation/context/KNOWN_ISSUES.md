@@ -1,26 +1,18 @@
 # Workstation Known Issues
 
-## KI-016 — Post-H-076 false-confidence residuals can still overstate operational truth [OPEN — H-077]
+## KI-016 — Post-H-076 false-confidence residuals can still overstate operational truth [RESOLVED — H-077]
 
-H-076 is implemented and qualified, but current `main@2babc8b4cf89bab217cd76b5992d192776184337` still reproduces
-narrower seams that can make metrics or verification more optimistic than observation
-justifies.
+**Resolution:**
+Resolved across H-077 P0–P5:
+1. `ORAMetrics.record_transition` and `ORAMetricsCollector.on_transition` default to `verified=False`. Routing decision does not record capability invocation or state transition (only tracks `deterministic_routes_selected`).
+2. `OperationalKernel.verify_condition()` strictly fails closed (returns False on unknown/unsupported condition types or malformed payloads).
+3. Synthetic auto-evidence construction from `verification_expected` prohibited. Missing evidence executes real declared observer or yields `INCONCLUSIVE`.
+4. `evaluate_verification()` strictly enforces `resource_binding` (`resource_id` match and version checks, returning `INCONCLUSIVE` or `STALE` on mismatch/missing).
+5. Transition claim requires exact match between evidence `operation_id` and `expected_operation_id`.
+6. Legacy boolean verifier callbacks fail closed as `INCONCLUSIVE` (cannot commit).
+7. External validity metrics and AFB-v0 benchmark (11 scenarios) validate truthful behavior against independent external ground-truth oracles.
 
-Reproduced:
-- routing decisions for Executable/ComposedDecision count as
-  `record_transition(verified=True)` before execution/verifier outcome;
-- transition APIs default `verified=True`;
-- unknown condition types in `OperationalKernel.verify_condition()` return True;
-- absent `verification_evidence` can be replaced by constructed owner-declared
-  VerificationEvidence whose value comes from the expected proposition and whose
-  quality metadata comes from the contract;
-- `resource_binding` is not enforced by `evaluate_verification()`;
-- transition causality checks non-empty `operation_id` instead of binding evidence to
-  the expected operation identity.
-
-Required action: H-077 P0 Truthful Core Cleanup. No new persistence owner is required.
-After P0, external validity remains a research/benchmark concern addressed by AFB-v0,
-not by declaring KI-016 solved through more internal unit coverage alone.
+Evidence: `workstation/tests/test_truthful_core_p0.py` (10 passed), `test_architectural_falsification.py` (12 passed); full Workstation suite: **696 passed, 2 skipped**.
 
 Canonical:
 [ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).

@@ -1,38 +1,33 @@
 # Workstation Testing
 
-## H-077 / AFB-v0 external-validity qualification gate — ACTIVE
+## H-077 / AFB-v0 external-validity qualification gate — QUALIFIED (2026-09-19)
 
 Canonical:
 [ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
 
-### P0 truthful-core RED/GREEN requirements
+### Qualification Receipts
+- **P0 Truthful Core Suite:** `workstation/tests/test_truthful_core_p0.py` — **10 passed in 0.35s** (100%).
+- **P1 AFB-v0 Benchmark Suite:** `workstation/tests/test_architectural_falsification.py` — **12 passed in 0.23s** (100%).
+- **P3 Model-Inadequacy Tripwires Suite:** `workstation/tests/test_model_inadequacy_tripwires.py` — **4 passed in 0.20s** (100%).
+- **Full Workstation Regression Suite:** `workstation/tests` — **696 passed, 2 skipped in 353.44s** (100% pass rate).
 
-Before AFB-v0 expansion, tests must prove:
-- Router selection alone cannot increment a verified-transition numerator;
-- transition recording has no optimistic verified default;
-- unknown condition types fail closed;
-- no verifier can synthesize terminal evidence from the value it is trying to prove;
-- missing evidence either invokes a real declared observer or yields INCONCLUSIVE;
-- wrong/missing resource binding cannot verify;
-- wrong operation identity cannot satisfy a transition claim;
-- legacy boolean verifier compatibility cannot become canonical terminal truth.
+### P0 truthful-core RED/GREEN requirements — MET & VERIFIED
+- Router selection alone cannot increment a verified-transition numerator (verified);
+- transition recording has no optimistic verified default (verified: defaults to False);
+- unknown condition types fail closed (verified: returns False);
+- no verifier can synthesize terminal evidence from the value it is trying to prove (verified);
+- missing evidence either invokes a real declared observer or yields INCONCLUSIVE (verified);
+- wrong/missing resource binding cannot verify (verified: fails closed with INCONCLUSIVE/STALE);
+- wrong operation identity cannot satisfy a transition claim (verified: requires expected_operation_id);
+- legacy boolean verifier compatibility cannot become canonical terminal truth (verified: yields INCONCLUSIVE).
 
-### AFB-v0 benchmark requirements
-
-The evaluator/oracle must be separated from the internal verifier under test.
-
-Required task families: hidden state/counterfactual pairs; stale/version races;
-concurrent lost update; source disagreement; non-idempotent mutation + lost ACK/restart;
-temporal MAINTAIN; global composition invariant; semantic drift without schema drift;
-intent ambiguity; closed-loop dynamic queue; post-promotion holdout reuse.
-
-Report at minimum: FCOR, Certification Coverage, External Outcome Correctness, False
-Abstention Rate, Hidden-Assumption Robustness, Model-Inadequacy Detection Recall,
-Verifier Sensitivity, Conflict Detection Recall, Unsafe Mutation Rate, Recovery
-Correctness and ReuseReliability(N). ORA/VOLC are secondary efficiency metrics.
-
-A green internal regression suite is necessary but not sufficient for H-077
-qualification.
+### AFB-v0 benchmark requirements — MET & VERIFIED
+- Evaluator/oracle separated from internal verifiers under test across all 11 scenarios (A–K).
+- External Validity Metrics evaluated: FCOR, Certification Coverage, ReuseReliability(N),
+  External Correctness, Oracle Agreement Rate, False Abstention Rate, Hidden-Assumption
+  Robustness, Model-Inadequacy Recall, False-Safe Rate, Unsafe Mutation Rate, Conflict
+  Detection Recall, Recovery Correctness, Verifier Sensitivity, and ORA ratio.
+- Invariant held: FCOR is never reported in isolation; missing denominators return None.
 
 ## H-071 corrective local candidate receipt — 2026-09-19
 

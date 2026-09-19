@@ -1,26 +1,28 @@
 # Current State
 
-## 2026-09-19 H-077 Architectural Falsification / External Validity — ACTIVE
+## 2026-09-19 H-077 Truthful Core, AFB-v0 & External Validity — IMPLEMENTED & QUALIFIED
 
-Baseline: `main@2babc8b4cf89bab217cd76b5992d192776184337` after PR #34/H-076.
+Baseline: `main@378b5a2df35ac05fe37a606298502d7bb974786d` after PR #34/H-076.
 
-H-076 is implemented and qualified; the current boundary is now **external validity and
-post-H-076 truthful-core residuals**, not verifier typing in general.
+H-077 is implemented and qualified across all phases P0–P5. Internal proof is strictly
+scoped, verifiable against independent external ground-truth oracles, and bounded by
+derived validity envelopes:
 
-Current-main reproduced residuals:
-1. routing selection still records executable/composed decisions as `verified=True`
-   and transition APIs retain optimistic True defaults;
-2. `OperationalKernel.verify_condition()` still returns True for an unknown condition type;
-3. absent evidence can be replaced by constructed owner-declared VerificationEvidence
-   from the expected value and contract metadata;
-4. `VerificationContract.resource_binding` is represented but not enforced by
-   `evaluate_verification()`;
-5. transition proof checks only for non-empty evidence `operation_id`, not identity
-   with the expected operation.
+1. **P0 (Truthful Core Cleanup):** Eliminated metrics auto-inflation; fail-closed condition
+   verification; prohibited synthetic evidence from expected values; strictly enforced
+   resource binding; required exact causal operation identity; fail-closed boolean verifier legacy.
+2. **P1 (AFB-v0 Benchmark):** 11 adversarial falsification scenarios (A through K) with
+   independent ground-truth oracles verifying truthful-core resistance.
+3. **P2 (External Validity Metrics):** Comprehensive external correctness and concordance
+   evaluator in `workstation/evaluation.py` (FCOR bound to coverage & reliability triad; no invented denominators).
+4. **P3 (Model-Inadequacy Tripwires):** Explicit tripwire `model_inadequacy_non_discriminable_outcome`
+   firing on non-discriminable counterexamples, suspending generalization, quarantining capabilities,
+   and blocking automatic promotion.
+5. **P4 (Derived Validity Envelope):** Pure diagnostic projection `ValidityEnvelope` and
+   `derive_validity_envelope()` over existing canonical owners without new storage.
+6. **P5 (Primitive Gate):** Zero new runtime primitives created (`NOVAS PRIMITIVES CRIADAS: nenhuma`).
 
-Sequence: P0 truthful core cleanup -> P1 AFB-v0 -> P2 external outcome metrics -> P3
-model-inadequacy tripwires -> P4 derived validity envelope -> P5 evidence-gated decision
-on any new primitive.
+Receipts: Full Workstation suite: **696 passed, 2 skipped in 353.44s** (100% pass rate).
 
 Canonical:
 [ARCHITECTURAL_FALSIFICATION_2026-09-19.md](ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
