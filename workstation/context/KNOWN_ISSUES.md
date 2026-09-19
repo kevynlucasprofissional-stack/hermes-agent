@@ -1,5 +1,38 @@
 # Workstation Known Issues
 
+
+## KI-013 — Operational knowledge hierarchy is not closed end to end [OPEN — 2026-09-19]
+
+The current architecture has the correct components but not yet one complete
+experience-to-reuse-to-wait-to-reasoning loop.
+
+**Confirmed seams:**
+1. Experience Compiler learned candidates do not currently derive/populate the typed
+   `formal_contract` required for semantic CapabilityRouter admission; exact
+   fingerprint reuse and intent routing remain partially separate.
+2. Capability dependencies and bounded CompositionEngine exist, but recurring
+   verified capability sequences are not captured/mined as hierarchical
+   dependency-based composite candidates.
+3. Persistent `AwaitCondition` and TriggerCoordinator exist, but normal
+   TaskCompiler waiting can retain a resident worker through event wait or polling;
+   satisfied conditions do not yet reconstruct/execute the stored continuation.
+4. H-071 Control Plane truth gaps remain a hard dependency: false COMPOSE,
+   ACK-as-verification and authority minting would poison higher-level learning if
+   composite candidates trusted those outcomes.
+
+**Do not solve KI-013 by:** creating per-click capabilities, adding another scheduler
+or registry, flattening all composites into scripts, using recurrence as causal proof,
+or keeping an LLM/worker resident during long waits.
+
+**Closure requires:** Router-visible promoted learned capability with conservative
+formal contract; non-resident restart-safe Await continuation; capability-invocation
+trace mining with causal/replay/promotion gates; dependency-based composite drift
+handling; ORA/reuse/wakeup metrics; and all H-071 truth invariants closed.
+
+Canonical design:
+[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+
 ## KI-012 — Browser ownership/recovery residual gaps after first corrective implementation [REOPENED — 2026-09-19]
 
 The 2026-09-18 patch resolved the original tooltip popper bug, added host fencing,
