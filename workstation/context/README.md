@@ -12,22 +12,23 @@ Before changing Workstation code, read these documents in order:
 4. [`PROGRESSIVE_OPERATIONAL_COMPILATION.md`](PROGRESSIVE_OPERATIONAL_COMPILATION.md) — implemented deterministic Operational Capability Runtime and the role of `work_execute`.
 5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — implemented Experience Compiler: TransitionSamples/VOTs, segmentation, parameterization, causal validation and trust-aware promotion.
 6. [`VERIFIED_OPERATIONAL_CONTROL_PLANE.md`](VERIFIED_OPERATIONAL_CONTROL_PLANE.md) — implemented CP0–CP9 baseline: immutable OperationIntent, Capability Router/typechecker, certificates, Await/Trigger, reasoning handoff and evaluation contracts.
-7. [`BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md`](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md) — **active corrective P0 after PR #29 audit**: real COMPOSE execution, evidence-gated commit, trusted authority origin, operational-closure admission, safe Browser-session readback, integration-anchor repair and exact-head qualification.
-   - Companion required reading: [`BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md) — **active P0 Browser presentation/recovery lane**: tooltip/native-view occlusion, host fencing, preferred-task wiring, lazy restart recovery and visibility-vs-activity truth.
-8. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
-9. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — causal reliability invariants that all active lanes must preserve.
-10. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
-11. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — pre-1.5 gate result, branch/PR disposition ledger and recurring consolidation rule.
-12. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions, including D-018/D-019/D-020/D-021 for Capability Runtime, Experience Compiler, verified Control Plane and operational-admission closure.
-13. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable security/maintenance boundaries.
-14. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — implemented Workstation runtime architecture and distribution model.
-15. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
-16. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership/use of internal/external components.
-17. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Browser Operational Admission / Primitive Closure remains an active corrective P0 after the PR #29 post-merge audit; CP0–CP9 and Experience Compiler EC0–EC8 are implemented baselines.
-18. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
-19. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
-20. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger. H-071 is the current PR #29 post-merge operational-truth audit; H-070 records the landed Browser admission implementation claim and H-069 the Control Plane milestone.
-21. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
+7. [`HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md`](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md) — **canonical implementation-open extension** connecting VOT -> learned Capability -> composite Capability -> deterministic workflow -> non-resident Await/Event -> smallest reasoning boundary, with Operational Reasoning Amortization metrics.
+8. [`BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md`](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md) — **active corrective P0 after PR #29 audit**: real COMPOSE execution, evidence-gated commit, trusted authority origin, operational-closure admission, safe Browser-session readback, integration-anchor repair and exact-head qualification.
+   - Companion required reading: [`BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md) — **active corrective P0 after H-072 post-implementation audit**: execution-aware parked cleanup, first-attach task reconciliation, renderer/restart H013 proof, complete session aliases and explicit native-view occlusion authority.
+9. [`UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md`](UPSTREAM_RELIABILITY_HARDENING_2026-09-18.md) — reliability hardening lane for ownership, transcript resync, Kanban provenance/liveness, worker-exit truth and bounded browser recovery.
+10. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — causal reliability invariants that all active lanes must preserve.
+11. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
+12. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — pre-1.5 gate result, branch/PR disposition ledger and recurring consolidation rule.
+13. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions, including D-018/D-019/D-020/D-021/D-022 for Capability Runtime, Experience Compiler, verified Control Plane, operational-admission closure and hierarchical operational knowledge.
+14. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable security/maintenance boundaries.
+15. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — implemented Workstation runtime architecture and distribution model.
+16. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
+17. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership/use of internal/external components.
+18. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Browser Operational Admission / Primitive Closure remains an active corrective P0 after the PR #29 post-merge audit; CP0–CP9 and Experience Compiler EC0–EC8 are implemented baselines.
+19. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
+20. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
+21. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger. H-071 is the PR #29 Browser Operational Admission audit; H-072 is the Browser Ownership/Recovery post-implementation corrective audit; H-073 records the hierarchical operational-learning/reasoning-amortization audit; H-070 records the landed admission implementation claim and H-069 the Control Plane milestone.
+22. [`../PATCH_MANIFEST.md`](../PATCH_MANIFEST.md) when touching an upstream integration point, rebase/migration tooling, or the downstream patch surface.
 
 After this read-order, inspect the **current `main` implementation and its tests** for the subsystem you intend to change. Documentation is intent and state; code on `main` is the source of truth for implementation details. Historical findings that current `main` has already fixed become regression evidence, while unverified claims must be reproduced before architecture changes. In particular, do not recreate a native Browser harness merely because #114964 describes an upstream keepalive bug: H004/H013 already exist downstream and must be reused/extended.
 

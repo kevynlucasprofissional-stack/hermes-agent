@@ -63,6 +63,41 @@ This document defines the next boundary: **how Hermes converts real adaptive
 experience into trustworthy OperationalCapabilities without asking an LLM to
 re-summarize or re-plan the trace.**
 
+## Hierarchical continuation — learned capabilities become learning vocabulary
+
+The implemented EC0-EC8 pipeline closes the primitive/adaptive-trace to
+OperationalCapability path. The 2026-09-18 architecture audit identified the next
+extension, specified in
+[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+Two additions are required without replacing this compiler:
+
+1. **Router bridge:** eligible learned candidates must gain a conservatively
+   derived typed `CapabilityFormalContract` from trusted observed families,
+   semantic pre/postconditions, canonical effects, actual authority evidence and
+   verifier requirements. If those facts cannot be proven, the learned object
+   remains exact-reuse-only rather than guessing a routable contract.
+2. **Hierarchical mining:** record verified `CapabilityInvocation` observations
+   so recurring capability sequences can themselves become candidate composites.
+   Recurrence only proposes. Semantic closure, causal/dependency support, effect
+   union, authority JOIN, verifier closure, replay, counterexamples and utility
+   still govern promotion.
+
+The preferred composite representation preserves child capability
+dependencies/version pins rather than flattening every primitive step. This
+allows localized drift/quarantine and prevents macro scripts from becoming a new
+opaque execution layer.
+
+The canonical hierarchy is:
+
+~~~text
+TransitionSample / trusted primitive experience
+  -> VOT / OperationalCapability
+  -> CapabilityInvocation traces
+  -> Composite OperationalCapability
+  -> deterministic workflow
+~~~
+
 ## Executive invariant
 
 > **Hermes must not memorize what it did. It must learn what it knows how to do.**

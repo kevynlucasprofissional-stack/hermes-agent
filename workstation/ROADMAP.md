@@ -8,21 +8,124 @@ same-origin HTTP readback without process fallback, owner-declared terminal iden
 repaired integration anchor, and a real Electron rich-editor/cookie/drift/replay fixture.
 Local candidate gates are green; final `QUALIFIED` status awaits exact-head CI.
 
-## Browser Ownership & Recovery Reconciliation (2026-09-18) — COMPLETED & VALIDATED
+## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — CANONICAL EXTENSION / IMPLEMENTATION OPEN
+
+Canonical specification:
+[context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+The 2026-09-18 architecture audit established that the desired direction is not a
+replacement for Progressive Operational Compilation, Experience Compiler or the
+Verified Operational Control Plane. It is the missing hierarchy that connects them:
+
+~~~text
+Trusted primitives
+  -> Verified Operational Transition (VOT)
+  -> OperationalCapability
+  -> Composite OperationalCapability
+  -> Deterministic Workflow
+  -> Await/Event
+  -> OpenCondition / reasoning boundary
+~~~
+
+The canonical atomic rule is **smallest semantically closed, parameterizable,
+executable and verifiable transition with positive reuse value**, not smallest tool
+sequence. This prevents micro-capability explosion while preserving increasingly
+high-level reuse.
+
+Implementation order:
+
+1. **P0 — truthful Control Plane closure (dependency, already open).**
+   Complete the Browser Operational Admission corrective P0: real COMPOSE execution
+   or non-terminal planning state, ACK != verification, trusted authority origin,
+   operational-closure-aware mandatory compilation, routed decision contract fixes
+   and exact-head qualification.
+2. **P1 — Experience Compiler -> Router bridge.**
+   Conservatively derive/persist `CapabilityFormalContract` from trusted learned
+   evidence so promoted learned capabilities can be selected by
+   `OperationIntent -> CapabilityRouter`, not only exact fingerprint reuse.
+3. **P2 — non-resident Await/Continuation.**
+   Make persistent `AwaitCondition` the semantic wait owner; persist an exact
+   continuation, release the worker/executor, resume after causal event plus
+   authoritative state confirmation, and keep polling only as a scheduled bounded
+   observer fallback.
+4. **P3 — Hierarchical Experience Compiler.**
+   Capture capability-invocation traces and allow recurrent, causally supported,
+   semantically closed sequences to become dependency-based composite capability
+   candidates. Frequency alone never grants promotion; reuse existing replay,
+   ablation, counterexample, provenance, authority and promotion gates.
+5. **P4 — Operational Reasoning Amortization metrics.**
+   Add ORA (verified semantic transitions executed with zero LLM / total verified
+   semantic transitions), LLM calls per verified transition, exact/routed/composite
+   reuse, non-resident WAIT ratio, worker-seconds per waiting wall time, WAKE_LLM
+   reasons and hierarchical candidate/promotion/reuse rates.
+
+Hard properties:
+- promoted learned capabilities become Router-visible only from provable typed
+  contracts; missing proof fails closed;
+- composite plans cannot commit unless actually executed and verified;
+- persistent waits survive restart and do not retain an idle worker;
+- repeated capability sequences may propose composites but passive recurrence is
+  never causal proof;
+- child drift/version changes propagate through composite pins/contracts;
+- no second registry, scheduler, task DB, BrowserTask store, journal, memory system
+  or control plane is introduced.
+
+Optimization target:
+
+> **As Hermes accumulates verified experience, the proportion of operational work
+> that requires fresh LLM reasoning should decrease, without weakening evidence,
+> authority, drift handling or uncertainty semantics.**
+
+
+## Browser Ownership & Recovery Reconciliation (2026-09-19) — IMPLEMENTATION LANDED / CORRECTIVE P0 REOPENED
 
 Canonical specification:
 [context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
 
-Implemented and validated cross-layer reconciliation between Chat preview, Browser Hub,
-BrowserTask lifecycle, lazy task-tab materialization, and the single native Chromium viewport:
-1. Shared native-view occlusion contract (`useNativeViewOcclusion`, `data-native-view-occluder="true"`); tooltips completely de-authorized from hiding Chromium;
-2. Host fencing across IPC and runtime (`detach(expectedHost)`, `setVisible(visible, expectedHost)`) preventing cross-host race conditions;
-3. `preferredTaskId` wired through `WorkstationBrowserBridge`, preload, and Chat UI (`workstation-browser-pane.tsx`), resolving task identity via canonical session lineage;
-4. Task-bound lazy recovery in `WorkstationBrowserRuntime.attach()`: recovers pending task tabs before fallback `about:blank`, restores safe URLs, prevents cross-session leakage;
-5. Independent projection of execution activity (`working | waiting | human_control | idle`) in Browser Hub TaskRail without conflating `visible | parked` viewport status;
-6. Verified across 88 Vitest tests (9 test files, 100% green), typecheck clean, H004 native browser smoke passed, and Work100 passed 30/30.
+The 2026-09-18 implementation remains a strong baseline: shared native-view occlusion,
+host fencing, `preferredTaskId` plumbing, task-bound lazy recovery, cross-session
+isolation and visibility-vs-execution projection all landed with useful focused
+regressions. A post-implementation audit of current `main@6328894c0a5f51a61da772593842c25d377d553f`
+found that the milestone was promoted to CLOSED before the renderer/product path and
+cleanup semantics were fully proven.
 
-Hard invariants preserved: background work never steals foreground; stale host cleanup cannot detach/hide a newer owner; at most one live page exists per BrowserTask; no second Browser/session/presentation store was introduced.
+Corrective P0 sequence:
+1. **Make Clear Parked execution-aware.** Bulk clearing must never destroy a task that
+   is `working`, `waiting` or under `human_control`. The current UI hides/protects
+   working tasks visually, but runtime `clearParkedTasks()` still destroys every
+   lifecycle task whose status is `parked`.
+2. **Resolve the chat task before first visual attach.** On cold renderer mount/restart,
+   `WorkstationBrowserPane` starts with `state.tasks=[]` and can call
+   `attach(bounds, 'chat', undefined)` before discovering the restored BrowserTask.
+   Avoid any transient foreground `about:blank` by obtaining/reconciling task identity
+   before the first native viewport attach.
+3. **Prove the real renderer/restart sequence in H013.** Extend the integrated
+   Electron/Desktop path to cover Chat A/Browser A -> Chat B/Browser B -> process
+   restart -> renderer mount -> restore B -> switch A, including
+   `preferredTaskId`, stale host cleanup and one-page-per-task invariants.
+4. **Close session alias coverage.** Add behavioral proof for `parent_session_id`
+   together with live id and `_lineage_root_id`; the current BrowserPane resolver
+   primarily consumes `lineageAliases()`, which does not itself encode
+   `parent_session_id`.
+5. **Finish the explicit occlusion contract.** Prefer
+   `[data-native-view-occluder="true"]` as the authoritative selector; generic
+   `role="menu"`, `role="dialog"` or slot selectors should not independently gain
+   Chromium-hiding authority unless deliberately justified.
+6. **Requalify on exact product evidence.** Retain the 88 focused Vitest results,
+   typecheck, H004 and Work100 as prior evidence, but do not call this lane
+   FULLY VALIDATED/P0 CLOSED until the new renderer/Electron restart gate passes.
+   Current global main is also not fully green because the separate Browser
+   Operational Admission lane still fails the downstream integration-anchor gate.
+
+Exit criteria:
+- Clear Parked leaves all active/waiting/human-controlled BrowserTasks intact;
+- first cold Chat attach with a recoverable BrowserTask never presents fallback blank;
+- H013 exercises the real renderer + preload + IPC + runtime restart path with A/B chats;
+- parent/lineage aliases resolve the same canonical BrowserTask;
+- only explicit native-view occluders can hide Chromium;
+- no new Browser/session/task state owner is introduced;
+- exact candidate-head required gates are green or failures are explicitly classified
+  as unrelated and do not invalidate the exercised Browser Ownership contracts.
 
 
 ## Browser Operational Admission / Primitive Closure (2026-09-19) — POST-PR #29 CORRECTIVE P0 OPEN

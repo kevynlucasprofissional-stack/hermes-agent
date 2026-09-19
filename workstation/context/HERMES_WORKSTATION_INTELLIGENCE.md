@@ -8,6 +8,92 @@ request apenas restringe grants confiáveis; e `REQUIRE_COMPILE` exige closure o
 O readback HTTP mantém cookies/sessão do Chromium, same-origin por default e payload
 integral no ArtifactStore. O fixture Electron real comprovou persistência, replay e drift.
 
+## Aprendizado operacional hierárquico e amortização de raciocínio — 2026-09-18
+
+A auditoria do fluxo Experience Compiler -> Operational Capability -> Router ->
+Await/Trigger consolidou a abstração central do Hermes Work:
+
+> **Hermes deve aprender não apenas fatos sobre o mundo, mas maneiras comprovadas
+> de agir sobre ele. Quanto mais uma transformação operacional se provar estável,
+> causal, reutilizável e verificável, menos raciocínio novo deve ser necessário
+> para executá-la novamente.**
+
+Isso **não** significa aprender a menor sequência física possível. A unidade
+canônica continua sendo a **Verified Operational Transition (VOT)**: a menor
+transformação semanticamente fechada, parametrizável, executável e verificável
+com valor positivo de reutilização. Atomicidade é definida pelo boundary de
+efeito/postcondition, não por contagem de cliques/tool calls.
+
+Hierarquia-alvo:
+
+~~~text
+Trusted Operational Primitives
+  -> VOT / OperationalCapability
+  -> Composite OperationalCapability
+  -> Deterministic Workflow
+  -> AwaitCondition / causal event
+  -> OpenCondition / AttentionPacket / WAKE_LLM
+~~~
+
+O produto de um nível de compilação pode virar o vocabulário do nível seguinte.
+Isso permite aprendizado operacional hierárquico sem transformar o sistema em um
+gravador de macros.
+
+**Estado real atual:**
+- Experience Compiler já minera experiência aceita em `kanban.py`, produz
+  candidatos, faz slicing, anti-unification, C0-C5, replay/ablation e promoção
+  conservadora;
+- Operational Kernel já executa capabilities deterministicamente com zero LLM
+  intermediária;
+- Capability dependencies e CompositionEngine já existem;
+- AwaitCondition/TriggerCoordinator já existem como contratos persistentes;
+- Router/OpenCondition/AttentionPacket já modelam a fronteira entre execução
+  conhecida e raciocínio.
+
+**Quatro costuras ainda abertas:**
+1. capability aprendida ainda não ganha automaticamente um
+   `CapabilityFormalContract` conservador; portanto exact fingerprint reuse e
+   semantic Router permanecem parcialmente separados;
+2. composição runtime e composição aprendida são coisas distintas: primeiro é
+   preciso executar COMPOSE de verdade; depois adicionar mineração de sequências
+   recorrentes de CapabilityInvocation para composite capabilities;
+3. espera produtiva ainda usa `event_bus.wait()`/polling residente em partes do
+   TaskCompiler; AwaitCondition precisa possuir continuation executável e liberar o
+   worker até evento/observer futuro;
+4. o Control Plane precisa fechar os P0s já reproduzidos: falso COMPOSE,
+   ACK != verification, authority trust root e branches/contratos de decisão.
+
+Fluxo canônico final:
+
+~~~text
+reason once
+  -> observe
+  -> prove
+  -> compile
+  -> reuse
+  -> compose
+  -> wait without resident reasoning/worker
+  -> event wakes
+  -> authoritative state confirms
+  -> Router resumes deterministically
+  -> WAKE_LLM only for the smallest unresolved semantic condition
+  -> learn again
+~~~
+
+A métrica estratégica passa a incluir **Operational Reasoning Amortization (ORA)**:
+
+~~~text
+verified semantic transitions executed with zero LLM
+----------------------------------------------------
+total verified semantic transitions
+~~~
+
+ORA deve subir e LLM calls / verified transition deve cair sem reduzir qualidade de
+verificação, aumentar uncertain mutations ou esconder drift.
+
+Plano canônico:
+`workstation/context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md`.
+
 ## Auditoria pós-PR #29 — fechamento operacional ainda aberto — 2026-09-19
 
 O PR #29 melhorou a base, mas a revisão pós-merge separou **presença de mecanismo** de **prova de propriedade operacional**. O novo princípio de leitura é:
@@ -46,27 +132,63 @@ Regra canônica pós-auditoria:
 A correção não pede um novo control plane. Ela fecha a implementação existente contra D-020/D-021, o Experience Compiler, o Operational Kernel e o Canonical Reliability Gate.
 
 
-## Browser ownership, recovery e verdade visual — IMPLEMENTADO (2026-09-18)
+## Browser ownership, recovery e verdade visual — corrective P0 reaberto (2026-09-19)
 
+A implementação de 2026-09-18 corrigiu as falhas estruturais mais importantes:
+`preferredTaskId` atravessa o produto, host fencing existe, lazy recovery é
+task-bound e atividade de execução foi separada da visibilidade. A auditoria seguinte
+mostrou, porém, que **reconciliação correta no runtime não equivale ainda a prova do
+primeiro frame do renderer nem a cleanup seguro por atividade**.
 
-A investigação de flicker + restart revelou um problema de reconciliação entre
-owners existentes, não uma simples perda de persistência. A relação que agora
-converge deterministicamente é:
+A cadeia que precisa ser provada no produto é:
 
-`Chat -> BrowserTask -> tab lógica/restaurada -> activeTabId -> viewportHost -> superfície visível`.
+`active session -> canonical BrowserTask -> pending/live tab -> first visual attach -> activeTabId -> viewportHost`.
 
-Correções implementadas e qualificadas:
-- Oclusão nativa centralizada em `useNativeViewOcclusion` e seletor `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Tooltips Radix (`OverflowTip`/`Tip`) foram desautorizados de ocultar Chromium; flicker de hover resolvido.
-- Fencing de host em `detach(expectedHost)` e `setVisible(visible, expectedHost)` no IPC, preload e runtime Electron, impedindo que desmontagens tardias de Chat ou Hub ocultem/destaquem a viewport do outro host.
-- `preferredTaskId` propagado via `WorkstationBrowserBridge`, `preload.ts` e `workstation-browser-pane.tsx`, resolvendo tarefas através da linhagem e aliases canônicos de sessão.
-- Recuperação preguiçosa vinculada a task no `attach()` do runtime: materializa a BrowserTask antes de criar `about:blank`, restaura URLs seguras e previne vazamento de abas entre sessões.
-- Separação entre visibilidade e atividade no TaskRail do Browser Hub (`getTaskExecutionActivity`), permitindo que tasks em background executem (`working`) sem roubar foco nem colapsar com `parked`.
+Novas descobertas:
 
-Invariante comprovado: se o chat C está ativo, sua superfície Browser está aberta e C possui T, há no máximo uma página viva de T e Chat UI, Hub, BrowserTask, activeTabId e viewportHost convergem para a mesma identidade, inclusive após restart.
+1. **Clear Parked ainda viola activity truth.** A UI consegue reconhecer
+   `parked + working`, mas o comando em lote chega ao runtime sem a classificação
+   de atividade e `clearParkedTasks()` destrói todos os `status === 'parked'`.
+   Presentation state não pode ser usado como autorização de destruição.
 
-Validação: 88 testes Vitest verdes em `apps/desktop`, typecheck sem erros, H004 smoke validado e Work100 com 30/30 PASS.
-Plano canônico: `workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
+2. **Task identity chega tarde no primeiro mount.** `WorkstationBrowserPane` começa
+   com `EMPTY_STATE.tasks=[]`; antes de receber o primeiro `onState`/resultado,
+   pode anexar Chat sem `preferredTaskId`. O runtime então tem permissão para criar
+   fallback `about:blank`, que só é corrigido no segundo attach. O objetivo não é
+   apenas convergir eventualmente: para uma task recuperável, o primeiro attach
+   visível deve nascer reconciliado.
 
+3. **Runtime tests não substituem renderer restart E2E.** O teste de recovery chama
+   `attach(..., preferredTaskId)` diretamente. H013 atual prova viewport real e
+   multi-task load, mas ainda não modela cold renderer mount + task discovery +
+   restart A/B e sua interface local de bridge não inclui o terceiro argumento.
+
+4. **Lineage precisa incluir parent semantics de forma demonstrável.**
+   `lineageAliases()` indexa `id` e `_lineage_root_id`; o BrowserPane não possui
+   prova específica para `parent_session_id`. Não criar outro resolver: estender o
+   helper/contrato canônico de identidade e testar a mesma conversa através de todos
+   os aliases suportados.
+
+5. **Occlusion deve ser opt-in, não heurística.** O marker
+   `data-native-view-occluder="true"` existe, mas roles/slots genéricos ainda são
+   autoridades paralelas. O objetivo final é que só componentes deliberadamente
+   marcados possam esconder a WebContentsView.
+
+Regra canônica refinada:
+
+> Se existe BrowserTask recuperável para o chat ativo e sua superfície Browser está
+> aberta, o **primeiro attach visual** já deve selecionar essa task; nenhum fallback
+> blank intermediário pode ganhar foreground. E uma BrowserTask em execução/espera/
+> controle humano nunca pode ser destruída por um bulk cleanup baseado apenas em
+> `parked`.
+
+A implementação anterior permanece baseline e seus testes continuam úteis. A
+qualificação só fecha com H013 estendido para renderer+restart, cleanup
+execution-aware, aliases completos e occlusion explicitamente marcada.
+
+Hipótese/experimento ativo: **H-072**.
+Plano canônico:
+`workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
 
 ## Browser dogfood pós-Control Plane — admission e primitive closure — 2026-09-18
 

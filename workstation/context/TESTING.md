@@ -11,20 +11,77 @@
 Required exact-head GitHub Actions remain pending; local evidence does not by itself
 authorize `QUALIFIED/CLOSED`.
 
-## Browser Ownership & Recovery Reconciliation regression gate — VALIDATED (2026-09-18)
+## Browser Ownership & Recovery Reconciliation regression gate — CORRECTIVE QUALIFICATION OPEN (2026-09-19)
 
 Canonical target:
 [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
 
-All required regression behaviors implemented and verified:
-- `native-view-occlusion.test.ts` (7 tests, GREEN): verifies tooltip hovers do not occlude Chromium; real dialogs/menus/popovers occlude; unmount restores visibility;
-- `workstation-browser-runtime-task.test.ts` (28 tests, GREEN): verifies host fencing on `detach` and `setVisible` preventing cross-host races, cross-session isolation preventing unowned chats from leaking other session tasks, and background actions preserving foreground activeTabId;
-- `workstation-browser-runtime-recovery.test.ts` (2 tests, GREEN): verifies multi-task restart sequence where `attach(..., preferredTaskId)` materializes the target task without `about:blank`, preserves 1 page per task, and survives chat switching and background work;
-- `task-rail.test.ts` (5 tests, GREEN): verifies separation of execution activity (`working | waiting | human_control | idle`) from viewport visibility;
-- Desktop TypeScript typecheck (`npm run typecheck`): 0 errors across `.` (`tsconfig.json`), `tsconfig.electron.json`, `tsconfig.e2e.json`;
-- Full Vitest workstation-browser suite: 88 passed across 9 test files;
-- H004 native browser smoke probe (`node workstation/context/engineering-journal/probes/h004-native-browser-task-smoke.mjs`): 100% passed (`H004_CLASSIFICATION=VALIDATED`);
-- Work100 suite (`python workstation/work100.py --run`): 30 PASS, 0 FAIL.
+### Prior green evidence retained
+
+- `native-view-occlusion.test.ts`: tooltip popper regression and real-occluder behavior;
+- `workstation-browser-runtime-task.test.ts`: host fencing, cross-session isolation,
+  background foreground-preservation and BrowserTask lifecycle;
+- `workstation-browser-runtime-recovery.test.ts`: direct runtime multi-task restart
+  with known `preferredTaskId`;
+- `task-rail.test.ts`: activity projection separate from viewport visibility;
+- Desktop TypeScript typecheck: previously green;
+- focused workstation-browser Vitest set: 88 passed across 9 files;
+- H004 native BrowserTask smoke: validated;
+- Work100: 30 PASS / 0 FAIL.
+
+These are baseline evidence, not final product qualification.
+
+### New required RED/GREEN behaviors
+
+1. **Execution-aware Clear Parked**
+   - construct at least one `parked + working` task and one `parked + idle` task;
+   - invoke the real bulk-clear path through the public bridge/runtime boundary;
+   - idle parked task may be destroyed;
+   - working, waiting and human-controlled tasks must survive unchanged;
+   - no renderer-only filtering is accepted as the safety boundary.
+
+2. **No first visual blank after restart**
+   - start from persisted BrowserTask metadata and session-scoped Browser preview intent;
+   - mount the real `WorkstationBrowserPane`/renderer path with no preseeded local
+     `state.tasks`;
+   - prove the task is resolved before the first native Chat viewport attach;
+   - a recoverable BrowserTask must never expose fallback `about:blank` as the
+     foreground frame, even transiently.
+
+3. **Integrated H013 restart A/B**
+   - extend the H013 bridge type to
+     `attach(bounds, host?, preferredTaskId?)`;
+   - Chat A/Browser A and Chat B/Browser B must survive an actual Electron process
+     restart;
+   - renderer cold mount restores B, switching to A restores A;
+   - exactly one live page per task;
+   - stale `detach/setVisible` from the prior host cannot blank the new owner;
+   - background work does not steal foreground.
+
+4. **Canonical session alias coverage**
+   - prove live id, `_lineage_root_id` and supported `parent_session_id` aliases
+     all resolve the same BrowserTask;
+   - reuse/extend canonical session identity helpers rather than adding a Browser-only
+     alias registry.
+
+5. **Explicit native-view occlusion authority**
+   - tooltips and unrelated generic role/slot elements never hide Chromium;
+   - only deliberately marked native-view occluders trigger hide/restore;
+   - Chat and Hub continue using the same shared observer/contract.
+
+### Qualification order
+
+Focused renderer/runtime RED/GREEN -> Desktop typecheck -> affected UI/platform suites
+-> H004 when runtime lifecycle is touched -> **extended H013 on real Electron** ->
+Work100 -> exact candidate-head Workstation/Windows gates.
+
+The Browser Operational Admission lane may remain independently red; classify such a
+failure rather than misattributing it. However no document may claim repository-wide
+"100% regressions green" while required exact-head workflows are failing or pending.
+
+Do not close this lane from direct runtime tests that already know
+`preferredTaskId`; the original residual risk is at the renderer discovery/first-attach
+boundary.
 
 
 ## Browser Operational Admission / Primitive Closure P0 regression gate

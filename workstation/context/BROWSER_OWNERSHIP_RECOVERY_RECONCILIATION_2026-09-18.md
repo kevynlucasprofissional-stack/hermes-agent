@@ -2,7 +2,7 @@
 
 ## Status
 
-**IMPLEMENTED & FULLY VALIDATED (2026-09-18)** — Code-level root causes resolved, regressions added across renderer, preload, and Electron runtime, all 88 Vitest tests green, H004 native browser smoke passed, Work100 passed 30/30, and TypeScript typecheck clean.
+**IMPLEMENTATION LANDED / CORRECTIVE P0 REOPENED (2026-09-19)** — The 2026-09-18 patch closed the original wiring/runtime defects and its focused test evidence is retained, but a post-implementation audit found residual cleanup, first-attach, session-alias and product-E2E gaps. Do not classify this lane as fully qualified until the corrective gate below passes.
 
 This lane is complementary to
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
@@ -242,6 +242,82 @@ Chat <-> Hub transfer -> no stale cleanup blanking viewport
 
 with one BrowserTask owner, one native Chromium runtime, bounded lazy recovery and
 no regression in Browser Operational Admission, H004/H013 or TaskRun fencing.
+
+## Post-implementation audit — 2026-09-19
+
+Audit baseline: current `main@6328894c0a5f51a61da772593842c25d377d553f`.
+
+The architecture direction remains correct, but the prior closure claim was too strong.
+
+### BOR-009 — bulk cleanup can destroy active parked work
+
+`TaskRail` derives execution activity and can correctly render
+`parked + working`. However `BrowserView.handleClearParked()` calls
+`bridge.clearParkedTasks()`, and runtime `clearParkedTasks()` filters only
+`task.status === 'parked'` before destroying every match.
+
+A single idle parked task can therefore make the Clear action available while another
+parked task is still working/waiting/under human control; the backend bulk clear then
+destroys both.
+
+**Required correction:** the destruction boundary itself must be execution-aware.
+Do not rely only on renderer filtering.
+
+### BOR-010 — first renderer attach can still be task-unbound
+
+`WorkstationBrowserPane` starts with `EMPTY_STATE.tasks=[]`, computes no
+`preferredTaskId`, and may call `attach(bounds, 'chat', undefined)` before the
+first runtime state response reveals restored BrowserTasks. The runtime can create/
+attach a fallback blank and only then receive a second task-bound attach.
+
+The direct recovery test does not exercise this because it supplies
+`preferredTaskId` from the start.
+
+**Required correction:** resolve/retrieve the matching BrowserTask before the first
+visible Chat attach after restart. Eventual convergence is insufficient if the user
+can see an intermediate blank.
+
+### BOR-011 — product restart proof is incomplete
+
+Current H013 proves real Electron viewport/load behavior, but does not yet encode the
+new `preferredTaskId` attach contract or reproduce:
+
+`A -> B -> process restart -> cold renderer mount on B -> switch A`.
+
+**Required correction:** extend H013 rather than creating another Browser harness.
+
+### BOR-012 — session alias proof is incomplete
+
+The Chat resolver uses `lineageAliases()`, whose canonical index covers live
+`id` and `_lineage_root_id`. Explicit `parent_session_id` behavior is not
+proven for BrowserTask lookup.
+
+**Required correction:** reuse/extend canonical session identity helpers and add a
+behavioral regression. Do not add a Browser-specific parallel alias registry.
+
+### BOR-013 — native-view occlusion is centralized but not fully explicit
+
+`data-native-view-occluder="true"` exists, but generic role/slot selectors remain
+parallel authorities.
+
+**Required correction:** make deliberate opt-in marking the authoritative occlusion
+contract unless a narrower documented exception is demonstrably required.
+
+### Corrective exit criterion
+
+This lane closes only when all of the following are true:
+
+1. bulk clear preserves working/waiting/human-controlled parked tasks;
+2. a recoverable BrowserTask is selected before the first visual Chat attach;
+3. extended H013 proves A/B restart through renderer + preload + IPC + runtime;
+4. live/root/parent session aliases converge on one BrowserTask;
+5. only explicit occluders can hide native Chromium;
+6. H004/H013/affected Desktop tests are green on the candidate head;
+7. no second Browser/session/task state owner was introduced.
+
+The separate Browser Operational Admission CI failure must be tracked separately, but
+repository-wide "100% green" wording is prohibited while exact-head required workflows
+remain red or pending.
 
 ## Implementation & Validation Summary (2026-09-18)
 
