@@ -17,32 +17,70 @@ BrowserTask lifecycle, lazy task-tab materialization, and the single native Chro
 Hard invariants preserved: background work never steals foreground; stale host cleanup cannot detach/hide a newer owner; at most one live page exists per BrowserTask; no second Browser/session/presentation store was introduced.
 
 
-## Browser Operational Admission / Primitive Closure (2026-09-18) — P0 NEXT MILESTONE
+## Browser Operational Admission / Primitive Closure (2026-09-19) — POST-PR #29 CORRECTIVE P0 OPEN
 
 Canonical specification:
 [context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
 
-Live authenticated Trello dogfooding after PR #28 proved that CP0–CP9, the
-Experience Compiler and the Operational Capability Runtime are individually present
-but are not yet closed as one production mutation path. The native Browser works;
-the failure is the boundary between legacy repetition admission, deterministic
-primitive expressiveness, certified routing and persisted verification.
+PR #29 landed substantial Browser/admission infrastructure, but post-merge review of
+`main@24997c9af8256ac41001bdee9f827c643d5598e4` found that the milestone was
+promoted to "qualified" before its strongest contracts were actually proven. The
+landed primitives/effect fixes remain useful; the correction lane below is about
+closing false success, false verification, authority minting, mandatory-compilation
+closure, browser-readback safety and CI/E2E qualification.
 
-P0 sequence:
-1. effect truth: `read_preview` PURE_READ and action-sensitive effects for mixed tools;
-2. semantic admission: no structural-only `REQUIRE_COMPILE` for non-browser tools;
-3. Browser primitive closure: semantic plain-text paste + bounded GET/HEAD readback;
-4. one admission owner: legacy repetition becomes learning signal, Router/policy owns mutation admission;
-5. trusted authority + mandatory CertifiedDispatcher;
-6. mutation-timeout => UNCERTAIN + authoritative reconciliation;
-7. generic bounded SPA hydration/readiness stabilization;
-8. dogfood proof: verified canary -> deterministic fan-out with zero intermediate LLM planning.
+Corrective P0 sequence:
+1. **Execute COMPOSE for real or keep it non-terminal.** A `ComposedDecision` must
+   execute its capability plan through the deterministic runtime with step/capability
+   verification, or return a non-terminal `COMPOSITION_READY/PLANNED` result. A
+   plan echo is never operational success and never `COMMITTED`.
+2. **ACK is not verification.** `CertifiedDispatcher` must default to
+   ACKNOWLEDGED/NEEDS_VERIFICATION when no accepted verifier evidence exists.
+   `success=True` alone cannot advance to VERIFIED/COMMITTED unless the formal
+   effect/acceptance contract explicitly permits ACK-only evidence.
+3. **Close the authority trust boundary.** Model/request payloads may only narrow
+   authority. Remove request-authored `trusted_authority` as a trust source and
+   remove automatic `EXTERNAL_REVERSIBLE + * + *` authority from bare task/session
+   presence. Mutation without a persisted/trusted grant must fail closed or ask human.
+4. **Mandatory compilation requires operational closure.** Positive semantic
+   homogeneity is necessary but not sufficient. `REQUIRE_COMPILE` additionally
+   requires representable deterministic primitive/capability closure, compatible
+   authority/policy, verifier/readback and certified dispatch. Otherwise use
+   `SUGGEST_COMPILE` while bounded adaptive execution remains legal.
+5. **Harden `browser_read_http`.** Native Browser readback is same-origin by
+   default; cross-origin requires explicit policy. Reuse canonical URL-safety rules,
+   block DNS/IPv6/private/metadata destinations, constrain headers, preserve the full
+   payload in artifacts before truncating the inline projection, and fail closed for
+   bound Workstation BrowserTasks instead of falling back to process-level
+   `requests.request`.
+6. **Repair downstream integration anchors.** Update
+   `workstation/scripts/apply_core_integration.py` / patch metadata so current
+   `browser_type` integration passes the committed-source check on Linux and Windows.
+7. **Strengthen semantic-family admission for arbitrary executors.** `terminal`
+   must not become mandatory compilation from broad syntactic families such as
+   `python:-m` or `bash:-c`; owner-declared semantic operation identity or
+   equivalent positive closure is required.
+8. **Prove the product path, not mocks only.** Add real Electron/WebContents fixture
+   coverage for contenteditable/rich editor paste, delayed SPA hydration,
+   session-cookie same-origin readback, persisted verification, drift isolation and
+   deterministic fan-out. Keep focused mocks as unit tests, not as the final dogfood
+   receipt.
+9. **Requalify before closure.** Required Workstation/Windows/CI gates must finish
+   green on the exact candidate head. The prior PR #29 runs failed
+   `apply_core_integration.py --check` with
+   `browser tool route anchor missing for browser_type`; local 599-pass evidence is
+   retained but is not sufficient for product qualification.
 
-Hard exit criterion: no `durable_compile_required <-> PREFLIGHT_REQUIRED` deadlock
-when the runtime lacks a compilable primitive; no arbitrary JavaScript promoted as a
-Capability implementation; no request-authored authority escalation; no blind retry
-after uncertain external mutation.
-
+Hard exit criteria:
+- no composition may report success/COMMITTED without executing and verifying its plan;
+- no ACK-only result is labeled VERIFIED unless the formal contract explicitly allows it;
+- no request/session can synthesize mutation authority;
+- no `REQUIRE_COMPILE` without deterministic/verifiable operational closure;
+- bound native Browser readback never silently changes into process HTTP fallback;
+- no blind retry after uncertain mutation;
+- exact-head Workstation + Windows integration gates are green;
+- real Electron fixture proves edit -> paste -> save -> persisted readback -> verify ->
+  deterministic fan-out with zero intermediate planning.
 ## Verified Operational Control Plane (2026-09-18) — CP0–CP9 IMPLEMENTED / CONTRACT VALIDATED
 
 Canonical specification:

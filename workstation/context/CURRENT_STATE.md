@@ -17,27 +17,53 @@ Canonical reference:
 [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
 
 
-## 2026-09-18 Browser Operational Admission / Primitive Closure — P0 CLOSED & QUALIFIED
+## 2026-09-19 Browser Operational Admission / Primitive Closure — IMPLEMENTATION LANDED / AUDIT REOPENED / QUALIFICATION BLOCKED
 
-The Browser Operational Admission & Primitive Closure P0 milestone is fully implemented,
-integrated into the real runtime, and qualified across all test suites.
+PR #29 (`main@24997c9af8256ac41001bdee9f827c643d5598e4`) landed real improvements:
+explicit read effects, action-sensitive effect resolution, structural-only admission
+relief, native plain-text paste, GET/HEAD Browser readback, authority narrowing,
+effect-sensitive timeout uncertainty and bounded SPA re-observation. Those pieces remain
+part of the current implementation.
 
-Implemented and verified state:
-- `read_preview` and `read_window_below` explicitly registered as `ToolEffect.PURE_READ`;
-- dynamic `effect_resolver` for multi-action tools (`drive_preview`) classifying `"elements"` as discovery/read and actions as mutation;
-- `execution_policy.py`: removed structural count fallback to `REQUIRE_COMPILE`; tightened `write_file`/`patch` to normalized path families (`filesystem.file:<normpath>`) and `terminal` to command families (`terminal:<cmd>[:<sub>]`);
-- `workstation-browser-runtime.ts` and `tools/browser_tool.py`: implemented native `browser_type(..., mode="plain_text_paste", semantic_anchor=...)` using DOM `ClipboardEvent("paste")` + `DataTransfer` with semantic anchor re-acquisition;
-- implemented `browser_read_http` (GET/HEAD only, no request body, private IP / RFC1918 / loopback blocking, ArtifactStore spillover for large payloads);
-- ambient trusted authority derivation in `TaskCompiler._execute_route` ensuring request payloads can only narrow permissions via `AuthorityScope.narrow()` and never mint authority;
-- `CertifiedDispatcher` enforced as mandatory mutation execution chokepoint with lifecycle `PREPARED -> DISPATCHED -> ACKNOWLEDGED -> VERIFIED -> COMMITTED`;
-- effect-sensitive browser timeout: mutating operations transition to `TIMEOUT_UNCERTAIN` (`state_changed=True`, `retryable=False`), blocking blind retry without authoritative external reconciliation;
-- generic SPA readiness detection in Electron runtime with bounded re-observation (< 1.2s total);
-- 100% green status across all regression suites: 599 passed in `workstation/tests/` (62 files), 13/13 passed in `test_browser_operational_admission.py`, 4/4 passed in `workstation-browser-runtime-admission.test.ts`.
+A post-merge code/CI audit found that the stronger P0 invariants are **not yet closed**:
+
+- `TaskCompiler._execute_route()` can handle `ComposedDecision` by dispatching a
+  lambda that only returns `{"success": True, "plan": [...]}`; the plan can therefore
+  be labeled successful/COMMITTED without executing its capabilities.
+- `CertifiedDispatcher.dispatch()` initializes verification as true and treats a
+  successful tool result as verified when no `verifier_fn` is supplied. This
+  collapses ACK into verification and violates the E0-E3 evidence boundary.
+- effective authority can still be synthesized from request `trusted_authority` or,
+  when only task/session context exists, from broad
+  `EXTERNAL_REVERSIBLE + allowed_actions={"*"} + allowed_resources={"*"}` defaults.
+  Bare session/task existence is not a trusted grant.
+- `execution_policy.py` still reaches `REQUIRE_COMPILE` from semantic repetition
+  count alone. D-021 requires executable deterministic closure, verifier/readback,
+  authority/policy compatibility and certified dispatch in addition to homogeneity.
+- native `browser_read_http` is not yet same-origin-by-default/policy-gated, uses
+  hand-rolled destination checks that do not cover the full canonical URL-safety
+  surface, and the Python wrapper can fall back to process-level `requests.request`,
+  which is not authenticated Browser-session readback.
+- `terminal:<program>:<second-token>` families remain too broad for mandatory
+  compilation of arbitrary command execution.
+- the PR #29 focused/local suites are useful evidence, but exact-head GitHub Actions
+  qualification is not green: both Workstation CI and Workstation Browser Windows
+  failed `workstation/scripts/apply_core_integration.py --root . --check` with
+  `ERROR: browser tool route anchor missing for browser_type`. Several later Windows
+  product gates were skipped as a consequence.
+- the current "dogfood" Browser proof is simulation-heavy; a real Electron/WebContents
+  fixture is still required for rich editor paste, delayed hydration, same-origin
+  authenticated readback, persisted verification and deterministic fan-out.
+
+Current classification: **implementation base retained; P0 correction and product
+qualification open**. Do not describe this milestone as CLOSED, fully contract-qualified
+or 100% regressions green until the corrective gate in `TESTING.md` passes on the
+exact candidate head.
 
 Canonical P0:
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
 
-Snapshot date: 2026-09-18.
+Snapshot date: 2026-09-19.
 
 The 2026-09-15 hardening snapshot below remains valid as implementation and test
 history, but a 2026-09-17 forensic audit of current `main`, persisted Workstation
