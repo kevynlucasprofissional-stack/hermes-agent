@@ -1,5 +1,26 @@
 # Current State
 
+## 2026-09-19 H-078C — Actual upstream merge in progress
+
+GitHub baseline remains `main@1192c016cfc59c4fb8edca27c309eb1e983c6aae`.
+The local integration branch is not pushed, so the unresolved merge state is local-only.
+
+Local audit reports:
+- branch: `integration/upstream-6a078969-h078b`;
+- MERGE_HEAD: `6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170`;
+- unresolved conflicts: 69, all `UU/both modified`;
+- no conflict modified by the audit;
+- safe-to-continue status: CONDITIONAL because three pre-existing unstaged files must be
+  backed up/isolated first.
+
+GitHub independently confirms that the pin is not yet an ancestor of main:
+502 ahead / 13,313 behind, merge-base still `057dcdf...`.
+
+Status distinction:
+`H-078B semantic decoupling = implemented`;
+`H-078C upstream baseline adoption = active / unresolved`.
+
+
 ## 2026-09-19 H-078B Code-to-Code Migration & Semantic Decoupling — COMPLETE / ACTIVE
 
 The H-078B semantic decoupling and code migration has been fully executed and empirically verified.
