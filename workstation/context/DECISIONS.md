@@ -522,6 +522,51 @@ trusted learned program.
 Canonical:
 [IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
 
+## D-024 — Verification is a typed evidence contract; learned action and learned oracle are validated separately
+
+D-018 through D-023 remain authoritative.
+
+Hermes Work does not introduce a separate Verifier Compiler subsystem. Verification
+extends the existing CapabilityFormalContract / OperationalCapability / Control Plane /
+Experience Compiler owners through a typed VerificationContract and a deterministic
+VerificationEvaluator.
+
+Canonical rules:
+
+- ACK, observation, persisted readback, semantic equivalence, postcondition proof,
+  goal satisfaction and task acceptance are distinct claims;
+- unknown verifier metadata never upgrades itself to independent/persisted evidence;
+- verifier sufficiency is multidimensional: persistence, source trust/authority,
+  failure-domain admissibility, temporal validity/freshness, deterministic relation and
+  predicate/goal coverage;
+- independence is derived from real provenance/failure domains, never asserted by the
+  verifier itself;
+- page prose and LLM output may propose observations but may not mint verifier trust,
+  consistency guarantees, canonicalizers or authority;
+- semantic equivalence must be deterministic, narrow, owner-approved and versioned;
+- source disagreement produces CONFLICT/INCONCLUSIVE rather than convenient success;
+- a postcondition can prove state satisfaction without proving transition causation;
+  idempotent ensure-state operations and causal mutations must not be conflated;
+- Experience Compiler may infer verifier candidates from experience, but the same
+  discovery traces do not validate the candidate;
+- action models and verifier/oracle models are falsified separately and bound only
+  after both satisfy their promotion obligations;
+- safe negative controls/counterexamples are first-class verifier validation evidence;
+  destructive production experiments are not required or authorized;
+- H-075 RunClosureProof may hand off only when the required verifier contract/result is
+  validated, fresh enough, conflict-free and covers the required predicates.
+
+Do not create a VerifierDB, VerifierRegistry, VerificationScheduler, second evidence
+store, second predicate IR, verifier agent or LLM judge as mutation commit authority.
+
+> **OBSERVATION PROPOSES. CONTRACT DEFINES. EVIDENCE PROVES.**
+
+> **THE ACTION AND THE ORACLE ARE LEARNED SEPARATELY; THEY ARE BOUND ONLY AFTER BOTH
+> SURVIVE FALSIFICATION.**
+
+Canonical:
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
