@@ -16,6 +16,7 @@ import re
 import shutil
 import time
 from typing import Any, Callable
+from uuid import uuid4
 
 from workstation.artifacts import ArtifactStore
 from workstation.operational_capabilities import (
@@ -100,6 +101,7 @@ class OperationalKernel:
         self.artifacts = artifacts or ArtifactStore()
         self.registry = registry or OperationalCapabilityRegistry(artifacts=self.artifacts)
         self.resolver = resolver or CapabilityResolver(registry=self.registry)
+        self.invocations: list[Any] = []
 
     # -------------------------------------------------------------------------
     # Filesystem Primitives
@@ -599,6 +601,26 @@ class OperationalKernel:
                 cap.savings["tokens_saved"] = cap.savings.get("tokens_saved", 0) + 1500
             if not exec_context.get('learning_replay'):
                 self.registry.register(cap)
+
+            from workstation.experience_compiler.models import CapabilityInvocation
+            invocation = CapabilityInvocation(
+                invocation_id=f"inv_{uuid4().hex[:16]}",
+                capability_id=cap.id,
+                capability_version=cap.version,
+                run_id=str(exec_context.get("run_id") or "run_default"),
+                task_id=exec_context.get("task_id") or owner,
+                operation_id=exec_context.get("operation_id"),
+                inputs=sanitize(inputs),
+                state_before=exec_context.get("semantic_state_before") or {},
+                state_after=exec_context.get("semantic_state") or {},
+                delta={},
+                status="COMMITTED",
+                verified=True,
+                verifier_status="verified",
+                authority_scope=exec_context.get("authority_scope"),
+                timestamp=datetime.now(timezone.utc).timestamp(),
+            )
+            self.invocations.append(invocation)
 
             return {
                 "success": True,

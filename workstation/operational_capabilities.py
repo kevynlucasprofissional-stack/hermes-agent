@@ -199,6 +199,14 @@ class OperationalCapability:
             lifecycle = CapabilityLifecycle.DISCOVERED
         deps_data = data.get("dependencies", [])
         deps = [CapabilityDependency.from_dict(d) if isinstance(d, dict) else d for d in deps_data]
+        fc_data = data.get("formal_contract")
+        formal_contract = None
+        if isinstance(fc_data, dict):
+            from workstation.control_plane.contract import CapabilityFormalContract
+            formal_contract = CapabilityFormalContract.from_dict(fc_data)
+        elif fc_data is not None:
+            formal_contract = fc_data
+
         return cls(
             id=str(data.get("id", "")),
             name=str(data.get("name", "")),
@@ -230,7 +238,7 @@ class OperationalCapability:
             source_trace_refs=list(data.get('source_trace_refs', [])),
             promotion_policy_version=str(data.get('promotion_policy_version', '')),
             learning_metadata=dict(data.get('learning_metadata', {})),
-            formal_contract=data.get("formal_contract"),
+            formal_contract=formal_contract,
             family_id=str(data.get("family_id", "")),
             alias_of=str(data.get("alias_of", "")),
             superseded_by=str(data.get("superseded_by", "")),

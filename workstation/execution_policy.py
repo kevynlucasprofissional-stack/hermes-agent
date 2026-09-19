@@ -81,7 +81,15 @@ def semantic_target_family(name: str, args: dict, *, contract: dict | None = Non
     # 1. Explicit target family in args
     explicit_family = args.get('target_family') or args.get('operation_family') or args.get('family')
     if explicit_family and isinstance(explicit_family, str):
-        return explicit_family.strip()
+        cleaned = explicit_family.strip()
+        # Broad command-runner syntaxes (terminal:python:-m, terminal:bash:-c, etc.) without
+        # concrete target script or module are too broad to grant mandatory compilation.
+        if cleaned in {
+            'terminal', 'terminal:python', 'terminal:python:-m', 'terminal:bash',
+            'terminal:bash:-c', 'terminal:sh', 'terminal:sh:-c', 'terminal:cmd', 'terminal:powershell',
+        } or cleaned.endswith((':-m', ':-c')):
+            return None
+        return cleaned
 
     # 2. Semantic anchor in args (e.g. from durable trace or explicit call)
     anchor = args.get('semantic_anchor')

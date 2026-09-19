@@ -327,6 +327,7 @@ class CapabilityRouter:
 
     def _rebuild_index(self) -> None:
         try:
+            self._index = CapabilityIndex()
             for cap in self.registry.list_capabilities(lifecycle=CapabilityLifecycle.PROMOTED):
                 self._index.index(cap)
         except Exception:
@@ -365,7 +366,14 @@ class CapabilityRouter:
             return SatisfiedDecision(goal_satisfied=True)
 
         # 3. Candidate search: exact match in promoted capabilities
-        candidates = self._index.candidates()
+        self._rebuild_index()
+        candidates = self._index.candidates(
+            target_family=operation_intent.metadata.get("target_family") or operation_intent.target,
+            operation_family=operation_intent.metadata.get("operation_family"),
+            family_id=operation_intent.metadata.get("family_id"),
+        )
+        if not candidates:
+            candidates = self._index.candidates()
         if not candidates:
             # Fall back to all promoted capabilities in registry
             candidates = self.registry.list_capabilities(lifecycle=CapabilityLifecycle.PROMOTED)

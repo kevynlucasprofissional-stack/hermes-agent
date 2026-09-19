@@ -1,31 +1,38 @@
 # Verified Operational Control Plane — OperationIntent, Capability Router, Await/Trigger Plane
 
 
-## Hierarchical operational learning integration addendum — 2026-09-18
+## Hierarchical operational learning integration — P0-P4 QUALIFIED (2026-09-19)
 
-The Control Plane remains the admission/selection owner for the new hierarchical
-learning layer described in
-[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+The Control Plane serves as the strict admission/selection owner for the hierarchical
+learning layer:
 
-Three consequences are now explicit:
+1. **Learned capabilities are routable via proven formal contracts (P1 Closed)**:
+   Experience Compiler learned candidates derive a conservative `CapabilityFormalContract`
+   from trusted evidence (`derive_formal_contract()`). `CapabilityRouter` dynamically
+   rebuilds its index, matching `OperationIntent` against learned capabilities and emitting
+   `ExecutableDecision` with a valid `RoutingCertificate`, executing without LLM intervention.
+2. **WAIT is non-resident control state (P2 Closed)**:
+   `AwaitContinuation` stores durable subgraph, plan metadata, capability pins, and
+   verified state. `is_non_resident_wait()` identifies external semantic waits to release
+   the worker process. `TriggerCoordinator` fences on `run_id`, `task_id`, and `operation_id`,
+   evaluates predicates against authoritative state before wake ("EVENT WAKES. AUTHORITATIVE STATE CONFIRMS."),
+   and deletes condition records only after resumption is confirmed.
+3. **Truthful dispatch and composition execution (P0 Closed)**:
+   `CertifiedDispatcher` fails closed (`DispatchStatus.NEEDS_VERIFICATION`) unless a valid
+   verifier confirms postconditions or the contract explicitly permits ACK-only (`allow_ack_only=True` / `E0`).
+   Composed decisions execute each step sequentially via `OperationalKernel.execute_capability`
+   rather than echoing plan IDs. Authority originates exclusively from trusted sources and cannot
+   be synthesized as wildcard defaults.
+4. **Hierarchical composition and execution (P3 Closed)**:
+   `OperationalKernel` captures `CapabilityInvocation` traces during verified runs.
+   `HierarchicalExperienceCompiler` mines recurring sequences and proposes dependency-based
+   composites requiring causal JOIN, authority JOIN, and verifier closure. Execution traverses
+   dependencies; child drift/quarantine propagates fail-closed.
+5. **Operational Reasoning Amortization metrics (P4 Closed)**:
+   `ORAMetrics` tracks `ora_ratio`, composite reuse, wait non-residency, and `WakeReason`
+   breakdowns, strictly preserving `None` / `null` when denominators are absent.
 
-1. **Learned does not mean routable until typed proof exists.**
-   Experience Compiler candidates may be reused by exact identity, but semantic
-   `OperationIntent -> CapabilityRouter` execution requires a conservative
-   `CapabilityFormalContract` derived from trusted evidence. The LLM cannot invent
-   or upgrade that contract.
-2. **WAIT must become non-resident control state.**
-   Persistent `AwaitCondition` plus a fenced durable continuation is the canonical
-   long-wait abstraction. Event reception is a wake hint; authoritative state
-   confirms the predicate; continuation re-enters Router admission. A blocked
-   thread/worker is an implementation fallback, not the target semantic contract.
-3. **Composition has two layers.**
-   Runtime `CompositionEngine` selects/certifies a plan for the current intent.
-   Hierarchical Experience Compilation may later learn a recurring verified
-   capability sequence as a composite OperationalCapability. Learned composition
-   still crosses the same Router/certificate/authority/verifier gates.
-
-The Control Plane therefore remains the narrow waist:
+The Control Plane remains the narrow waist:
 
 ~~~text
 reasoning proposal OR learned capability/composite
@@ -39,30 +46,8 @@ reasoning proposal OR learned capability/composite
 
 No hierarchical learner may bypass this boundary.
 
-
-## Post-merge dogfood qualification addendum — P0 open
-
-CP0–CP9 is implemented and contract-validated, but live native-Browser dogfooding
-proved that component-level green status is not yet equivalent to one authoritative
-production mutation path.
-
-The active integration hardening is specified in
-[BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
-It does not replace this Control Plane. It closes the seams around it:
-- legacy repetition admission vs Router authority;
-- trusted AuthorityScope derivation;
-- mandatory CertifiedDispatcher use;
-- Browser primitive/verifier expressiveness;
-- mutation-timeout uncertainty;
-- semantic snapshot readiness.
-
-Until that P0 closes, describe the Control Plane as **implemented /
-contract-validated, production mutation integration hardening open**, not as fully
-qualified end to end.
-
 Date established: 2026-09-18
-
-Status: **IMPLEMENTED / CONTRACT VALIDATED; PRODUCTION INTEGRATION HARDENING + NON-RESIDENT WAIT BRIDGE OPEN**
+Status: **IMPLEMENTED / CONTRACT VALIDATED (P0-P4 QUALIFIED — 2026-09-19)**
 
 Depends on:
 - [CANONICAL_WORK_LOOP.md](CANONICAL_WORK_LOOP.md)

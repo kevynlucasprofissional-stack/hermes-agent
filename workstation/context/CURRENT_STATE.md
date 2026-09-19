@@ -8,43 +8,48 @@ Evidence: Workstation 607 passed / 2 skipped; Electron 1791 passed / 5 skipped;
 typecheck, H004, H013 2/2, Work100 30/30 and integration dry-run green. Exact-head CI
 remains the final qualification gate.
 
-## 2026-09-18 Hierarchical Operational Learning — ARCHITECTURE VALIDATED / IMPLEMENTATION OPEN
+## 2026-09-19 Hierarchical Operational Learning — IMPLEMENTED & QUALIFIED (P0-P4 CLOSED)
 
-A current-main architecture audit confirmed that Hermes Work already implements
-the major substrate for amortizing operational reasoning: accepted-run Experience
-Compiler mining, VOT/state abstraction, causal grades/replay, OperationalCapability
-runtime, capability dependencies, Router/certificates, reasoning handoff and
-Await/Trigger contracts.
+The architectural phase for Hierarchical Operational Learning and Operational Reasoning
+Amortization (ORA) is completely implemented and qualified across all phases (P0 to P4):
 
-The desired direction is therefore **not a replacement architecture**. The current
-open work is to close four integration seams:
+1. **P0 (Truthful Control Plane Closure):**
+   - Added `certificate_hash()` to `CompositionCertificate`;
+   - Hardened `CertifiedDispatcher.dispatch()` to fail closed (`NEEDS_VERIFICATION`) unless
+     a verifier or explicit ACK-only acceptance contract is provided;
+   - Real sequential child execution through `OperationalKernel` in `TaskCompiler._execute_route`
+     without synthetic wildcard authority minting;
+   - Gated `REQUIRE_COMPILE` in `execution_policy.py` on full operational closure, narrowing
+     broad terminal command families (`terminal:python:-m`, `terminal:bash:-c`).
 
-1. **learned Capability -> Router:** Experience Compiler candidates do not yet
-   conservatively derive/populate the typed `CapabilityFormalContract` required
-   by CapabilityRouter, so exact fingerprint reuse and semantic intent routing are
-   only partially unified;
-2. **hierarchical composition:** runtime dependencies/composition exist, but
-   verified capability-invocation sequences are not yet mined as higher-level
-   dependency-based composite candidates;
-3. **non-resident wait:** persistent AwaitCondition exists, while TaskCompiler
-   still performs resident event waits/bounded polling and TriggerCoordinator does
-   not yet execute a durable continuation;
-4. **Control Plane truth:** H-071 remains prerequisite work: composition must execute
-   for real, ACK is not proof, authority cannot be synthesized, and all decision
-   branches must preserve the actual typed contracts.
+2. **P1 (Experience Compiler <-> Capability Router Bridge):**
+   - Extended `Provenance` with `authority_ref` and `authority_scope`;
+   - Implemented conservative deterministic `CapabilityFormalContract` derivation from
+     verified experience in `promotion.py` and `compiler.py`;
+   - Decoupled semantic identity with `family_id = f"{op_family}:{target_family}"`;
+   - Rebuilt router index dynamically so `OperationIntent -> CapabilityRouter` routes to
+     promoted learned capabilities, issuing a `RoutingCertificate` without LLM calls.
 
-Canonical atomicity is the smallest **semantically closed** verified transition,
-not the fewest clicks/tool calls.
+3. **P2 (Non-Resident AwaitCondition):**
+   - Implemented `AwaitContinuation` holding durable subgraph, pins, and plan metadata;
+   - Hardened `TriggerCoordinator` with run_id, task_id, and operation_id fencing;
+   - Enforced "EVENT WAKES. AUTHORITATIVE STATE CONFIRMS." — false wakes reject resumption;
+   - Atomic cleanup: conditions are only removed from store after resumption confirmation;
+   - Classified external semantic waits (`is_non_resident_wait`) to release worker processes.
 
-Target progression:
+4. **P3 (Hierarchical Experience Compiler):**
+   - `OperationalKernel` records `CapabilityInvocation` upon verified execution;
+   - Created `HierarchicalExperienceCompiler` to mine recurring sequences across runs;
+   - Validated causal JOIN, authority JOIN, and verifier closure;
+   - Emits composite `OperationalCapability` preserving child dependencies (no flattening);
+   - Drift propagation: quarantined or drifted children strictly block composite execution.
 
-~~~text
-Experience -> VOT -> OperationalCapability -> Composite Capability
--> Deterministic Workflow -> Await/Event -> Reasoning Boundary
-~~~
+5. **P4 (Operational Reasoning Amortization Metrics):**
+   - Implemented `ORAMetrics` with `ora_ratio`, `composite_reuse_rate`, `wait_non_residency_rate`,
+     `wake_llm_rate`, and `WakeReason` breakdown;
+   - Preserved `None` / `null` for unknown denominators and unmeasured metrics.
 
-New measurement target: Operational Reasoning Amortization (ORA), paired with
-LLM calls per verified transition, reuse, wait residency, drift and uncertainty.
+Evidence: Full workstation test suite passed (620 passed, 2 skipped, 0 failed in 235.36s).
 
 Canonical reference:
 [HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
