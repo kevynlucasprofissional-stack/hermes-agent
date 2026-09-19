@@ -430,3 +430,166 @@ def test_task_compiler_composition_unbound_and_stale_dispatch_nothing(clean_env,
         task_id="t", session_id="s", dispatch=lambda *_args: {})
     assert stale["success"] is False
     assert kernel.calls == 0
+
+
+def test_route_wait_uses_await_condition_contract(clean_env, monkeypatch):
+    """WaitDecision correctly consumes and exposes await_condition."""
+    from workstation.control_plane.router import CapabilityRouter, WaitDecision
+    from workstation.control_plane.waiting import AwaitCondition, AwaitKind
+    from workstation.task_compiler import TaskCompiler
+
+    artifacts, registry = clean_env
+    cond = AwaitCondition(
+        wait_id="wait-contract-1",
+        kind=AwaitKind.WAITING_FOR_EVENT,
+        predicate=EQ("data_ready", True),
+        correlation_id="corr-99",
+    )
+    monkeypatch.setattr(
+        CapabilityRouter,
+        "route",
+        lambda *_args, **_kwargs: WaitDecision(await_condition=cond, reason="Waiting for webhook"),
+    )
+
+    compiler = TaskCompiler(artifacts=artifacts)
+    compiler.capability_registry = registry
+    result = compiler._execute_route(
+        {"operation_intent": {"id": "intent-wait"}, "semantic_state": {}},
+        task_id="task-wait",
+        session_id="session-wait",
+        dispatch=lambda *_args: {},
+    )
+    assert result["routing_decision"] == "WAIT"
+    assert result["await_condition"]["wait_id"] == "wait-contract-1"
+    assert result["condition"]["wait_id"] == "wait-contract-1"
+    assert result["reason"] == "Waiting for webhook"
+
+
+def test_route_human_and_reasoning_branches_use_actual_dataclass_fields(clean_env, monkeypatch):
+    """HumanDecision and ReasoningDecision consume actual canonical fields."""
+    from workstation.control_plane.router import CapabilityRouter, HumanDecision, ReasoningDecision
+    from workstation.task_compiler import TaskCompiler
+
+    artifacts, registry = clean_env
+    compiler = TaskCompiler(artifacts=artifacts)
+    compiler.capability_registry = registry
+
+    # HumanDecision
+    scope = AuthorityScope(level=AuthorityLevel.EXTERNAL_REVERSIBLE, allowed_actions={"deploy"})
+    monkeypatch.setattr(
+        CapabilityRouter,
+        "route",
+        lambda *_args, **_kwargs: HumanDecision(reason="Need operator confirmation", scope=scope),
+    )
+    res_human = compiler._execute_route(
+        {"operation_intent": {"id": "intent-human"}, "semantic_state": {}},
+        task_id="task-h",
+        session_id="session-h",
+        dispatch=lambda *_args: {},
+    )
+    assert res_human["routing_decision"] == "ASK_HUMAN"
+    assert res_human["scope"]["level"] == AuthorityLevel.EXTERNAL_REVERSIBLE.value
+    assert res_human["missing_authority"]["level"] == AuthorityLevel.EXTERNAL_REVERSIBLE.value
+    assert res_human["reason"] == "Need operator confirmation"
+
+    # ReasoningDecision
+    monkeypatch.setattr(
+        CapabilityRouter,
+        "route",
+        lambda *_args, **_kwargs: ReasoningDecision(
+            open_condition={"field": "unknown_param"},
+            attention_packet={"hint": "focus on line 42"},
+            requires_reconciliation=True,
+            reason="Adaptive discovery required",
+        ),
+    )
+    res_reason = compiler._execute_route(
+        {"operation_intent": {"id": "intent-reason"}, "semantic_state": {}},
+        task_id="task-r",
+        session_id="session-r",
+        dispatch=lambda *_args: {},
+    )
+    assert res_reason["routing_decision"] == "WAKE_LLM"
+    assert res_reason["open_condition"] == {"field": "unknown_param"}
+    assert res_reason["attention_packet"] == {"hint": "focus on line 42"}
+    assert res_reason["requires_reconciliation"] is True
+    assert res_reason["reason"] == "Adaptive discovery required"
+    assert res_reason["context"]["open_condition"] == {"field": "unknown_param"}
+
+
+def test_composed_execution_verifies_final_intent_goal_authoritatively(clean_env, monkeypatch):
+    """Child verification != final semantic goal verification. Final authoritative readback must hold."""
+    from workstation.control_plane.composition import CompositionCertificate
+    from workstation.control_plane.router import CapabilityRouter, ComposedDecision, _state_hash
+    from workstation.task_compiler import TaskCompiler
+
+    artifacts, registry = clean_env
+    cap = OperationalCapability(id="compose.step1", name="Step1", version="1.0.0")
+    cert = CompositionCertificate(
+        plan_ids=[cap.id],
+        plan_versions=[cap.version],
+        chain_verified=True,
+        goal_coverage=True,
+        effect_containment=True,
+        authority_satisfied=True,
+        invariant_preservation=True,
+        no_causal_threats=True,
+        verifier_closure=True,
+        deterministic_closure=True,
+        intent_hash="intent-hash",
+        semantic_state_hash=_state_hash({"final_state_target": "not_achieved"}),
+    )
+    monkeypatch.setattr(
+        CapabilityRouter,
+        "route",
+        lambda *_args, **_kwargs: ComposedDecision(plan=[cap], certificate=cert),
+    )
+
+    class MockKernel:
+        def execute_capability(self, *_args, **_kwargs):
+            return {
+                "success": True,
+                "verification": {"accepted": True},
+                "output": {"intermediate_value": 10},
+            }
+
+    compiler = TaskCompiler(artifacts=artifacts)
+    compiler.capability_registry = registry
+    compiler.kernel = MockKernel()
+    compiler.trusted_authority = AuthorityScope(
+        level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"*"}, allowed_resources={"*"}
+    )
+
+    # 1. Final authoritative readback fails -> composition fails closed
+    req_fail = {
+        "operation_intent": {
+            "id": "intent-composed",
+            "goal": {"type": "EQ", "path": "final_state_target", "value": "achieved"},
+        },
+        "semantic_state": {"final_state_target": "not_achieved"},
+        "composition_bindings": {cap.id: {"x": 1}},
+        "final_readback_fn": lambda: {"final_state_target": "still_not_achieved"},
+    }
+    res_fail = compiler._execute_route(
+        req_fail, task_id="task-comp", session_id="session-comp", dispatch=lambda *_args: {"success": True}
+    )
+    assert res_fail["success"] is False
+    assert res_fail["status"] == "FINAL_GOAL_VERIFICATION_FAILED"
+
+    # 2. Final authoritative readback confirms goal -> composition succeeds COMMITTED
+    req_success = {
+        "operation_intent": {
+            "id": "intent-composed",
+            "goal": {"type": "EQ", "path": "final_state_target", "value": "achieved"},
+        },
+        "semantic_state": {"final_state_target": "not_achieved"},
+        "composition_bindings": {cap.id: {"x": 1}},
+        "final_readback_fn": lambda: {"final_state_target": "achieved"},
+    }
+    res_success = compiler._execute_route(
+        req_success, task_id="task-comp", session_id="session-comp", dispatch=lambda *_args: {"success": True}
+    )
+    assert res_success["success"] is True
+    assert res_success["routing_decision"] == "COMPOSE"
+    assert res_success["dispatch_record"]["status"] == "COMMITTED"
+

@@ -215,7 +215,7 @@ def _decode_output(raw):
 
 class TaskCompiler:
     def __init__(self, store: DurableTaskStore | None = None, artifacts: ArtifactStore | None = None, recipes=None,
-                 handoffs=None):
+                 handoffs=None, ora_metrics: Any | None = None):
         self.store = store or DurableTaskStore()
         self.artifacts = artifacts or ArtifactStore()
         self.recipes = recipes or RecipeStore(self.artifacts)
@@ -224,6 +224,13 @@ class TaskCompiler:
             from workstation.runtime import HumanHandoffManager
             handoffs = HumanHandoffManager(get_hermes_home() / "workstation" / "human_handoffs.json")
         self.handoffs = handoffs
+        if ora_metrics is not None:
+            self.ora_metrics = ora_metrics
+        else:
+            from workstation.control_plane.metrics import ORAMetrics
+            self.ora_metrics = ORAMetrics()
+        from workstation.control_plane.metrics import ORAMetricsCollector
+        self.metrics_collector = ORAMetricsCollector(self.ora_metrics)
 
     def discover(self, request, *, task_id, session_id, dispatch):
         """Preparation only: no frozen plan and no caller-provided effect override."""
@@ -974,9 +981,14 @@ class TaskCompiler:
         if registry is None:
             registry = OperationalCapabilityRegistry(artifacts=self.artifacts)
         from workstation.control_plane.composition import CompositionEngine
-        router = CapabilityRouter(registry, composition_engine=CompositionEngine(registry))
+        from workstation.control_plane.router import CapabilityRouter
+        router = getattr(self, "router", None) or CapabilityRouter(registry, composition_engine=CompositionEngine(registry))
 
         decision = router.route(intent, semantic_state, authority)
+        try:
+            self.metrics_collector.on_routing_decision(decision)
+        except Exception:
+            pass
 
         if isinstance(decision, SatisfiedDecision):
             return {
@@ -1108,6 +1120,54 @@ class TaskCompiler:
                             "step_result": step_result,
                         }
                     confirmed_steps.append({"id": cap.id, "version": cap.version, "result": step_result})
+                # Authoritative final readback of the goal of OperationIntent!
+                # child verification != final semantic goal verification.
+                final_readback_fn = request.get("final_readback_fn")
+                final_state = request.get("semantic_state") or {}
+                if callable(final_readback_fn):
+                    try:
+                        readback_state = final_readback_fn()
+                        if isinstance(readback_state, dict):
+                            final_state = {**final_state, **readback_state}
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "status": "FINAL_GOAL_VERIFICATION_FAILED",
+                            "reason": f"final_readback_error: {e}",
+                            "confirmed_steps": list(confirmed_steps),
+                        }
+
+                if request.get("goal_verifier_fn"):
+                    try:
+                        goal_ok = bool(request["goal_verifier_fn"](final_state, confirmed_steps))
+                        if not goal_ok:
+                            return {
+                                "success": False,
+                                "status": "FINAL_GOAL_VERIFICATION_FAILED",
+                                "reason": "goal_verifier_failed",
+                                "confirmed_steps": list(confirmed_steps),
+                            }
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "status": "FINAL_GOAL_VERIFICATION_FAILED",
+                            "reason": f"goal_verifier_error: {e}",
+                            "confirmed_steps": list(confirmed_steps),
+                        }
+                elif intent and intent.goal:
+                    accumulated_state = dict(final_state)
+                    for s in confirmed_steps:
+                        res = s.get("result", {})
+                        if isinstance(res.get("output"), dict):
+                            accumulated_state.update(res["output"])
+                    if not intent.goal.evaluate(accumulated_state):
+                        return {
+                            "success": False,
+                            "status": "FINAL_GOAL_VERIFICATION_FAILED",
+                            "reason": "final_intent_goal_not_satisfied_by_authoritative_state",
+                            "confirmed_steps": list(confirmed_steps),
+                        }
+
                 return {"success": True, "plan": [c.id for c in decision.plan], "confirmed_steps": confirmed_steps}
 
             try:
@@ -1124,6 +1184,7 @@ class TaskCompiler:
                         and len(result.get("confirmed_steps", [])) == len(decision.plan)
                         and all(step.get("result", {}).get("verification", {}).get("accepted") is True
                                 for step in result.get("confirmed_steps", []))
+                        and result.get("status") != "FINAL_GOAL_VERIFICATION_FAILED"
                     ),
                 )
                 composition_result = dispatch_res.get("result", {})
@@ -1144,24 +1205,103 @@ class TaskCompiler:
                 }
 
         if isinstance(decision, WaitDecision):
+            from workstation.control_plane.waiting import (
+                AwaitCondition,
+                AwaitConditionStore,
+                AwaitContinuation,
+            )
+            raw_cond = decision.await_condition
+            if isinstance(raw_cond, dict):
+                cond = AwaitCondition.from_dict(raw_cond)
+            else:
+                cond = raw_cond
+
+            if cond is not None:
+                task_ref = canonical_task_id or task_id
+                run_ref = request.get("run_id")
+                op_ref = request.get("operation_id") or (intent.id if intent else None)
+                intent_id_val = intent.id if intent else None
+                intent_hash_val = getattr(intent, "intent_hash", None) if intent else None
+                sem_state_val = dict(semantic_state) if semantic_state else {}
+
+                if not getattr(cond, "continuation", None):
+                    cond.continuation = AwaitContinuation(
+                        task_id=task_ref,
+                        run_id=run_ref,
+                        operation_id=op_ref,
+                        intent_id=intent_id_val,
+                        intent_hash=intent_hash_val,
+                        last_verified_state=sem_state_val,
+                    )
+                elif isinstance(cond.continuation, dict):
+                    c_dict = dict(cond.continuation)
+                    c_dict.setdefault("task_id", task_ref)
+                    c_dict.setdefault("run_id", run_ref)
+                    c_dict.setdefault("operation_id", op_ref)
+                    c_dict.setdefault("intent_id", intent_id_val)
+                    c_dict.setdefault("last_verified_state", sem_state_val)
+                    cond.continuation = AwaitContinuation.from_dict(c_dict)
+
+                if not cond.task_id and task_ref:
+                    cond.task_id = task_ref
+                if not cond.run_id and run_ref:
+                    cond.run_id = run_ref
+                if not cond.operation_id and op_ref:
+                    cond.operation_id = op_ref
+
+                # Persist AwaitCondition to AwaitConditionStore (surviving process restart)
+                await_store = AwaitConditionStore(artifacts=self.artifacts)
+                await_store.save(cond)
+
+            cond_dict = (
+                cond.to_dict()
+                if hasattr(cond, "to_dict")
+                else cond
+            )
             return {
                 "success": False,
                 "routing_decision": "WAIT",
-                "condition": decision.condition.to_dict() if hasattr(decision.condition, "to_dict") else decision.condition,
+                "await_condition": cond_dict,
+                "condition": cond_dict,
                 "reason": decision.reason,
+                "wait_id": getattr(cond, "wait_id", None),
+                "correlation_id": getattr(cond, "correlation_id", None),
+                "worker_released": True,
             }
 
         if isinstance(decision, HumanDecision):
-            missing_authority = getattr(decision, "missing_authority", None)
+            scope_dict = (
+                decision.scope.to_dict()
+                if hasattr(decision.scope, "to_dict")
+                else decision.scope
+            )
             return {
                 "success": False,
                 "routing_decision": "ASK_HUMAN",
                 "reason": decision.reason,
-                "missing_authority": missing_authority.to_dict() if missing_authority else None,
+                "scope": scope_dict,
+                "missing_authority": scope_dict,
             }
 
         # ReasoningDecision
         from workstation.reasoning_handoff import needs_reasoning
+        open_cond = (
+            decision.open_condition.to_dict()
+            if hasattr(decision.open_condition, "to_dict")
+            else decision.open_condition
+        )
+        attention = (
+            decision.attention_packet.to_dict()
+            if hasattr(decision.attention_packet, "to_dict")
+            else decision.attention_packet
+        )
+        context_payload = {
+            "intent_id": intent.id,
+            "open_condition": open_cond,
+            "attention_packet": attention,
+            "requires_reconciliation": getattr(decision, "requires_reconciliation", False),
+            "reason": decision.reason,
+        }
         handoff = needs_reasoning(
             self.artifacts,
             owner=str(canonical_task_id or task_id or session_id),
@@ -1169,13 +1309,17 @@ class TaskCompiler:
             expected="Executable capability match",
             observed=decision.reason,
             safe_to_resume=False,
-            context={"intent_id": intent.id, "unmatched_goals": [g.to_dict() for g in getattr(decision, "unmatched_goals", [])]},
+            context=context_payload,
         )
         return {
             **handoff,
             "success": False,
             "routing_decision": "WAKE_LLM",
             "reason": decision.reason,
+            "open_condition": open_cond,
+            "attention_packet": attention,
+            "requires_reconciliation": getattr(decision, "requires_reconciliation", False),
+            "context": context_payload,
         }
 
     def _execute_capability(self, request, *, task_id, session_id, dispatch, canonical_task_id=None):
@@ -1290,6 +1434,28 @@ class TaskCompiler:
         return self.execute(objective, task_id=plan.metadata["browser_task_id"], session_id=session_id,
                             dispatch=dispatch, progress=progress, provider_usage=provider_usage, event_bus=event_bus,
                             canonical_task_id=plan.metadata.get("canonical_task_id"))
+
+    def handle_event(
+        self,
+        event: Any,
+        read_authoritative_state: Callable[[], dict[str, Any]],
+        resume_fn: Callable[[Any, dict[str, Any]], bool] | None = None,
+    ) -> bool:
+        """Process an incoming causal event against persistent AwaitConditions.
+        
+        Enforces Rule 21.2: EVENT WAKES. AUTHORITATIVE STATE CONFIRMS.
+        """
+        from workstation.control_plane.waiting import AwaitConditionStore, TriggerCoordinator
+        store = AwaitConditionStore(artifacts=self.artifacts)
+        coordinator = TriggerCoordinator(store=store)
+        resumed = coordinator.handle_event(
+            event=event,
+            read_authoritative_state=read_authoritative_state,
+            resume_fn=resume_fn,
+        )
+        if resumed:
+            self.ora_metrics.record_transition(verified=True, reasoned=False)
+        return resumed
 
 
 def execute_compiled_work(args: dict, **kwargs) -> str:

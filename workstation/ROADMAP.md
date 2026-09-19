@@ -1,18 +1,20 @@
 # Workstation roadmap
 
-## In-Flight Operationalization / Adaptive-to-Deterministic Handoff (2026-09-19) — CORRECTIVE P0 OPEN
+## In-Flight Operationalization / Adaptive-to-Deterministic Handoff (2026-09-19) — IMPLEMENTED & QUALIFIED (Phases P0–P6)
 
 Canonical specification:
 [context/IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](context/IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
 
-H-075 partially falsified the broad hypothesis: deterministic continuation,
-checkpointing and operational-closure primitives already exist. The confirmed gap is
-the automatic **handoff** from newly verified adaptive work to a run-scoped compiled
-segment executed by existing TaskCompiler/DurableBatchRunner/OperationalKernel owners.
+H-075 closed the In-Flight Operationalization Handoff Gap (KI-014) and remaining operational hierarchy seams (KI-013) across Phases P0–P6:
+- P0: Decision seams (`WaitDecision`, `HumanDecision`, `ReasoningDecision`, `ComposedDecision`) consume real dataclass fields; composition requires authoritative final-goal verification; conservative derivation fails closed.
+- P1: `RunClosureProof` with 21 canonical fields, 10 admission conditions in `evaluate_run_local_closure()`, positive expected operational utility threshold.
+- P2: Adaptive-to-compiled handoff transferring remaining batch to `DurableBatchRunner` without LLM re-entry; `RunScopedCapability` excluded from global promoted index; prefix recovery prevents duplicate mutation replay.
+- P3: Browser lowering replaces console scripts with `plain_text_paste` for rich editors; `resolve_browser_type_text()` resolves `text_ref`/`artifact_ref` at trusted boundary with task fencing, <=1MB size, and MIME validation.
+- P4: Durable `CapabilityInvocation` with lineage in `ArtifactStore` and `ExecutionJournal`; `load_invocations()` verifies pins/drift; composite promotion enforces causal replay and counterexample verification (`ExperiencePromotionPolicy`).
+- P5: Non-resident `WaitDecision` persists `AwaitCondition` + `AwaitContinuation` in `AwaitConditionStore` and releases worker processes; production `ORAMetrics` wired directly into `OperationalKernel` and `TaskCompiler`.
+- P6: 12-item Trello-shaped benchmark qualified end-to-end with canary + replay, handoff of 10 items, large artifact ref resolution, deliberate anomaly handling with `AttentionPacket`, prefix recovery, and clean resume without duplicate replays.
 
-P0-P6: truth corrections; RunClosureProof; adaptive-to-compiled handoff; Browser
-lowering plus Artifact-to-Browser text; durable invocation/causal composites; real
-non-resident continuation plus telemetry; Trello-shaped Electron qualification.
+Evidence: 21 in-flight operationalization tests passed; full workstation test suite: **647 passed, 2 skipped in 287.92s**.
 
 
 ## Browser Operational Admission corrective P0 (2026-09-19) — IMPLEMENTED; EXACT-HEAD CI PENDING
@@ -23,7 +25,7 @@ same-origin HTTP readback without process fallback, owner-declared terminal iden
 repaired integration anchor, and a real Electron rich-editor/cookie/drift/replay fixture.
 Local candidate gates are green; final `QUALIFIED` status awaits exact-head CI.
 
-## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — COMPONENT BASELINE LANDED / H-075 CORRECTIVE INTEGRATION OPEN
+## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — COMPONENT BASELINE LANDED & SEAMS CLOSED [H-075]
 
 Canonical specification:
 [context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).

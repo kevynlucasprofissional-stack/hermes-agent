@@ -97,11 +97,17 @@ class OperationalKernel:
         registry: OperationalCapabilityRegistry | None = None,
         resolver: CapabilityResolver | None = None,
         artifacts: ArtifactStore | None = None,
+        ora_metrics: Any | None = None,
     ):
         self.artifacts = artifacts or ArtifactStore()
         self.registry = registry or OperationalCapabilityRegistry(artifacts=self.artifacts)
         self.resolver = resolver or CapabilityResolver(registry=self.registry)
         self.invocations: list[Any] = []
+        if ora_metrics is not None:
+            self.ora_metrics = ora_metrics
+        else:
+            from workstation.control_plane.metrics import ORAMetrics
+            self.ora_metrics = ORAMetrics()
 
     # -------------------------------------------------------------------------
     # Filesystem Primitives
@@ -198,6 +204,32 @@ class OperationalKernel:
     # -------------------------------------------------------------------------
     # Primitive Dispatch
     # -------------------------------------------------------------------------
+
+    def lower_primitive(
+        self,
+        primitive: str,
+        inputs: dict[str, Any],
+        route: str = "native_browser",
+    ) -> dict[str, Any]:
+        """Lower an operational primitive into a concrete executable tool call without dispatching."""
+        if primitive in {"browser_type", "type", "fill", "paste_text_semantic", "paste", "plain_text_paste"}:
+            ref = inputs.get("ref") or "@e1"
+            anchor = inputs.get("anchor") or inputs.get("semantic_anchor")
+            default_mode = "plain_text_paste" if primitive in {"paste_text_semantic", "paste", "plain_text_paste"} else "insert_text"
+            payload = {
+                "ref": ref,
+                "text": inputs.get("text", ""),
+                "clear": inputs.get("clear", True),
+                "mode": inputs.get("mode", default_mode),
+            }
+            if anchor:
+                payload["semantic_anchor"] = anchor
+            return {"tool": "browser_type", "args": payload}
+        if primitive in {"browser_click", "click"}:
+            return {"tool": "browser_click", "args": {"ref": inputs.get("ref", "@e1")}}
+        if primitive in {"browser_navigate", "navigate"}:
+            return {"tool": "browser_navigate", "args": {"url": inputs.get("url", "")}}
+        return {"tool": primitive, "args": inputs}
 
     def execute_primitive(
         self,
@@ -492,6 +524,14 @@ class OperationalKernel:
         try:
             # 1. Execute dependencies in topological order
             for dep in cap.dependencies:
+                dep_cap = self.registry.get(dep.capability_id)
+                if not dep_cap or dep_cap.drift_state != "healthy":
+                    raise CapabilityDriftError(f"Child capability '{dep.capability_id}' has drifted ({getattr(dep_cap, 'drift_state', 'missing')}); blocking composite execution")
+                pins = exec_context.get("capability_pins") or {}
+                if dep.capability_id in pins:
+                    pin = pins[dep.capability_id]
+                    if pin.get("version") and dep_cap.version != pin["version"]:
+                        raise CapabilityDriftError(f"Child capability '{dep.capability_id}' pin changed from {pin['version']} to {dep_cap.version}")
                 dep_inputs = {}
                 for target_field, src_path in dep.input_mappings.items():
                     val = _lookup_dotted_path(src_path, exec_context)
@@ -603,13 +643,20 @@ class OperationalKernel:
                 self.registry.register(cap)
 
             from workstation.experience_compiler.models import CapabilityInvocation
+            task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
+            run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
+            operation_id = str(exec_context.get("operation_id") or getattr(self, "operation_id", None) or f"op_{cap.id}_{uuid4().hex[:8]}")
+            auth_scope = exec_context.get("authority_scope") or getattr(self, "authority_scope", None)
+            if hasattr(auth_scope, "to_dict"):
+                auth_scope = auth_scope.to_dict()
+
             invocation = CapabilityInvocation(
                 invocation_id=f"inv_{uuid4().hex[:16]}",
                 capability_id=cap.id,
                 capability_version=cap.version,
-                run_id=str(exec_context.get("run_id") or "run_default"),
-                task_id=exec_context.get("task_id") or owner,
-                operation_id=exec_context.get("operation_id"),
+                run_id=run_id,
+                task_id=task_id,
+                operation_id=operation_id,
                 inputs=sanitize(inputs),
                 state_before=exec_context.get("semantic_state_before") or {},
                 state_after=exec_context.get("semantic_state") or {},
@@ -617,10 +664,44 @@ class OperationalKernel:
                 status="COMMITTED",
                 verified=True,
                 verifier_status="verified",
-                authority_scope=exec_context.get("authority_scope"),
+                authority_scope=auth_scope,
                 timestamp=datetime.now(timezone.utc).timestamp(),
             )
             self.invocations.append(invocation)
+
+            # Durable persistence in ArtifactStore
+            try:
+                self.artifacts.store(task_id, f"invocation_{invocation.invocation_id}.json", invocation.to_dict())
+            except Exception:
+                pass
+
+            # Durable persistence in ExecutionJournal
+            try:
+                from workstation.journal import ExecutionJournal
+                from workstation.contracts import ExecutionEventKind
+                journal = ExecutionJournal(task_id=task_id, session_id=run_id)
+                journal.record(
+                    ExecutionEventKind.ACTION,
+                    f"CapabilityInvocation {invocation.invocation_id} committed",
+                    metadata=invocation.to_dict(),
+                )
+            except Exception:
+                pass
+
+            # Record in ORAMetrics
+            try:
+                is_comp = (
+                    cap.route == "composite"
+                    or bool(cap.dependencies)
+                    or (isinstance(cap.learning_metadata, dict) and bool(cap.learning_metadata.get("composite")))
+                )
+                self.ora_metrics.record_capability_invocation(is_composite=is_comp)
+                self.ora_metrics.record_transition(
+                    verified=True,
+                    reasoned=bool(exec_context.get("reasoned") or exec_context.get("learning_replay")),
+                )
+            except Exception:
+                pass
 
             return {
                 "success": True,
@@ -655,3 +736,20 @@ class OperationalKernel:
                 )
                 return handoff
             raise
+
+    def load_invocations(self, task_id: str):
+        """Reload persisted CapabilityInvocations from ArtifactStore."""
+        invocations = []
+        safe_task = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in task_id)
+        task_dir = self.artifacts.root / safe_task
+        if task_dir.exists():
+            for p in sorted(task_dir.glob("invocation_*.json")):
+                if not p.name.endswith(".meta.json"):
+                    try:
+                        data = json.loads(p.read_text(encoding="utf-8"))
+                        from workstation.experience_compiler.models import CapabilityInvocation
+                        invocations.append(CapabilityInvocation.from_dict(data))
+                    except Exception:
+                        pass
+        return invocations
+

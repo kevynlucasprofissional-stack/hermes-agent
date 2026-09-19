@@ -1,55 +1,40 @@
 # Workstation Known Issues
 
-## KI-014 — Verified adaptive procedure stays in the LLM loop instead of handing off in-flight [OPEN — H-075]
+## KI-014 — Verified adaptive procedure stays in the LLM loop instead of handing off in-flight [RESOLVED — H-075, 2026-09-19]
 
-A Trello-shaped run discovered and verified stable description/due procedures, then
-continued equivalent work through repeated LLM -> tool -> LLM cycles until the
-iteration budget ended.
+**Resolution:**
+Closed via in-flight operationalization handoff across Phases P1-P6:
+1. **RunClosureProof & Utility Admission (`workstation/run_closure.py`):**
+   - 21 canonical fields capturing lineage, semantic fingerprint, target family, route, verifier contract, authority containment, replay evidence, parameter bindings, and remaining equivalent work.
+   - `evaluate_run_local_closure()` enforcing 10 admission conditions including positive operational utility threshold.
+2. **Adaptive-to-Compiled Handoff & Prefix Recovery:**
+   - Synthesizes `ExecutionEnvelope` and transfers remaining fan-out to `DurableBatchRunner` without LLM re-entry.
+   - `RunScopedCapability` strictly fenced to `task_id`/`run_id`/`operation_id` and excluded from global registry.
+   - `recover_verified_prefix()` recovers committed items from `DurableTaskStore` and prevents duplicate replay after mid-batch interruption.
+3. **Browser Lowering & Artifact Data Plane (`tools/browser_workstation.py`, `apps/desktop/electron`):**
+   - Browser lowering maps rich text editors to `browser_type` with `plain_text_paste` semantic primitive, rejecting opaque `browser_console` traces from promotion.
+   - `resolve_browser_type_text()` resolves `text_ref`/`artifact_ref` at the trusted boundary, enforcing task ownership, <=1MB size, and text/json MIME type.
+4. **Qualification Receipt:**
+   - Qualified by 12-item Trello-shaped benchmark (`test_trello_benchmark_qualification.py`) demonstrating canary + replay, handoff of 10 items, large >50KB artifact ref resolution, deliberate anomaly handling with `AttentionPacket`, prefix recovery, and clean resumption of remaining items without duplicate replay.
 
-The deterministic runtime already exists. The missing seam is automatic run-local
-operationalization into TaskCompiler/DurableBatchRunner/OperationalKernel.
-browser_console opacity and missing ArtifactStore text refs amplify the issue.
 
-Target: after compatible verified replay closes an operation family, remaining
-equivalent work executes through existing deterministic owners with checkpoints and no
-LLM re-entry unless a declared exception occurs. Run-local reuse never grants global
-promotion or broader authority.
+## KI-013 — Operational knowledge hierarchy is not closed end to end [RESOLVED — H-075, 2026-09-19]
 
-
-
-## KI-013 — Operational knowledge hierarchy is not closed end to end [REOPENED / PARTIAL — H-075, 2026-09-19]
-
-**Historical PR #32 implementation claim (not an end-to-end resolution):**
-
-H-075 supersedes the RESOLVED label. Component tests remain evidence, but decision seams, non-resident wait product integration, durable CapabilityInvocation/causal promotion and production telemetry remain open.
-
-**Landed component inventory:**
-1. **P0 (Truthful Control Plane Closure)**:
-   - `workstation/control_plane/dispatcher.py`: Added `DispatchStatus.NEEDS_VERIFICATION`. `CertifiedDispatcher` fails closed without a verifier unless explicitly allowed by contract (`allow_ack_only=True` / `E0`).
-   - `workstation/task_compiler.py`: Replaced fake plan echoing in `_execute_route` with real sequential execution of composed children via `OperationalKernel.execute_capability`. Removed synthetic wildcard authority minting (`request["trusted_authority"]` / `{"*"}`). Fixed `RoutingDecision` attribute accesses (`await_condition`, `scope`, `open_condition`, `attention_packet`, etc.).
-   - `workstation/execution_policy.py`: Fixed broad terminal runners in `semantic_target_family`. Gated `REQUIRE_COMPILE` strictly on operational closure proof (`_operational_closure_proven`).
-   - `tools/browser_tool.py`: Validated forbidden authority headers syntactically prior to network DNS resolution in `browser_read_http`.
-2. **P1 (Experience Compiler ↔ Capability Router Bridge)**:
-   - `workstation/experience_compiler/promotion.py`: Implemented `derive_formal_contract()` deriving typed IR preconditions, postconditions, effects, proven authority requirement, and verifier contract.
-   - `workstation/control_plane/router.py`: Rebuilds index dynamically to include promoted learned capabilities with `formal_contract`, routing `OperationIntent` to `ExecutableDecision` with zero LLM calls.
-3. **P2 (Non-Resident AwaitCondition)**:
-   - `workstation/control_plane/waiting.py`: Created `AwaitContinuation` holding durable subgraph, plan metadata, capability pins, and verified state. Added `is_non_resident_wait()` to classify semantic waits and release worker processes. Hardened `TriggerCoordinator` to fence on `run_id`/`task_id`/`operation_id`, check authoritative state before waking ("EVENT WAKES. AUTHORITATIVE STATE CONFIRMS."), and delete condition only after confirmed resumption.
-4. **P3 (Hierarchical Experience Compiler)**:
-   - `workstation/experience_compiler/models.py` & `operational_kernel.py`: Defined and captured `CapabilityInvocation` traces on verified execution.
-   - `workstation/experience_compiler/hierarchical.py`: Created `HierarchicalExperienceCompiler` to mine recurring sequences across runs and propose composite capabilities preserving child `CapabilityDependency` (preventing script flattening), requiring causal JOIN, authority JOIN, verifier closure, and positive utility, with drift propagation.
-5. **P4 (Operational Reasoning Amortization Metrics)**:
-   - `workstation/control_plane/metrics.py`: Created `ORAMetrics` tracking `ora_ratio`, composite reuse, wait non-residency, and `WakeReason` breakdowns, strictly preserving `None` / `null` for unknown denominators.
-
-**Verification Receipts:**
-- `workstation/tests/test_learned_capability_routing.py`: 4 passed.
-- `workstation/tests/test_await_trigger_plane.py`: 10 passed.
-- `workstation/tests/test_hierarchical_experience_compiler.py`: 4 passed.
-- `workstation/tests/test_ora_metrics.py`: 3 passed.
-- Full workstation test suite: `python -m pytest -q -o pythonpath=. workstation/tests`:
-  **620 passed, 2 skipped, 0 failed in 235.36s**.
-
-Canonical design:
-[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+**Resolution:**
+All open integration seams identified in the H-075 post-merge audit were resolved and verified across Phases P0, P4, and P5:
+1. **P0 (Decision Seams, Final-Goal Verification, Conservative Derivation):**
+   - `workstation/task_compiler.py`: Route decision branches (`WaitDecision`, `HumanDecision`, `ReasoningDecision`, `ComposedDecision`) strictly consume real dataclass fields.
+   - `workstation/control_plane/composition.py`: Composed execution enforces authoritative final-goal verification, dependency satisfaction, verifier closure, and deterministic closure.
+   - `workstation/experience_compiler/promotion.py`: `derive_formal_contract()` fails closed if candidate has multiple incompatible families or lacks trusted provenance authority.
+2. **P4 (Durable CapabilityInvocations & Causal Hierarchical Promotion):**
+   - `workstation/operational_kernel.py`: Invocations persisted durably to `ArtifactStore` and `ExecutionJournal` with lineage (`task_id`, `run_id`, `operation_id`, `authority_scope`) and child drift/pin verification across restarts via `load_invocations()`.
+   - `workstation/experience_compiler/hierarchical.py`: `propose_composite()` marks candidates as `DISCOVERED`; promotion strictly enforces `ExperiencePromotionPolicy` with causal replay and counterexample verification.
+3. **P5 (Non-Resident Await & Production Telemetry):**
+   - `workstation/task_compiler.py`: Connected `WaitDecision` to `AwaitConditionStore` with `worker_released=True`, releasing worker processes on semantic waits and resuming via `handle_event()`.
+   - `workstation/control_plane/metrics.py`: `ORAMetricsCollector` and `ORAMetrics` wired directly to `OperationalKernel.execute_capability` and `TaskCompiler` recording transitions, waits, routing events, and reasoning re-entry rates.
+4. **Verification Receipts:**
+   - 21 in-flight operationalization tests passing (`test_run_closure.py`, `test_in_flight_handoff.py`, `test_browser_lowering_and_artifacts.py`, `test_hierarchical_causal_promotion.py`, `test_non_resident_await_telemetry.py`, `test_trello_benchmark_qualification.py`).
+   - Full workstation regression suite passing: **647 passed, 2 skipped in 287.92s**.
 
 
 ## KI-012 — Browser ownership/recovery residual gaps after first corrective implementation [REOPENED — 2026-09-19]

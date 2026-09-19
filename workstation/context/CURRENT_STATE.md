@@ -1,12 +1,17 @@
 # Current State
 
-## 2026-09-19 H-075 in-flight operationalization audit — CORRECTIVE INTEGRATION OPEN
+## 2026-09-19 H-075 in-flight operationalization — IMPLEMENTED & QUALIFIED (Phases P0–P6 Passed)
 
-Current-main falsification proves deterministic execution, checkpoints,
-operational-closure proof and typed rich-editor paste already exist. The open product
-gap is automatic **adaptive -> run-scoped compiled -> deterministic continuation**
-inside one TaskRun. browser_console remains opaque, Browser text has no ArtifactStore
-ref input, and prior P2/P3/P4 integration seams remain open.
+The In-Flight Operationalization Handoff Gap (KI-014) and remaining operational knowledge hierarchy seams (KI-013) are fully closed and verified across Phases P0–P6:
+1. **P0 (Truth Seams & Contracts):** Route decision branches strictly use real dataclass fields; composition requires authoritative final-goal verification; conservative derivation fails closed on incompatible families or unproven authority origins.
+2. **P1 (RunClosureProof & Utility):** 21 canonical fields, 10 admission conditions in `evaluate_run_local_closure()`, positive expected operational utility threshold.
+3. **P2 (Adaptive -> Compiled Handoff):** Synthesizes `ExecutionEnvelope` and transfers remaining batch to `DurableBatchRunner` without LLM re-entry; `RunScopedCapability` excluded from global promoted index; `recover_verified_prefix()` recovers committed items and prevents duplicate mutation replays.
+4. **P3 (Browser Lowering & Artifact Data Plane):** Opaque `browser_console` marked non-replayable and rejected from candidate steps; rich editor lowered to `browser_type` with `plain_text_paste`; `resolve_browser_type_text()` resolves `text_ref`/`artifact_ref` at trusted boundary enforcing task ownership, <=1MB size, and text/json MIME.
+5. **P4 (Durable Invocations & Causal Hierarchical Promotion):** Invocations persisted to `ArtifactStore` and `ExecutionJournal` with lineage; `load_invocations()` verifies pins/drift across restarts; composite mining marks candidate as `DISCOVERED` and requires `ExperiencePromotionPolicy` causal replay for promotion.
+6. **P5 (Non-Resident Await & Production Telemetry):** `WaitDecision` creates `AwaitCondition` + `AwaitContinuation` in `AwaitConditionStore`, releasing worker processes (`worker_released=True`); `ORAMetrics` and `ORAMetricsCollector` wired into `OperationalKernel` and `TaskCompiler` recording real execution events.
+7. **P6 (Trello-Shaped Benchmark):** 12-item benchmark passing end-to-end with canary + replay, handoff of 10 items, large artifact resolution, deliberate anomaly handling, recovery prefix, and clean resume without duplicate replays.
+
+Evidence: 21 in-flight operationalization tests passed (100%); full workstation suite: **647 passed, 2 skipped in 287.92s**.
 
 Canonical:
 [IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
@@ -20,9 +25,9 @@ Evidence: Workstation 607 passed / 2 skipped; Electron 1791 passed / 5 skipped;
 typecheck, H004, H013 2/2, Work100 30/30 and integration dry-run green. Exact-head CI
 remains the final qualification gate.
 
-## 2026-09-19 Hierarchical Operational Learning — COMPONENT BASELINE LANDED / H-075 REOPENED
+## 2026-09-19 Hierarchical Operational Learning — COMPONENT BASELINE LANDED & SEAMS CLOSED [H-075]
 
-PR #32 landed substantial P0-P4 component infrastructure, but H-075 and post-merge code audit invalidate the earlier end-to-end CLOSED claim. Treat the list below as component inventory; routed branch seams, real non-resident resume, durable hierarchical evidence/causal promotion, production telemetry and in-flight handoff remain corrective work:
+All remaining integration seams from PR #32 and post-merge audit are closed and verified via H-075 (Phases P0, P4, P5):
 
 1. **P0 (Truthful Control Plane Closure):**
    - Added `certificate_hash()` to `CompositionCertificate`;

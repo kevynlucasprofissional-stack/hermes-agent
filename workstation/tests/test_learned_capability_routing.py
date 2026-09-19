@@ -124,6 +124,16 @@ def test_derive_formal_contract_derives_contract_and_family_id():
         effect="state_mutation",
         route="native_browser",
         scope={"host": "github.com"},
+        provenance={
+            "source": "experience_compiler",
+            "origins": [{
+                "authority_scope": {
+                    "level": 1,
+                    "allowed_actions": ["merge_pr", "native_browser"],
+                    "allowed_resources": ["github_pr"],
+                }
+            }],
+        },
         learning_metadata={
             "effects": {"pr_merged": True},
             "preconditions": {"pr_open": True},
@@ -146,10 +156,62 @@ def test_derive_formal_contract_derives_contract_and_family_id():
     assert contract.authority_required.level == AuthorityLevel.LOCAL_MUTATION
 
 
+def test_learned_contract_fails_on_multiple_operation_families():
+    """Incompatible operation families block formal contract derivation fail-closed."""
+    cap = OperationalCapability(
+        id="cap.ambiguous_op",
+        name="Ambiguous Op",
+        effect="state_mutation",
+        learning_metadata={
+            "effects": {"done": True},
+            "operation_families": ["op_a", "op_b"],
+            "target_families": ["tgt_a"],
+            "authority_origins": ["user"],
+            "explicit_authority_scope": {"level": 1, "allowed_actions": ["*"], "allowed_resources": ["*"]},
+        },
+    )
+    assert derive_formal_contract(cap) is None
+
+
+def test_learned_contract_fails_on_multiple_target_families():
+    """Incompatible target families block formal contract derivation fail-closed."""
+    cap = OperationalCapability(
+        id="cap.ambiguous_tgt",
+        name="Ambiguous Target",
+        effect="state_mutation",
+        learning_metadata={
+            "effects": {"done": True},
+            "operation_families": ["op_a"],
+            "target_families": ["tgt_a", "tgt_b"],
+            "authority_origins": ["user"],
+            "explicit_authority_scope": {"level": 1, "allowed_actions": ["*"], "allowed_resources": ["*"]},
+        },
+    )
+    assert derive_formal_contract(cap) is None
+
+
+def test_learned_contract_fails_on_mutation_without_explicit_authority_scope():
+    """Learned mutation without trusted explicit authority scope never becomes generically routable."""
+    cap = OperationalCapability(
+        id="cap.no_auth_scope",
+        name="No Auth Scope Mutation",
+        effect="state_mutation",
+        learning_metadata={
+            "effects": {"done": True},
+            "operation_families": ["op_a"],
+            "target_families": ["tgt_a"],
+            "authority_origins": ["user"],  # origin string alone cannot fabricate authority
+        },
+    )
+    assert derive_formal_contract(cap) is None
+
+
 def test_learned_capability_routes_via_operation_intent_without_llm(tmp_path):
     """A promoted capability derived from experience is routed by OperationIntent without LLM."""
     artifacts = ArtifactStore(tmp_path / "artifacts")
     registry = OperationalCapabilityRegistry(artifacts)
+
+    auth_scope = {"level": 1, "allowed_actions": ["merge_pr", "native_browser"], "allowed_resources": ["github_pr"]}
 
     # 1. Compile traces across 2 runs with verified successes
     traces = [
@@ -162,6 +224,7 @@ def test_learned_capability_routes_via_operation_intent_without_llm(tmp_path):
                 after={"pr_open": False, "pr_merged": True},
                 parameters={"semantic_anchor": {"type": "testid", "value": "merge-btn"}},
                 effect="state_mutation",
+                authority_scope=auth_scope,
             ),
         ],
         [
@@ -173,6 +236,7 @@ def test_learned_capability_routes_via_operation_intent_without_llm(tmp_path):
                 after={"pr_open": False, "pr_merged": True},
                 parameters={"semantic_anchor": {"type": "testid", "value": "merge-btn"}},
                 effect="state_mutation",
+                authority_scope=auth_scope,
             ),
         ],
     ]

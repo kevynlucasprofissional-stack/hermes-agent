@@ -83,6 +83,7 @@ class ArtifactStore:
         *,
         schema: Optional[str] = None,
         summary: Optional[Dict[str, Any]] = None,
+        media_type: Optional[str] = None,
     ) -> ArtifactRef:
         """Store content atomically and return an ArtifactRef."""
         task_dir = self._task_dir(task_id)
@@ -128,8 +129,8 @@ class ArtifactStore:
             sha256=sha256,
             schema=schema,
             summary=computed_summary,
-            media_type="application/json" if isinstance(content, (dict, list)) else (
-                "text/plain" if isinstance(content, str) else "application/octet-stream"),
+            media_type=media_type or ("application/json" if isinstance(content, (dict, list)) else (
+                "text/plain" if isinstance(content, str) else "application/octet-stream")),
             encoding="utf-8" if isinstance(content, (dict, list, str)) else None,
         )
 
