@@ -10,7 +10,7 @@ from .models import TransitionOutcome, TransitionSample, CausalGrade, normalized
 from .segmentation import align_traces, NodeClass, segments
 from .generalization import anti_unify, infer_action_model
 from .causal import dependency_graph, operational_slice, observational_grade
-from .promotion import ExperiencePromotionPolicy
+from .promotion import ExperiencePromotionPolicy, derive_formal_contract
 
 _PRIMITIVES = {'browser_navigate', 'browser_snapshot', 'browser_click', 'browser_type', 'browser_press',
     'browser_scroll', 'browser_extract_items', 'navigate', 'snapshot', 'click', 'fill', 'press', 'scroll',
@@ -169,7 +169,13 @@ class ExperienceCompiler:
                 'utility': utility, 'drift_rate': len(failures)/(len(successes)+len(failures)),
                 'unresolved_counterexamples': model.unresolved_counterexamples,
                 'node_classes': [n.classification.value for n in nodes],
-                'sample_refs': [s.to_dict()['sample_id'] for s in evidence_samples]})
+                'sample_refs': [s.to_dict()['sample_id'] for s in evidence_samples],
+                'operation_families': sorted({s.operation.operation_family for s in flat if s.operation.operation_family}),
+                'target_families': sorted({s.operation.target_family for s in flat if s.operation.target_family})})
+        fc = derive_formal_contract(cap)
+        if fc is not None:
+            cap.formal_contract = fc
+            cap.family_id = f"{fc.operation_family}:{fc.target_family}"
         return self.registry.register(cap)
 
     def mine(self):
@@ -200,7 +206,13 @@ class ExperienceCompiler:
         admission = ExperiencePromotionPolicy().evaluate(cap)
         if not admission.admitted:
             return admission
+        if cap.formal_contract is None:
+            fc = derive_formal_contract(cap)
+            if fc is not None:
+                cap.formal_contract = fc
+                cap.family_id = f"{fc.operation_family}:{fc.target_family}"
         self.registry.register(cap)
-        self.registry.promote(cap.id, version=cap.version)
+        promoted = self.registry.promote(cap.id, version=cap.version)
+        cap.lifecycle = promoted.lifecycle
         self._promotions += 1
         return admission

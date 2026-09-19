@@ -1,5 +1,52 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-074 — Hierarchical Operational Learning / Operational Reasoning Amortization (P0–P4) Implementation & Qualification (2026-09-19)
+
+**Classification:** IMPLEMENTED / CONTRACT VALIDATED / 100% REGRESSIONS GREEN (620 passed, 2 skipped, 0 failed).
+
+**Executive Invariant:**
+Hermes must learn not only facts about the world, but verified ways of acting on it. The more an operational transformation proves stable, causal, reusable and verifiable, the less reasoning should be required to execute it again.
+
+**Phased Implementation & Structural Closures:**
+- **P0 — Truthful Control Plane Closure**:
+  - `workstation/control_plane/dispatcher.py`: Added `DispatchStatus.NEEDS_VERIFICATION`. `CertifiedDispatcher.dispatch()` strictly fails closed without an authoritative verifier unless the capability formal contract explicitly authorizes ACK-only completion (`allow_ack_only=True` / `E0`).
+  - `workstation/control_plane/composition.py`: Added `certificate_hash()`, `canonical_json()`, and `operation_id` to `CompositionCertificate`.
+  - `workstation/task_compiler.py`: Replaced fake plan echoing in `_execute_route` with real sequential invocation of composed child capabilities via `OperationalKernel.execute_capability`. Removed synthetic wildcard authority minting (`request["trusted_authority"]` / `{"*"}`). Trusted authority is derived exclusively from immutable sources (`trusted_authority`, persisted Kanban Task, or ScopedPolicyEngine), and request authority can only narrow. Fixed `RoutingDecision` attribute accesses (`await_condition`, `scope`, `open_condition`, `attention_packet`, `requires_reconciliation`, `reason`).
+  - `workstation/execution_policy.py`: In `semantic_target_family`, filtered out broad terminal runners (`terminal:python:-m`, `terminal:bash:-c`, `terminal:sh:-c`, etc.) lacking concrete target scripts/modules. Gated `REQUIRE_COMPILE` strictly on operational closure proof (`_operational_closure_proven`).
+  - `tools/browser_tool.py`: Validated forbidden authority headers syntactically prior to network DNS resolution in `browser_read_http`.
+
+- **P1 — Experience Compiler ↔ Capability Router Bridge**:
+  - `workstation/experience_compiler/models.py`: Added `authority_ref` and `authority_scope` to `Provenance`.
+  - `workstation/experience_compiler/promotion.py`: Implemented `derive_formal_contract(capability)` deriving typed preconditions (IR `EQ`), postconditions (IR `EQ`), canonical effects (IR `SET`/`CALL`), proven authority requirement from provenance, and verifier requirements. Returns `None` if authority origins are unproven/untrusted.
+  - `workstation/experience_compiler/compiler.py`: Added `operation_families` and `target_families` to `learning_metadata`, populated `formal_contract` and `family_id` on compile and promote, and updated `cap.lifecycle = CapabilityLifecycle.PROMOTED` on promote.
+  - `workstation/control_plane/router.py`: Dynamic index rebuild (`self._rebuild_index()`) on route, querying index with `target_family`, `operation_family`, and `family_id`. Promoted learned capabilities route deterministically to `ExecutableDecision` with a valid `RoutingCertificate` without LLM calls.
+
+- **P2 — Non-Resident AwaitCondition**:
+  - `workstation/control_plane/waiting.py`: Created `AwaitContinuation` holding durable subgraph, plan metadata, capability pins, contract fingerprints, and last verified state. Added `is_non_resident_wait()` to classify semantic waits (`WAITING_FOR_EVENT`, `WAITING_FOR_TIMER`, `WAITING_FOR_EXTERNAL_STATE`, `WAITING_FOR_HUMAN`, `WAITING_FOR_APPROVAL`) to release worker processes.
+  - Hardened `TriggerCoordinator` with `run_id`, `task_id`, and `operation_id` fencing, evaluated predicates against authoritative state before wake ("EVENT WAKES. AUTHORITATIVE STATE CONFIRMS."), and ensured condition deletion occurs ONLY after resumption is confirmed (`resumed == True`).
+
+- **P3 — Hierarchical Experience Compiler**:
+  - `workstation/experience_compiler/models.py`: Defined `CapabilityInvocation` dataclass tracking capability identity, pinned version, typed inputs/outputs, state before/after, verified effects, authority scope, and lineage.
+  - `workstation/operational_kernel.py`: Captured `CapabilityInvocation` upon verified execution in `self.invocations`. Defaulted composite output to include dependency outputs (`output["deps"]`).
+  - `workstation/operational_capabilities.py`: In `from_dict`, lazily imported and parsed `CapabilityFormalContract` when `formal_contract` is a dictionary.
+  - `workstation/experience_compiler/hierarchical.py`: Created `HierarchicalExperienceCompiler` to mine recurring sequences across runs (`mine_sequences`) and propose composite capabilities (`propose_composite`) with explicit `CapabilityDependency` (preserving child dependencies without flattening into micro-primitives). Enforced causal JOIN, authority JOIN, verifier closure, positive utility, and drift/quarantine propagation.
+
+- **P4 — Operational Reasoning Amortization Metrics**:
+  - `workstation/control_plane/metrics.py`: Created `WakeReason` enum and `ORAMetrics` dataclass computing `ora_ratio`, `composite_reuse_rate`, `wait_non_residency_rate`, `wake_llm_rate`, and wake reason breakdown, strictly preserving `None` / `null` for unknown denominators or unmeasured metrics.
+
+**Receipts & Validation:**
+- `workstation/tests/test_learned_capability_routing.py`: 4/4 passed.
+- `workstation/tests/test_await_trigger_plane.py`: 10/10 passed.
+- `workstation/tests/test_hierarchical_experience_compiler.py`: 4/4 passed.
+- `workstation/tests/test_ora_metrics.py`: 3/3 passed.
+- Full workstation test suite: `python -m pytest -q -o pythonpath=. workstation/tests`:
+  **620 passed, 2 skipped, 0 failed in 235.36s**.
+
+**Canonical Design Reference:**
+[../HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](../HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+---
+
 ## H-071 corrective implementation run — 2026-09-19
 
 **Baseline:** clean, synchronized `main@6328894c0a5f51a61da772593842c25d377d553f`.

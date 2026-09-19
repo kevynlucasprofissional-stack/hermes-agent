@@ -66,27 +66,28 @@ re-summarize or re-plan the trace.**
 ## Hierarchical continuation — learned capabilities become learning vocabulary
 
 The implemented EC0-EC8 pipeline closes the primitive/adaptive-trace to
-OperationalCapability path. The 2026-09-18 architecture audit identified the next
-extension, specified in
-[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+OperationalCapability path. As of 2026-09-19, the hierarchical continuation extension specified in
+[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md)
+is fully implemented and qualified:
 
-Two additions are required without replacing this compiler:
+1. **Router bridge (Implemented)**:
+   `derive_formal_contract(capability)` in `workstation/experience_compiler/promotion.py`
+   conservatively derives a typed `CapabilityFormalContract` from trusted observed families,
+   semantic pre/postconditions (as IR `EQ`), canonical effects (as IR `SET`/`CALL`),
+   actual proven authority scope from provenance, and verifier requirements. If those facts
+   cannot be proven, derivation returns `None` and the capability remains exact-reuse-only.
+   The CapabilityRouter index is dynamically rebuilt to index promoted learned capabilities,
+   enabling deterministic semantic routing via `OperationIntent`.
+2. **Hierarchical mining (Implemented)**:
+   `OperationalKernel` captures verified `CapabilityInvocation` observations (`workstation/experience_compiler/models.py`).
+   `HierarchicalExperienceCompiler` (`workstation/experience_compiler/hierarchical.py`)
+   mines recurring capability sequences (`mine_sequences`) across distinct runs and proposes
+   composite capabilities (`propose_composite`). Promotion strictly enforces causal JOIN,
+   monotonic authority JOIN, verifier closure, and positive utility.
 
-1. **Router bridge:** eligible learned candidates must gain a conservatively
-   derived typed `CapabilityFormalContract` from trusted observed families,
-   semantic pre/postconditions, canonical effects, actual authority evidence and
-   verifier requirements. If those facts cannot be proven, the learned object
-   remains exact-reuse-only rather than guessing a routable contract.
-2. **Hierarchical mining:** record verified `CapabilityInvocation` observations
-   so recurring capability sequences can themselves become candidate composites.
-   Recurrence only proposes. Semantic closure, causal/dependency support, effect
-   union, authority JOIN, verifier closure, replay, counterexamples and utility
-   still govern promotion.
-
-The preferred composite representation preserves child capability
-dependencies/version pins rather than flattening every primitive step. This
-allows localized drift/quarantine and prevents macro scripts from becoming a new
-opaque execution layer.
+The composite representation preserves child capability
+dependencies/version pins (`CapabilityDependency`) rather than flattening every primitive step. This
+allows localized drift/quarantine to propagate fail-closed without corrupting the rest of the catalog.
 
 The canonical hierarchy is:
 

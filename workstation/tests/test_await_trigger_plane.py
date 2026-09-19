@@ -290,3 +290,120 @@ def test_uncertain_dispatch_reconciliation_before_retry():
         external_reconciled=True,
     )
     assert can_retry_after is True
+
+
+def test_await_continuation_persistence_and_operation_fencing(clean_artifacts):
+    """Continuation holds durable subgraph metadata and respects operation fencing."""
+    from workstation.control_plane.waiting import (
+        AwaitCondition, AwaitConditionStore, AwaitContinuation, CausalEventEnvelope,
+        TriggerCoordinator, is_non_resident_wait, AwaitKind,
+    )
+
+    store = AwaitConditionStore(clean_artifacts)
+    continuation = AwaitContinuation(
+        task_id="task-cont-1",
+        run_id="run-cont-1",
+        operation_id="op-cont-1",
+        plan_id="plan-cont-1",
+        work_item_id="item-cont-1",
+        capability_pins={"cap.a": {"version": "1.0.0"}},
+        last_verified_state={"step_1": "completed"},
+        remaining_subgraph=[{"step": 2, "capability_id": "cap.b"}],
+    )
+    cond = AwaitCondition(
+        wait_id="wait-cont-99",
+        kind=AwaitKind.WAITING_FOR_EVENT,
+        predicate=EQ("pipeline.status", "green"),
+        correlation_id="corr-pipeline",
+        task_id="task-cont-1",
+        run_id="run-cont-1",
+        operation_id="op-cont-1",
+        continuation=continuation,
+    )
+    assert is_non_resident_wait(cond) is True
+    store.save(cond)
+
+    # Rehydrate
+    reloaded_store = AwaitConditionStore(clean_artifacts)
+    loaded = reloaded_store.get("wait-cont-99")
+    assert loaded is not None
+    assert isinstance(loaded.continuation, AwaitContinuation)
+    assert loaded.continuation.plan_id == "plan-cont-1"
+    assert loaded.continuation.remaining_subgraph == [{"step": 2, "capability_id": "cap.b"}]
+
+    coordinator = TriggerCoordinator(reloaded_store)
+
+    # 1. Event with mismatched operation_id fails fence
+    bad_op_event = CausalEventEnvelope(
+        event_id="evt-bad-op",
+        event_type="pipeline_green",
+        correlation_id="corr-pipeline",
+        task_id="task-cont-1",
+        run_id="run-cont-1",
+        operation_id="mismatched-op",
+    )
+    assert coordinator.handle_event(bad_op_event, lambda: {"pipeline": {"status": "green"}}) is False
+    assert reloaded_store.get("wait-cont-99") is not None
+
+    # 2. Event with matching operation_id succeeds and condition is deleted
+    good_event = CausalEventEnvelope(
+        event_id="evt-good-op",
+        event_type="pipeline_green",
+        correlation_id="corr-pipeline",
+        task_id="task-cont-1",
+        run_id="run-cont-1",
+        operation_id="op-cont-1",
+    )
+    resumed_conditions = []
+    def on_resume(c, s):
+        resumed_conditions.append(c)
+        return True
+
+    resumed = coordinator.handle_event(good_event, lambda: {"pipeline": {"status": "green"}}, resume_fn=on_resume)
+    assert resumed is True
+    assert len(resumed_conditions) == 1
+    assert reloaded_store.get("wait-cont-99") is None
+
+
+def test_failed_resume_keeps_condition_persisted_for_subsequent_retry(clean_artifacts):
+    """If resumption callback fails/throws, condition remains persisted and is not dropped."""
+    from workstation.control_plane.waiting import (
+        AwaitCondition, AwaitConditionStore, CausalEventEnvelope, TriggerCoordinator,
+    )
+
+    store = AwaitConditionStore(clean_artifacts)
+    cond = AwaitCondition(
+        wait_id="wait-retry-1",
+        predicate=EQ("ready", True),
+        correlation_id="corr-retry",
+        task_id="task-1",
+        run_id="run-1",
+    )
+    store.save(cond)
+
+    coordinator = TriggerCoordinator(store)
+    event = CausalEventEnvelope(
+        event_id="evt-retry-1",
+        event_type="ready",
+        correlation_id="corr-retry",
+        task_id="task-1",
+        run_id="run-1",
+    )
+
+    # First attempt: resume_fn returns False (e.g. database lock or worker busy)
+    resumed = coordinator.handle_event(
+        event,
+        lambda: {"ready": True},
+        resume_fn=lambda c, s: False,
+    )
+    assert resumed is False
+    assert store.get("wait-retry-1") is not None
+
+    # Second attempt: resume_fn returns True
+    resumed_retry = coordinator.handle_event(
+        event,
+        lambda: {"ready": True},
+        resume_fn=lambda c, s: True,
+    )
+    assert resumed_retry is True
+    assert store.get("wait-retry-1") is None

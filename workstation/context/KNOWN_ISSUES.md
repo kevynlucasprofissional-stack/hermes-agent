@@ -1,33 +1,32 @@
 # Workstation Known Issues
 
 
-## KI-013 — Operational knowledge hierarchy is not closed end to end [OPEN — 2026-09-19]
+## KI-013 — Operational knowledge hierarchy is not closed end to end [RESOLVED / QUALIFIED — 2026-09-19]
 
-The current architecture has the correct components but not yet one complete
-experience-to-reuse-to-wait-to-reasoning loop.
+**Resolution (P0-P4 Closed):**
+1. **P0 (Truthful Control Plane Closure)**:
+   - `workstation/control_plane/dispatcher.py`: Added `DispatchStatus.NEEDS_VERIFICATION`. `CertifiedDispatcher` fails closed without a verifier unless explicitly allowed by contract (`allow_ack_only=True` / `E0`).
+   - `workstation/task_compiler.py`: Replaced fake plan echoing in `_execute_route` with real sequential execution of composed children via `OperationalKernel.execute_capability`. Removed synthetic wildcard authority minting (`request["trusted_authority"]` / `{"*"}`). Fixed `RoutingDecision` attribute accesses (`await_condition`, `scope`, `open_condition`, `attention_packet`, etc.).
+   - `workstation/execution_policy.py`: Fixed broad terminal runners in `semantic_target_family`. Gated `REQUIRE_COMPILE` strictly on operational closure proof (`_operational_closure_proven`).
+   - `tools/browser_tool.py`: Validated forbidden authority headers syntactically prior to network DNS resolution in `browser_read_http`.
+2. **P1 (Experience Compiler ↔ Capability Router Bridge)**:
+   - `workstation/experience_compiler/promotion.py`: Implemented `derive_formal_contract()` deriving typed IR preconditions, postconditions, effects, proven authority requirement, and verifier contract.
+   - `workstation/control_plane/router.py`: Rebuilds index dynamically to include promoted learned capabilities with `formal_contract`, routing `OperationIntent` to `ExecutableDecision` with zero LLM calls.
+3. **P2 (Non-Resident AwaitCondition)**:
+   - `workstation/control_plane/waiting.py`: Created `AwaitContinuation` holding durable subgraph, plan metadata, capability pins, and verified state. Added `is_non_resident_wait()` to classify semantic waits and release worker processes. Hardened `TriggerCoordinator` to fence on `run_id`/`task_id`/`operation_id`, check authoritative state before waking ("EVENT WAKES. AUTHORITATIVE STATE CONFIRMS."), and delete condition only after confirmed resumption.
+4. **P3 (Hierarchical Experience Compiler)**:
+   - `workstation/experience_compiler/models.py` & `operational_kernel.py`: Defined and captured `CapabilityInvocation` traces on verified execution.
+   - `workstation/experience_compiler/hierarchical.py`: Created `HierarchicalExperienceCompiler` to mine recurring sequences across runs and propose composite capabilities preserving child `CapabilityDependency` (preventing script flattening), requiring causal JOIN, authority JOIN, verifier closure, and positive utility, with drift propagation.
+5. **P4 (Operational Reasoning Amortization Metrics)**:
+   - `workstation/control_plane/metrics.py`: Created `ORAMetrics` tracking `ora_ratio`, composite reuse, wait non-residency, and `WakeReason` breakdowns, strictly preserving `None` / `null` for unknown denominators.
 
-**Confirmed seams:**
-1. Experience Compiler learned candidates do not currently derive/populate the typed
-   `formal_contract` required for semantic CapabilityRouter admission; exact
-   fingerprint reuse and intent routing remain partially separate.
-2. Capability dependencies and bounded CompositionEngine exist, but recurring
-   verified capability sequences are not captured/mined as hierarchical
-   dependency-based composite candidates.
-3. Persistent `AwaitCondition` and TriggerCoordinator exist, but normal
-   TaskCompiler waiting can retain a resident worker through event wait or polling;
-   satisfied conditions do not yet reconstruct/execute the stored continuation.
-4. H-071 Control Plane truth gaps remain a hard dependency: false COMPOSE,
-   ACK-as-verification and authority minting would poison higher-level learning if
-   composite candidates trusted those outcomes.
-
-**Do not solve KI-013 by:** creating per-click capabilities, adding another scheduler
-or registry, flattening all composites into scripts, using recurrence as causal proof,
-or keeping an LLM/worker resident during long waits.
-
-**Closure requires:** Router-visible promoted learned capability with conservative
-formal contract; non-resident restart-safe Await continuation; capability-invocation
-trace mining with causal/replay/promotion gates; dependency-based composite drift
-handling; ORA/reuse/wakeup metrics; and all H-071 truth invariants closed.
+**Verification Receipts:**
+- `workstation/tests/test_learned_capability_routing.py`: 4 passed.
+- `workstation/tests/test_await_trigger_plane.py`: 10 passed.
+- `workstation/tests/test_hierarchical_experience_compiler.py`: 4 passed.
+- `workstation/tests/test_ora_metrics.py`: 3 passed.
+- Full workstation test suite: `python -m pytest -q -o pythonpath=. workstation/tests`:
+  **620 passed, 2 skipped, 0 failed in 235.36s**.
 
 Canonical design:
 [HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).

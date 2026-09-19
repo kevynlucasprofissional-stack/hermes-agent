@@ -101,6 +101,34 @@ class Provenance:
     taint: list[str] = field(default_factory=list)
     operation_index: int | None = None
     sample_ref: str | None = None
+    authority_ref: str | None = None
+    authority_scope: dict | None = None
+
+
+@dataclass
+class CapabilityInvocation:
+    invocation_id: str = ''
+    capability_id: str = ''
+    capability_version: str = '1.0.0'
+    run_id: str = ''
+    task_id: str | None = None
+    operation_id: str | None = None
+    inputs: dict = field(default_factory=dict)
+    state_before: dict = field(default_factory=dict)
+    state_after: dict = field(default_factory=dict)
+    delta: dict = field(default_factory=dict)
+    status: str = 'COMMITTED'
+    verified: bool = True
+    verifier_status: str = 'verified'
+    authority_scope: dict | None = None
+    timestamp: float = 0.0
+
+    def to_dict(self) -> dict:
+        return normalized(asdict(self))
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'CapabilityInvocation':
+        return cls(**normalized(data))
 
 
 @dataclass

@@ -3905,13 +3905,6 @@ def browser_read_http(
             "error": f"Invalid protocol '{parsed.scheme}': only http and https are allowed",
         })
 
-    if parsed.scheme:
-        from tools.url_safety import is_safe_url, normalize_url_for_request
-        raw_url = normalize_url_for_request(raw_url)
-        if not is_safe_url(raw_url):
-            return json.dumps({"success": False, "status": 403,
-                               "error": "Blocked unsafe destination by canonical URL policy"})
-
     forbidden_headers = {
         "authorization", "cookie", "proxy-authorization", "host", "origin", "referer",
     }
@@ -3921,6 +3914,13 @@ def browser_read_http(
     if blocked:
         return json.dumps({"success": False, "status": 400,
                            "error": f"Forbidden browser authority header(s): {', '.join(sorted(blocked))}"})
+
+    if parsed.scheme:
+        from tools.url_safety import is_safe_url, normalize_url_for_request
+        raw_url = normalize_url_for_request(raw_url)
+        if not is_safe_url(raw_url):
+            return json.dumps({"success": False, "status": 403,
+                               "error": "Blocked unsafe destination by canonical URL policy"})
 
     def _fallback():
         return json.dumps({"success": False, "status": 503, "ok": False,

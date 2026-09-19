@@ -159,6 +159,7 @@ def test_browser_read_http_blocks_authority_headers_and_fails_closed_without_run
     assert blocked["success"] is False
     assert "Forbidden browser authority header" in blocked["error"]
 
+    monkeypatch.setattr("tools.url_safety.is_safe_url", lambda _url: True)
     monkeypatch.setattr(browser_module, "_workstation_or_legacy",
                         lambda _action, _args, _kw, fallback: fallback())
     unavailable = json.loads(browser_module.browser_read_http(url="https://example.com/api"))

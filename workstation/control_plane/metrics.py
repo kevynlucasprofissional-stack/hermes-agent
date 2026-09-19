@@ -187,3 +187,89 @@ def calculate_volc(
         human_interventions=human_interventions,
         tokens_cost_usd=tokens_cost_usd,
     )
+
+
+class WakeReason(str, Enum):
+    """Normalized categories for waking the LLM from deterministic execution."""
+    TIMEOUT = "TIMEOUT"
+    UNCERTAIN_MUTATION = "UNCERTAIN_MUTATION"
+    OPEN_CONDITION = "OPEN_CONDITION"
+    SCHEMA_DRIFT = "SCHEMA_DRIFT"
+    HUMAN_INTERVENTION = "HUMAN_INTERVENTION"
+    UNEXPECTED_FAILURE = "UNEXPECTED_FAILURE"
+
+
+@dataclass
+class ORAMetrics:
+    """Operational Reasoning Amortization (ORA) Metrics.
+
+    Tracks how effectively verified operational experience progressively replaces
+    LLM re-reasoning with deterministic operational knowledge.
+
+    Invariants:
+    - Never invent synthetic counts or tokens; unknown denominators remain strictly None.
+    - Zero division safely returns None.
+    """
+    verified_transitions_deterministic: int = 0
+    verified_transitions_reasoned: int = 0
+    unverified_transitions: int = 0
+
+    atomic_capability_invocations: int = 0
+    composite_capability_invocations: int = 0
+    total_capability_invocations: int = 0
+
+    resident_wait_count: int = 0
+    non_resident_wait_count: int = 0
+    total_wait_duration_seconds: float = 0.0
+    non_resident_wait_duration_seconds: float = 0.0
+
+    llm_wake_count: int = 0
+    total_routing_events: int = 0
+    wake_reasons: dict[str, int] = field(default_factory=dict)
+
+    amortized_tokens_saved: int | None = None
+    amortized_cost_usd_saved: float | None = None
+
+    @property
+    def ora_ratio(self) -> float | None:
+        """Ratio of verified transitions executed deterministically without LLM."""
+        total = self.verified_transitions_deterministic + self.verified_transitions_reasoned
+        if not total:
+            return None
+        return self.verified_transitions_deterministic / total
+
+    @property
+    def composite_reuse_rate(self) -> float | None:
+        """Ratio of composite capability invocations over total capability invocations."""
+        total = self.total_capability_invocations or (self.atomic_capability_invocations + self.composite_capability_invocations)
+        if not total:
+            return None
+        return self.composite_capability_invocations / total
+
+    @property
+    def wait_non_residency_rate(self) -> float | None:
+        """Ratio of non-resident waits (releasing worker) over total waits."""
+        total = self.resident_wait_count + self.non_resident_wait_count
+        if not total:
+            return None
+        return self.non_resident_wait_count / total
+
+    @property
+    def wake_llm_rate(self) -> float | None:
+        """Ratio of events that triggered WAKE_LLM over total routing events."""
+        if not self.total_routing_events:
+            return None
+        return self.llm_wake_count / self.total_routing_events
+
+    def record_wake_reason(self, reason: str | WakeReason) -> None:
+        r_str = reason.value if isinstance(reason, WakeReason) else str(reason)
+        self.wake_reasons[r_str] = self.wake_reasons.get(r_str, 0) + 1
+        self.llm_wake_count += 1
+
+    def to_dict(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["ora_ratio"] = self.ora_ratio
+        d["composite_reuse_rate"] = self.composite_reuse_rate
+        d["wait_non_residency_rate"] = self.wait_non_residency_rate
+        d["wake_llm_rate"] = self.wake_llm_rate
+        return d

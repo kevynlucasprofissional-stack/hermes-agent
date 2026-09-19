@@ -8,7 +8,7 @@ same-origin HTTP readback without process fallback, owner-declared terminal iden
 repaired integration anchor, and a real Electron rich-editor/cookie/drift/replay fixture.
 Local candidate gates are green; final `QUALIFIED` status awaits exact-head CI.
 
-## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — CANONICAL EXTENSION / IMPLEMENTATION OPEN
+## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — IMPLEMENTED (P0-P4 QUALIFIED)
 
 Canonical specification:
 [context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
@@ -32,32 +32,29 @@ executable and verifiable transition with positive reuse value**, not smallest t
 sequence. This prevents micro-capability explosion while preserving increasingly
 high-level reuse.
 
-Implementation order:
+Implementation status (all phases implemented and qualified with 620 passing tests):
 
-1. **P0 — truthful Control Plane closure (dependency, already open).**
-   Complete the Browser Operational Admission corrective P0: real COMPOSE execution
-   or non-terminal planning state, ACK != verification, trusted authority origin,
-   operational-closure-aware mandatory compilation, routed decision contract fixes
-   and exact-head qualification.
-2. **P1 — Experience Compiler -> Router bridge.**
-   Conservatively derive/persist `CapabilityFormalContract` from trusted learned
-   evidence so promoted learned capabilities can be selected by
-   `OperationIntent -> CapabilityRouter`, not only exact fingerprint reuse.
-3. **P2 — non-resident Await/Continuation.**
-   Make persistent `AwaitCondition` the semantic wait owner; persist an exact
-   continuation, release the worker/executor, resume after causal event plus
-   authoritative state confirmation, and keep polling only as a scheduled bounded
-   observer fallback.
-4. **P3 — Hierarchical Experience Compiler.**
-   Capture capability-invocation traces and allow recurrent, causally supported,
-   semantically closed sequences to become dependency-based composite capability
-   candidates. Frequency alone never grants promotion; reuse existing replay,
-   ablation, counterexample, provenance, authority and promotion gates.
-5. **P4 — Operational Reasoning Amortization metrics.**
-   Add ORA (verified semantic transitions executed with zero LLM / total verified
-   semantic transitions), LLM calls per verified transition, exact/routed/composite
-   reuse, non-resident WAIT ratio, worker-seconds per waiting wall time, WAKE_LLM
-   reasons and hierarchical candidate/promotion/reuse rates.
+1. **P0 — Truthful Control Plane closure (CLOSED / QUALIFIED).**
+   CompositionCertificate hash method, CertifiedDispatcher fail-closed verification
+   (NEEDS_VERIFICATION), TaskCompiler sequential child execution without synthetic
+   wildcards, operational-closure-aware execution policy, terminal family narrowing.
+2. **P1 — Experience Compiler -> Router bridge (CLOSED / QUALIFIED).**
+   Provenance extended with authority_ref and authority_scope; conservative deterministic
+   CapabilityFormalContract derivation from verified experience; family_id indexing;
+   OperationIntent routing to promoted learned capabilities without LLM.
+3. **P2 — Non-resident Await/Continuation (CLOSED / QUALIFIED).**
+   AwaitContinuation with durable subgraph and capability pins; TriggerCoordinator with
+   run_id/task_id/operation_id fencing, authoritative state confirmation before wake,
+   and atomic condition cleanup only after verified resumption.
+4. **P3 — Hierarchical Experience Compiler (CLOSED / QUALIFIED).**
+   OperationalKernel records verified CapabilityInvocation; HierarchicalExperienceCompiler
+   mines recurring sequences across runs, validates causal/authority/verifier JOIN closure,
+   and emits composite OperationalCapabilities preserving child dependencies (no flattening).
+   Child drift or quarantine fails closed and strictly blocks composite execution.
+5. **P4 — Operational Reasoning Amortization metrics (CLOSED / QUALIFIED).**
+   ORAMetrics implemented with ora_ratio, composite_reuse_rate, wait_non_residency_rate,
+   wake_llm_rate, and WakeReason breakdown. All unknown denominators strictly preserved
+   as None / null without synthetic figures.
 
 Hard properties:
 - promoted learned capabilities become Router-visible only from provable typed

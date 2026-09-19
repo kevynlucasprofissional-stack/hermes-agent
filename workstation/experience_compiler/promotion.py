@@ -44,6 +44,115 @@ class ExperiencePromotionPolicy:
         return PromotionAdmission(not reasons, tuple(reasons))
 
 
+def derive_formal_contract(capability, traces=None):
+    """Conservatively derive CapabilityFormalContract from verified operational experience.
+
+    If any essential requirement cannot be proven with positive evidence,
+    returns None (limiting the capability to exact replay/ephemeral reuse without generic routing).
+    """
+    from workstation.control_plane.contract import CapabilityFormalContract
+    from workstation.control_plane.ir import EQ, SET, CALL
+    from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
+
+    m = capability.learning_metadata or {}
+
+    # 1. Operation & Target Families
+    op_families = m.get('operation_families') or []
+    target_families = m.get('target_families') or []
+    if not op_families and m.get('families'):
+        op_families = list(m['families'])
+    if not target_families and m.get('targets'):
+        target_families = list(m['targets'])
+
+    op_family = op_families[0] if op_families else (
+        capability.implementation.get('steps', [{}])[-1].get('primitive', '')
+        if isinstance(capability.implementation, dict) else ''
+    )
+    target_family = target_families[0] if target_families else str(
+        capability.scope.get('target_family') or capability.route or 'workstation'
+    )
+    if not op_family or not target_family:
+        return None
+
+    # 2. Typed Preconditions
+    preconditions = []
+    pre_dict = m.get('preconditions')
+    if isinstance(pre_dict, dict):
+        for k, v in sorted(pre_dict.items()):
+            preconditions.append(EQ(k, v))
+    elif isinstance(capability.preconditions, list):
+        for p in capability.preconditions:
+            if isinstance(p, dict) and 'key' in p:
+                preconditions.append(EQ(p['key'], p.get('expected')))
+
+    # 3. Typed Postconditions (must have at least one verified effect)
+    postconditions = []
+    eff_dict = m.get('effects')
+    if isinstance(eff_dict, dict):
+        for k, v in sorted(eff_dict.items()):
+            postconditions.append(EQ(k, v))
+    elif isinstance(capability.postconditions, list):
+        for p in capability.postconditions:
+            if isinstance(p, dict) and 'key' in p:
+                postconditions.append(EQ(p['key'], p.get('expected')))
+
+    if not postconditions and capability.effect != 'read_only':
+        return None
+
+    # 4. Effect Footprint
+    effect_footprint = []
+    if capability.effect == 'read_only':
+        effect_footprint = []
+    else:
+        for k, v in sorted((eff_dict or {}).items()):
+            effect_footprint.append(SET(k, v))
+        if not effect_footprint and op_family:
+            effect_footprint.append(CALL(op_family, target_family))
+
+    # 5. Authority Required
+    # Derived strictly from proven authority in samples
+    if capability.effect in {'read_only', 'PURE_READ', 'DISCOVERY'}:
+        authority_required = AuthorityScope(
+            level=AuthorityLevel.READ,
+            allowed_actions={"read"},
+            allowed_resources={target_family},
+        )
+    else:
+        origins = capability.provenance.get('origins', []) if isinstance(capability.provenance, dict) else []
+        scopes = [
+            o.get('authority_scope') for o in origins
+            if isinstance(o, dict) and o.get('authority_scope')
+        ]
+        if scopes:
+            authority_required = AuthorityScope.from_dict(scopes[0])
+        elif m.get('authority_origins') and set(m['authority_origins']) <= {'user', 'system'}:
+            authority_required = AuthorityScope(
+                level=AuthorityLevel.LOCAL_MUTATION,
+                allowed_actions={op_family, capability.route},
+                allowed_resources={target_family},
+            )
+        else:
+            return None
+
+    # 6. Verifier
+    evidence_strength = m.get('evidence_strength', 1)
+    verifier = {
+        "kind": "verified_predicates",
+        "effects": eff_dict or {},
+        "minimum_evidence": f"E{int(evidence_strength)}",
+    }
+
+    return CapabilityFormalContract(
+        operation_family=op_family,
+        target_family=target_family,
+        typed_preconditions=preconditions,
+        typed_postconditions=postconditions,
+        effect_footprint=effect_footprint,
+        authority_required=authority_required,
+        verifier=verifier,
+    )
+
+
 def contract_fingerprint(capability):
     from workstation.recipes import digest, sanitize
     fields = ('input_schema', 'output_schema', 'implementation', 'dependencies', 'preconditions',

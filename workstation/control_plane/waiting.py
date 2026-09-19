@@ -54,6 +54,49 @@ class PollingPolicy:
 
 
 @dataclass
+class AwaitContinuation:
+    """Canonical continuation structure for non-resident awaits surviving process restart."""
+    task_id: str | None = None
+    run_id: str | None = None
+    operation_id: str | None = None
+    intent_id: str | None = None
+    intent_hash: str | None = None
+    capability_pins: dict[str, Any] = field(default_factory=dict)
+    contract_fingerprints: dict[str, str] = field(default_factory=dict)
+    last_verified_state: dict[str, Any] = field(default_factory=dict)
+    remaining_subgraph: list[dict[str, Any]] = field(default_factory=list)
+    plan_id: str | None = None
+    work_item_id: str | None = None
+    deadline: float | None = None
+    timeout_action: str = "WAKE_LLM"
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AwaitContinuation:
+        valid = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+        return cls(**valid)
+
+
+def is_non_resident_wait(kind_or_condition: Any) -> bool:
+    """True if wait must release the worker and use scheduled observer rather than local spin."""
+    kind = kind_or_condition.kind if hasattr(kind_or_condition, "kind") else kind_or_condition
+    if isinstance(kind, str):
+        try:
+            kind = AwaitKind(kind)
+        except ValueError:
+            return False
+    return kind in {
+        AwaitKind.WAITING_FOR_EVENT,
+        AwaitKind.WAITING_FOR_TIMER,
+        AwaitKind.WAITING_FOR_EXTERNAL_STATE,
+        AwaitKind.WAITING_FOR_HUMAN,
+        AwaitKind.WAITING_FOR_APPROVAL,
+    }
+
+
+@dataclass
 class AwaitCondition:
     """Persistent wait specification surviving process restart."""
 
@@ -62,7 +105,7 @@ class AwaitCondition:
     predicate: Predicate = field(default_factory=TRUE)
     observer_type: str = ""
     correlation_id: str = ""
-    continuation: dict[str, Any] = field(default_factory=dict)
+    continuation: dict[str, Any] | AwaitContinuation = field(default_factory=dict)
     task_id: str | None = None
     run_id: str | None = None
     operation_id: str | None = None
@@ -74,13 +117,14 @@ class AwaitCondition:
     temporal_semantics: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        cont = self.continuation.to_dict() if hasattr(self.continuation, "to_dict") else dict(self.continuation)
         return {
             "wait_id": self.wait_id,
             "kind": self.kind.value if isinstance(self.kind, AwaitKind) else str(self.kind),
             "predicate": self.predicate.to_dict(),
             "observer_type": self.observer_type,
             "correlation_id": self.correlation_id,
-            "continuation": dict(self.continuation),
+            "continuation": cont,
             "task_id": self.task_id,
             "run_id": self.run_id,
             "operation_id": self.operation_id,
@@ -110,13 +154,19 @@ class AwaitCondition:
         poll_raw = data.get("poll_policy")
         poll = PollingPolicy.from_dict(poll_raw) if isinstance(poll_raw, dict) else None
 
+        cont_raw = data.get("continuation", {})
+        if isinstance(cont_raw, dict) and any(k in cont_raw for k in ("plan_id", "intent_id", "remaining_subgraph", "capability_pins")):
+            continuation = AwaitContinuation.from_dict(cont_raw)
+        else:
+            continuation = dict(cont_raw) if isinstance(cont_raw, dict) else cont_raw
+
         return cls(
             wait_id=str(data.get("wait_id", "")),
             kind=kind,
             predicate=pred,
             observer_type=str(data.get("observer_type", "")),
             correlation_id=str(data.get("correlation_id", "")),
-            continuation=dict(data.get("continuation", {})),
+            continuation=continuation,
             task_id=data.get("task_id"),
             run_id=data.get("run_id"),
             operation_id=data.get("operation_id"),
@@ -253,22 +303,23 @@ class TriggerCoordinator:
         self,
         store: AwaitConditionStore,
         circuit_breaker: TriggerCircuitBreaker | None = None,
+        resume_handler: Callable[[AwaitCondition, dict[str, Any]], bool] | None = None,
     ) -> None:
         self.store = store
         self.circuit_breaker = circuit_breaker or TriggerCircuitBreaker()
+        self.resume_handler = resume_handler
         self._seen_dedupes: set[str] = set()
 
     def handle_event(
         self,
         event: CausalEventEnvelope,
         read_authoritative_state: Callable[[], dict[str, Any]],
+        resume_fn: Callable[[AwaitCondition, dict[str, Any]], bool] | None = None,
     ) -> bool:
         """Process event. Returns True if an AwaitCondition was successfully satisfied and resumed."""
         # Deduplication check
-        if event.dedupe_key:
-            if event.dedupe_key in self._seen_dedupes:
-                return False
-            self._seen_dedupes.add(event.dedupe_key)
+        if event.dedupe_key and event.dedupe_key in self._seen_dedupes:
+            return False
 
         # Correlation lookup
         if not event.correlation_id:
@@ -278,12 +329,16 @@ class TriggerCoordinator:
         if not conditions:
             return False
 
+        active_resume = resume_fn or self.resume_handler
         any_resumed = False
+
         for cond in conditions:
-            # TaskRun fence verification
+            # TaskRun and Operation fence verification
             if cond.run_id and event.run_id and cond.run_id != event.run_id:
                 continue
             if cond.task_id and event.task_id and cond.task_id != event.task_id:
+                continue
+            if cond.operation_id and event.operation_id and cond.operation_id != event.operation_id:
                 continue
 
             # Rule 21.2: EVENT WAKES. AUTHORITATIVE STATE CONFIRMS.
@@ -292,8 +347,19 @@ class TriggerCoordinator:
                 # State does NOT confirm predicate -> reject resume!
                 continue
 
-            # Condition satisfied and verified by authoritative state!
-            self.store.delete(cond.wait_id)
-            any_resumed = True
+            # Resumption execution: condition remains stored until resume is confirmed
+            resumed = True
+            if active_resume is not None:
+                try:
+                    resumed = bool(active_resume(cond, authoritative_state))
+                except Exception:
+                    resumed = False
+
+            if resumed:
+                self.store.delete(cond.wait_id)
+                any_resumed = True
+
+        if event.dedupe_key:
+            self._seen_dedupes.add(event.dedupe_key)
 
         return any_resumed
