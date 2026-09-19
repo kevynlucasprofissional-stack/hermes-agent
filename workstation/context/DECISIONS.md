@@ -415,6 +415,32 @@ chokepoint. Timeout after possible mutation dispatch becomes UNCERTAIN until rec
 blind retry is forbidden. Browser observation must distinguish a transient empty SPA
 snapshot from stable semantic state using bounded readiness, not site-specific sleeps.
 
+### D-021 implementation compliance note — 2026-09-19
+
+Post-PR #29 audit does **not** replace D-021; it found implementation paths that still
+violate D-021 and must be corrected:
+
+- `COMPOSE` is dispatchable only if the certified composition is actually executed and
+  its required postconditions/verifiers close. Returning a plan description is not
+  execution and cannot produce COMMITTED.
+- dispatcher ACK and `success=True` are execution acknowledgements, not persisted
+  verification by default. Without accepted verifier evidence, state remains
+  ACKNOWLEDGED / NEEDS_VERIFICATION / UNCERTAIN as appropriate.
+- trusted authority must be supplied by trusted ingress/TaskRun/policy/approval state,
+  never by a model-facing request field and never by a permissive wildcard synthesized
+  merely because a task/session exists.
+- semantic recurrence cannot by itself produce `REQUIRE_COMPILE`. The runtime must
+  prove operational closure: deterministic representation, compatible authority/policy,
+  verifier/readback and certified dispatch.
+- `browser_read_http` is a Browser-session readback capability, not a generic HTTP
+  client. Bound native Browser use fails closed when that runtime is unavailable,
+  defaults to same-origin, and may cross origin only through explicit policy.
+- qualification claims require exact-head CI/product gates; focused/local green tests
+  do not override a failing integration anchor or skipped downstream gates.
+
+These are compliance requirements for the existing decision, not a new parallel
+authority, verifier or Browser state system.
+
 Canonical design:
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
 
