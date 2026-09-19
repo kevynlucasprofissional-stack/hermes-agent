@@ -380,39 +380,56 @@ class OperationalKernel:
         if isinstance(condition, str):
             try:
                 cond_dict = json.loads(condition)
-            except ValueError:
-                cond_dict = {"type": "expression", "expr": condition}
-        else:
+            except (ValueError, TypeError):
+                return False
+        elif isinstance(condition, dict):
             cond_dict = condition
+        else:
+            return False
+
+        if not isinstance(cond_dict, dict):
+            return False
 
         cond_dict = interpolate_variables(cond_dict, context)
         c_type = cond_dict.get("type")
 
         if c_type == 'semantic_predicate':
+            if "key" not in cond_dict or "expected" not in cond_dict:
+                return False
             state = context.get('semantic_state', {})
             return cond_dict['key'] in state and state[cond_dict['key']] == cond_dict['expected']
 
         if c_type == "file_exists":
+            if "path" not in cond_dict:
+                return False
             target = _resolve_path(cond_dict["path"], cond_dict.get("base_dir"))
             return target.exists()
         if c_type == "file_hash":
+            if "path" not in cond_dict or "expected" not in cond_dict:
+                return False
             target = _resolve_path(cond_dict["path"], cond_dict.get("base_dir"))
             if not target.exists():
                 return False
             actual_hash = hashlib.sha256(target.read_bytes()).hexdigest()
             return actual_hash.lower() == str(cond_dict["expected"]).lower()
         if c_type == "file_contains":
+            if "path" not in cond_dict or "text" not in cond_dict:
+                return False
             target = _resolve_path(cond_dict["path"], cond_dict.get("base_dir"))
             if not target.exists():
                 return False
             return str(cond_dict["text"]) in target.read_text(encoding="utf-8")
         if c_type == "field_equals":
+            if "field" not in cond_dict or "expected" not in cond_dict:
+                return False
             actual = _lookup_dotted_path(cond_dict["field"], context)
             return actual == cond_dict["expected"]
         if c_type == "not_empty":
+            if "field" not in cond_dict:
+                return False
             actual = _lookup_dotted_path(cond_dict["field"], context)
             return bool(actual)
-        return True
+        return False
 
     def check_conditions(self, conditions: list[str | dict[str, Any]], context: dict[str, Any], stage: str) -> None:
         for cond in conditions:
@@ -644,26 +661,67 @@ class OperationalKernel:
                 "verification_expected",
                 verifier_contract.relation_parameters.get("expected", exec_context.get("semantic_state")),
             )
+            task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
+            run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
+            operation_id = str(exec_context.get("operation_id") or getattr(self, "operation_id", None) or f"op_{cap.id}_{uuid4().hex[:8]}")
+
             supplied_evidence = exec_context.get("verification_evidence")
             if supplied_evidence is None:
-                # A semantic observer may propose evidence.  The contract still
-                # decides whether its same-surface provenance is admissible.
-                owner_declared = not learned and bool(verifier_contract.observer)
-                supplied_evidence = [VerificationEvidence(
-                    evidence_id=f"observation:{cap.id}:{cap.version}",
-                    observer=verifier_contract.observer if owner_declared else "semantic_observer",
-                    source_kind=verifier_contract.source_kind if owner_declared else ("browser_dom" if cap.route in {"browser", "native_browser"} else "runtime_state"),
-                    value=expected_verification_value if owner_declared else exec_context.get("semantic_state"),
-                    evidence_strength=verifier_contract.minimum_evidence if owner_declared else EvidenceStrength.SAME_SESSION_SEMANTIC_OBSERVATION,
-                    trust_class=(verifier_contract.allowed_trust[0] if owner_declared and verifier_contract.allowed_trust else "trusted_runtime"),
-                    observer_failure_domain=(verifier_contract.allowed_observer_failure_domains[0]
-                                             if owner_declared and verifier_contract.allowed_observer_failure_domains
-                                             else ("browser_renderer" if cap.route in {"browser", "native_browser"} else "runtime")),
-                    resource_version=str(exec_context.get("resource_version", "owner-readback" if owner_declared else "")),
-                    observed_at=datetime.now(timezone.utc).isoformat(),
-                    read_after_write=True,
-                    covered_predicates=tuple(verifier_contract.covered_predicates),
-                )]
+                # Do NOT manufacture evidence from expected values!
+                # Only execute real observers if available.
+                observed_val = None
+                has_real_observation = False
+                obs_fn = exec_context.get("observer_fn") or exec_context.get("readback_fn")
+                if obs_fn is None and isinstance(exec_context.get("observers"), dict):
+                    obs_fn = exec_context["observers"].get(verifier_contract.observer)
+
+                if obs_fn is not None:
+                    try:
+                        observed_val = obs_fn()
+                        has_real_observation = True
+                    except Exception:
+                        has_real_observation = False
+                elif verifier_contract.observer and verifier_contract.observer in {'fs_stat', 'fs_read', 'fs_hash', 'stat', 'read', 'hash_file'}:
+                    obs_args = exec_context.get("observer_args", {})
+                    try:
+                        observed_val = self.execute_primitive(verifier_contract.observer, obs_args, context=exec_context)
+                        has_real_observation = True
+                    except Exception:
+                        has_real_observation = False
+                elif learned and exec_context.get('semantic_state') is not None:
+                    observed_val = exec_context.get('semantic_state')
+                    has_real_observation = True
+
+                if has_real_observation:
+                    res_binding = verifier_contract.resource_binding or {}
+                    res_id = str(exec_context.get("resource_id", res_binding.get("resource_id", res_binding.get("id", ""))))
+                    res_version = str(exec_context.get("resource_version", ""))
+                    strength = (
+                        verifier_contract.minimum_evidence
+                        if (obs_fn or verifier_contract.observer)
+                        else EvidenceStrength.SAME_SESSION_SEMANTIC_OBSERVATION
+                    )
+                    supplied_evidence = [VerificationEvidence(
+                        evidence_id=f"observation:{cap.id}:{cap.version}",
+                        observer=verifier_contract.observer or "semantic_observer",
+                        source_kind=verifier_contract.source_kind if verifier_contract.source_kind != "unknown" else ("browser_dom" if cap.route in {"browser", "native_browser"} else "runtime_state"),
+                        value=observed_val,
+                        evidence_strength=strength,
+                        trust_class=(verifier_contract.allowed_trust[0] if verifier_contract.allowed_trust else "trusted_runtime"),
+                        observer_failure_domain=(verifier_contract.allowed_observer_failure_domains[0]
+                                                 if verifier_contract.allowed_observer_failure_domains
+                                                 else ("browser_renderer" if cap.route in {"browser", "native_browser"} else "runtime")),
+                        resource_id=res_id,
+                        resource_version=res_version,
+                        observed_at=datetime.now(timezone.utc).isoformat(),
+                        read_after_write=True,
+                        operation_id=operation_id,
+                        task_id=task_id,
+                        run_id=run_id,
+                        covered_predicates=tuple(verifier_contract.covered_predicates),
+                    )]
+                else:
+                    supplied_evidence = []
             verification_result = evaluate_verification(
                 verifier_contract,
                 expected_verification_value,
@@ -672,6 +730,9 @@ class OperationalKernel:
                 mutation_failure_domains=set(exec_context.get("mutation_failure_domains", ())),
                 mutation_observed_at=str(exec_context.get("mutation_observed_at", "")),
                 transition_required=verifier_contract.transition_claim,
+                expected_operation_id=operation_id,
+                expected_run_id=run_id,
+                expected_task_id=task_id,
             )
             try:
                 self.ora_metrics.record_verification(verification_result)
@@ -695,9 +756,6 @@ class OperationalKernel:
                 self.registry.register(cap)
 
             from workstation.experience_compiler.models import CapabilityInvocation
-            task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
-            run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
-            operation_id = str(exec_context.get("operation_id") or getattr(self, "operation_id", None) or f"op_{cap.id}_{uuid4().hex[:8]}")
             auth_scope = exec_context.get("authority_scope") or getattr(self, "authority_scope", None)
             if hasattr(auth_scope, "to_dict"):
                 auth_scope = auth_scope.to_dict()

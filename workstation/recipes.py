@@ -18,6 +18,8 @@ _SECRET = re.compile(r"token|apikey|authorization|cookie|password|secret|credent
 
 
 def sanitize(value):
+    if hasattr(value, "to_dict") and callable(value.to_dict):
+        return sanitize(value.to_dict())
     if isinstance(value, dict):
         return {k: sanitize(v) for k, v in value.items()
                 if (not _SECRET.search(re.sub(r"[^a-z]", "", str(k).lower()))

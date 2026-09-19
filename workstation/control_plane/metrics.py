@@ -234,6 +234,8 @@ class ORAMetrics:
     relation_rejections: int = 0
     negative_control_pass: int = 0
     negative_control_fail: int = 0
+    model_inadequacy_events: int = 0
+    model_inadequacy_reasons: dict[str, int] = field(default_factory=dict)
 
     amortized_tokens_saved: int | None = None
     amortized_cost_usd_saved: float | None = None
@@ -274,7 +276,9 @@ class ORAMetrics:
         self.wake_reasons[r_str] = self.wake_reasons.get(r_str, 0) + 1
         self.llm_wake_count += 1
 
-    def record_transition(self, verified: bool = True, reasoned: bool = False) -> None:
+    deterministic_routes_selected: int = 0
+
+    def record_transition(self, verified: bool = False, reasoned: bool = False) -> None:
         """Record a state transition outcome."""
         if not verified:
             self.unverified_transitions += 1
@@ -318,6 +322,10 @@ class ORAMetrics:
             self.verification_latency_ms_total += max(0.0, latency_ms)
             self.verification_latency_observations += 1
 
+    def record_model_inadequacy(self, reason: str = "model_inadequacy_non_discriminable_outcome") -> None:
+        self.model_inadequacy_events += 1
+        self.model_inadequacy_reasons[reason] = self.model_inadequacy_reasons.get(reason, 0) + 1
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["ora_ratio"] = self.ora_ratio
@@ -333,7 +341,7 @@ class ORAMetricsCollector:
     def __init__(self, metrics: ORAMetrics | None = None) -> None:
         self.metrics = metrics or ORAMetrics()
 
-    def on_transition(self, verified: bool = True, reasoned: bool = False) -> None:
+    def on_transition(self, verified: bool = False, reasoned: bool = False) -> None:
         self.metrics.record_transition(verified=verified, reasoned=reasoned)
 
     def on_capability_invocation(self, capability: Any) -> None:
@@ -381,12 +389,10 @@ class ORAMetricsCollector:
         elif isinstance(decision, HumanDecision):
             self.on_wake_reason(WakeReason.HUMAN_INTERVENTION)
         elif isinstance(decision, ComposedDecision):
-            self.metrics.record_capability_invocation(is_composite=True)
-            self.metrics.record_transition(verified=True, reasoned=False)
+            self.metrics.deterministic_routes_selected += 1
         elif isinstance(decision, ExecutableDecision):
-            is_comp = (
-                getattr(decision.capability, "route", "") == "composite"
-                or bool(getattr(decision.capability, "dependencies", []))
-            )
-            self.metrics.record_capability_invocation(is_composite=is_comp)
-            self.metrics.record_transition(verified=True, reasoned=False)
+            self.metrics.deterministic_routes_selected += 1
+
+    def on_model_inadequacy(self, reason: str = "model_inadequacy_non_discriminable_outcome") -> None:
+        self.metrics.record_model_inadequacy(reason)
+

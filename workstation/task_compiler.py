@@ -1386,10 +1386,15 @@ class TaskCompiler:
         # Browser actions retain the caller's scoped tool dispatcher/approval/lease.
         def scoped_dispatch(name, args):
             return dispatch(name, args, task_id, f'{item.id}_{name}')
-        result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner,
-            context={'task_id': owner, 'session_id': session_id,
-                'capability_pins': self.store.get_plan(plan.id).metadata['capability_pins'],
-                'durable_store': self.store, 'durable_item_id': item.id, 'primitive_admission': admit})
+        exec_context = {
+            'task_id': owner, 'session_id': session_id,
+            'capability_pins': self.store.get_plan(plan.id).metadata['capability_pins'],
+            'durable_store': self.store, 'durable_item_id': item.id, 'primitive_admission': admit,
+        }
+        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'resource_id', 'resource_version'):
+            if k in request:
+                exec_context[k] = request[k]
+        result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner, context=exec_context)
         projected_output = blob_references(self.artifacts, owner, sanitize(result.get('output')))
         if len(json.dumps(projected_output, ensure_ascii=False).encode('utf-8', 'surrogatepass')) > 2048:
             projected_output = content_reference(self.artifacts, owner, projected_output, schema='capability_output')

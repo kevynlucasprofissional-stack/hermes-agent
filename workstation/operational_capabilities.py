@@ -164,7 +164,7 @@ class OperationalCapability:
             "scope": self.scope,
             "preconditions": list(self.preconditions),
             "postconditions": list(self.postconditions),
-            "verifier_contract": self.verifier_contract,
+            "verifier_contract": self.verifier_contract.to_dict() if hasattr(self.verifier_contract, "to_dict") else self.verifier_contract,
             "dependencies": [d.to_dict() for d in self.dependencies],
             "implementation": self.implementation,
             "lifecycle": self.lifecycle.value,
