@@ -1,5 +1,41 @@
 # Workstation roadmap
 
+## H-078 — Upstream Migration as Decoupling / Unidirectional Supervision (2026-09-19) — ACTIVE STRATEGIC LANE
+
+Canonical program:
+[context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
+Decision: **adapt Hermes Work to the current upstream while progressively extracting
+Workstation seams instead of re-inserting them into the upstream's new internals.**
+
+Hermes remains the first-party laboratory/reference reasoner, but Workstation correctness
+must progressively stop depending on Hermes core knowing that Workstation exists or on the
+LLM remembering to call `work_execute`. The target is unidirectional supervision:
+generic Hermes lifecycle/middleware/provider surfaces emit/mediate execution; a
+Workstation-owned adapter observes and can wrap/veto/pause/reconcile/verify through those
+generic contracts.
+
+Migration rule for every upstream overlap:
+`ADOPT_UPSTREAM | KEEP_WORKSTATION | SEMANTIC_PORT | EXTRACT_BOUNDARY`.
+Whenever a generic hook/middleware/provider boundary can preserve the invariant,
+`EXTRACT_BOUNDARY` is preferred over restoring a direct `agent/* -> workstation/*`
+or `tools/* -> workstation/*` import.
+
+Sequence:
+P0 decision + seam audit -> P1 pinned upstream baseline migration -> P2 supervisory adapter
+shadow mode -> P3 tool-execution seam retirement -> P4 turn/finalizer seam retirement ->
+P5 browser provider boundary -> P6 session/Kanban/API edge isolation -> P7 Work Gateway ->
+P8 Hermes-less qualification.
+
+Retirement gate: **shadow parity first**. No seam is removed until normal Hermes behavior
+(without model compliance or explicit `work_execute`) is still observed/supervised with
+equivalent lineage, authority, uncertainty, verification, BrowserTask and Experience
+Compiler semantics.
+
+This lane is architectural/migration work and does not supersede H-077's external-validity
+program. H-077 governs what Workstation may claim as true; H-078 governs how Workstation
+is coupled to Hermes while upstream is adopted.
+
 ## H-077 — Architectural Falsification / External Validity (2026-09-19) — ACTIVE
 
 Canonical program:
