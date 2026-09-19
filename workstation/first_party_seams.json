@@ -1,0 +1,125 @@
+{
+  "schema": "hermes.workstation.first-party-seams.v1",
+  "policy": "minimum-necessary-first-party-seams",
+  "established": "2026-09-19",
+  "rule": "Minimize upstream-owned Workstation seams without sacrificing proven capability or correctness.",
+  "dispositions": [
+    "REMOVE",
+    "UPSTREAM_ABSTRACT",
+    "PRESERVE_FIRST_PARTY"
+  ],
+  "entries": [
+    {
+      "id": "FPS-001",
+      "path": "agent/conversation_loop.py",
+      "current_direct_imports": 3,
+      "disposition": "REMOVE",
+      "target": "Workstation-owned supervisory adapter over generic lifecycle/LLM contracts",
+      "rationale": "Current turn preparation/routing/continuation coupling is a strong candidate for generic observation and middleware rather than permanent Workstation knowledge in the agent loop.",
+      "retire_only_after": [
+        "shadow parity",
+        "normal Hermes path supervised without work_execute",
+        "lineage preserved",
+        "reasoning handoff preserved"
+      ]
+    },
+    {
+      "id": "FPS-002",
+      "path": "agent/tool_executor.py",
+      "current_direct_imports": 6,
+      "disposition": "REMOVE",
+      "target": "tool_request/tool_execution middleware plus pre_tool_call/post_tool_call observation",
+      "rationale": "Upstream already exposes behavior-changing tool middleware. Workstation should supervise ordinary tool dispatch without direct imports where parity is proven.",
+      "retire_only_after": [
+        "no double dispatch",
+        "pre-mutation intervention parity",
+        "effect capture parity",
+        "uncertain mutation reconciliation",
+        "Experience Compiler observation parity"
+      ]
+    },
+    {
+      "id": "FPS-003",
+      "path": "agent/turn_finalizer.py",
+      "current_direct_imports": 2,
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic verification/finalization lifecycle contract consumed by the Workstation adapter",
+      "rationale": "Finalization semantics are legitimate but may need a stronger generic lifecycle event than existing hooks before direct Workstation knowledge can be removed safely.",
+      "retire_only_after": [
+        "completion candidate observed",
+        "acceptance/verification parity",
+        "procedure trace parity",
+        "canonical commit ordering preserved"
+      ]
+    },
+    {
+      "id": "FPS-004",
+      "path": "tools/browser_tool.py",
+      "current_direct_imports": 6,
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic BrowserProvider/NativeBrowser capability boundary with Workstation Browser behind it",
+      "rationale": "Browser routing should not be scattered Workstation branching, but the Workstation Browser requires stronger ownership and native runtime semantics than a simple external browser backend.",
+      "retire_only_after": [
+        "BrowserTask ownership parity",
+        "fail-closed bound task behavior",
+        "native session continuity",
+        "human handoff parity",
+        "no fallback regression"
+      ]
+    },
+    {
+      "id": "FPS-005",
+      "path": "apps/desktop/electron/main.ts",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "narrow first-party native runtime bootstrap seam, ideally behind a generic native-view provider abstraction",
+      "rationale": "Workstation Browser owns a persistent Electron Chromium WebContentsView and lifecycle capabilities that renderer plugins do not currently provide.",
+      "reevaluate_when": "upstream exposes an equivalent generic native-view/provider lifecycle contract"
+    },
+    {
+      "id": "FPS-006",
+      "path": "apps/desktop/electron/preload.ts",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "narrow typed IPC bridge for the first-party Workstation Browser runtime",
+      "rationale": "Renderer access to native BrowserTask lifecycle/control requires preload-mediated privileged IPC.",
+      "reevaluate_when": "upstream plugin/native SDK exposes equivalent safe typed native-view IPC"
+    },
+    {
+      "id": "FPS-007",
+      "path": "apps/desktop/src/app/session/hooks/use-preview-routing.ts",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "Plugin SDK/contributed-pane or generic desktop event-to-workspace routing with behavioral parity",
+      "rationale": "Modern upstream can open/dock plugin workspaces and panes; the Workstation-specific right-rail event path should be tested against that generic surface before remaining first-party.",
+      "retire_only_after": [
+        "same-session visibility behavior",
+        "no background-session pane hijack",
+        "automatic browser reveal",
+        "Hub-to-Chat transfer parity"
+      ]
+    },
+    {
+      "id": "FPS-008",
+      "path": "hermes_cli/web_server.py",
+      "current_direct_imports": 3,
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "narrow Work Gateway/resource projection adapter",
+      "rationale": "Workstation API projection is a legitimate product edge but should not spread state ownership into generic web-server internals.",
+      "retire_only_after": [
+        "resource/event projection parity",
+        "auth/session scope parity"
+      ]
+    },
+    {
+      "id": "FPS-009",
+      "path": "hermes_cli/kanban_db.py",
+      "current_direct_imports": 1,
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic task completion/acceptance extension boundary",
+      "rationale": "Canonical Kanban remains shared, but Workstation acceptance semantics should attach through a narrow contract rather than ad-hoc DB-layer knowledge when feasible.",
+      "retire_only_after": [
+        "TaskRun fencing parity",
+        "acceptance contract parity",
+        "canonical commit-before-projection preserved"
+      ]
+    }
+  ]
+}
