@@ -1,5 +1,36 @@
 # Architectural Decisions
 
+## D-028 — Migrate semantic causal contracts, not historical patch locations
+
+**Decision:** H-078 implementation is governed by semantic concerns and causal ordering.
+A source file is not the unit of preservation.
+
+The migration must:
+
+- adopt modern upstream owners/decomposition;
+- identify the Workstation property currently guaranteed by each seam;
+- preserve the exact authority/ordering/lineage property;
+- place it behind the narrowest generic upstream-compatible contract;
+- keep a first-party seam only when generic contracts cannot preserve equivalent
+  capability/correctness;
+- remove the historical patch location after parity.
+
+Required generic boundaries identified by the deep audit are
+`turn_admission`, `tool_batch_admission`, authorized pre-I/O dispatch,
+execution-persistence disposition, `completion_admission`, `TurnRoutePolicy`,
+`TaskCompletionAdmission`, browser capability registration and trusted `TurnIngress`.
+
+The critical causal invariant is that uncertain mutation state is persisted **after final
+arguments and authorization/guardrails, but before external I/O**. A hook at any other
+position is not equivalent.
+
+The Browser migration specifically uses dual-control/shadow prediction, never
+dual-execution for mutations.
+
+This decision refines D-026/D-027; it does not supersede the minimum-first-party-seam
+policy.
+
+
 These are settled decisions for the Hermes Workstation downstream architecture. They narrow implementation choices; they are not a substitute for the detailed design in [`../ARCHITECTURE.md`](../ARCHITECTURE.md).
 
 ## D-001 — Workstation is first-class in this downstream fork
