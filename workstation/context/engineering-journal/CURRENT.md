@@ -1,32 +1,53 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-071 — Browser Ownership & Recovery Reconciliation (2026-09-18)
+## H-072 — Browser Ownership & Recovery post-implementation audit (2026-09-19)
 
-**Classification:** IMPLEMENTED / FULLY VALIDATED / 100% REGRESSIONS GREEN / P0 CLOSED.
+**Classification:** IMPLEMENTATION BASE RETAINED / CORRECTIVE P0 REOPENED / PRODUCT QUALIFICATION OPEN.
 
-**Observed & Diagnosed:**
-1. Browser flickers when hovering other chats because Radix tooltips (`OverflowTip`/`Tip`) share `[data-radix-popper-content-wrapper]`, which was included in the native-view occlusion observer, triggering unnecessary remove/add of the `WebContentsView`.
-2. After restart, chats with associated BrowserTasks reopened on `Blank Page` because `ensure()` created/activated an `about:blank` tab while the recovered BrowserTask tabs were parked/lazy in `pendingSessionTabs`.
-3. Background actions resurrected the BrowserTask entry in the background while the visible viewport remained stranded on `about:blank`.
-4. Browser Hub TaskRail displayed active tasks as `Parked` because visibility (`visible | parked`) was conflated with execution activity (`working | idle`).
-5. Switching between Chat A and Chat B did not restore the respective task because `preferredTaskId` was dropped at the bridge/preload/UI seam, and unowned chats inherited whichever tab was active.
-6. Delayed cleanup on chat switch detached/hid viewports owned by the newer host due to missing host fencing.
+**Baseline retained:** commit family around `3c72763da79525587b97c09ad561b2b0ca2701de`
+landed shared occlusion, host fencing, `preferredTaskId`, task-bound lazy recovery,
+cross-session isolation and activity-vs-visibility projection. Focused evidence
+(88 Vitest, typecheck, H004, Work100) remains useful.
 
-**Implementation & Verification:**
-- **Shared Native-View Occlusion:** Created `apps/desktop/src/app/browser/native-view-occlusion.ts` with `useNativeViewOcclusion` and selector `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Marked real occluders in `dialog.tsx`, `dropdown-menu.tsx`, `context-menu.tsx`, `select.tsx`, and `popover.tsx`. Tooltips never occlude Chromium.
-- **IPC & Runtime Host Fencing:** Added `expectedHost` to `detach` and `setVisible` in `WorkstationBrowserBridge`, preload, IPC handlers, and `WorkstationBrowserRuntime`. Calls from stale hosts are safely rejected. On `attach()`, `viewVisible` is always set to `true`.
-- **Preferred-Task Plumbing:** Extended `WorkstationBrowserBridge.attach()` and preload to forward `preferredTaskId`. `workstation-browser-pane.tsx` resolves `preferredTaskId` via session lineage and aliases, reattaching when session identity changes.
-- **Task-Bound Lazy Recovery:** Restructured `WorkstationBrowserRuntime.attach()` to restore session and durable browser state, materialize `preferredTaskId` from `pendingSessionTabs` via `rawEntryForTask(preferredTaskId, true)` before any physical blank fallback is created, discard unnavigated placeholder `about:blank`, and prevent cross-session leakage.
-- **Activity vs. Visibility Decoupling:** In `task-rail.tsx`, implemented `getTaskExecutionActivity(task, dotStates, sessions)` projecting `working | waiting | human_control | idle` from `$sessionDotStateById` and session lineage without conflating viewport visibility. Added `Working` section and protected active working tasks against premature clearing.
-- **Test Suite Results:**
-  - `native-view-occlusion.test.ts`: 7/7 passed.
-  - `task-rail.test.ts`: 5/5 passed.
-  - `workstation-browser-runtime-task.test.ts`: 28/28 passed (including host fencing and cross-session isolation).
-  - `workstation-browser-runtime-recovery.test.ts`: 2/2 passed (including multi-task restart sequence with 1 page per task invariant).
-  - Full Vitest workstation-browser suite: 88 passed across 9 test files (100% green).
-  - TypeScript check (`npm run typecheck`): 0 errors.
-  - H004 native browser smoke probe: validated all phases (`H004_CLASSIFICATION=VALIDATED`).
-  - Work100 regression benchmark: 30 PASS / 0 FAIL.
+**Post-implementation findings on `main@6328894c0a5f51a61da772593842c25d377d553f`:**
+- **H-072-A — destructive bulk clear:** TaskRail can classify `parked + working`,
+  but runtime `clearParkedTasks()` destroys all parked lifecycle tasks. One idle
+  parked task can expose Clear and cause another working/waiting/human-controlled
+  parked task to be destroyed.
+- **H-072-B — first-frame blank race:** Chat pane local state starts with no tasks, so
+  first `attach('chat')` may carry no `preferredTaskId`; fallback blank can become
+  visible before the returned state triggers a second, task-bound attach.
+- **H-072-C — E2E proof gap:** focused recovery tests inject the preferred task
+  directly. H013 has not yet proven cold renderer discovery + A/B restart and its
+  local bridge declaration does not yet include `preferredTaskId`.
+- **H-072-D — alias proof gap:** live/root lineage is handled, but BrowserPane has no
+  dedicated `parent_session_id` behavior proof.
+- **H-072-E — occlusion authority too broad:** the shared selector still grants
+  hide authority to generic roles/slots in addition to the explicit
+  `data-native-view-occluder="true"` marker.
+- **H-072-F — qualification wording exceeded evidence:** the ownership lane had strong
+  focused evidence, but the exact renderer/restart product invariant was not proven.
+  Current global main is also red in the separate Browser Operational Admission
+  integration-anchor gate, so repository-wide "100% regressions green" is incorrect.
+
+**Smallest discriminating experiments:**
+1. H072-E001: parked-working + parked-idle through the real bulk-clear bridge; only
+   idle may be destroyed.
+2. H072-E002: cold BrowserPane mount from persisted BrowserTask with no preseeded
+   renderer task state; assert first native attach is already task-bound.
+3. H072-E003: extend H013 for Chat A/B -> process restart -> cold B restore -> switch A,
+   including stale host cleanup and one-page-per-task.
+4. H072-E004: live/root/parent alias matrix resolves one canonical BrowserTask.
+5. H072-E005: only explicit native-view-occluder markers hide Chromium; tooltip and
+   unrelated role/slot nodes do not.
+
+**Refuting evidence:** H-072 may be narrowed if instrumentation proves first attach
+cannot become visually observable, or if canonical execution state is unavailable at
+the bulk-clear owner. Neither has been proven on current main.
+
+**Closure:** all five experiments green at the appropriate renderer/runtime/E2E
+layer, affected H004/H013/Work100 gates green, exact-head failures classified, and no
+new state owner.
 
 **Canonical plan:** [../BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md]
 
@@ -4200,7 +4221,7 @@ Sub-phases tracked:
 - CP8: metrics + shadow mode + failure attribution + baseline comparison
 - CP9: full integration, Work100 benchmark, canonical gates and documentation.
 
-## 2026-09-18 — H-071: Browser ownership/recovery reconciliation
+## 2026-09-18 — Browser ownership/recovery pre-implementation hypothesis (historical; promoted to H-072)
 
 **Classification:** VALIDATED BY CURRENT-MAIN CODE AUDIT / IMPLEMENTATION OPEN.
 
