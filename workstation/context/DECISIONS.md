@@ -1,5 +1,27 @@
 # Architectural Decisions
 
+## D-029 — Upstream structure is authoritative; H-078B contracts are semantic transplant assets
+
+**Decision:** during the actual pinned-upstream merge, a dependency-clean downstream file
+does not earn structural precedence merely because H-078B removed Workstation imports.
+
+For conflicted upstream-owned code:
+1. adopt the modern upstream owner/decomposition;
+2. identify the proven H-078B causal property;
+3. port that property through the smallest generic contract;
+4. reconnect the Workstation adapter;
+5. preserve first-party code only for material native/process privilege;
+6. prove parity before retiring the legacy path.
+
+This specifically prohibits keeping the old `run_agent.py`, conversation-loop,
+Kanban or Browser monolith merely because their direct imports were cleaned up.
+
+The migration completion gate now includes Git ancestry:
+the pinned upstream SHA must be an ancestor of the qualified integration head/main.
+
+D-029 refines D-026/D-027/D-028; it does not weaken minimum-seam or truthful-core rules.
+
+
 ## D-029 — First-Party Workstation Adapter via Generic Core Registries
 
 **Decision:** The Hermes generic core is completely decoupled from Workstation internals.
