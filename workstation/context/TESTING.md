@@ -34,6 +34,59 @@ theft, weakened safe restore, redefinition of `parked`, or a parallel state owne
 Canonical target:
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
 
+### Post-PR #29 corrective qualification gate — 2026-09-19
+
+The prior focused/local suites are retained, but P0 closure now additionally requires
+behavioral RED/GREEN proof for the audited failures. Do not use source-text/regex tests.
+
+Required behaviors:
+- a `ComposedDecision` whose capabilities were not executed cannot return operational
+  success, VERIFIED or COMMITTED;
+- real composition executes the certified plan in order/graph semantics, propagates
+  drift/uncertainty and verifies the required postconditions before commit;
+- `CertifiedDispatcher` receiving only `{"success": true}` and no accepted verifier
+  remains ACKNOWLEDGED / NEEDS_VERIFICATION (or equivalent non-committed state);
+- explicit contract-authorized ACK-only evidence is the only exception and is tested
+  separately;
+- request `trusted_authority` cannot mint authority, and bare task/session context
+  without persisted trusted grant cannot mutate; requested scope can only narrow;
+- three semantically equal mutations with **no executable/verifiable operational
+  closure** yield at most `SUGGEST_COMPILE`;
+- the same family with deterministic primitive/capability + authority/policy +
+  verifier/readback + certified dispatch may reach `REQUIRE_COMPILE`;
+- arbitrary `terminal` commands sharing `python -m`, `bash -c`, etc. never become
+  mandatory compilation solely from that syntax;
+- `browser_read_http` permits relative/same-origin GET/HEAD in the bound Browser
+  session, rejects body/mutation methods, denies cross-origin by default and permits it
+  only through explicit policy;
+- destination safety covers literal and resolved private/link-local/metadata/loopback
+  surfaces, including IPv6/DNS cases supported by the canonical URL-safety owner;
+- caller-supplied headers cannot smuggle forbidden credentials/authority across origin;
+- bound native Browser readback with controller/runtime unavailable fails closed and
+  never falls back to process `requests.request`;
+- large readback stores the **complete** payload in ArtifactStore/reference plane before
+  producing a bounded inline projection;
+- `python workstation/scripts/apply_core_integration.py --root . --check` passes on
+  Linux and Windows with the current `browser_type` route/registration;
+- a real Electron/WebContents fixture exercises contenteditable/rich-editor plain-text
+  paste with exact newlines, delayed SPA hydration, session cookie, same-origin API
+  readback, Save/persist/verify and deterministic replay/fan-out without intermediate
+  planner calls;
+- timeout-after-mutation remains UNCERTAIN and cannot blind retry; earlier confirmed
+  item effects remain preserved under per-item drift.
+
+Required qualification order:
+1. focused Python through `scripts/run_tests.sh` (never direct pytest);
+2. focused Electron/Vitest behavior tests and Desktop typecheck;
+3. `apply_core_integration.py --check` on supported CI hosts;
+4. affected Workstation and adjacent core suites;
+5. H004/H013 when Browser lifecycle/recovery owners are touched;
+6. Work100;
+7. exact candidate-head GitHub Actions: required Workstation/Windows jobs all green;
+8. only then update CURRENT_STATE / ROADMAP / journal / canonical P0 to QUALIFIED.
+
+A local pass count is evidence, not a substitute for a failing/skipped product gate.
+
 Minimum focused proof:
 - `read_preview` PURE_READ; mixed-action tools classify subactions correctly;
 - structural similarity alone never forces compilation across terminal/filesystem/browser;
