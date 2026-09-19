@@ -648,6 +648,18 @@ them. The new Capability layer is an abstraction and contract boundary first; it
 physical persistence may be implemented by extending existing Recipe/Procedural
 stores.
 
+## H-075 integration boundary — deterministic runtime exists; adaptive handoff does not
+
+TaskCompiler plus DurableBatchRunner already execute repetitive work outside the model
+loop with durable checkpoints, and OperationalKernel can replay capabilities without
+intermediate LLM calls. Do not build another executor.
+
+Open work: connect newly verified adaptive execution to this existing path during the
+same TaskRun. browser_console success is not the compiled program; stable semantics
+lower to typed primitives and large payloads flow ArtifactStore -> runtime by reference.
+
+See [IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
 ## Final architectural statement
 
 Hermes Work should behave less like an agent that repeatedly decides every

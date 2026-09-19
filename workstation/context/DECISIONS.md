@@ -501,6 +501,27 @@ database, BrowserTask owner, journal or memory store.
 Canonical design:
 [HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
 
+## D-023 — Run-local operationalization is distinct from global capability promotion
+
+D-018 through D-022 remain authoritative. Newly verified adaptive behavior may become a
+run-scoped compiled segment before TaskRun end only when RunClosureProof establishes
+deterministic representation, executable closure, authority/effect containment,
+verifier readback, cleared uncertainty, compatible replay/canary and positive utility.
+
+This is not global promotion. The segment is fenced to task/run/operation, may only
+narrow current authority, persists through existing WorkPlan/WorkItem/ArtifactStore,
+executes through TaskCompiler/DurableBatchRunner/OperationalKernel and never enters the
+global PROMOTED Router index.
+
+Do not create a second scheduler for an ExecutionLease. Treat it as bounded WorkPlan
+execution metadata. Arbitrary browser_console source remains discovery evidence, not a
+trusted learned program.
+
+> **Run outcome does not rewrite transition truth.**
+
+Canonical:
+[IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.

@@ -1,5 +1,37 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-075 — In-Flight Operationalization falsification + Trello-shaped dogfood audit (2026-09-19)
+
+**Classification:** PARTIALLY FALSIFIED / REFINED HYPOTHESIS VALIDATED BY CURRENT-MAIN CODE AUDIT / IMPLEMENTATION OPEN.
+
+On main@e36b0f0febed96240fa13bbcb78f1cc13c7c0b24:
+- missing deterministic executor — REFUTED by DurableBatchRunner;
+- missing checkpoints — REFUTED by TaskCompiler/OperationalKernel;
+- missing closure predicate — REFUTED by _operational_closure_proven;
+- missing rich-editor primitive — MOSTLY REFUTED by plain_text_paste;
+- automatic adaptive-to-compiled in-run handoff — CONFIRMED MISSING;
+- browser_console semantic transparency — CONFIRMED MISSING;
+- ArtifactStore-to-Browser text reference — CONFIRMED MISSING;
+- durable causal hierarchical promotion and production telemetry — STILL OPEN.
+
+Dogfood session 20260919_015451_5d017a synchronized 12 Trello descriptions and
+discovered due mechanics but exhausted the iteration budget with five dues and final
+state publication pending. About 109 distinct tool calls were observed, about 55
+browser_console; at least 35 were post-discovery repetition.
+
+**Refined hypothesis:** the missing layer is an **In-Flight Operationalization Handoff**
+that converts newly verified adaptive knowledge into a run-scoped compiled segment and
+hands remaining equivalent work to existing deterministic owners before TaskRun end.
+
+No new scheduler. Run-local reuse remains fenced to the same TaskRun and never grants
+global promotion.
+
+Canonical:
+[../IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](../IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
+---
+
+
 ## H-074 — Hierarchical Operational Learning / Operational Reasoning Amortization (P0–P4) Implementation & Qualification (2026-09-19)
 
 **Classification:** IMPLEMENTED / CONTRACT VALIDATED / 100% REGRESSIONS GREEN (620 passed, 2 skipped, 0 failed).

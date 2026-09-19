@@ -4,6 +4,18 @@ Date established: 2026-09-18
 
 Status: **IMPLEMENTED / CONTRACT VALIDATED — native product qualification separate**
 
+## H-075 implementation boundary — 2026-09-19
+
+EC6 distinguishes run-local ephemeral compiled segments from global promotion, but
+current-main does not yet operationally hand newly verified adaptive repetition into
+the existing DurableBatchRunner/TaskCompiler path before TaskRun completion.
+
+browser_console is intentionally excluded by procedure_trace.candidate_steps; opaque JS
+must lower to typed primitives or independently instrumented trusted semantic events.
+
+See [IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+Verified prefixes remain valid evidence but do not bypass global promotion admission.
+
 ## Implementation evidence — 2026-09-18
 
 Base: `2479b712f8a3912ff6df9066d1782e8b407b4177`. Implementation is in

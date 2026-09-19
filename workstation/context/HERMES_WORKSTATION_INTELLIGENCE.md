@@ -1,5 +1,20 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-075 — In-Flight Operationalization Handoff Gap — 2026-09-19
+
+A hipótese inicial foi parcialmente refutada: executor determinístico, checkpoints,
+closure operacional e plain_text_paste já existem. O gap confirmado é a transferência
+automática, dentro da mesma TaskRun, de uma descoberta adaptativa verificada para o
+runtime determinístico existente.
+
+browser_console é um amplificador porque segue como executeJavaScript opaco. Console
+pode descobrir; o caminho estável deve baixar para primitivas tipadas. Payload grande
+deve ir ArtifactStore -> Browser sem atravessar a LLM.
+
+Canônico:
+[IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
+
 ## Fechamento corretivo H-071 — candidato local verde; CI exato pendente — 2026-09-19
 
 Plano composto agora executa em ordem; ACK não vira verificação; o kernel só emite

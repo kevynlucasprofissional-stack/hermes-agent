@@ -1,5 +1,17 @@
 # Current State
 
+## 2026-09-19 H-075 in-flight operationalization audit — CORRECTIVE INTEGRATION OPEN
+
+Current-main falsification proves deterministic execution, checkpoints,
+operational-closure proof and typed rich-editor paste already exist. The open product
+gap is automatic **adaptive -> run-scoped compiled -> deterministic continuation**
+inside one TaskRun. browser_console remains opaque, Browser text has no ArtifactStore
+ref input, and prior P2/P3/P4 integration seams remain open.
+
+Canonical:
+[IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
+
 ## 2026-09-19 H-071 corrective candidate — LOCAL GATES GREEN / EXACT-HEAD CI PENDING
 
 P0-A..H are implemented on `codex/browser-operational-admission-closure` from clean
@@ -8,10 +20,9 @@ Evidence: Workstation 607 passed / 2 skipped; Electron 1791 passed / 5 skipped;
 typecheck, H004, H013 2/2, Work100 30/30 and integration dry-run green. Exact-head CI
 remains the final qualification gate.
 
-## 2026-09-19 Hierarchical Operational Learning — IMPLEMENTED & QUALIFIED (P0-P4 CLOSED)
+## 2026-09-19 Hierarchical Operational Learning — COMPONENT BASELINE LANDED / H-075 REOPENED
 
-The architectural phase for Hierarchical Operational Learning and Operational Reasoning
-Amortization (ORA) is completely implemented and qualified across all phases (P0 to P4):
+PR #32 landed substantial P0-P4 component infrastructure, but H-075 and post-merge code audit invalidate the earlier end-to-end CLOSED claim. Treat the list below as component inventory; routed branch seams, real non-resident resume, durable hierarchical evidence/causal promotion, production telemetry and in-flight handoff remain corrective work:
 
 1. **P0 (Truthful Control Plane Closure):**
    - Added `certificate_hash()` to `CompositionCertificate`;

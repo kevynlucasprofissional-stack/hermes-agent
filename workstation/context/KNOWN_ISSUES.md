@@ -1,9 +1,29 @@
 # Workstation Known Issues
 
+## KI-014 — Verified adaptive procedure stays in the LLM loop instead of handing off in-flight [OPEN — H-075]
 
-## KI-013 — Operational knowledge hierarchy is not closed end to end [RESOLVED / QUALIFIED — 2026-09-19]
+A Trello-shaped run discovered and verified stable description/due procedures, then
+continued equivalent work through repeated LLM -> tool -> LLM cycles until the
+iteration budget ended.
 
-**Resolution (P0-P4 Closed):**
+The deterministic runtime already exists. The missing seam is automatic run-local
+operationalization into TaskCompiler/DurableBatchRunner/OperationalKernel.
+browser_console opacity and missing ArtifactStore text refs amplify the issue.
+
+Target: after compatible verified replay closes an operation family, remaining
+equivalent work executes through existing deterministic owners with checkpoints and no
+LLM re-entry unless a declared exception occurs. Run-local reuse never grants global
+promotion or broader authority.
+
+
+
+## KI-013 — Operational knowledge hierarchy is not closed end to end [REOPENED / PARTIAL — H-075, 2026-09-19]
+
+**Historical PR #32 implementation claim (not an end-to-end resolution):**
+
+H-075 supersedes the RESOLVED label. Component tests remain evidence, but decision seams, non-resident wait product integration, durable CapabilityInvocation/causal promotion and production telemetry remain open.
+
+**Landed component inventory:**
 1. **P0 (Truthful Control Plane Closure)**:
    - `workstation/control_plane/dispatcher.py`: Added `DispatchStatus.NEEDS_VERIFICATION`. `CertifiedDispatcher` fails closed without a verifier unless explicitly allowed by contract (`allow_ack_only=True` / `E0`).
    - `workstation/task_compiler.py`: Replaced fake plan echoing in `_execute_route` with real sequential execution of composed children via `OperationalKernel.execute_capability`. Removed synthetic wildcard authority minting (`request["trusted_authority"]` / `{"*"}`). Fixed `RoutingDecision` attribute accesses (`await_condition`, `scope`, `open_condition`, `attention_packet`, etc.).

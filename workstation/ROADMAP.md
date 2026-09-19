@@ -1,5 +1,20 @@
 # Workstation roadmap
 
+## In-Flight Operationalization / Adaptive-to-Deterministic Handoff (2026-09-19) — CORRECTIVE P0 OPEN
+
+Canonical specification:
+[context/IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](context/IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
+H-075 partially falsified the broad hypothesis: deterministic continuation,
+checkpointing and operational-closure primitives already exist. The confirmed gap is
+the automatic **handoff** from newly verified adaptive work to a run-scoped compiled
+segment executed by existing TaskCompiler/DurableBatchRunner/OperationalKernel owners.
+
+P0-P6: truth corrections; RunClosureProof; adaptive-to-compiled handoff; Browser
+lowering plus Artifact-to-Browser text; durable invocation/causal composites; real
+non-resident continuation plus telemetry; Trello-shaped Electron qualification.
+
+
 ## Browser Operational Admission corrective P0 (2026-09-19) — IMPLEMENTED; EXACT-HEAD CI PENDING
 
 H-071 closes P0-A through P0-H in the existing owners: real ordered composition,
@@ -8,7 +23,7 @@ same-origin HTTP readback without process fallback, owner-declared terminal iden
 repaired integration anchor, and a real Electron rich-editor/cookie/drift/replay fixture.
 Local candidate gates are green; final `QUALIFIED` status awaits exact-head CI.
 
-## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — IMPLEMENTED (P0-P4 QUALIFIED)
+## Hierarchical Operational Learning / Reasoning Amortization (2026-09-18) — COMPONENT BASELINE LANDED / H-075 CORRECTIVE INTEGRATION OPEN
 
 Canonical specification:
 [context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
@@ -32,7 +47,7 @@ executable and verifiable transition with positive reuse value**, not smallest t
 sequence. This prevents micro-capability explosion while preserving increasingly
 high-level reuse.
 
-Implementation status (all phases implemented and qualified with 620 passing tests):
+PR #32 component baseline (620 tests were reported at implementation time; H-075 supersedes the end-to-end CLOSED/QUALIFIED claim):
 
 1. **P0 — Truthful Control Plane closure (CLOSED / QUALIFIED).**
    CompositionCertificate hash method, CertifiedDispatcher fail-closed verification

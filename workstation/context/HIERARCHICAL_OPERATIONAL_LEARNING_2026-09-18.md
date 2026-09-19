@@ -1,12 +1,11 @@
 # Hierarchical Operational Learning — Verified Action Knowledge and Reasoning Amortization
 
 Date established: 2026-09-18  
-Status: **IMPLEMENTED AND QUALIFIED (P0-P4 CLOSED — 2026-09-19)**
+Status: **COMPONENT BASELINE LANDED / H-075 CORRECTIVE END-TO-END INTEGRATION OPEN — 2026-09-19**
 
-## Implementation and Qualification Evidence — 2026-09-19
+## PR #32 landed component evidence — 2026-09-19
 
-All architectural phases P0 through P4 have been implemented, tested, and verified
-without regressions against the Hermes Work substrate:
+PR #32 landed substantial P0-P4 components and focused tests. H-075 current-main audit and Trello-shaped dogfood show these receipts do not establish end-to-end closure:
 
 - **P0 (Truthful Control Plane Closure)**:
   - `workstation/control_plane/composition.py`: Added `certificate_hash()`, `canonical_json()`, and `operation_id` to `CompositionCertificate`.
@@ -40,6 +39,15 @@ without regressions against the Hermes Work substrate:
   - `workstation/tests/test_ora_metrics.py`: 3 passed.
   - Full workstation test suite: `python -m pytest -q -o pythonpath=. workstation/tests`:
     **620 passed, 2 skipped, 0 failed in 235.36s**.
+
+## H-075 correction — in-flight handoff remains open
+
+Deterministic continuation/checkpointing already exist. Automatic transfer from newly
+verified adaptive work into those owners during the same TaskRun is missing. See
+[IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md).
+
+Post-PR #32 routed decision, non-resident resume, durable invocation, causal composite
+promotion, final-goal verification and production telemetry findings remain open.
 
 Depends on:
 - [PROGRESSIVE_OPERATIONAL_COMPILATION.md](PROGRESSIVE_OPERATIONAL_COMPILATION.md)
