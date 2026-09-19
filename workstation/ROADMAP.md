@@ -27,7 +27,7 @@ Before any resolution, safeguard the three pre-existing unstaged changes reporte
 Completion requires pinned-upstream ancestry proof, not only green tests.
 
 
-## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED
+## H-078B — Semantic Decoupling Preparation (2026-09-19) — IMPLEMENTED / VERIFIED ON PRE-UPSTREAM STRUCTURE
 
 The H-078B Code-to-Code Upstream Migration / Semantic Decoupling has been fully implemented and
 empirically validated.
