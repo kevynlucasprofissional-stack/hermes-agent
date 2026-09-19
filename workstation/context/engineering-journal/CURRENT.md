@@ -1,5 +1,45 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-078B — Deep code-to-code audit / semantic migration spec — 2026-09-19
+
+**Status:** DOCUMENTATION + MACHINE-READABLE MIGRATION SPEC UPDATED; NO RUNTIME AUTHORITY
+SWITCHED.
+
+The first H-078 seam inventory was intentionally challenged against three exact trees. The
+result reduced the apparent problem from "13k commits" to a bridge migration: only 129
+paths were changed by both downstream and upstream, while 338 downstream paths do not
+collide and 254 of those are under `workstation/`.
+
+Key falsifications of the first H-078 draft:
+
+1. file-level disposition is too coarse; `tool_executor.py` contains both REMOVE and
+   UPSTREAM_ABSTRACT concerns;
+2. `run_agent.py` was under-classified and is one of the largest semantic seams;
+3. generic tool middleware is insufficient for uncertain-before-I/O because the checkpoint
+   must occur after final args+authorization but before real I/O;
+4. raw `post_tool_call` is sufficient for record/capture post-effect observation;
+5. durable internal compiled steps require an explicit persistence/visibility disposition;
+6. Progressive Compilation needs batch-level admission, not only per-tool middleware;
+7. turn completion is an admission gate, not a notification;
+8. upstream Kanban PR acceptance provides a reusable two-phase completion pattern;
+9. Browser broker convergence is now preferable to preserving bespoke Hermes-side routing;
+10. Browser native lifecycle is still Workstation-owned and remains a legitimate narrow
+    first-party seam;
+11. Browser mutation shadowing must be predictive only, never duplicate I/O;
+12. `web_server.py` and `toolsets.py` are stronger REMOVE candidates than originally
+    classified.
+
+Repository changes in this refinement:
+
+- `first_party_seams.json` -> v2 semantic concerns + causal ordering + parity/sunset;
+- canonical H-078 migration document -> code-level extension points, owners and hard gates;
+- ROADMAP / Intelligence / CURRENT_STATE / journal / upstream delta / decisions / policy
+  updated to the same model.
+
+No upstream merge is performed in this documentation lane. The next coding lane must first
+reconcile H-078 with current main, then pin exactly one upstream SHA.
+
+
 ## H-078A — Minimum Necessary First-Party Seams — 2026-09-19
 
 **Status:** ACTIVE REFINEMENT OF H-078.
