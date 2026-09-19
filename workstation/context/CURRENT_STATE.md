@@ -1,6 +1,106 @@
 # Current State
 
-## 2026-09-19 H-077.1 Truthful Core Qualification Closure — IMPLEMENTED / EXACT-HEAD CI PENDING
+## 2026-09-19 H-078B Code-to-Code Migration Specification — ACTIVE / RECONCILED WITH MAIN
+
+The deeper audit has superseded the original file-level seam assumptions.
+
+Repository state observed during this refresh:
+
+- downstream `main`: `9f4ce89e56e204b3c8119d4b937be4462d0dfeaf` (with H-077.1 qualification closure applied);
+- PR #35 head reconciled against current main;
+- deep upstream research snapshot: `ea94d88e25d7699115a668c1757433361f3420dd`;
+- later upstream head observed during refresh:
+  `af2e9a4313f9a8a96618207ae111f9e824241949`;
+- upstream research snapshot is not an integration pin.
+
+Verified downstream hotspots on current main include:
+
+- `run_agent.py::_execute_tool_calls` calling Workstation
+  `decisions_for_calls()`;
+- `conversation_loop.py` calling `prepare_turn_work`, publishing
+  `TurnConstraintContext`, and applying `project_for_provider`;
+- `tool_executor.py` directly calling `prepare_mutation`, `record_mutation`,
+  `capture_raw_result` and suppressing normal SessionDB flush during durable execution;
+- `turn_finalizer.py` delegating candidate completion to
+  `WorkstationKanbanBridge.finalize_turn_candidate()`;
+- `cli.py` constructing trusted MessageEnvelope authority;
+- `web_server.py`, `toolsets.py`, `model_tools.py` carrying removable Workstation
+  edges.
+
+Verified modern upstream affordances include `turn_tool_round.py`, raw tool lifecycle,
+`BrowserControlBroker` with lane-registered fail-closed semantics, and the
+`prepare_acceptance()/record_acceptance()` Kanban transaction pattern.
+
+Immediate state rule: **do not merge PR #35 and do not start the upstream merge until
+H-078 is reconciled with H-077/H-077.1 and the semantic seam inventory is the active
+specification.**
+
+
+## 2026-09-19 H-078A Minimum Necessary First-Party Seams — ACTIVE
+
+H-078 was refined after a second code audit and the Browser/UX counterexample. The project
+will **not** use "zero downstream source seams" as a success metric.
+
+Modern upstream now exposes stronger generic hooks/middleware/providers and a Desktop
+Plugin SDK with pane/workspace docking. These should absorb accidental Workstation
+coupling wherever full parity exists.
+
+At the same time, current Workstation Browser behavior still includes privileged native
+Electron responsibilities that are not equivalent to a renderer plugin: persistent
+`WebContentsView`, BrowserTask/page ownership, background continuity, human control,
+stale-run fencing, Hub/Chat transfer, native IPC and recovery. Those are legitimate
+first-party seam candidates until a generic upstream abstraction can preserve them.
+
+New policy:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+The initial classification registry is `workstation/first_party_seams.json`. It is a
+starting inventory, not a claim that the audit is complete. The next upstream migration
+must expand/revise it from the actual pinned-SHA overlap analysis.
+
+No capability may be removed merely to improve diff purity.
+
+Canonical:
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md).
+
+## 2026-09-19 H-078 Upstream Migration as Decoupling — ACTIVE STRATEGIC LANE
+
+The fork remains at `main@378b5a2df35ac05fe37a606298502d7bb974786d` while the
+upstream continues to advance. The architecture decision is now settled: **the next
+upstream migration must also reduce Workstation coupling**.
+
+The Workstation will use Hermes as the first-party laboratory/reference agent while moving
+toward a Workstation-owned runtime boundary. Generic Hermes core should not need
+Workstation-specific knowledge. Instead, Workstation will consume generic lifecycle,
+middleware and provider surfaces to observe and supervise normal Hermes behavior.
+
+Current code audit confirms direct inward seams that must be retired progressively:
+`agent/conversation_loop.py`, `agent/tool_executor.py`,
+`agent/turn_finalizer.py`, and `tools/browser_tool.py` directly import Workstation
+behavior. Product-edge integrations in Web/Kanban/Desktop are lower-priority adapter
+boundaries rather than equivalent core coupling.
+
+A key feasibility finding is that both the current fork and modern upstream already expose
+generic `pre_tool_call/post_tool_call`, `pre_verify`, API request/response lifecycle and
+behavior-changing `tool_request/tool_execution` and
+`llm_request/llm_execution` middleware. These are the preferred bridge for a
+Workstation-owned supervisory adapter.
+
+Immediate H-078 work:
+1. freeze one upstream SHA when migration execution starts;
+2. generate seam inventory with `workstation/scripts/audit_hermes_seams.py`;
+3. classify every overlap as ADOPT_UPSTREAM / KEEP_WORKSTATION / SEMANTIC_PORT /
+   EXTRACT_BOUNDARY;
+4. run new supervisory paths in shadow before removing old direct seams;
+5. prove ordinary Hermes tool use remains supervised even when the model never calls
+   `work_execute`.
+
+Canonical:
+[UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
+## 2026-09-19 H-077.1 Truthful Core Qualification Closure — IMPLEMENTED / QUALIFIED
+
+## 2026-09-19 H-077 Architectural Falsification / External Validity — QUALIFIED
 
 Audited main: `92a3acb51e87af85a9f380ee04d2cf47d7900ca5` after PR #36.
 

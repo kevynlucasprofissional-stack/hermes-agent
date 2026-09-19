@@ -1,6 +1,130 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## H-077.1 — Fechamento de Qualificação do Truthful Core — IMPLEMENTADO / CI PENDENTE (2026-09-19)
+## H-078B — Code-to-code audit: preserve causal properties, not patch locations — 2026-09-19
+
+A deeper audit of the exact downstream/upstream trees refines the central intelligence:
+
+> **The synchronization must not preserve the places where we put the code. It must preserve
+> the causal properties that code guarantees, then move each property into the narrowest
+> modern upstream owner capable of expressing it.**
+
+The most important consequences are:
+
+- `run_agent.py` is no longer a future integration point. Progressive Compilation,
+  human handoff, execution scope and route authority must be extracted into decomposed
+  owners plus the Hermes first-party adapter.
+- `tool_executor.py` is a mixed semantic container. The mutation uncertainty checkpoint
+  needs a new generic hook after final args+authorization but before real I/O;
+  post-effect/raw-result observation can move to upstream raw `post_tool_call`; internal
+  compiled persistence needs a generic OWNER_MANAGED/DEFER-like disposition.
+- completion is an **admission** boundary, not an observer. Workstation must still be able
+  to prevent canonical DONE.
+- upstream Kanban PR acceptance already demonstrates the right two-phase pattern:
+  prepare outside txn, snapshot, revalidate inside txn, record receipt, then terminal
+  update.
+- upstream `BrowserControlBroker` now naturally owns controller routing/identity/
+  dispatch/fail-closed. Workstation continues to own BrowserTask/page lifecycle, native
+  Chromium, human control, persistence, semantic anchors, recovery and learning.
+- Browser migration uses dual-control/shadow routing. Mutations never execute through both
+  old and new paths.
+- `web_server.py`, `toolsets.py` and likely `model_tools.py` contain seams that modern
+  plugin/controller surfaces can remove with little loss.
+- trusted ingress and route authority remain semantic requirements: text is not authority,
+  so `TurnIngress` and `TurnRoutePolicy` are generic abstractions worth adding.
+
+This is the implementation meaning of agent/harness agnosticism: Workstation domain truth
+stays in `workstation/`; Hermes becomes the best first-party adapter/reference reasoner,
+not the owner of operational truth.
+
+
+## H-078A — Minimum Necessary First-Party Seams — 2026-09-19
+
+A arquitetura não persegue mais "zero costuras" como valor em si. O objetivo é reduzir o
+acoplamento acidental ao mínimo sem perder capacidade, qualidade, lifecycle, autoridade,
+verificação ou UX first-party.
+
+A distinção canônica é:
+
+```text
+COUPLING ACIDENTAL
+-> remover ou transformar em contrato genérico
+
+INTEGRATION POINT FIRST-PARTY
+-> preservar quando privilégio/lifecycle nativo é parte material do produto
+```
+
+A frase "Hermes não precisa saber que Workstation existe" aplica-se com força ao
+Reasoner/LLM e, quando houver contrato genérico equivalente, ao agent core. Ela não é uma
+proibição de o Hermes Work Desktop downstream possuir integração consciente com
+Workstation.
+
+O Browser é a prova operacional. O upstream moderno já possui Plugin SDK, panes,
+workspaces e docking capazes de absorver parte da apresentação. Mas isso não equivale ao
+runtime nativo que possui `WebContentsView`, BrowserTask, background execution, fencing,
+human takeover, IPC e recovery. Enquanto não houver extensão genérica equivalente, essa
+integração pode e deve permanecer first-party.
+
+A decisão para cada costura passa a ser:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+Regra de otimização: reduzir blast radius, não maximizar pureza. Uma costura pequena,
+deliberada e testada é preferível a vários `if workstation` espalhados; e uma integração
+profunda necessária é preferível a uma regressão funcional causada por um plugin layer
+insuficiente.
+
+Canonical:
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md).
+
+## H-078 — Upstream como laboratório, Workstation como supervisor unidirecional — 2026-09-19
+
+A direção estratégica do Hermes Work foi refinada: não haverá uma escolha binária entre
+"continuar forkando Hermes" e "reescrever um software standalone". A migração do upstream
+será usada para **extrair as costuras enquanto elas são tocadas**.
+
+```text
+hoje:
+Hermes internals -> Workstation patches
+
+migração:
+Hermes generic contracts -> Workstation supervisor/adapter -> Work Runtime
+
+futuro:
+Hermes Agent / outros reasoners -> adapters/gateway -> Work Runtime independente
+```
+
+O ponto crítico é não confundir desacoplamento com perda de controle. O Hermes não deve
+precisar aprender, por prompt ou imports específicos, que "tem que usar o Workstation".
+O Workstation deve observar o fluxo normal de Hermes e participar fora do modelo:
+propostas de tool/LLM, execução real, resultados, verificação e lifecycle chegam por
+contratos genéricos; o Workstation pode então admitir, interromper, pausar, transformar,
+substituir por capability determinística, reconciliar, verificar e aprender.
+
+Isso torna a relação deliberadamente unidirecional: Workstation conhece o adapter Hermes;
+o core genérico do Hermes não conhece Workstation.
+
+O audit do código atual mostra que a oportunidade é concreta, não teórica. A base já
+possui hooks `pre_tool_call/post_tool_call`, `pre_verify`, `pre/post_api_request` e
+middleware `tool_request/tool_execution` e `llm_request/llm_execution`. O upstream
+moderno reforça essa decomposição. Portanto, ao sincronizar, não devemos reconstruir as
+injeções antigas nos novos owners quando esses contratos genéricos conseguem transportar
+a semântica.
+
+A regra operacional passa a ser: **cada conflito de upstream deve pagar parte da dívida de
+acoplamento**. Se uma costura direta for tocada, a primeira pergunta deixa de ser "onde
+recoloco este import?" e passa a ser "qual observação/middleware/provider genérico permite
+ao Workstation manter a mesma autoridade sem o Hermes conhecê-lo?".
+
+A retirada é progressiva e segura: caminho antigo permanece enquanto o novo roda em
+shadow; com paridade provada, a autoridade muda para o adapter; só então o import direto é
+apagado. `work_execute` continua útil, mas não é requisito para o Workstation existir na
+execução.
+
+Canonical:
+[UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
+## H-077.1 — Fechamento de Qualificação do Truthful Core — IMPLEMENTADO / QUALIFICADO (2026-09-19)
+
+## H-077 — Falsificação arquitetural, validade externa e envelope de validade — QUALIFICADO (2026-09-19)
 
 A base do PR #36 permanece válida, mas a qualificação plena do H-077 foi reaberta por
 falsificação pós-merge.

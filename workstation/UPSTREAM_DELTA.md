@@ -1,5 +1,110 @@
 # Hermes Workstation upstream delta
 
+## HW-028 — Semantic seam registry / causal upstream migration (2026-09-19)
+
+H-078B refines HW-026/HW-027 after a three-tree code-to-code audit.
+
+The canonical machine-readable registry is now
+`hermes.workstation.first-party-seams.v2`. The policy unit is no longer merely a file:
+each path may contain multiple semantic concerns with independent owners, required causal
+ordering, dispositions, replacements, parity tests and sunset conditions.
+
+Newly explicit high-risk seams:
+
+- `run_agent.py` batch admission / execution scope / route authority;
+- `tool_executor.prepare_mutation` exact authorized-pre-I/O checkpoint;
+- internal compiled execution persistence ownership;
+- completion admission before canonical DONE;
+- trusted TurnIngress and turn-scoped route authority.
+
+Newly strengthened REMOVE paths:
+
+- post-effect/raw-result observation -> raw `post_tool_call`;
+- provider wire projection -> `llm_request` middleware;
+- `work_execute` -> plugin tool registration;
+- Workstation web APIs -> plugin dashboard router;
+- forced Browser schemas -> broker/controller capability exposure.
+
+Browser target becomes:
+
+```text
+generic browser_tool
+-> browser_extension_router
+-> BrowserControlBroker
+-> WorkstationBrowserController
+-> Workstation Electron native runtime
+```
+
+The broker owns routing/controller identity/dispatch/fail-closed; Workstation owns
+BrowserTask/page/native Chromium/human control/persistence/semantics/recovery.
+
+Migration shadow rule: reads may be compared; **mutations are executed once only**. The
+shadow path may resolve/predict controller and fail-closed outcome but cannot perform the
+second click/type/submit.
+
+The downstream H-078 branch must be reconciled with current main before integration, and
+the upstream SHA must be freshly selected/pinned for the cycle rather than inherited from
+the research snapshot.
+
+
+## HW-027 — Minimum necessary first-party seam policy (2026-09-19)
+
+Decision: D-027. Policy:
+`context/FIRST_PARTY_SEAM_POLICY.md`. Registry:
+`first_party_seams.json`.
+
+H-078 is refined from "retire direct seams progressively" to **minimize accidental seams
+while preserving the narrow first-party seams required for product capability**.
+
+This matters because the Workstation Browser currently depends on capabilities that are not
+equivalent to renderer-level plugin extensibility: Electron main-process ownership of a
+persistent `WebContentsView`, BrowserTask/page identity, background continuity,
+take/release control, stale-run fencing, Hub <-> Chat viewport transfer, native IPC and
+recovery. The modern upstream Plugin SDK can replace some presentation-layer seams, but it
+must not be assumed to replace privileged native lifecycle.
+
+Source seams now receive one disposition:
+- `REMOVE` — generic existing surface has full parity;
+- `UPSTREAM_ABSTRACT` — add/use a small generic extension boundary;
+- `PRESERVE_FIRST_PARTY` — keep a narrow first-party integration because higher layers
+  cannot preserve equivalent behavior.
+
+The seam budget requires rationale, concentration, behavioral tests, delta registration and
+re-evaluation every upstream cycle. No proven Workstation capability may be downgraded to
+achieve a zero-diff or plugin-purity goal.
+
+## HW-026 — Upstream Migration as Decoupling / seam-retirement program (2026-09-19)
+
+Decision: D-026. Canonical:
+`context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md`.
+
+This delta changes how future downstream deltas are integrated. The next upstream sync
+must not mechanically reconstruct old Workstation imports inside the upstream's newly
+decomposed modules. Each touched overlap is classified as `ADOPT_UPSTREAM`,
+`KEEP_WORKSTATION`, `SEMANTIC_PORT`, or `EXTRACT_BOUNDARY`.
+
+Current high-value inward seams observed on the downstream baseline:
+- `agent/conversation_loop.py` -> Workstation turn preparation/routing/continuation;
+- `agent/tool_executor.py` -> durable execution, mutation preparation/recording and raw
+  result capture;
+- `agent/turn_finalizer.py` -> Workstation completion/procedure learning;
+- `tools/browser_tool.py` -> Workstation Browser routing and Workstation-owned
+  artifact/task helpers.
+
+The preferred target for these seams is the generic Hermes extension surface already
+present in the fork/upstream: lifecycle hooks plus `tool_request/tool_execution` and
+`llm_request/llm_execution` middleware, with browser/provider boundaries where
+appropriate. Workstation becomes the subscriber/supervisor; generic Hermes core should
+not know Workstation identity.
+
+Initial migration guardrail:
+`workstation/scripts/audit_hermes_seams.py` reports direct generic-core ->
+`workstation.*` imports and edge references so a migration can prove the inward seam
+surface is shrinking.
+
+This is not yet a claim that any runtime seam has been retired. Old paths remain
+authoritative until shadow/parity and Workstation qualification prove the replacement.
+
 ## HW-025 — H-071 Browser operational admission corrective closure (2026-09-19)
 
 Downstream base: `main@6328894c0a5f51a61da772593842c25d377d553f`.
