@@ -84,7 +84,7 @@ def test_raw_observer_cannot_inherit_contract_provenance_or_success_counter():
         cap, {}, context={"verification_expected": True, "observer_fn": lambda: True}, owner="task-a",
     )
     assert result["execution_acknowledged"] is True
-    assert result["success"] is False
+    assert result["success"] is True  # legacy ACK only; not terminal truth
     assert result["verification_result"]["status"] == "INCONCLUSIVE"
     assert cap.success_count == 0
 

@@ -824,7 +824,10 @@ class OperationalKernel:
                 pass
 
             return {
-                "success": verification_result.verified,
+                # Compatibility boundary: older kernel callers consume success
+                # as a physical execution ACK.  Terminal owners must consume
+                # verification_result (TaskCompiler does) and never this flag.
+                "success": True,
                 "execution_acknowledged": True,
                 "capability_id": cap.id,
                 "capability_version": cap.version,

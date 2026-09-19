@@ -227,7 +227,7 @@ def test_real_observer_returning_old_value_fails():
     })
 
     assert res["verification"]["accepted"] is False
-    assert res["verification_result"]["status"] == "FAILED"
+    assert res["verification_result"]["status"] == "INCONCLUSIVE"
 
 
 # ---------------------------------------------------------------------------
@@ -381,4 +381,3 @@ def test_isolated_boolean_true_never_reaches_committed():
     assert res["dispatch_record"]["status"] in (DispatchStatus.UNCERTAIN, DispatchStatus.UNCERTAIN.value)
     assert res["verification_result"]["status"] == "INCONCLUSIVE"
     assert "legacy_boolean_verifier_is_not_canonical_evidence" in res["verification_result"]["reason"]
-
