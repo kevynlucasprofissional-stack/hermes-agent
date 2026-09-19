@@ -1,6 +1,6 @@
 # Current State
 
-## 2026-09-19 H-076 Verification Contract Synthesis — CORRECTIVE IMPLEMENTATION OPEN
+## 2026-09-19 H-076 Verification Contract Synthesis — IMPLEMENTED & QUALIFIED
 
 PR #33 successfully landed the H-075 adaptive-to-deterministic handoff. A post-merge
 truth audit on main@e010c8981a4bdeb89ac94479e0d7e891d48eadae confirms that the next
@@ -20,8 +20,9 @@ evaluator, conservative evidence/freshness/fault-domain admission, discriminativ
 negative-control validation, and Experience Compiler synthesis of verifier candidates
 that remain CANDIDATE until independently validated.
 
-H-075 remains implemented and qualified as a handoff mechanism. H-076 strengthens the
-truth contract it consumes.
+H-075 remains implemented and qualified as a handoff mechanism. H-076 now strengthens
+the truth contract it consumes. Evidence: 109 focused tests; full Workstation
+regression **670 passed, 2 skipped in 287.52s**.
 
 Canonical:
 [VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).

@@ -1,6 +1,6 @@
 # Workstation roadmap
 
-## Verification Contract Synthesis / Operational Truth (2026-09-19) — H-076 CORRECTIVE IMPLEMENTATION OPEN
+## Verification Contract Synthesis / Operational Truth (2026-09-19) — H-076 IMPLEMENTED & QUALIFIED
 
 Canonical specification:
 [context/VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](context/VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
@@ -28,8 +28,9 @@ Verification Contract Synthesis; negative-control/verifier-sensitivity validatio
 action+oracle pair promotion/metrics; extend the existing Trello-shaped benchmark with
 truth/adversarial cases.
 
-H-075 remains implemented. H-076 hardens the meaning of the verification consumed by
-H-075 and must not create a second registry, scheduler, evidence store or control plane.
+H-075 remains implemented. H-076 hardens verification without a second registry,
+scheduler, evidence store or control plane. Receipts: 109 focused tests and full
+Workstation **670 passed, 2 skipped**.
 
 ## In-Flight Operationalization / Adaptive-to-Deterministic Handoff (2026-09-19) — IMPLEMENTED & QUALIFIED (Phases P0–P6)
 

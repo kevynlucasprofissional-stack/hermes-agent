@@ -1,7 +1,7 @@
 # Verification Contract Synthesis — Operational Truth Without Self-Certification
 
 Date established: 2026-09-19
-Status: **CANONICAL CORRECTIVE ARCHITECTURE / IMPLEMENTATION OPEN**
+Status: **IMPLEMENTED & WORKSTATION-QUALIFIED (P0-P7, 2026-09-19)**
 Current-main audit baseline: e010c8981a4bdeb89ac94479e0d7e891d48eadae (PR #33 merged)
 
 ## Executive finding
@@ -612,3 +612,14 @@ The long-term objective is not merely to teach Hermes more ways to act.
 It is to teach Hermes **reusable ways to know whether reality changed as intended,
 without allowing the same perceptual mistake that produced an experience to become the
 rule that certifies it forever.**
+
+## Implementation receipts
+
+- `control_plane/verification.py` is the pure typed contract/evaluator; it owns no
+  database, registry, scheduler, corpus, journal or control plane.
+- Router, Dispatcher, OperationalKernel, TaskCompiler, Composition, Await and
+  RunClosure consume canonical `VerificationContract` / `VerificationResult` truth.
+- Experience Compiler emits CANDIDATE verifier hypotheses and validates them from
+  separately identified positive/negative receipts.
+- Focused affected suites: **109 passed**.
+- Full Workstation regression: **670 passed, 2 skipped in 287.52s**.
