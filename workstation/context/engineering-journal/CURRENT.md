@@ -1,5 +1,35 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-078A — Minimum Necessary First-Party Seams — 2026-09-19
+
+**Status:** ACTIVE REFINEMENT OF H-078.
+
+The initial decoupling hypothesis was challenged by the historical Browser behavior:
+some Workstation outcomes exist precisely because the downstream distribution owns
+first-party lifecycle/UI seams. A fresh code audit reproduced the current path in which
+internal Browser navigation emits `workstation.browser.open`, Desktop routing opens the
+Workstation Browser beside the chat, and the native Electron runtime owns a persistent
+BrowserTask-linked `WebContentsView`.
+
+The same audit found stronger modern upstream extension surfaces: tool/LLM middleware,
+lifecycle hooks, Browser providers, and a Desktop Plugin SDK capable of contributed
+workspaces/panes and right-side docking. Therefore neither extreme is justified:
+
+```text
+plugin-only / zero seam     -> risks functional ceiling
+deep scattered fork        -> recurring upstream integration tax
+minimum first-party seams  -> selected direction
+```
+
+Decision D-027: remove accidental seams, create generic abstractions where needed, preserve
+narrow first-party seams when privileged lifecycle is materially required. Never trade a
+proven Workstation capability for architectural purity.
+
+Implementation additions:
+- `context/FIRST_PARTY_SEAM_POLICY.md`;
+- `first_party_seams.json` initial classification registry;
+- seam audit will classify/report deliberate vs unclassified coupling.
+
 ## H-078 — Upstream Migration as Decoupling / Supervisory Independence — 2026-09-19
 
 **Status:** ACTIVE STRATEGIC MIGRATION PROGRAM.
