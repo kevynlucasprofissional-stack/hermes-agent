@@ -38,27 +38,63 @@ Regra canônica pós-auditoria:
 A correção não pede um novo control plane. Ela fecha a implementação existente contra D-020/D-021, o Experience Compiler, o Operational Kernel e o Canonical Reliability Gate.
 
 
-## Browser ownership, recovery e verdade visual — IMPLEMENTADO (2026-09-18)
+## Browser ownership, recovery e verdade visual — corrective P0 reaberto (2026-09-19)
 
+A implementação de 2026-09-18 corrigiu as falhas estruturais mais importantes:
+`preferredTaskId` atravessa o produto, host fencing existe, lazy recovery é
+task-bound e atividade de execução foi separada da visibilidade. A auditoria seguinte
+mostrou, porém, que **reconciliação correta no runtime não equivale ainda a prova do
+primeiro frame do renderer nem a cleanup seguro por atividade**.
 
-A investigação de flicker + restart revelou um problema de reconciliação entre
-owners existentes, não uma simples perda de persistência. A relação que agora
-converge deterministicamente é:
+A cadeia que precisa ser provada no produto é:
 
-`Chat -> BrowserTask -> tab lógica/restaurada -> activeTabId -> viewportHost -> superfície visível`.
+`active session -> canonical BrowserTask -> pending/live tab -> first visual attach -> activeTabId -> viewportHost`.
 
-Correções implementadas e qualificadas:
-- Oclusão nativa centralizada em `useNativeViewOcclusion` e seletor `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Tooltips Radix (`OverflowTip`/`Tip`) foram desautorizados de ocultar Chromium; flicker de hover resolvido.
-- Fencing de host em `detach(expectedHost)` e `setVisible(visible, expectedHost)` no IPC, preload e runtime Electron, impedindo que desmontagens tardias de Chat ou Hub ocultem/destaquem a viewport do outro host.
-- `preferredTaskId` propagado via `WorkstationBrowserBridge`, `preload.ts` e `workstation-browser-pane.tsx`, resolvendo tarefas através da linhagem e aliases canônicos de sessão.
-- Recuperação preguiçosa vinculada a task no `attach()` do runtime: materializa a BrowserTask antes de criar `about:blank`, restaura URLs seguras e previne vazamento de abas entre sessões.
-- Separação entre visibilidade e atividade no TaskRail do Browser Hub (`getTaskExecutionActivity`), permitindo que tasks em background executem (`working`) sem roubar foco nem colapsar com `parked`.
+Novas descobertas:
 
-Invariante comprovado: se o chat C está ativo, sua superfície Browser está aberta e C possui T, há no máximo uma página viva de T e Chat UI, Hub, BrowserTask, activeTabId e viewportHost convergem para a mesma identidade, inclusive após restart.
+1. **Clear Parked ainda viola activity truth.** A UI consegue reconhecer
+   `parked + working`, mas o comando em lote chega ao runtime sem a classificação
+   de atividade e `clearParkedTasks()` destrói todos os `status === 'parked'`.
+   Presentation state não pode ser usado como autorização de destruição.
 
-Validação: 88 testes Vitest verdes em `apps/desktop`, typecheck sem erros, H004 smoke validado e Work100 com 30/30 PASS.
-Plano canônico: `workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
+2. **Task identity chega tarde no primeiro mount.** `WorkstationBrowserPane` começa
+   com `EMPTY_STATE.tasks=[]`; antes de receber o primeiro `onState`/resultado,
+   pode anexar Chat sem `preferredTaskId`. O runtime então tem permissão para criar
+   fallback `about:blank`, que só é corrigido no segundo attach. O objetivo não é
+   apenas convergir eventualmente: para uma task recuperável, o primeiro attach
+   visível deve nascer reconciliado.
 
+3. **Runtime tests não substituem renderer restart E2E.** O teste de recovery chama
+   `attach(..., preferredTaskId)` diretamente. H013 atual prova viewport real e
+   multi-task load, mas ainda não modela cold renderer mount + task discovery +
+   restart A/B e sua interface local de bridge não inclui o terceiro argumento.
+
+4. **Lineage precisa incluir parent semantics de forma demonstrável.**
+   `lineageAliases()` indexa `id` e `_lineage_root_id`; o BrowserPane não possui
+   prova específica para `parent_session_id`. Não criar outro resolver: estender o
+   helper/contrato canônico de identidade e testar a mesma conversa através de todos
+   os aliases suportados.
+
+5. **Occlusion deve ser opt-in, não heurística.** O marker
+   `data-native-view-occluder="true"` existe, mas roles/slots genéricos ainda são
+   autoridades paralelas. O objetivo final é que só componentes deliberadamente
+   marcados possam esconder a WebContentsView.
+
+Regra canônica refinada:
+
+> Se existe BrowserTask recuperável para o chat ativo e sua superfície Browser está
+> aberta, o **primeiro attach visual** já deve selecionar essa task; nenhum fallback
+> blank intermediário pode ganhar foreground. E uma BrowserTask em execução/espera/
+> controle humano nunca pode ser destruída por um bulk cleanup baseado apenas em
+> `parked`.
+
+A implementação anterior permanece baseline e seus testes continuam úteis. A
+qualificação só fecha com H013 estendido para renderer+restart, cleanup
+execution-aware, aliases completos e occlusion explicitamente marcada.
+
+Hipótese/experimento ativo: **H-072**.
+Plano canônico:
+`workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
 
 ## Browser dogfood pós-Control Plane — admission e primitive closure — 2026-09-18
 
