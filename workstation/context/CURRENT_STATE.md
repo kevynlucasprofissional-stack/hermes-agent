@@ -1,5 +1,32 @@
 # Current State
 
+## 2026-09-19 H-078A Minimum Necessary First-Party Seams — ACTIVE
+
+H-078 was refined after a second code audit and the Browser/UX counterexample. The project
+will **not** use "zero downstream source seams" as a success metric.
+
+Modern upstream now exposes stronger generic hooks/middleware/providers and a Desktop
+Plugin SDK with pane/workspace docking. These should absorb accidental Workstation
+coupling wherever full parity exists.
+
+At the same time, current Workstation Browser behavior still includes privileged native
+Electron responsibilities that are not equivalent to a renderer plugin: persistent
+`WebContentsView`, BrowserTask/page ownership, background continuity, human control,
+stale-run fencing, Hub/Chat transfer, native IPC and recovery. Those are legitimate
+first-party seam candidates until a generic upstream abstraction can preserve them.
+
+New policy:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+The initial classification registry is `workstation/first_party_seams.json`. It is a
+starting inventory, not a claim that the audit is complete. The next upstream migration
+must expand/revise it from the actual pinned-SHA overlap analysis.
+
+No capability may be removed merely to improve diff purity.
+
+Canonical:
+[FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md).
+
 ## 2026-09-19 H-078 Upstream Migration as Decoupling — ACTIVE STRATEGIC LANE
 
 The fork remains at `main@378b5a2df35ac05fe37a606298502d7bb974786d` while the
