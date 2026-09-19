@@ -21,7 +21,7 @@ restart + Chat<->Hub race coverage and H004/H013 where affected.
 
 
 
-## KI-011 — Durable compiler can obstruct stateful native-browser work [REOPENED BY LIVE DOGFOOD — CROSS-LAYER P0 OPEN — 2026-09-18]
+## KI-011 — Durable compiler can obstruct stateful native-browser work [POST-PR #29 AUDIT — CROSS-LAYER P0 OPEN — 2026-09-19]
 
 **2026-09-18 post-PR #28 reopening:** authenticated Trello dogfooding on current
 native Electron Chromium reproduced the product class after the earlier policy hardening.
@@ -35,6 +35,23 @@ retry ambiguity; and transient empty SPA snapshots.
 The previous AEPC correction remains valuable regression coverage, but it was not full
 product closure. KI-011 now closes only with the P0 exit criteria in
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
+
+
+**2026-09-19 post-PR #29 audit:** PR #29 landed useful primitives and focused fixes,
+but closure remains open. Current main can (1) label a composition successful without
+executing its capability plan, (2) promote ACK/`success=True` to VERIFIED/COMMITTED
+without accepted verifier evidence, (3) synthesize broad mutation authority from
+request/task/session context, (4) force compilation from semantic repetition without
+proving operational closure, and (5) change Browser-session readback into process HTTP
+fallback. `terminal` semantic families are also too broad for mandatory compilation.
+
+Qualification is independently blocked: exact-head Workstation CI and Windows Workstation
+jobs both failed `apply_core_integration.py --check` with
+`browser tool route anchor missing for browser_type`, skipping later product gates.
+The simulation-heavy dogfood tests remain regression coverage, not final native runtime
+proof.
+
+Closure now additionally requires H-071 and the post-PR #29 gate in TESTING.md.
 
 
 **Implemented correction:** remote implementation
