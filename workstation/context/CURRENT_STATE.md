@@ -1,5 +1,42 @@
 # Current State
 
+## 2026-09-19 H-078B Code-to-Code Migration Specification — ACTIVE / PR #35 MUST BE RECONCILED
+
+The deeper audit has superseded the original file-level seam assumptions.
+
+Repository state observed during this refresh:
+
+- downstream `main`: `9f4ce89e56e204b3c8119d4b937be4462d0dfeaf`;
+- PR #35 head remains on `workstation/h078-upstream-decoupling` and is not mergeable
+  against the newer main;
+- deep upstream research snapshot: `ea94d88e25d7699115a668c1757433361f3420dd`;
+- later upstream head observed during refresh:
+  `af2e9a4313f9a8a96618207ae111f9e824241949`;
+- upstream research snapshot is not an integration pin.
+
+Verified downstream hotspots on current main include:
+
+- `run_agent.py::_execute_tool_calls` calling Workstation
+  `decisions_for_calls()`;
+- `conversation_loop.py` calling `prepare_turn_work`, publishing
+  `TurnConstraintContext`, and applying `project_for_provider`;
+- `tool_executor.py` directly calling `prepare_mutation`, `record_mutation`,
+  `capture_raw_result` and suppressing normal SessionDB flush during durable execution;
+- `turn_finalizer.py` delegating candidate completion to
+  `WorkstationKanbanBridge.finalize_turn_candidate()`;
+- `cli.py` constructing trusted MessageEnvelope authority;
+- `web_server.py`, `toolsets.py`, `model_tools.py` carrying removable Workstation
+  edges.
+
+Verified modern upstream affordances include `turn_tool_round.py`, raw tool lifecycle,
+`BrowserControlBroker` with lane-registered fail-closed semantics, and the
+`prepare_acceptance()/record_acceptance()` Kanban transaction pattern.
+
+Immediate state rule: **do not merge PR #35 and do not start the upstream merge until
+H-078 is reconciled with H-077/H-077.1 and the semantic seam inventory is the active
+specification.**
+
+
 ## 2026-09-19 H-078A Minimum Necessary First-Party Seams — ACTIVE
 
 H-078 was refined after a second code audit and the Browser/UX counterexample. The project
