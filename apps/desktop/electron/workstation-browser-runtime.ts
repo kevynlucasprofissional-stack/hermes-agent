@@ -1286,12 +1286,19 @@ export class WorkstationBrowserRuntime {
     }
   }
 
-  clearParkedTasks(): number {
+  clearParkedTasks(eligibleTaskIds: readonly string[] = []): number {
     this.ensureBrowserSessionStateRestored()
 
+    const eligible = new Set(eligibleTaskIds.filter(taskId => typeof taskId === 'string' && taskId.trim()))
     const parked = this.taskLifecycle()
       .listTasks()
-      .filter(task => task.status === 'parked')
+      .filter(
+        task =>
+          eligible.has(task.taskId) &&
+          (task.status === 'parked' || task.status === 'hidden') &&
+          !task.humanControlLease &&
+          (task.leaseState == null || task.leaseState === 'idle')
+      )
 
     let count = 0
 
@@ -4087,8 +4094,12 @@ function registerIpc(): void {
   ipcMain.handle('hermes:workstation-browser:destroy-task', (_event, taskId) =>
     getWorkstationBrowserRuntime().destroyTask(String(taskId ?? ''))
   )
-  ipcMain.handle('hermes:workstation-browser:clear-parked-tasks', () =>
-    getWorkstationBrowserRuntime().clearParkedTasks()
+  ipcMain.handle('hermes:workstation-browser:clear-parked-tasks', (_event, eligibleTaskIds) =>
+    getWorkstationBrowserRuntime().clearParkedTasks(
+      Array.isArray(eligibleTaskIds)
+        ? eligibleTaskIds.filter((taskId): taskId is string => typeof taskId === 'string')
+        : []
+    )
   )
   ipcMain.handle('hermes:workstation-browser:pause', () => getWorkstationBrowserRuntime().pause())
   ipcMain.handle('hermes:workstation-browser:resume', () => getWorkstationBrowserRuntime().resume())

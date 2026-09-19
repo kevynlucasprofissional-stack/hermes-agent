@@ -149,7 +149,7 @@ export interface WorkstationBrowserBridge {
   hideTask: (taskId: string) => Promise<BrowserTask>
   parkTask: (taskId: string) => Promise<BrowserTask>
   destroyTask: (taskId: string) => Promise<boolean>
-  clearParkedTasks: () => Promise<number>
+  clearParkedTasks: (eligibleTaskIds: string[]) => Promise<number>
   pause: () => Promise<WorkstationBrowserState>
   resume: () => Promise<WorkstationBrowserState>
   takeControl: (taskId?: string, sessionId?: string) => Promise<WorkstationBrowserState>

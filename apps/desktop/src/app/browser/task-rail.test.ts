@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getTaskExecutionActivity } from './task-rail'
+import { getClearableBrowserTaskIds, getTaskExecutionActivity } from './task-rail'
 import type { BrowserTask } from './types'
 
 describe('TaskRail Activity Projection', () => {
@@ -72,5 +72,38 @@ describe('TaskRail Activity Projection', () => {
 
     const activity = getTaskExecutionActivity(baseTask, dotStates, sessions)
     expect(activity).toBe('idle')
+  })
+
+  it('selects only unequivocally idle parked or hidden tasks for bulk clear', () => {
+    const tasks: BrowserTask[] = [
+      { ...baseTask, taskId: 'working', sessionHost: 'working-session' },
+      { ...baseTask, taskId: 'idle', sessionHost: 'idle-session' },
+      {
+        ...baseTask,
+        taskId: 'human',
+        sessionHost: 'human-session',
+        humanControlLease: {
+          owner: 'human',
+          taskId: 'human',
+          sessionId: 'human-session',
+          tabId: 'human-tab',
+          pageId: 3,
+          profileScope: null,
+          acquiredAt: '2026-09-18T00:00:00Z',
+          expiresAt: '2026-09-18T00:10:00Z',
+          renewedAt: null
+        }
+      },
+      { ...baseTask, taskId: 'waiting', sessionHost: 'waiting-session', leaseState: 'waiting' }
+    ]
+
+    expect(
+      getClearableBrowserTaskIds(tasks, { 'working-session': 'working' }, [
+        { id: 'working-session' },
+        { id: 'idle-session' },
+        { id: 'human-session' },
+        { id: 'waiting-session' }
+      ])
+    ).toEqual(['idle'])
   })
 })

@@ -782,6 +782,31 @@ test('runtime BrowserTask hide/park/show preserves one WebContents and its URL',
   await runtime.destroy()
 })
 
+test('bulk clear destroys only explicitly eligible idle parked tasks and refuses live leases', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+
+  runtime.createTask({ taskId: 'working', sessionHost: 'working-session' })
+  runtime.createTask({ taskId: 'idle', sessionHost: 'idle-session' })
+  runtime.createTask({ taskId: 'human', sessionHost: 'human-session' })
+  runtime.createTask({ taskId: 'waiting', sessionHost: 'waiting-session', leaseState: 'waiting' })
+  runtime.takeControl('human', 'human-session')
+  for (const taskId of ['working', 'idle', 'human', 'waiting']) {
+    runtime.parkTask(taskId)
+  }
+
+  assert.equal(runtime.clearParkedTasks(['idle', 'human', 'waiting']), 1)
+  assert.deepEqual(
+    runtime
+      .listTasks()
+      .map(task => task.taskId)
+      .sort(),
+    ['human', 'waiting', 'working']
+  )
+
+  await runtime.destroy()
+})
+
 test('controller actions preserve a visible task through Take Control and Release Control', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()

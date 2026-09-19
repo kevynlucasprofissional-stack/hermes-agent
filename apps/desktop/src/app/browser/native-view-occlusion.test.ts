@@ -26,6 +26,18 @@ describe('Native View Occlusion', () => {
     expect(isNativeViewOccluded(document)).toBe(false)
   })
 
+  it.each([
+    ['dialog role', 'role', 'dialog'],
+    ['menu role', 'role', 'menu'],
+    ['popover slot', 'data-slot', 'popover-content']
+  ])('unmarked %s does NOT trigger native-view occlusion', (_label, attribute, value) => {
+    const element = document.createElement('div')
+    element.setAttribute(attribute, value)
+    document.body.appendChild(element)
+
+    expect(isNativeViewOccluded(document)).toBe(false)
+  })
+
   it('real dropdown menu content triggers native-view occlusion', () => {
     const menu = document.createElement('div')
     menu.setAttribute('data-slot', 'dropdown-menu-content')
@@ -116,6 +128,7 @@ describe('Native View Occlusion', () => {
     await act(async () => {
       const menu = document.createElement('div')
       menu.setAttribute('data-slot', 'dropdown-menu-content')
+      menu.setAttribute('data-native-view-occluder', 'true')
       document.body.appendChild(menu)
       await new Promise(resolve => setTimeout(resolve, 10))
     })

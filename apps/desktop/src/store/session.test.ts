@@ -27,6 +27,7 @@ import {
   _resetLegacyDiscardForTests,
   applyConfiguredDefaultProjectDir,
   commitWorkspaceCwdForSelectedSession,
+  conversationAliases,
   getRememberedRoute,
   getRememberedSessionId,
   getSessionOwnerHint,
@@ -55,6 +56,20 @@ import {
 } from './session-states'
 
 const session = (over: Partial<SessionInfo>): SessionInfo => makeSessionInfo({ id: 'live', ...over })
+
+describe('conversationAliases', () => {
+  it('resolves current tip, lineage root, and its direct continuity parent without merging siblings', () => {
+    const sessions = [
+      session({ id: 'tip', _lineage_root_id: 'root', parent_session_id: 'previous' }),
+      session({ id: 'other-tip', _lineage_root_id: 'other-root', parent_session_id: 'previous' })
+    ]
+
+    expect(conversationAliases('tip', sessions)).toEqual(expect.arrayContaining(['tip', 'root', 'previous']))
+    expect(conversationAliases('root', sessions)).toEqual(expect.arrayContaining(['root', 'tip', 'previous']))
+    expect(conversationAliases('tip', sessions)).not.toContain('other-tip')
+    expect(conversationAliases('other-root', sessions)).not.toContain('tip')
+  })
+})
 
 describe('session owner hints', () => {
   it('keeps identical session ids separate across connection and profile owners', () => {
