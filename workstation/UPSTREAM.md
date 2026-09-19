@@ -1,5 +1,20 @@
 # Upstream strategy
 
+## H-078B synchronization rule (2026-09-19)
+
+For the next major sync:
+
+- reconcile the H-078 documentation/policy branch with the then-current downstream main;
+- fetch upstream and pin one exact SHA for the whole cycle;
+- classify **semantic concerns**, not just conflicted files;
+- preserve causal invariants while adopting upstream structure;
+- never resurrect old monoliths merely to retain Workstation patch locations;
+- never dual-execute a mutation during shadow/parity migration;
+- do not switch authority until concern-level parity evidence exists.
+
+Research snapshots are evidence, not moving integration targets.
+
+
 Primary upstream: `NousResearch/hermes-agent`.
 
 Downstream fork: `kevynlucasprofissional-stack/hermes-agent`.
