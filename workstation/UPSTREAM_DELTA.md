@@ -1,5 +1,31 @@
 # Hermes Workstation upstream delta
 
+## HW-027 — Minimum necessary first-party seam policy (2026-09-19)
+
+Decision: D-027. Policy:
+`context/FIRST_PARTY_SEAM_POLICY.md`. Registry:
+`first_party_seams.json`.
+
+H-078 is refined from "retire direct seams progressively" to **minimize accidental seams
+while preserving the narrow first-party seams required for product capability**.
+
+This matters because the Workstation Browser currently depends on capabilities that are not
+equivalent to renderer-level plugin extensibility: Electron main-process ownership of a
+persistent `WebContentsView`, BrowserTask/page identity, background continuity,
+take/release control, stale-run fencing, Hub <-> Chat viewport transfer, native IPC and
+recovery. The modern upstream Plugin SDK can replace some presentation-layer seams, but it
+must not be assumed to replace privileged native lifecycle.
+
+Source seams now receive one disposition:
+- `REMOVE` — generic existing surface has full parity;
+- `UPSTREAM_ABSTRACT` — add/use a small generic extension boundary;
+- `PRESERVE_FIRST_PARTY` — keep a narrow first-party integration because higher layers
+  cannot preserve equivalent behavior.
+
+The seam budget requires rationale, concentration, behavioral tests, delta registration and
+re-evaluation every upstream cycle. No proven Workstation capability may be downgraded to
+achieve a zero-diff or plugin-purity goal.
+
 ## HW-026 — Upstream Migration as Decoupling / seam-retirement program (2026-09-19)
 
 Decision: D-026. Canonical:
