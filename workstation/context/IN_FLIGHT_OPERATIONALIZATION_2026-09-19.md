@@ -273,3 +273,16 @@ No live third-party mutation as the sole qualification gate.
 8. **Full Workstation Suite Regression:**
    - `python -m pytest -q -o pythonpath=. workstation/tests`: **647 passed, 2 skipped in 287.92s**.
 
+## Post-qualification epistemic dependency — H-076
+
+H-075 remains implemented and qualified as an adaptive-to-deterministic handoff
+mechanism. A later post-merge audit did not reopen those scheduling/checkpoint/handoff
+properties; it identified a deeper verification-semantics dependency.
+
+Current RunClosureProof still treats a non-empty verifier_contract as sufficient for
+one admission obligation. H-076 strengthens that contract so future handoff requires a
+validated verifier fingerprint/result with adequate source/trust, temporal validity,
+relation and predicate coverage and no unresolved STALE/CONFLICT/INCONCLUSIVE state.
+
+Canonical follow-on:
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
