@@ -1,34 +1,37 @@
 # Workstation roadmap
 
-## H-077 — Architectural Falsification / External Validity (2026-09-19) — ACTIVE
+## H-077 — Truthful Core, AFB-v0 & External Validity (2026-09-19) — IMPLEMENTED & QUALIFIED
 
 Canonical program:
 [context/ARCHITECTURAL_FALSIFICATION_2026-09-19.md](context/ARCHITECTURAL_FALSIFICATION_2026-09-19.md).
 
-PR #34 / H-076 remains the verified baseline (**670 passed, 2 skipped**). The next
-milestone is not another horizontal subsystem. Adversarial research plus a current-main
-audit show that the core architecture remains strong for operationally closable digital
-work, but internal proof must not be conflated with external validity.
+H-077 is implemented and qualified across all phases P0–P5 (696 passed, 2 skipped).
+The core architecture remains strong for operationally closable digital work; internal
+proof is strictly scoped and bound to independent external observation.
 
-Immediate P0 (confirmed on `main@2babc8b4cf89bab217cd76b5992d192776184337`):
-- stop counting Router selection as a verified ORA transition and remove optimistic
-  `verified=True` defaults;
-- make unknown condition types fail closed in `OperationalKernel.verify_condition()`;
-- prohibit construction of terminal `VerificationEvidence` from the expected value;
-  execute a real declared observer or return INCONCLUSIVE;
-- enforce `resource_binding` against the concrete evidence resource;
-- require expected operation identity/lineage for transition claims;
-- finish deprecation/migration of legacy boolean verifier callbacks.
+Delivered Phases:
+- **P0 (Truthful Core Cleanup):** Eliminated metrics auto-inflation; fail-closed condition
+  verification; prohibited synthetic evidence construction from expected value; strictly
+  enforced resource_binding (identity + version); required exact operation_id matching
+  for causal transition claims; deprecated boolean verifier callbacks fail closed.
+- **P1 (AFB-v0 Architectural Falsification Benchmark):** 11 adversarial scenarios (A–K)
+  with independent ground-truth oracles verifying truthful-core resistance against
+  phantom proofs, masked drift, concurrency, no-ops, broken dependencies, envelope violations,
+  hidden assumptions, side-effects, cumulative drift, and race conditions.
+- **P2 (External Validity Metrics):** Implemented ExternalValidityMetrics and
+  evaluate_external_validity() in workstation/evaluation.py with strict invariants:
+  FCOR is never reported in isolation (bound to Coverage and ReuseReliability), and absent
+  observations return None (no invented denominators).
+- **P3 (Model-Inadequacy Tripwires):** Non-discriminable counterexamples fire
+  model_inadequacy_non_discriminable_outcome, suspend generalization, quarantine capability,
+  block automatic promotion, and record in ORAMetrics.
+- **P4 (Derived Validity Envelope):** Pure diagnostic projection ValidityEnvelope and
+  derive_validity_envelope() projecting validated operational bounds without new storage.
+- **P5 (Primitive Gate):** Zero new horizontal runtime primitives created.
 
-Then P1 AFB-v0 -> P2 external metrics -> P3 model-inadequacy tripwires -> P4 derived
-validity envelope -> P5 evidence-gated decision on any new primitive.
-
-Architecture admission gate: **reproducible counterexample + material frequency/value +
-no natural existing owner + measured external improvement**.
-
-Explicitly deferred: ApplicabilityCompiler, AssumptionRegistry, PolicyCompiler,
-StrategyRegistry, TemporalIntent, WorldModelService, VerifierDB/OracleManager,
-UnknownUnknownDetector and any second Control Plane/evidence store/predicate IR.
+Architecture admission gate held: **reproducible counterexample + material frequency/value +
+no natural existing owner + measured external improvement**. All deferred primitives
+(ApplicabilityCompiler, AssumptionRegistry, etc.) remain strictly rejected.
 
 > Preserve -> harden -> measure externally -> falsify -> learn limits -> only then generalize.
 

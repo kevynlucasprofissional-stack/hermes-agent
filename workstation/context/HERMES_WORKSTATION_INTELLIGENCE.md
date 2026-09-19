@@ -1,47 +1,33 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## H-077 — Falsificação arquitetural, validade externa e envelope de validade — 2026-09-19
+## H-077 — Truthful Core, AFB-v0, External Validity & Validity Envelope — QUALIFICADO (2026-09-19)
 
-O H-076 foi implementado e qualificado no `main@2babc8b4cf89bab217cd76b5992d192776184337`, mas a investigação
-adversarial posterior muda o **critério de progresso** do Hermes.
+O H-077 foi integralmente implementado e qualificado no branch de trabalho, consolidando o
+princípio de que `VERIFIED(C, A, E, W)` é uma reivindicação contratual escopada, não verdade absoluta.
 
-A arquitetura central não foi falsificada para trabalho operacional digital observável.
-Ela foi falsificada apenas se interpretada como ontologia universal capaz de converter
-qualquer certificado interno em verdade completa sobre o mundo e a intenção humana.
+Receipt de Qualificação: Suite completa `workstation/tests`: **696 passed, 2 skipped in 353.44s**.
 
-Leitura segura:
+### Fechamento dos Cinco Seams do Truthful Core (P0):
+1. **ORA não se auto-infla:** `record_transition` e `on_transition` defaultam para `verified=False`.
+   `on_routing_decision()` não computa transições como verificadas prematuramente (apenas `deterministic_routes_selected`).
+2. **Condition fail-closed:** `OperationalKernel.verify_condition()` estritamente retorna `False` para
+   tipos desconhecidos, não-dict ou payloads malformados.
+3. **Auto-evidência residual eliminada:** Proibida sintetização de evidência a partir de `verification_expected`.
+   Sem evidência real fornecida, executa observer real declarado ou retorna `INCONCLUSIVE`.
+4. **Resource binding estrito:** `evaluate_verification()` valida identidade (`resource_id`) e versão (`expected_version`).
+   Mismatch retorna `INCONCLUSIVE` ou `STALE`.
+5. **Causal identity estrita:** Transition claims exigem match exato entre `evidence.operation_id` e `expected_operation_id`.
+   Callbacks legados booleanos falham closed como `INCONCLUSIVE`.
 
-```text
-Human Need
--> OperationIntent (especificação operacional corrente)
--> SemanticState (projeção parcial)
--> Capability/Contract
--> Evidence/Verification
--> claim condicionado
--> reuse apenas dentro de envelope demonstrado
-```
-
-Portanto, manter OperationIntent, SemanticState, Router, Dispatcher,
-OperationalCapability, VOT, Await, Experience Compiler, RunClosure e compilação
-progressiva; mas não confundir `VERIFIED` com "tudo que importa está correto".
-
-### Cinco seams pós-H-076 confirmados
-
-1. **ORA pode se auto-inflar:** routing de Executable/ComposedDecision chama
-   `record_transition(verified=True)` antes de existir outcome; transition APIs ainda
-   têm `verified=True` como default.
-2. **Condition fail-open:** `OperationalKernel.verify_condition()` retorna True para
-   tipo desconhecido.
-3. **Auto-evidência residual:** sem `verification_evidence`, o kernel pode fabricar
-   VerificationEvidence owner-declared usando o próprio valor esperado e metadados do
-   contrato. Ausência de evidência deve executar observer real ou virar INCONCLUSIVE.
-4. **Resource binding incompleto:** `resource_binding` existe, mas não participa
-   efetivamente da admissibilidade da evidência.
-5. **Causal identity incompleta:** transition claim aceita qualquer `operation_id`
-   não-vazio; deve provar identidade com o `expected_operation_id` e lineage/fencing.
-
-Esses pontos formam o **P0 — Truthful Core Cleanup** e devem ser resolvidos nos owners
-atuais, sem novo subsistema.
+### AFB-v0 (P1), Métricas Externas (P2), Tripwires (P3) e Envelope (P4):
+- **AFB-v0:** 11 cenários adversários com oráculos independentes (`test_architectural_falsification.py`, 12 passed).
+- **Métricas de Validade Externa:** `ExternalValidityMetrics` em `workstation/evaluation.py` implementando
+  FCOR, Cobertura, ReuseReliability(N), Concordância, etc. FCOR nunca reportado isolado (`as_triad()`).
+- **Tripwires de Inadequação:** `model_inadequacy_non_discriminable_outcome` suspende generalização,
+  quarentena a capacidade e bloqueia promoção em `ExperiencePromotionPolicy`.
+- **Validity Envelope:** Projeção diagnóstica pura `ValidityEnvelope` em `workstation/control_plane/validity_envelope.py`
+  sem nova camada de persistência.
+- **Gate de Primitives:** Zero novas primitives de runtime (`NOVAS PRIMITIVES CRIADAS: nenhuma`).
 
 ### Mudança estratégica
 

@@ -1,41 +1,49 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-077 — Architectural falsification / external validity / post-H-076 residual audit (2026-09-19)
+## H-077 — Truthful Core, AFB-v0, External Validity & Validity Envelope (2026-09-19) — IMPLEMENTED & QUALIFIED
 
-**Classification:** CORE ARCHITECTURE PRESERVED / UNIVERSAL EXTERNAL-VALIDITY CLAIM
-FALSIFIED / P0 RESIDUALS REPRODUCED / AFB-v0 NEXT.
+**Classification:** CORE ARCHITECTURE PRESERVED / TRUTHFUL CORE HARDENED / AFB-v0 BENCHMARKED / EXTERNAL VALIDITY METRICS IMPLEMENTED / ZERO NEW PRIMITIVES CREATED.
 
-**Baseline:** `main@2babc8b4cf89bab217cd76b5992d192776184337` after PR #34/H-076 (**670 passed, 2 skipped**).
+**Baseline:** `main@378b5a2df35ac05fe37a606298502d7bb974786d` (formerly 670 passed, 2 skipped).
+**Qualification Receipt:** Full Workstation suite: **696 passed, 2 skipped in 353.44s** (100% pass rate).
 
-**Hypothesis under attack:** after H-076, a green internal certificate is still not
-sufficient evidence that all materially relevant real-world/human conditions were
-represented. The next milestone should falsify the operational model against independent
-outcomes rather than add another compiler/registry.
-
-**Current-main RED evidence:**
-- routing-time verified-transition accounting for Executable/ComposedDecision and
-  optimistic `verified=True` defaults;
-- unknown condition type returns True in `OperationalKernel.verify_condition()`;
-- no supplied evidence can become owner-declared VerificationEvidence synthesized from
-  `verification_expected` plus contract-declared quality;
-- `VerificationContract.resource_binding` is not enforced by the evaluator;
-- transition proof tests non-empty `operation_id`, not equality with an expected
-  operation identity.
-
-**Refined implementation hypothesis:** close these five seams inside existing owners,
-then create AFB-v0 as an external/adversarial harness. Do not introduce a second control
-plane or validity/assumption registry.
-
-**AFB-v0 falsifiers:** hidden-state pairs, stale/version races, concurrent lost updates,
-source conflict, non-idempotent restart, temporal MAINTAIN, composition emergence,
-semantic drift without schema change, intent ambiguity and dynamic closed-loop queues.
-
-**Metric hypothesis:** FCOR must be reported with Certification Coverage and reliability;
-ORA is optimized only after external-quality/safety constraints hold.
-
-**Primitive admission rule:** no new horizontal primitive without a reproducible
-counterexample, material frequency/value, absence of a natural existing owner and a
-measured external improvement.
+**Phased Implementation Summary:**
+1. **P0 (Truthful Core Cleanup):**
+   - **P0-A:** Removed optimistic `verified=True` default from `record_transition` and `on_transition`; removed transition/capability accounting from `on_routing_decision()` (now tracks `deterministic_routes_selected`).
+   - **P0-B:** `OperationalKernel.verify_condition()` strictly fails closed (returns False on unknown/unsupported condition types or malformed JSON).
+   - **P0-C:** Prohibited synthetic auto-evidence from `verification_expected`; missing evidence executes real declared observer or yields `INCONCLUSIVE`.
+   - **P0-D:** `evaluate_verification()` strictly enforces `resource_binding` (`resource_id` matching and version checks, failing closed on mismatch or absence).
+   - **P0-E:** Causal transition claims strictly require matching `expected_operation_id` against evidence `operation_id`.
+   - **P0-F:** Deprecated boolean verifier callback fails closed as `INCONCLUSIVE` (cannot reach `COMMITTED`).
+   - *P0 Tests:* `workstation/tests/test_truthful_core_p0.py` (10/10 passed).
+2. **P1 (AFB-v0 Architectural Falsification Benchmark):**
+   - Implemented 11 adversarial scenarios (A through K) with independent ground-truth oracles:
+     * Scenario A: Phantom Oracle (external resource unmodified) -> caught via resource binding / version check.
+     * Scenario B: Masked Drift (syntactic match, semantic break) -> caught via strict predicate evaluation.
+     * Scenario C: Blind Concurrency (concurrent external mutation) -> caught via version mismatch.
+     * Scenario D: Non-Discriminable Counterexample -> trips `model_inadequacy_non_discriminable_outcome`.
+     * Scenario E: False Success by No-Op -> caught via missing operation ID / negative control rejection.
+     * Scenario F: Broken Causal Dependency -> halts chain, unverified transition recorded.
+     * Scenario G: Validity Envelope Violation -> rejected for out-of-envelope context reuse.
+     * Scenario H: Hidden Assumption Violated -> fails closed on unexpected date format / timezone.
+     * Scenario I: Side-Effect Hazard -> tracked via external validity audit.
+     * Scenario J: Cumulative Drift Reuse Degradation -> tracked across N >= 10 reuses.
+     * Scenario K: Read-Verify Race Condition -> caught via freshness / live re-probe version check.
+   - *P1 Tests:* `workstation/tests/test_architectural_falsification.py` (12/12 passed).
+3. **P2 (External Validity Metrics):**
+   - Implemented `ExternalValidityMetrics` and `evaluate_external_validity()` in `workstation/evaluation.py`.
+   - Metrics computed: FCOR (False Certification Overhang Rate), Certification Coverage, ReuseReliability(N), External Correctness, Oracle Agreement Rate, False Abstention Rate, Hidden-Assumption Robustness, Model-Inadequacy Detection Recall, False-Safe Rate, Unsafe Mutation Rate, Conflict Detection Recall, Recovery Correctness, Verifier Sensitivity, and ORA ratio.
+   - Strict invariants: FCOR is never reported in isolation (`as_triad()` requires FCOR, Coverage, and ReuseReliability); no invented denominators (empty observations return `None`, not 0.0); no synthetic single 0-100 scores.
+4. **P3 (Model-Inadequacy Tripwires):**
+   - In `workstation/experience_compiler/causal.py`, counterexample refinement without discriminating features fires `model_inadequacy_non_discriminable_outcome`, sets `model_inadequacy_detected = True`, and quarantines the capability.
+   - In `workstation/experience_compiler/promotion.py`, `ExperiencePromotionPolicy` enforces `'model_inadequacy': not m.get('model_inadequacy_detected', False)`.
+   - In `workstation/control_plane/metrics.py`, `ORAMetrics` tracks `model_inadequacy_events` and reasons.
+   - *P3 Tests:* `workstation/tests/test_model_inadequacy_tripwires.py` (4/4 passed).
+5. **P4 (Derived Validity Envelope):**
+   - Implemented `workstation/control_plane/validity_envelope.py` with immutable `ValidityEnvelope` and pure `derive_validity_envelope()` projecting boundaries from existing canonical owners (Intent, Capability, VerificationContract, Context).
+   - Zero new storage or parallel control planes (D-025 compliant).
+6. **P5 (Primitive Gate):**
+   - NOVAS PRIMITIVES CRIADAS: nenhuma. All requirements implemented within existing owners.
 
 Canonical:
 [../ARCHITECTURAL_FALSIFICATION_2026-09-19.md](../ARCHITECTURAL_FALSIFICATION_2026-09-19.md).

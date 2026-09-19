@@ -323,12 +323,30 @@ def test_task_compiler_work_execute_route_action(clean_env):
         "effect_budget": [{"kind": "CREATE", "resource": "new_folder"}],
     }
 
+    from workstation.control_plane.verification import VerificationEvidence
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    expected_fp = EXISTS("new_folder").fingerprint()
+    ev = VerificationEvidence(
+        evidence_id="ev-route-mkdir",
+        observer="owner.readback",
+        source_kind="source_of_record",
+        value=expected_fp,
+        evidence_strength=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        trust_class="trusted_owner",
+        observed_at=now,
+        read_after_write=True,
+        covered_predicates=(expected_fp,),
+    )
+
     result = compiler.execute(
         {
             "action": "route",
             "operation_intent": intent_dict,
             "semantic_state": {"new_folder": {"exists": False}},
             "authority": {"level": 1, "allowed_actions": ["create"], "allowed_resources": ["*"]},
+            "verification_evidence": [ev],
+            "verification_expected": expected_fp,
         },
         task_id="task-test-route",
         session_id="sess-route-1",

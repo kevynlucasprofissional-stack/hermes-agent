@@ -176,6 +176,11 @@ class VerificationEvidence:
     run_id: str = ""
     operation_id: str = ""
 
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        data["evidence_strength"] = int(self.evidence_strength)
+        return data
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "VerificationEvidence":
         raw = dict(data)
@@ -285,6 +290,9 @@ def evaluate_verification(
     mutation_failure_domains: set[str] | None = None,
     mutation_observed_at: str = "", now: datetime | None = None,
     transition_required: bool | None = None,
+    expected_operation_id: str | None = None,
+    expected_run_id: str | None = None,
+    expected_task_id: str | None = None,
 ) -> VerificationResult:
     c = contract if isinstance(contract, VerificationContract) else VerificationContract.from_dict(contract)
     evs = [e if isinstance(e, VerificationEvidence) else VerificationEvidence.from_dict(e) for e in evidence]
@@ -296,6 +304,25 @@ def evaluate_verification(
         return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs, reason=",".join(reasons), evaluated_at=stamp)
     if not evs:
         return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), reason="no_evidence", evaluated_at=stamp)
+    if c.resource_binding:
+        expected_res_id = (
+            c.resource_binding.get("resource_id")
+            or c.resource_binding.get("id")
+            or c.resource_binding.get("uri")
+            or c.resource_binding.get("path")
+        )
+        for e in evs:
+            if not e.resource_id:
+                return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs, reason="resource_binding_missing", evaluated_at=stamp)
+            if expected_res_id is not None and str(e.resource_id) != str(expected_res_id):
+                return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs, reason="resource_binding_mismatch", evaluated_at=stamp)
+            expected_res_ver = (
+                c.resource_binding.get("resource_version")
+                or c.resource_binding.get("version")
+                or c.resource_binding.get("expected_version")
+            )
+            if expected_res_ver is not None and str(e.resource_version) != str(expected_res_ver):
+                return VerificationResult(VerificationStatus.STALE, c.fingerprint(), refs, reason="resource_version_mismatch", evaluated_at=stamp)
     if any(e.verifier_fingerprint and e.verifier_fingerprint != c.fingerprint() for e in evs):
         return VerificationResult(VerificationStatus.STALE, c.fingerprint(), refs, reason="verifier_fingerprint_drift", evaluated_at=stamp)
     if any(e.observer != c.observer or e.source_kind != c.source_kind for e in evs):
@@ -335,9 +362,14 @@ def evaluate_verification(
     if not all(matches):
         return VerificationResult(VerificationStatus.FAILED, c.fingerprint(), refs, tuple(sorted(covered)), True, False, True, True, reason="relation_rejected", evaluated_at=stamp)
     needs_transition = c.transition_claim if transition_required is None else transition_required
-    transition_proven = not needs_transition or all(e.operation_id for e in evs)
-    if needs_transition and not transition_proven:
-        return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs, tuple(sorted(covered)), True, True, True, True, False, "state_satisfied_transition_unproven", stamp)
+    if needs_transition:
+        if not expected_operation_id:
+            return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs, tuple(sorted(covered)), True, True, True, True, False, "state_satisfied_transition_unproven:expected_operation_id_missing", stamp)
+        if not all(e.operation_id == expected_operation_id for e in evs):
+            return VerificationResult(VerificationStatus.INCONCLUSIVE, c.fingerprint(), refs, tuple(sorted(covered)), True, True, True, True, False, "state_satisfied_transition_unproven:operation_id_mismatch", stamp)
+        transition_proven = True
+    else:
+        transition_proven = True
     return VerificationResult(VerificationStatus.VERIFIED, c.fingerprint(), refs, tuple(sorted(covered)), True, True, True, True, transition_proven, "verified", stamp)
 
 
