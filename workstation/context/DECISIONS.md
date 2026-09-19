@@ -444,6 +444,63 @@ authority, verifier or Browser state system.
 Canonical design:
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
 
+## D-022 — Operational knowledge is hierarchical; compile semantic closure, not gestures
+
+D-018 (Operational Capability Runtime), D-019 (Experience Compiler), D-020
+(Verified Operational Control Plane) and D-021 (operational closure for mandatory
+compilation) remain authoritative.
+
+Hermes Work adopts the following additional architectural rule:
+
+> **Repeated verified experience should progressively reduce fresh LLM reasoning by
+> becoming reusable operational knowledge, and the product of one verified
+> compilation level may become the vocabulary of the next.**
+
+The hierarchy is:
+
+~~~text
+trusted primitive
+  -> Verified Operational Transition / OperationalCapability
+  -> Composite OperationalCapability
+  -> deterministic workflow
+  -> Await/Event
+  -> smallest unresolved reasoning boundary
+~~~
+
+The atomic learning target is **not** the smallest possible physical action. It is
+the smallest semantically closed, parameterizable, executable and verifiable state
+transition with positive reuse value. Tool calls and transient UI gestures are
+evidence/primitives; they are not automatically durable capability identities.
+
+A recurring composition of capabilities may propose a higher-level composite only
+when semantic closure, causal/dependency support, stable parameterization,
+effect/authority/verifier closure, positive utility and replay evidence support it.
+Frequency alone never promotes. Higher-level composites should normally preserve
+child capability dependencies/version pins rather than flatten their primitive
+implementations.
+
+Learned capabilities become semantic Router candidates only through conservatively
+derived typed formal contracts backed by trusted compiler/runtime evidence.
+Missing target/effect/authority/verifier proof means exact reuse or
+`NEEDS_REASONING`, not guessed admission.
+
+Long external waits are operational state, not reasoning. Persistent
+`AwaitCondition` plus a fenced durable continuation is the canonical semantic
+model. The executor should be releasable while waiting. An event wakes; authoritative
+state confirms; continuation re-enters Router admission. Polling is a bounded
+observer fallback, not a reason to retain an LLM or resident worker indefinitely.
+
+The system should measure **Operational Reasoning Amortization** rather than count
+capabilities alone. The preferred leading ratio is verified semantic transitions
+executed with zero LLM intervention divided by total verified semantic transitions,
+paired with evidence quality, drift, uncertainty and reuse metrics.
+
+This decision does not authorize a second scheduler, registry, control plane, task
+database, BrowserTask owner, journal or memory store.
+
+Canonical design:
+[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
 ## Changing a decision
 
 A replacement decision must state which decision it supersedes, why the old invariant no longer holds, how migration/backward compatibility is handled, and which tests prove the new contract. Do not silently drift architecture through implementation-only changes.
