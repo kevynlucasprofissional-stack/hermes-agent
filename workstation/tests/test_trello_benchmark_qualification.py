@@ -19,6 +19,10 @@ from workstation.artifacts import ArtifactStore
 from workstation.control_plane.ir import CREATE, EQ, Effect
 from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
 from workstation.control_plane.router import RoutingCertificate
+from workstation.control_plane.verification import (
+    VerificationContract, VerificationLifecycle, VerificationResult, VerificationStatus,
+)
+from workstation.execution_policy import EvidenceStrength
 from workstation.durable_tasks import DurableTaskStore, WorkItemStatus
 from workstation.reasoning_handoff import AttentionPacket, OpenCondition, needs_reasoning
 from workstation.run_closure import (
@@ -29,6 +33,7 @@ from workstation.run_closure import (
     recover_verified_prefix,
 )
 from tools.browser_workstation import resolve_browser_type_text
+from workstation.control_plane.verification import VerificationEvidence, evaluate_verification
 
 
 class MockTrelloEnvironment:
@@ -225,6 +230,15 @@ def test_trello_shaped_12_item_fixture_closes_after_canary_and_finishes(trello_f
         },
     )
 
+    verifier = VerificationContract(
+        covered_predicates=("trello.card.persisted",), observer="browser_readback",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.INDEPENDENT_PERSISTED_READBACK,
+        allowed_trust=("trusted_owner",), lifecycle=VerificationLifecycle.VALIDATED,
+    )
+    verified = VerificationResult(
+        VerificationStatus.VERIFIED, verifier.fingerprint(), (first_ref,),
+        ("trello.card.persisted",), True, True, True, True, True, "verified",
+    )
     admitted, proof, reasons = evaluate_run_local_closure(
         mock_agent,
         name="native_browser.card_pipeline",
@@ -238,7 +252,13 @@ def test_trello_shaped_12_item_fixture_closes_after_canary_and_finishes(trello_f
         operation_id="op_create_trello_card",
         first_verified_ref=first_ref,
         replay_verified_ref=replay_ref,
-        verifier_contract={"readback": "browser_readback", "check": "persisted"},
+        verifier_contract=verifier.to_dict(),
+        first_verification_result=verified,
+        replay_verification_result=VerificationResult(
+            VerificationStatus.VERIFIED, verifier.fingerprint(), (replay_ref,),
+            ("trello.card.persisted",), True, True, True, True, True, "verified",
+        ),
+        required_predicates={"trello.card.persisted"},
         remaining_items_ref=rem_ref,
         remaining_item_count=len(remaining_items),
         requested_authority=AuthorityScope(level=AuthorityLevel.EXTERNAL_REVERSIBLE, allowed_actions={"browser_click", "browser_type"}),
@@ -407,3 +427,32 @@ def test_trello_shaped_12_item_fixture_closes_after_canary_and_finishes(trello_f
         assert card["persisted"] is True
         # Each card mutation occurred exactly once (no duplicate replays of committed items)
         assert env.mutation_counts[card_id] == 1
+
+
+def test_trello_truth_fixture_rejects_stale_dom_and_preserves_valid_handoff():
+    verifier = VerificationContract(
+        covered_predicates=("card.description",), observer="trello.api.card.read",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.INDEPENDENT_PERSISTED_READBACK,
+        allowed_trust=("trusted_owner",), mutation_failure_domains=("trello_web:renderer",),
+        allowed_observer_failure_domains=("trello_api",), require_distinct_failure_domain=True,
+        temporal_basis="version", require_read_after_write=True,
+        lifecycle=VerificationLifecycle.VALIDATED,
+    )
+    optimistic_dom = VerificationEvidence(
+        "dom", "trello.api.card.read", "source_of_record", "new",
+        EvidenceStrength.INDEPENDENT_PERSISTED_READBACK, "trusted_owner",
+        "trello_web:renderer", resource_version="2", read_after_write=True,
+        covered_predicates=("card.description",),
+    )
+    assert evaluate_verification(
+        verifier, "new", [optimistic_dom], mutation_failure_domains={"trello_web:renderer"}
+    ).status == VerificationStatus.INCONCLUSIVE
+    backend = VerificationEvidence(
+        "api", "trello.api.card.read", "source_of_record", "new",
+        EvidenceStrength.INDEPENDENT_PERSISTED_READBACK, "trusted_owner", "trello_api",
+        resource_version="2", read_after_write=True, covered_predicates=("card.description",),
+        operation_id="op-save",
+    )
+    assert evaluate_verification(
+        verifier, "new", [backend], mutation_failure_domains={"trello_web:renderer"}
+    ).status == VerificationStatus.VERIFIED

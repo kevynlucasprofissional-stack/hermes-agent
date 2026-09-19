@@ -256,6 +256,19 @@ def test_learned_capability_routes_via_operation_intent_without_llm(tmp_path):
         'compatibility_fingerprint': cap.compatibility_fingerprint,
         'result': {'evidence_refs': ['artifact://proof'], 'evidence_strength': 2},
     }]
+    from workstation.control_plane.verification import VerificationContract, VerificationLifecycle
+    from workstation.execution_policy import EvidenceStrength
+    owner_verifier = VerificationContract(
+        covered_predicates=tuple(p.fingerprint() for p in cap.formal_contract.typed_postconditions),
+        effect_classes=(cap.effect,), observer="github.api.pull_request.read",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_runtime",), lifecycle=VerificationLifecycle.CANDIDATE,
+    )
+    cap, reasons = compiler.validate_verifier(cap, owner_verifier, [
+        {"kind": "positive_replay", "passed": True, "phase": "validation", "evidence_ref": "artifact://positive"},
+        {"kind": "negative_control", "passed": True, "phase": "validation", "evidence_ref": "artifact://negative"},
+    ])
+    assert not reasons
     admission = compiler.promote(cap)
     assert admission.admitted is True
     assert cap.lifecycle == CapabilityLifecycle.PROMOTED

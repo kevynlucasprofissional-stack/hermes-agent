@@ -757,7 +757,9 @@ class TaskCompiler:
                     if target_identity:
                         from workstation.browser_transaction import evidence_strength
                         _, verifier_owner = tool_contract(step['tool'])
-                        strength = int(evidence_strength(step)) if transaction or 'evidence_strength' in verifier_owner or step['tool'] == 'browser_snapshot' else (1 if request.get('routine_id') else 3)
+                        # Missing owner metadata never upgrades itself.  Snapshot is
+                        # owner-known E1; all other undeclared verifiers fail closed E0.
+                        strength = int(evidence_strength(step)) if transaction or 'evidence_strength' in verifier_owner or step['tool'] == 'browser_snapshot' else 0
                         target_identity.update({"persisted": strength >= 2, "status": "persisted" if strength >= 2 else 'semantically_observed', "verifier_status": "verified",
                                                 'evidence_strength': strength,
                                                 "verification_evidence_ref": ref["artifact_ref"]})
@@ -1029,13 +1031,12 @@ class TaskCompiler:
                     run_id=getattr(self, "canonical_run_id", None) or request.get("run_id"),
                     has_uncertain_mutation=getattr(self, "has_uncertain_mutation", False) or request.get("has_uncertain_mutation", False),
                     authority_scope=authority,
-                    verifier_fn=lambda result: bool(
-                        isinstance(result, dict)
-                        and result.get("success") is True
-                        and result.get("capability_id") == decision.capability.id
-                        and result.get("capability_version") == decision.capability.version
-                        and result.get("verification", {}).get("accepted") is True
-                    ),
+                    verification_result_fn=lambda result: result.get("verification_result", {
+                        "status": "INCONCLUSIVE",
+                        "reason": "executor_did_not_return_canonical_verification",
+                    }) if isinstance(result, dict) else {
+                        "status": "INCONCLUSIVE", "reason": "invalid_executor_result"
+                    },
                 )
                 exec_res = dispatch_res.get("result", {})
                 if not dispatch_res.get("success", True):
@@ -1110,7 +1111,7 @@ class TaskCompiler:
                     )
                     if (not isinstance(step_result, dict)
                             or step_result.get("success") is not True
-                            or step_result.get("verification", {}).get("accepted") is not True):
+                            or step_result.get("verification_result", {}).get("status") != "VERIFIED"):
                         return {
                             "success": False,
                             "status": step_result.get("status", "NEEDS_REASONING") if isinstance(step_result, dict) else "NEEDS_REASONING",
@@ -1168,7 +1169,19 @@ class TaskCompiler:
                             "confirmed_steps": list(confirmed_steps),
                         }
 
-                return {"success": True, "plan": [c.id for c in decision.plan], "confirmed_steps": confirmed_steps}
+                final_result = request.get("final_verification_result")
+                if callable(request.get("final_verification_result_fn")):
+                    final_result = request["final_verification_result_fn"](final_state, confirmed_steps)
+                if not isinstance(final_result, dict) or final_result.get("status") != "VERIFIED":
+                    return {
+                        "success": False,
+                        "status": "FINAL_GOAL_VERIFICATION_FAILED",
+                        "reason": "final_goal_missing_canonical_verification",
+                        "confirmed_steps": list(confirmed_steps),
+                        "verification_result": final_result or {"status": "INCONCLUSIVE"},
+                    }
+                return {"success": True, "plan": [c.id for c in decision.plan], "confirmed_steps": confirmed_steps,
+                        "verification_result": final_result}
 
             try:
                 dispatch_res = dispatcher.dispatch(
@@ -1178,14 +1191,12 @@ class TaskCompiler:
                     run_id=getattr(self, "canonical_run_id", None) or request.get("run_id"),
                     has_uncertain_mutation=getattr(self, "has_uncertain_mutation", False) or request.get("has_uncertain_mutation", False),
                     authority_scope=authority,
-                    verifier_fn=lambda result: bool(
-                        isinstance(result, dict)
-                        and result.get("success") is True
-                        and len(result.get("confirmed_steps", [])) == len(decision.plan)
-                        and all(step.get("result", {}).get("verification", {}).get("accepted") is True
-                                for step in result.get("confirmed_steps", []))
-                        and result.get("status") != "FINAL_GOAL_VERIFICATION_FAILED"
-                    ),
+                    verification_result_fn=lambda result: result.get("verification_result", {
+                        "status": "INCONCLUSIVE",
+                        "reason": "final_goal_missing_canonical_verification",
+                    }) if isinstance(result, dict) else {
+                        "status": "INCONCLUSIVE", "reason": "invalid_composition_result"
+                    },
                 )
                 composition_result = dispatch_res.get("result", {})
                 return {
@@ -1386,6 +1397,9 @@ class TaskCompiler:
             'capability_id': cap.id, 'capability_version': cap.version,
             'output': projected_output, 'savings': result.get('savings', {}),
             'verification': sanitize(result.get('verification') or {'accepted': False, 'source': 'none'}),
+            'verification_result': sanitize(result.get('verification_result') or {
+                'status': 'INCONCLUSIVE', 'reason': 'missing_canonical_verification_result'
+            }),
             'metrics': {'executor_llm_calls': 0}}
         if result.get('success'):
             ref = self.artifacts.store(owner, plan.id + '_result.json', sanitize(envelope))

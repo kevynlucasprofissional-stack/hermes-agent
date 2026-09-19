@@ -262,7 +262,8 @@ def test_ora_and_reentry_metrics_are_wired_to_real_execution_events(temp_env):
     assert ora_metrics.atomic_capability_invocations == 1
     assert ora_metrics.composite_capability_invocations == 0
     assert ora_metrics.total_capability_invocations == 1
-    assert ora_metrics.verified_transitions_deterministic == 1
+    assert ora_metrics.verified_transitions_deterministic == 0
+    assert ora_metrics.unverified_transitions == 1
 
     # 2. Register child B and propose composite
     cap_b = OperationalCapability(
@@ -310,4 +311,5 @@ def test_ora_and_reentry_metrics_are_wired_to_real_execution_events(temp_env):
     assert "SCHEMA_DRIFT" in ora_metrics.wake_reasons or "OPEN_CONDITION" in ora_metrics.wake_reasons
     assert ora_metrics.total_routing_events == 2
     assert ora_metrics.wake_llm_rate == pytest.approx(1 / 2)
-    assert ora_metrics.ora_ratio is not None
+    # ORA has no verified-transition denominator until a canonical verifier passes.
+    assert ora_metrics.ora_ratio is None

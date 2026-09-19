@@ -226,6 +226,14 @@ class ORAMetrics:
     llm_wake_count: int = 0
     total_routing_events: int = 0
     wake_reasons: dict[str, int] = field(default_factory=dict)
+    verification_results: dict[str, int] = field(default_factory=dict)
+    verification_latency_ms_total: float = 0.0
+    verification_latency_observations: int = 0
+    verifier_disagreements: int = 0
+    verifier_quarantines: int = 0
+    relation_rejections: int = 0
+    negative_control_pass: int = 0
+    negative_control_fail: int = 0
 
     amortized_tokens_saved: int | None = None
     amortized_cost_usd_saved: float | None = None
@@ -295,6 +303,20 @@ class ORAMetrics:
     def record_routing_event(self) -> None:
         """Record a routing decision event."""
         self.total_routing_events += 1
+
+    def record_verification(self, result: Any, *, latency_ms: float | None = None) -> None:
+        status = getattr(getattr(result, "status", None), "value", None) or str(
+            result.get("status", "INCONCLUSIVE") if isinstance(result, dict) else "INCONCLUSIVE"
+        )
+        self.verification_results[status] = self.verification_results.get(status, 0) + 1
+        if status == "CONFLICT":
+            self.verifier_disagreements += 1
+        reason = getattr(result, "reason", "") if not isinstance(result, dict) else result.get("reason", "")
+        if reason == "relation_rejected":
+            self.relation_rejections += 1
+        if latency_ms is not None:
+            self.verification_latency_ms_total += max(0.0, latency_ms)
+            self.verification_latency_observations += 1
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)

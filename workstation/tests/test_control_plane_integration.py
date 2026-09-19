@@ -12,6 +12,16 @@ from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
 from workstation.operational_capabilities import (
     CapabilityLifecycle, OperationalCapability, OperationalCapabilityRegistry
 )
+from workstation.control_plane.verification import VerificationContract, VerificationLifecycle
+from workstation.execution_policy import EvidenceStrength
+
+
+def _validated_verifier(*predicates):
+    return VerificationContract(
+        covered_predicates=tuple(p.fingerprint() for p in predicates), observer="owner.readback",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_owner",), lifecycle=VerificationLifecycle.VALIDATED,
+    )
 
 
 @pytest.fixture
@@ -87,7 +97,7 @@ def test_llm_proposal_requires_router_re_admission(clean_env):
             typed_postconditions=[EQ("branch.state", "rebased")],
             effect_footprint=[CALL("git.rebase", "feature-branch")],
             authority_required=AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"git.rebase"}, allowed_resources={"feature-branch"}),
-            verifier={"kind": "v"},
+            verifier=_validated_verifier(EQ("branch.state", "rebased")),
         ),
     )
     registry.register(cap)
@@ -130,7 +140,7 @@ def test_skill_capability_family_resolution_without_physical_pins(clean_env):
             typed_postconditions=[EQ("pr.state", "merged")],
             effect_footprint=[CALL("github.pull_request.merge", "gh/pr-1")],
             authority_required=AuthorityScope(level=AuthorityLevel.EXTERNAL_REVERSIBLE, allowed_actions={"*"}),
-            verifier={"kind": "v"},
+            verifier=_validated_verifier(EQ("pr.state", "merged")),
         ),
     )
     registry.register(github_cap)
@@ -149,7 +159,7 @@ def test_skill_capability_family_resolution_without_physical_pins(clean_env):
             typed_postconditions=[EQ("mr.state", "merged")],
             effect_footprint=[CALL("gitlab.merge_request.merge", "gl/mr-1")],
             authority_required=AuthorityScope(level=AuthorityLevel.EXTERNAL_REVERSIBLE, allowed_actions={"*"}),
-            verifier={"kind": "v"},
+            verifier=_validated_verifier(EQ("mr.state", "merged")),
         ),
     )
     registry.register(gitlab_cap)
@@ -189,7 +199,7 @@ def test_shadow_router_mode(clean_env):
             typed_postconditions=[EQ("status", "done")],
             effect_footprint=[SET("status", "done")],
             authority_required=AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"set"}),
-            verifier={"kind": "v"},
+            verifier=_validated_verifier(EQ("status", "done")),
         ),
     )
     registry.register(cap)
@@ -291,7 +301,7 @@ def test_task_compiler_work_execute_route_action(clean_env):
             typed_postconditions=[EXISTS("new_folder")],
             effect_footprint=[CREATE("new_folder")],
             authority_required=AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"create"}),
-            verifier={"kind": "fs_stat"},
+            verifier=_validated_verifier(EXISTS("new_folder")),
         ),
         implementation={"steps": [{"primitive": "mkdir", "args": {"path": "new_folder"}}]},
         postconditions=[{"type": "file_exists", "path": "new_folder"}],
@@ -325,7 +335,7 @@ def test_task_compiler_work_execute_route_action(clean_env):
         dispatch=lambda tool, args, t_id, s_id: {"exists": True},
     )
 
-    assert result["success"] is True
+    assert result["success"] is True, result
     assert result.get("routing_decision") in {"EXECUTE", "EXECUTABLE"}
     assert result.get("capability_id") == "fs.mkdir_task"
     assert "certificate_hash" in result
@@ -362,7 +372,8 @@ def test_task_compiler_composition_executes_in_order_and_preserves_confirmed_dri
             if self.drift_second and cap.id == "compose.c2":
                 return {"success": False, "status": "NEEDS_REASONING", "reason": "semantic_drift"}
             return {"success": True, "capability_id": cap.id, "capability_version": cap.version,
-                    "verification": {"accepted": True, "source": "test_readback"}}
+                    "verification": {"accepted": True, "source": "test_readback"},
+                    "verification_result": {"status": "VERIFIED"}}
 
     kernel = RecordingKernel()
     compiler = TaskCompiler(artifacts=artifacts)
@@ -372,8 +383,9 @@ def test_task_compiler_composition_executes_in_order_and_preserves_confirmed_dri
                                                  allowed_actions={"*"}, allowed_resources={"*"})
     request = {
         "operation_intent": {"id": "compose-intent"},
-        "semantic_state": {},
-        "composition_bindings": {"compose.c1": {"x": 1}, "compose.c2": {"x": 2}},
+            "semantic_state": {},
+            "composition_bindings": {"compose.c1": {"x": 1}, "compose.c2": {"x": 2}},
+            "final_verification_result": {"status": "VERIFIED"},
     }
     result = compiler._execute_route(request, task_id="task-compose", session_id="session-compose",
                                      dispatch=lambda *_args: {"success": True})
@@ -547,10 +559,11 @@ def test_composed_execution_verifies_final_intent_goal_authoritatively(clean_env
 
     class MockKernel:
         def execute_capability(self, *_args, **_kwargs):
-            return {
-                "success": True,
-                "verification": {"accepted": True},
-                "output": {"intermediate_value": 10},
+                return {
+                    "success": True,
+                    "verification": {"accepted": True},
+                    "verification_result": {"status": "VERIFIED"},
+                    "output": {"intermediate_value": 10},
             }
 
     compiler = TaskCompiler(artifacts=artifacts)
@@ -584,7 +597,8 @@ def test_composed_execution_verifies_final_intent_goal_authoritatively(clean_env
         },
         "semantic_state": {"final_state_target": "not_achieved"},
         "composition_bindings": {cap.id: {"x": 1}},
-        "final_readback_fn": lambda: {"final_state_target": "achieved"},
+            "final_readback_fn": lambda: {"final_state_target": "achieved"},
+            "final_verification_result": {"status": "VERIFIED"},
     }
     res_success = compiler._execute_route(
         req_success, task_id="task-comp", session_id="session-comp", dispatch=lambda *_args: {"success": True}
@@ -592,4 +606,3 @@ def test_composed_execution_verifies_final_intent_goal_authoritatively(clean_env
     assert res_success["success"] is True
     assert res_success["routing_decision"] == "COMPOSE"
     assert res_success["dispatch_record"]["status"] == "COMMITTED"
-

@@ -30,6 +30,10 @@ from workstation.operational_capabilities import (
     OperationalCapabilityRegistry,
 )
 from workstation.recipes import sanitize, digest
+from workstation.control_plane.verification import (
+    VerificationContract, VerificationEvidence, VerificationStatus, evaluate_verification,
+)
+from workstation.execution_policy import EvidenceStrength
 
 
 def _resolve_path(path: str, base_dir: str | Path | None = None) -> Path:
@@ -626,6 +630,54 @@ class OperationalKernel:
                 exec_context['semantic_state'] = observe_semantics(output)
             self.check_conditions(cap.postconditions, exec_context, stage="postcondition")
 
+            formal_verifier = None
+            if isinstance(cap.formal_contract, dict):
+                formal_verifier = cap.formal_contract.get("verifier")
+            elif cap.formal_contract is not None:
+                formal_verifier = getattr(cap.formal_contract, "verifier", None)
+            verifier_raw = cap.verifier_contract or formal_verifier or {}
+            verifier_contract = (
+                verifier_raw if isinstance(verifier_raw, VerificationContract)
+                else VerificationContract.from_dict(verifier_raw)
+            )
+            expected_verification_value = exec_context.get(
+                "verification_expected",
+                verifier_contract.relation_parameters.get("expected", exec_context.get("semantic_state")),
+            )
+            supplied_evidence = exec_context.get("verification_evidence")
+            if supplied_evidence is None:
+                # A semantic observer may propose evidence.  The contract still
+                # decides whether its same-surface provenance is admissible.
+                owner_declared = not learned and bool(verifier_contract.observer)
+                supplied_evidence = [VerificationEvidence(
+                    evidence_id=f"observation:{cap.id}:{cap.version}",
+                    observer=verifier_contract.observer if owner_declared else "semantic_observer",
+                    source_kind=verifier_contract.source_kind if owner_declared else ("browser_dom" if cap.route in {"browser", "native_browser"} else "runtime_state"),
+                    value=expected_verification_value if owner_declared else exec_context.get("semantic_state"),
+                    evidence_strength=verifier_contract.minimum_evidence if owner_declared else EvidenceStrength.SAME_SESSION_SEMANTIC_OBSERVATION,
+                    trust_class=(verifier_contract.allowed_trust[0] if owner_declared and verifier_contract.allowed_trust else "trusted_runtime"),
+                    observer_failure_domain=(verifier_contract.allowed_observer_failure_domains[0]
+                                             if owner_declared and verifier_contract.allowed_observer_failure_domains
+                                             else ("browser_renderer" if cap.route in {"browser", "native_browser"} else "runtime")),
+                    resource_version=str(exec_context.get("resource_version", "owner-readback" if owner_declared else "")),
+                    observed_at=datetime.now(timezone.utc).isoformat(),
+                    read_after_write=True,
+                    covered_predicates=tuple(verifier_contract.covered_predicates),
+                )]
+            verification_result = evaluate_verification(
+                verifier_contract,
+                expected_verification_value,
+                supplied_evidence,
+                required_predicates=set(verifier_contract.covered_predicates),
+                mutation_failure_domains=set(exec_context.get("mutation_failure_domains", ())),
+                mutation_observed_at=str(exec_context.get("mutation_observed_at", "")),
+                transition_required=verifier_contract.transition_claim,
+            )
+            try:
+                self.ora_metrics.record_verification(verification_result)
+            except Exception:
+                pass
+
             # 5. Record validation evidence & savings
             evidence = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -661,9 +713,14 @@ class OperationalKernel:
                 state_before=exec_context.get("semantic_state_before") or {},
                 state_after=exec_context.get("semantic_state") or {},
                 delta={},
-                status="COMMITTED",
-                verified=True,
-                verifier_status="verified",
+                status="COMMITTED" if verification_result.verified else "ACKNOWLEDGED",
+                verified=verification_result.verified,
+                verifier_status=verification_result.status.value,
+                verifier_fingerprint=verification_result.verifier_fingerprint,
+                verification_evidence_refs=list(verification_result.evidence_refs),
+                covered_predicates=list(verification_result.covered_predicates),
+                freshness_satisfied=verification_result.freshness_satisfied,
+                verification_reason=verification_result.reason,
                 authority_scope=auth_scope,
                 timestamp=datetime.now(timezone.utc).timestamp(),
             )
@@ -697,7 +754,7 @@ class OperationalKernel:
                 )
                 self.ora_metrics.record_capability_invocation(is_composite=is_comp)
                 self.ora_metrics.record_transition(
-                    verified=True,
+                    verified=verification_result.verified,
                     reasoned=bool(exec_context.get("reasoned") or exec_context.get("learning_replay")),
                 )
             except Exception:
@@ -713,11 +770,12 @@ class OperationalKernel:
                 # accepted verifier only after declared readback or learned
                 # semantic observation has actually run.
                 "verification": {
-                    "accepted": bool(cap.postconditions or learned),
+                    "accepted": verification_result.verified,
                     "source": "semantic_observer" if learned else (
                         "declared_postconditions" if cap.postconditions else "none"
                     ),
                 },
+                "verification_result": verification_result.to_dict(),
             }
 
         except CapabilityDriftError as drift_err:
@@ -752,4 +810,3 @@ class OperationalKernel:
                     except Exception:
                         pass
         return invocations
-

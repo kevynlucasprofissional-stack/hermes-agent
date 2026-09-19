@@ -87,6 +87,20 @@ class Verification:
     verifier: str = ''
     verified_predicates: dict = field(default_factory=dict)
     evidence_refs: list[str] = field(default_factory=list)
+    status: str = 'INCONCLUSIVE'
+    verifier_fingerprint: str = ''
+    observer: str = ''
+    source_kind: str = 'unknown'
+    resource_binding: dict = field(default_factory=dict)
+    extractor_path: str = ''
+    relation: str = 'EXACT'
+    canonicalizer_id: str = ''
+    canonicalizer_version: str = ''
+    trust_class: str = 'untrusted'
+    observer_failure_domain: str = ''
+    resource_version: str = ''
+    observed_at: str = ''
+    validation_receipts: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -118,8 +132,13 @@ class CapabilityInvocation:
     state_after: dict = field(default_factory=dict)
     delta: dict = field(default_factory=dict)
     status: str = 'COMMITTED'
-    verified: bool = True
-    verifier_status: str = 'verified'
+    verified: bool = False
+    verifier_status: str = 'INCONCLUSIVE'
+    verifier_fingerprint: str = ''
+    verification_evidence_refs: list[str] = field(default_factory=list)
+    covered_predicates: list[str] = field(default_factory=list)
+    freshness_satisfied: bool = False
+    verification_reason: str = ''
     authority_scope: dict | None = None
     timestamp: float = 0.0
 

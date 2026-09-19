@@ -84,8 +84,9 @@ def test_capability_invocation_is_durable_with_real_run_operation_authority_line
     assert inv.task_id == task_id
     assert inv.run_id == run_id
     assert inv.operation_id == operation_id
-    assert inv.status == "COMMITTED"
-    assert inv.verified is True
+    assert inv.status == "ACKNOWLEDGED"
+    assert inv.verified is False
+    assert inv.verifier_status == "INCONCLUSIVE"
     assert inv.authority_scope["level"] == "local_mutation"
 
     # Simulate restart by creating a new kernel instance with the same artifact store
@@ -100,8 +101,9 @@ def test_capability_invocation_is_durable_with_real_run_operation_authority_line
     assert reloaded.task_id == task_id
     assert reloaded.run_id == run_id
     assert reloaded.operation_id == operation_id
-    assert reloaded.status == "COMMITTED"
-    assert reloaded.verified is True
+    assert reloaded.status == "ACKNOWLEDGED"
+    assert reloaded.verified is False
+    assert reloaded.verifier_status == "INCONCLUSIVE"
     assert reloaded.authority_scope["level"] == "local_mutation"
     assert reloaded.state_after.get("file_exists") is True
 
@@ -223,6 +225,17 @@ def test_composite_promotion_requires_causal_replay_policy(temp_dir):
             },
         }
     ]
+    from workstation.control_plane.verification import VerificationContract, VerificationLifecycle
+    from workstation.execution_policy import EvidenceStrength
+    composite.verifier_contract = VerificationContract(
+        covered_predicates=("read_completed",), observer="fixture.readback",
+        source_kind="test_fixture", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_runtime",), lifecycle=VerificationLifecycle.VALIDATED,
+        validation_receipts=(
+            {"kind": "positive_replay", "passed": True, "phase": "validation", "evidence_ref": "positive"},
+            {"kind": "negative_control", "passed": True, "phase": "validation", "evidence_ref": "negative"},
+        ),
+    ).to_dict()
 
     promoted = compiler.promote_composite(composite)
     assert promoted.lifecycle == CapabilityLifecycle.PROMOTED

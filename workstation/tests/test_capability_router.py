@@ -13,6 +13,16 @@ from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
 from workstation.operational_capabilities import (
     CapabilityLifecycle, OperationalCapability, OperationalCapabilityRegistry
 )
+from workstation.control_plane.verification import VerificationContract, VerificationLifecycle
+from workstation.execution_policy import EvidenceStrength
+
+
+def _validated_verifier(*predicates):
+    return VerificationContract(
+        covered_predicates=tuple(p.fingerprint() for p in predicates), observer="owner.readback",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_owner",), lifecycle=VerificationLifecycle.VALIDATED,
+    )
 
 
 @pytest.fixture
@@ -69,7 +79,7 @@ def test_router_exact_match_executable_produces_valid_certificate(clean_registry
                 allowed_resources={"repo/pr-123"},
             ),
             preserves=[UNCHANGED("repo.default_branch")],
-            verifier={"kind": "api_check", "evidence_strength": "E2"},
+            verifier=_validated_verifier(EQ("pr.state", "merged"), EXISTS("pr.merged_at")),
         ),
     )
     clean_registry.register(cap)
@@ -404,7 +414,7 @@ def test_metamorphic_property_invariants(clean_registry):
             effect_footprint=[CREATE("dir/file.txt")],
             authority_required=AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"create"}, allowed_resources={"dir/file.txt"}),
             preserves=[UNCHANGED("dir/other.txt")],
-            verifier={"kind": "fs_stat", "evidence_strength": "E2"},
+            verifier=_validated_verifier(EXISTS("dir/file.txt")),
         ),
     )
     clean_registry.register(cap)

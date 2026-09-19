@@ -13,6 +13,16 @@ from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
 from workstation.operational_capabilities import (
     CapabilityLifecycle, OperationalCapability, OperationalCapabilityRegistry
 )
+from workstation.control_plane.verification import VerificationContract, VerificationLifecycle
+from workstation.execution_policy import EvidenceStrength
+
+
+def _validated_verifier(*predicates):
+    return VerificationContract(
+        covered_predicates=tuple(p.fingerprint() for p in predicates), observer="owner.readback",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_owner",), lifecycle=VerificationLifecycle.VALIDATED,
+    )
 
 
 @pytest.fixture
@@ -40,7 +50,7 @@ def test_composition_backward_chaining_success(clean_registry):
             typed_postconditions=[EQ("git.remote_refs_fetched", True)],
             effect_footprint=[CALL("git.fetch", "repo")],
             authority_required=AuthorityScope(level=AuthorityLevel.READ, allowed_actions={"git.fetch"}, allowed_resources={"repo"}),
-            verifier={"kind": "git_check", "evidence_strength": "E2"},
+            verifier=_validated_verifier(EQ("git.remote_refs_fetched", True)),
         ),
     )
     clean_registry.register(c1)
@@ -58,7 +68,7 @@ def test_composition_backward_chaining_success(clean_registry):
             typed_postconditions=[EQ("git.local_synced", True)],
             effect_footprint=[CALL("git.fast_forward", "repo"), SET("git.local_synced", True)],
             authority_required=AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"git.fast_forward", "set"}, allowed_resources={"repo"}),
-            verifier={"kind": "git_check", "evidence_strength": "E2"},
+            verifier=_validated_verifier(EQ("git.local_synced", True)),
         ),
     )
     clean_registry.register(c2)

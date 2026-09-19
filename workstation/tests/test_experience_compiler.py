@@ -7,6 +7,38 @@ import pytest
 from workstation.artifacts import ArtifactStore
 from workstation.memory import ProcedureStep
 from workstation.procedure_trace import record_trace, candidate_steps
+from workstation.control_plane.verification import (
+    VerificationContract, VerificationLifecycle, VerificationStatus, VerificationResult,
+)
+from workstation.execution_policy import EvidenceStrength
+
+
+def _validated_contract(predicates=("exists",)):
+    return VerificationContract(
+        covered_predicates=tuple(predicates), observer="fixture.owner.readback",
+        source_kind="test_fixture", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_runtime",), lifecycle=VerificationLifecycle.VALIDATED,
+        validation_receipts=(
+            {"kind": "positive_replay", "passed": True, "phase": "validation", "evidence_ref": "positive"},
+            {"kind": "negative_control", "passed": True, "phase": "validation", "evidence_ref": "negative"},
+        ),
+    )
+
+
+def _validate_cap(cap, predicates=("exists",)):
+    verifier = _validated_contract(predicates)
+    cap.verifier_contract = verifier.to_dict()
+    cap.learning_metadata["verifier_fingerprint"] = verifier.fingerprint()
+    cap.learning_metadata["verifier_lifecycle"] = "VALIDATED"
+    return cap
+
+
+def _replay_result(cap, predicates):
+    verifier = VerificationContract.from_dict(cap.verifier_contract)
+    return VerificationResult(
+        VerificationStatus.VERIFIED, verifier.fingerprint(), ("artifact://readback",),
+        tuple(predicates), True, True, True, True, True, "verified",
+    ).to_dict()
 
 
 @pytest.mark.parametrize('target', [
@@ -195,12 +227,13 @@ def test_explicit_data_dependency_survives_slice():
 
 def learned_capability():
     from workstation.operational_capabilities import OperationalCapability
-    return OperationalCapability('learned', 'Learned write', route='filesystem', effect='state_mutation',
+    cap = OperationalCapability('learned', 'Learned write', route='filesystem', effect='state_mutation',
         implementation={'steps': [{'id': 'write', 'primitive': 'fs_write', 'args': {'path': 'x', 'content': 'hi'}},
             {'id': 'wait', 'primitive': 'wait', 'args': {'duration': .01}},
             {'id': 'verify', 'primitive': 'fs_stat', 'args': {'path': 'x'}, 'verifier': True}]},
         postconditions=[{'type': 'field_equals', 'field': 'prev.exists', 'expected': True}],
         provenance={'source': 'experience_compiler'}, learning_metadata={'effects': {'exists': True}})
+    return _validate_cap(cap)
 
 
 def test_safe_replay_and_ablation_require_verified_interventions():
@@ -212,7 +245,8 @@ def test_safe_replay_and_ablation_require_verified_interventions():
     def replay(steps, deadline):
         attempted.append([s['id'] for s in steps])
         return {'passed': any(s['id'] == 'write' for s in steps), 'predicates': {'exists': True},
-            'evidence_strength': 2, 'evidence_refs': ['artifact://readback']}
+            'evidence_strength': 2, 'evidence_refs': ['artifact://readback'],
+            'verification_result': _replay_result(cap, ('exists',))}
     validated = controlled_replay(cap, env, replay)
     assert validated.causal_grade == CausalGrade.REPLAY_VALIDATED
     reduced = reduce_slice(validated, env, replay, max_attempts=8)
@@ -358,7 +392,7 @@ def test_learned_browser_replay_is_verified_without_provider_calls(tmp_path):
     from workstation.operational_capabilities import OperationalCapabilityRegistry
     from workstation.operational_kernel import OperationalKernel
     registry = OperationalCapabilityRegistry(ArtifactStore(tmp_path / 'artifacts'))
-    cap = ExperienceCompiler(registry).compile(pr_traces())
+    cap = _validate_cap(ExperienceCompiler(registry).compile(pr_traces()), ("pr_state",))
     kernel = OperationalKernel(registry)
     state, calls = {'pr_state': 'open', 'mergeable': True}, []
     def dispatch(tool, args):
@@ -376,7 +410,8 @@ def test_learned_browser_replay_is_verified_without_provider_calls(tmp_path):
         result = kernel.execute_capability(trial, {next(iter(cap.input_schema['properties'])): 999}, dispatch=dispatch,
             context={'learning_replay': True}, owner=None)
         return {'passed': result['success'], 'predicates': dict(state),
-            'evidence_strength': 2, 'evidence_refs': ['artifact://fixture-readback']}
+            'evidence_strength': 2, 'evidence_refs': ['artifact://fixture-readback'],
+            'verification_result': _replay_result(cap, ('pr_state',))}
     validated = controlled_replay(cap, SafeEnvironment('test_fixture', 'test-browser', lambda *a: True), run)
     registry.register(validated)
     promoted = registry.promote(cap.id)
@@ -427,7 +462,7 @@ def test_filesystem_compilation_replay_and_two_composites(tmp_path):
         traces.append([write, verify])
         path.unlink()
     registry = OperationalCapabilityRegistry(ArtifactStore(tmp_path / 'artifacts'))
-    cap = ExperienceCompiler(registry).compile(traces)
+    cap = _validate_cap(ExperienceCompiler(registry).compile(traces), tuple(ExperienceCompiler(registry).compile(traces).learning_metadata.get('effects', {})))
     kernel = OperationalKernel(registry)
     def run(steps, deadline):
         from copy import deepcopy
@@ -438,7 +473,8 @@ def test_filesystem_compilation_replay_and_two_composites(tmp_path):
         result = kernel.execute_capability(trial, {'path': str(path), 'path2': str(path)},
             context={'learning_replay': True})
         return {'passed': result['success'], 'predicates': filesystem_state(path).semantic_predicates,
-            'evidence_strength': 2, 'evidence_refs': ['artifact://local-readback']}
+            'evidence_strength': 2, 'evidence_refs': ['artifact://local-readback'],
+            'verification_result': _replay_result(cap, tuple(cap.learning_metadata.get('effects', {})))}
     cap = controlled_replay(cap, SafeEnvironment('temp_filesystem', str(tmp_path), lambda *a: True), run)
     registry.register(cap)
     registry.promote(cap.id)
@@ -472,7 +508,7 @@ def test_process_abstraction_and_cross_backend_provenance(tmp_path):
         samples[1].provenance.runtime = 'local_process'
         samples[1].operation.dependencies = {'data': ['fs_stat']}
         traces.append(samples)
-    cap = ExperienceCompiler(registry).compile(traces)
+    cap = _validate_cap(ExperienceCompiler(registry).compile(traces), tuple(ExperienceCompiler(registry).compile(traces).learning_metadata.get('effects', {})))
     assert cap.route == 'composite'
     assert {o['runtime'] for o in cap.provenance['origins']} == {'local_filesystem', 'local_process'}
     assert cap.effect == 'read_only'
@@ -487,7 +523,7 @@ def test_process_abstraction_and_cross_backend_provenance(tmp_path):
     from workstation.experience_compiler.state_abstraction import filesystem_state
     for trace in traces:
         trace[0].state_before = filesystem_state(tmp_path)
-    cap = ExperienceCompiler(registry).compile(traces)
+    cap = _validate_cap(ExperienceCompiler(registry).compile(traces), tuple(ExperienceCompiler(registry).compile(traces).learning_metadata.get('effects', {})))
     completed = subprocess.run([sys.executable, '-c', 'print("fixture")'], capture_output=True, check=True)
     context = {'learning_replay': True, 'process_observer': lambda args: {
         'process_state': 'exited', 'exit_code': completed.returncode}}
@@ -497,7 +533,8 @@ def test_process_abstraction_and_cross_backend_provenance(tmp_path):
         attempt.implementation['steps'] = steps
         outcome = OperationalKernel(registry).execute_capability(attempt, {}, context=context)
         return {'passed': outcome['success'], 'predicates': outcome['output'],
-                'evidence_strength': 2, 'evidence_refs': ['artifact://fixture-process-readback']}
+                'evidence_strength': 2, 'evidence_refs': ['artifact://fixture-process-readback'],
+                'verification_result': _replay_result(cap, tuple(cap.learning_metadata.get('effects', {})))}
     validated = controlled_replay(cap, SafeEnvironment('test_fixture', 'cross-backend', lambda *a: True), replay)
     compiler = ExperienceCompiler(registry)
     assert compiler.promote(validated).admitted
@@ -555,7 +592,8 @@ def test_cross_context_grade_requires_distinct_controlled_successes():
     from workstation.experience_compiler.causal import validate_cross_context, SafeEnvironment
     cap = learned_capability()
     passed = lambda steps, deadline: {'passed': True, 'predicates': {'exists': True},
-        'evidence_strength': 2, 'evidence_refs': ['artifact://readback']}
+        'evidence_strength': 2, 'evidence_refs': ['artifact://readback'],
+        'verification_result': _replay_result(cap, ('exists',))}
     env = lambda identity: SafeEnvironment('test_fixture', identity, lambda *args: True)
     validated = validate_cross_context(cap, [(env('clean'), passed), (env('restart'), passed)])
     assert validated.causal_grade == 5 and cap.causal_grade == 0

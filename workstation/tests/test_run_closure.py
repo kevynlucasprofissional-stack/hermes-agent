@@ -9,6 +9,23 @@ from workstation.run_closure import (
     compute_expected_operational_utility,
     evaluate_run_local_closure,
 )
+from workstation.control_plane.verification import (
+    VerificationContract, VerificationLifecycle, VerificationResult, VerificationStatus,
+)
+from workstation.execution_policy import EvidenceStrength
+
+
+def _verifier_and_result():
+    verifier = VerificationContract(
+        covered_predicates=("card.description",), observer="trello.card.read",
+        source_kind="source_of_record", minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_owner",), lifecycle=VerificationLifecycle.VALIDATED,
+    )
+    result = VerificationResult(
+        VerificationStatus.VERIFIED, verifier.fingerprint(), ("artifact://proof",),
+        ("card.description",), True, True, True, True, True, "verified",
+    )
+    return verifier.to_dict(), result
 
 
 @pytest.fixture
@@ -30,6 +47,7 @@ def mock_agent_closure():
 
 def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_closure):
     """Closure handoff strictly fails closed without verified execution, replay, and verifier."""
+    verifier, verification_result = _verifier_and_result()
     base_kwargs = {
         "name": "browser_type",
         "args": {"ref": "@e1", "text": "hello"},
@@ -44,6 +62,9 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
         "parameter_schema": {"text": "string"},
         "requested_authority": AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"browser_type"}),
         "authorized_authority": AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION, allowed_actions={"browser_type"}),
+        "first_verification_result": verification_result,
+        "replay_verification_result": verification_result,
+        "required_predicates": {"card.description"},
     }
 
     # 1. Missing first verified execution evidence
@@ -51,7 +72,7 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
         mock_agent_closure,
         first_verified_ref=None,
         replay_verified_ref="artifact://proof_replay",
-        verifier_contract={"kind": "readback"},
+        verifier_contract=verifier,
         **base_kwargs,
     )
     assert ok is False
@@ -63,7 +84,7 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
         mock_agent_closure,
         first_verified_ref="artifact://proof_1",
         replay_verified_ref=None,
-        verifier_contract={"kind": "readback"},
+        verifier_contract=verifier,
         **base_kwargs,
     )
     assert ok is False
@@ -79,7 +100,7 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
         **base_kwargs,
     )
     assert ok is False
-    assert "insufficient_verifier_contract" in reasons
+    assert "verifier_not_validated" in reasons
     assert proof is None
 
     # 4. Missing remaining items ref
@@ -87,7 +108,7 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
         mock_agent_closure,
         first_verified_ref="artifact://proof_1",
         replay_verified_ref="artifact://proof_replay",
-        verifier_contract={"kind": "readback"},
+        verifier_contract=verifier,
         **{**base_kwargs, "remaining_items_ref": None},
     )
     assert ok is False
@@ -99,7 +120,7 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
         mock_agent_closure,
         first_verified_ref="artifact://proof_1",
         replay_verified_ref="artifact://proof_replay",
-        verifier_contract={"kind": "readback"},
+        verifier_contract=verifier,
         **base_kwargs,
     )
     assert ok is True
@@ -112,6 +133,7 @@ def test_run_local_closure_requires_verified_replay_and_verifier(mock_agent_clos
 
 def test_run_local_closure_cannot_expand_authority_or_effect_budget(mock_agent_closure):
     """Run-local closure cannot widen granted authority or exceed intent effect budget."""
+    verifier, verification_result = _verifier_and_result()
     base_kwargs = {
         "name": "browser_type",
         "args": {"ref": "@e1", "text": "hello"},
@@ -121,7 +143,10 @@ def test_run_local_closure_cannot_expand_authority_or_effect_budget(mock_agent_c
         "contract": {"effect": "state_mutation", "target_family": "trello_card"},
         "first_verified_ref": "artifact://proof_1",
         "replay_verified_ref": "artifact://proof_replay",
-        "verifier_contract": {"kind": "readback"},
+        "verifier_contract": verifier,
+        "first_verification_result": verification_result,
+        "replay_verification_result": verification_result,
+        "required_predicates": {"card.description"},
         "remaining_items_ref": "artifact://tasks/batch.json",
         "remaining_item_count": 5,
         "parameter_schema": {"text": "string"},

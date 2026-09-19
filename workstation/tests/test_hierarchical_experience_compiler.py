@@ -41,8 +41,9 @@ def test_capability_invocation_is_persisted_only_after_verified_execution(clean_
     assert len(kernel.invocations) == 1
     inv = kernel.invocations[0]
     assert inv.capability_id == cap.id
-    assert inv.status == "COMMITTED"
-    assert inv.verified is True
+    assert inv.status == "ACKNOWLEDGED"
+    assert inv.verified is False
+    assert inv.verifier_status == "INCONCLUSIVE"
     assert inv.inputs == {"x": 1}
 
     # Failed execution does not record a committed successful invocation
