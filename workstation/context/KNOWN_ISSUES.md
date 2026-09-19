@@ -1,6 +1,6 @@
 # Workstation Known Issues
 
-## KI-015 — "Verified" can still encode correlated, stale or under-specified evidence [OPEN — H-076]
+## KI-015 — "Verified" could encode correlated, stale or under-specified evidence [RESOLVED — H-076]
 
 Post-PR #33 audit shows that the execution/control substrate is present, but verifier
 semantics remain too shallow in several production paths.
@@ -17,9 +17,10 @@ Reproduced code-level risks:
 - Experience Compiler reduces verifier knowledge mainly to effects/minimum evidence,
   losing reusable observer/extractor/relation/freshness/provenance detail.
 
-Required action: implement H-076 Verification Contract Synthesis. Unknown evidence must
-never upgrade itself; source disagreement preserves uncertainty; verifier candidates
-must pass discriminative positive/negative validation before promotion.
+Resolved behavior: H-076 removes undeclared E3 promotion, makes canonical
+VerificationResult govern commit, requires validated/fresh/covered RunClosure proof,
+preserves disagreement as CONFLICT, and requires separate positive/negative verifier
+receipts. Full Workstation regression: **670 passed, 2 skipped**.
 
 Canonical:
 [VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).

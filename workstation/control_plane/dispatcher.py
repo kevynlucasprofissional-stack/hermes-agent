@@ -17,6 +17,7 @@ from workstation.contracts import utc_now
 from workstation.control_plane.router import (
     ComposedDecision, ExecutableDecision, RoutingCertificate, _state_hash, revalidate_certificate
 )
+from workstation.control_plane.verification import VerificationResult, VerificationStatus
 
 
 class DispatchStatus(str, Enum):
@@ -68,6 +69,7 @@ class CertifiedDispatcher:
         has_uncertain_mutation: bool = False,
         authority_scope: Any = None,
         verifier_fn: Callable[[Any], bool] | None = None,
+        verification_result_fn: Callable[[Any], VerificationResult | dict[str, Any]] | None = None,
         ack_is_terminal_evidence: bool = False,
     ) -> dict[str, Any]:
         """Dispatch certified decision with strict preflight revalidation."""
@@ -130,12 +132,29 @@ class CertifiedDispatcher:
             record.acknowledged_at = utc_now()
 
             # Verification phase: cannot advance to COMMITTED without verification
-            verified = False
-            if verifier_fn is not None:
+            verification_result: VerificationResult | None = None
+            if verification_result_fn is not None:
                 try:
-                    verified = bool(verifier_fn(result))
+                    candidate = verification_result_fn(result)
+                    verification_result = candidate if isinstance(candidate, VerificationResult) else VerificationResult.from_dict(candidate)
                 except Exception:
-                    verified = False
+                    verification_result = VerificationResult(VerificationStatus.INCONCLUSIVE, reason="verification_callback_error")
+            elif verifier_fn is not None:
+                # Compatibility callbacks may still run, but a boolean cannot be
+                # terminal truth.  Callers must migrate to canonical results.
+                try:
+                    candidate = verifier_fn(result)
+                    if isinstance(candidate, VerificationResult):
+                        verification_result = candidate
+                    elif isinstance(candidate, dict) and "status" in candidate:
+                        verification_result = VerificationResult.from_dict(candidate)
+                    else:
+                        verification_result = VerificationResult(
+                            VerificationStatus.INCONCLUSIVE,
+                            reason="legacy_boolean_verifier_is_not_canonical_evidence",
+                        )
+                except Exception:
+                    verification_result = VerificationResult(VerificationStatus.INCONCLUSIVE, reason="legacy_verifier_error")
             elif ack_is_terminal_evidence:
                 # This exception is deliberately opt-in at a trusted contract
                 # boundary. A successful-looking tool payload is only an ACK.
@@ -143,8 +162,12 @@ class CertifiedDispatcher:
                     isinstance(result, dict)
                     and (result.get("success") is False or result.get("ok") is False or result.get("error"))
                 )
+                verification_result = VerificationResult(
+                    VerificationStatus.VERIFIED if verified else VerificationStatus.FAILED,
+                    reason="trusted_owner_ack_terminal_contract",
+                )
 
-            if verifier_fn is None and not ack_is_terminal_evidence:
+            if verification_result_fn is None and verifier_fn is None and not ack_is_terminal_evidence:
                 record.verifier_status = "needs_verification"
                 return {
                     "success": False,
@@ -153,13 +176,16 @@ class CertifiedDispatcher:
                     "error": "needs_verification",
                 }
 
-            if not verified:
+            if verification_result is None or not verification_result.verified:
                 record.status = DispatchStatus.UNCERTAIN
-                record.verifier_status = "failed"
+                record.verifier_status = (
+                    verification_result.status.value.lower() if verification_result else "inconclusive"
+                )
                 return {
                     "success": False,
                     "result": result,
                     "dispatch_record": record.to_dict(),
+                    "verification_result": verification_result.to_dict() if verification_result else None,
                     "error": "verification_failed",
                 }
 
@@ -168,7 +194,7 @@ class CertifiedDispatcher:
             record.verifier_status = "verified"
 
             record.status = DispatchStatus.COMMITTED
-            return {"success": True, "result": result, "dispatch_record": record.to_dict()}
+            return {"success": True, "result": result, "verification_result": verification_result.to_dict(), "dispatch_record": record.to_dict()}
         except Exception as exc:
             record.status = DispatchStatus.UNCERTAIN
             record.verifier_status = "failed"

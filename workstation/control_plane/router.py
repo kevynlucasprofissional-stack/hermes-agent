@@ -15,6 +15,7 @@ from typing import Any, Callable, Sequence
 
 from workstation.contracts import AcceptanceContract, utc_now
 from workstation.control_plane.contract import CapabilityFormalContract
+from workstation.control_plane.verification import VerificationContract
 from workstation.control_plane.intent import (
     OperationIntent, operation_intent_hash
 )
@@ -472,12 +473,35 @@ class CapabilityRouter:
             # Verifier and acceptance contract
             acceptance = operation_intent.acceptance
             policy_str = getattr(acceptance, "policy", "evidence")
-            verifier_dict = contract.verifier or cap.verifier_contract
-            verifier_available = bool(verifier_dict)
-            evidence_strength_sufficient = True
-            if policy_str == "evidence" and not verifier_available:
-                evidence_strength_sufficient = False
+            verifier_raw = contract.verifier or cap.verifier_contract
+            verifier_contract = (
+                verifier_raw if isinstance(verifier_raw, VerificationContract)
+                else VerificationContract.from_dict(verifier_raw)
+            )
+            required_predicates = {p.fingerprint() for p in contract.typed_postconditions}
+            is_mutation = bool(contract.effect_footprint)
+            temporal_required = verifier_contract.temporal_basis != "none"
+            verifier_available, _verifier_reasons = verifier_contract.is_sufficient_for(
+                required_predicates=required_predicates,
+                mutation=is_mutation,
+                temporal_required=temporal_required,
+            )
+            evidence_strength_sufficient = verifier_available
             if not evidence_strength_sufficient:
+                continue
+
+            # Preflight state hashing remains a dispatch fence.  A verifier that
+            # additionally requires revision/time freshness must have a real basis;
+            # a default boolean cannot manufacture it.
+            state_fresh = True
+            if temporal_required:
+                basis = verifier_contract.temporal_basis
+                state_fresh = bool(
+                    runtime_state.get("verification_temporal_basis")
+                    or runtime_state.get(basis)
+                    or runtime_state.get(f"state_{basis}")
+                )
+            if not state_fresh:
                 continue
 
             # All obligations passed! Build certificate
@@ -493,7 +517,7 @@ class CapabilityRouter:
                 approval_satisfied=True,
                 verifier_available=verifier_available,
                 evidence_strength_sufficient=evidence_strength_sufficient,
-                state_fresh=True,
+                state_fresh=state_fresh,
                 capability_healthy=(cap.drift_state == "healthy" and cap.lifecycle == CapabilityLifecycle.PROMOTED),
                 no_outstanding_uncertainty=True,
                 deterministic_closure=True,

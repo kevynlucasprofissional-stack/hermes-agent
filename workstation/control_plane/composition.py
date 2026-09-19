@@ -298,11 +298,22 @@ class CompositionEngine:
             return None
 
         # 5. Verifier closure
-        verifier_closure = all(
-            bool(c.formal_contract.get("verifier") if isinstance(c.formal_contract, dict)
-                 else getattr(c.formal_contract, "verifier", None) or c.verifier_contract)
-            for c in plan
-        )
+        from workstation.control_plane.verification import VerificationContract
+        verifier_closure = True
+        for capability in plan:
+            raw = (capability.formal_contract.get("verifier") if isinstance(capability.formal_contract, dict)
+                   else getattr(capability.formal_contract, "verifier", None)) or capability.verifier_contract
+            verifier = raw if isinstance(raw, VerificationContract) else VerificationContract.from_dict(raw)
+            formal = _get_contract(capability)
+            required = {p.fingerprint() for p in (formal.typed_postconditions if formal else [])}
+            sufficient, _ = verifier.is_sufficient_for(
+                required_predicates=required,
+                mutation=bool(formal and formal.effect_footprint),
+                temporal_required=verifier.temporal_basis != "none",
+            )
+            if not sufficient:
+                verifier_closure = False
+                break
         if not verifier_closure:
             return None
 

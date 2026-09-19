@@ -39,9 +39,19 @@ class ExperiencePromotionPolicy:
                           and e.get('result', {}).get('evidence_refs')
                           and e.get('result', {}).get('evidence_strength', 0) >= 1
                           for e in cap.validation_evidence),
+            'verifier_validated': self._validated_verifier(cap),
         }
         reasons.extend(k for k, passed in checks.items() if not passed)
         return PromotionAdmission(not reasons, tuple(reasons))
+
+    @staticmethod
+    def _validated_verifier(cap):
+        from workstation.control_plane.verification import (
+            VerificationContract, VerificationLifecycle, validate_verifier_sensitivity,
+        )
+        contract = VerificationContract.from_dict(cap.verifier_contract or {})
+        sensitive, _ = validate_verifier_sensitivity(list(contract.validation_receipts))
+        return contract.lifecycle == VerificationLifecycle.VALIDATED and sensitive
 
 
 def derive_formal_contract(capability, traces=None):
@@ -140,12 +150,8 @@ def derive_formal_contract(capability, traces=None):
             return None
 
     # 6. Verifier
-    evidence_strength = m.get('evidence_strength', 1)
-    verifier = {
-        "kind": "verified_predicates",
-        "effects": eff_dict or {},
-        "minimum_evidence": f"E{int(evidence_strength)}",
-    }
+    from workstation.control_plane.verification import VerificationContract
+    verifier = VerificationContract.from_dict(capability.verifier_contract or {})
 
     return CapabilityFormalContract(
         operation_family=op_family,

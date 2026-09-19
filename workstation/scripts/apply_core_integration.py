@@ -233,7 +233,7 @@ def patch_browser_tool(text: str) -> str:
         "browser_navigate": 'browser_navigate(url=args.get("url", ""), task_id=kw.get("task_id"))',
         "browser_snapshot": 'browser_snapshot(\n            full=args.get("full", False), task_id=kw.get("task_id"), user_task=kw.get("user_task"))',
         "browser_click": 'browser_click(ref=args.get("ref", ""), task_id=kw.get("task_id"))',
-        "browser_type": 'browser_type(\n                ref=args.get("ref", ""),\n                text=args.get("text", ""),\n                clear=args.get("clear", True),\n                append=args.get("append", False),\n                mode=args.get("mode", "insert_text"),\n                semantic_anchor=args.get("semantic_anchor"),\n                task_id=kw.get("task_id"),\n            )',
+        "browser_type": 'browser_type(\n                ref=args.get("ref", ""),\n                text=args.get("text"),\n                text_ref=args.get("text_ref"),\n                artifact_ref=args.get("artifact_ref"),\n                clear=args.get("clear", True),\n                append=args.get("append", False),\n                mode=args.get("mode", "insert_text"),\n                semantic_anchor=args.get("semantic_anchor"),\n                task_id=kw.get("task_id"),\n            )',
         "browser_scroll": 'browser_scroll(direction=args.get("direction", "down"), task_id=kw.get("task_id"))',
         "browser_back": 'browser_back(task_id=kw.get("task_id"))',
         "browser_press": 'browser_press(key=args.get("key", ""), task_id=kw.get("task_id"))',

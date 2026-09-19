@@ -11,6 +11,9 @@ from .segmentation import align_traces, NodeClass, segments
 from .generalization import anti_unify, infer_action_model
 from .causal import dependency_graph, operational_slice, observational_grade
 from .promotion import ExperiencePromotionPolicy, derive_formal_contract
+from workstation.control_plane.verification import (
+    VerificationContract, VerificationLifecycle, VerificationRelation,
+)
 
 _PRIMITIVES = {'browser_navigate', 'browser_snapshot', 'browser_click', 'browser_type', 'browser_press',
     'browser_scroll', 'browser_extract_items', 'navigate', 'snapshot', 'click', 'fill', 'press', 'scroll',
@@ -42,6 +45,27 @@ class ExperienceCompiler:
             'capability_coverage': None, 'operational_novelty_rate': None,
             'atomic_reuse': sum(len(c.dependencies) for c in caps),
             'llm_calls_per_verified_outcome': None}
+
+    def validate_verifier(self, cap, owner_contract, receipts):
+        """Bind owner metadata and held-out receipts without promoting the action."""
+        from workstation.control_plane.verification import (
+            VerificationContract, validate_verifier_candidate,
+        )
+        contract = owner_contract if isinstance(owner_contract, VerificationContract) else VerificationContract.from_dict(owner_contract)
+        validated, reasons = validate_verifier_candidate(contract, list(receipts))
+        cap.verifier_contract = validated.to_dict()
+        if isinstance(cap.formal_contract, dict):
+            cap.formal_contract["verifier"] = validated.to_dict()
+        elif cap.formal_contract is not None:
+            cap.formal_contract.verifier = validated
+        cap.learning_metadata['verifier_fingerprint'] = validated.fingerprint()
+        cap.learning_metadata['verifier_lifecycle'] = validated.lifecycle.value
+        cap.learning_metadata['verifier_validation_reasons'] = list(reasons)
+        cap.learning_metadata['pair_digest'] = digest({
+            'action': cap.compatibility_fingerprint,
+            'verifier': validated.fingerprint(),
+        })
+        return cap, reasons
 
     def compile(self, traces, failures=()):
         self._attempts += 1
@@ -150,10 +174,30 @@ class ExperienceCompiler:
         utility = raw_size - model_size - len(successes)*64 - 256
         if utility <= 0:
             raise ValueError('nonpositive reuse/compression utility')
+        terminal_verifications = [t[-1].verification for t in successes]
+        observers = {v.observer or v.verifier for v in terminal_verifications}
+        sources = {v.source_kind for v in terminal_verifications}
+        extractors = {v.extractor_path for v in terminal_verifications}
+        relations = {v.relation for v in terminal_verifications}
+        versions = {v.resource_version for v in terminal_verifications if v.resource_version}
+        # Experience may propose identity/extraction/exact comparison. Trust,
+        # authority, consistency and validation never come from recurrence.
+        verifier_candidate = VerificationContract(
+            covered_predicates=tuple(sorted({k for v in terminal_verifications for k in v.verified_predicates})),
+            effect_classes=tuple(sorted(effects)),
+            observer=next(iter(observers)) if len(observers) == 1 else "",
+            source_kind=next(iter(sources)) if len(sources) == 1 else "unknown",
+            extractor_path=next(iter(extractors)) if len(extractors) == 1 else "",
+            relation=VerificationRelation.EXACT if relations <= {"", "EXACT"} else VerificationRelation.EXACT,
+            minimum_evidence=min(v.evidence_strength for v in terminal_verifications),
+            temporal_basis="version" if versions else "none",
+            lifecycle=VerificationLifecycle.CANDIDATE,
+            validation_evidence_refs=tuple(sorted({r for v in terminal_verifications for r in v.evidence_refs})),
+        )
         cap = OperationalCapability('experience_' + compatible[:24], 'Verified ' + nodes[-1].primitive,
             input_schema=generalized.schema, effect=effect, route=route, scope=scope,
             preconditions=preconditions, postconditions=postconditions,
-            verifier_contract={'effects': model.effects, 'minimum_evidence': min(int(t[-1].verification.evidence_strength) for t in successes)},
+            verifier_contract=verifier_candidate.to_dict(),
             implementation=generalized.template, provenance={'source': 'experience_compiler',
                 'origins': [asdict(s.provenance) for s in evidence_samples]}, semantic_fingerprint=semantic,
             compatibility_fingerprint=compatible, causal_grade=grade, trust_class=trust, taint=taint,
@@ -170,6 +214,8 @@ class ExperienceCompiler:
                 'unresolved_counterexamples': model.unresolved_counterexamples,
                 'node_classes': [n.classification.value for n in nodes],
                 'sample_refs': [s.to_dict()['sample_id'] for s in evidence_samples],
+                'verifier_fingerprint': verifier_candidate.fingerprint(),
+                'verifier_lifecycle': verifier_candidate.lifecycle.value,
                 'operation_families': sorted({s.operation.operation_family for s in flat if s.operation.operation_family}),
                 'target_families': sorted({s.operation.target_family for s in flat if s.operation.target_family})})
         fc = derive_formal_contract(cap)

@@ -298,6 +298,7 @@ def test_p0_6_certified_dispatcher_lifecycle_and_verification():
     from workstation.control_plane.router import ExecutableDecision, RoutingCertificate, _state_hash
     from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
     from workstation.operational_capabilities import OperationalCapability
+    from workstation.control_plane.verification import VerificationResult, VerificationStatus
 
     cap = OperationalCapability(
         id="cap.test.echo",
@@ -324,7 +325,9 @@ def test_p0_6_certified_dispatcher_lifecycle_and_verification():
         current_state={},
         dispatch_fn=lambda: {"success": True, "data": "output"},
         run_id="run-1",
-        verifier_fn=lambda result: result.get("data") == "output",
+        verification_result_fn=lambda result: VerificationResult(
+            VerificationStatus.VERIFIED if result.get("data") == "output" else VerificationStatus.FAILED
+        ),
     )
     assert res["success"] is True
     record = res["dispatch_record"]
@@ -349,7 +352,7 @@ def test_p0_6_certified_dispatcher_lifecycle_and_verification():
         current_state={},
         dispatch_fn=lambda: {"success": False, "error": "verification_mismatch"},
         run_id="run-1",
-        verifier_fn=lambda result: False,
+        verification_result_fn=lambda result: VerificationResult(VerificationStatus.FAILED),
     )
     assert res_failed["success"] is False
     assert res_failed["dispatch_record"]["status"] == DispatchStatus.UNCERTAIN

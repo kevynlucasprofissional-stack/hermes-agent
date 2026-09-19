@@ -20,6 +20,19 @@ from workstation.contracts import utc_now
 from workstation.control_plane.ir import Predicate, TRUE
 
 
+def evaluate_authoritative_observation(contract, expected, evidence, *, required_predicates=None):
+    """Await-side projection of the canonical verification evaluator.
+
+    Await remains responsible for scheduling/fencing; this helper only evaluates
+    whether an authoritative observation proves the awaited predicate.
+    """
+    from workstation.control_plane.verification import evaluate_verification
+    return evaluate_verification(
+        contract, expected, evidence,
+        required_predicates=set(required_predicates or ()),
+    )
+
+
 class AwaitKind(str, Enum):
     WAITING_FOR_EVENT = "WAITING_FOR_EVENT"
     WAITING_FOR_TIMER = "WAITING_FOR_TIMER"

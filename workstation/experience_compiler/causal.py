@@ -100,8 +100,16 @@ class SafeEnvironment:
 
 
 def _verified(capability, result):
+    from workstation.control_plane.verification import VerificationResult, VerificationStatus
     effects = capability.learning_metadata.get('effects', {})
+    canonical = result.get('verification_result') if isinstance(result, dict) else None
+    try:
+        vr = canonical if isinstance(canonical, VerificationResult) else VerificationResult.from_dict(canonical or {})
+    except (TypeError, ValueError):
+        return False
     return (isinstance(result, dict) and result.get('passed') is True
+            and vr.status == VerificationStatus.VERIFIED
+            and vr.verifier_fingerprint == capability.learning_metadata.get('verifier_fingerprint')
             and result.get('evidence_strength', 0) >= 1 and bool(result.get('evidence_refs'))
             and bool(effects) and all(k in result.get('predicates', {}) and result['predicates'][k] == v
                                      for k, v in effects.items()))

@@ -2,7 +2,26 @@
 
 ## H-076 — Verification Contract Synthesis / operational truth audit (2026-09-19)
 
-**Classification:** VERIFIER-COMPILER SUBSYSTEM MOSTLY FALSIFIED / VERIFICATION-SEMANTICS GAP CONFIRMED / IMPLEMENTATION OPEN.
+**Active implementation experiment (baseline `main@14ef1e3ed1f05bec41c70469e231d3b9354439d7`):**
+Hypothesis: a pure typed contract/evaluator integrated at the existing Router,
+Dispatcher, OperationalKernel, RunClosure and Experience Compiler seams removes the
+confirmed self-certification paths without a second state owner. RED evidence is the
+current code-level reproduction of F1-F8 (undeclared E3 at `task_compiler.py:760`,
+presence-based routing, assumed freshness, executor bool callback, unconditional
+invocation verification and non-empty-dict closure). Planned confirming evidence is
+the H-076 focused behavior suite followed by the full Workstation regression. Result
+classification is **CONFIRMED AND RESOLVED**.
+
+Observed result: the first focused run was infrastructure-blocked by `WinError 5` in
+pytest global temp. Native `.venv` Python plus isolated external `--basetemp` and no
+cacheprovider resolved setup without product changes. Consolidated focused gate:
+**109 passed**. The first full run produced **666 passed, 2 skipped, 4 failed**; all four
+were legacy expectations contradicted by H-076 (boolean verifier callback,
+unconditional invocation verification/ORA numerator, and an unannotated readback
+fixture). After migrating those fixtures to canonical results or explicit owner
+evidence, final regression passed **670 tests, 2 skipped in 287.52s**.
+
+**Classification:** VERIFIER-COMPILER SUBSYSTEM FALSIFIED / VERIFICATION-SEMANTICS GAP RESOLVED / IMPLEMENTED & QUALIFIED.
 
 **Baseline:** main@e010c8981a4bdeb89ac94479e0d7e891d48eadae after PR #33.
 

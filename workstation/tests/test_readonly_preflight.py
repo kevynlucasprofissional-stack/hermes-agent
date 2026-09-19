@@ -28,6 +28,7 @@ def incident(tmp_path, monkeypatch):
                                          ("incident_put", ToolEffect.MUTATION, "PUT", "api"),
                                          ("incident_ui", ToolEffect.MUTATION, "UPDATE", "ui")):
         registry.register(name, "incident", {"name": name, "parameters": {"type": "object"},
+            "evidence_strength": 3 if name == "incident_get" else 0,
             "capability": {"provider": "fake_cards", "channel": channel, "method": method},
             "mutation_target": {"provider": "fake_cards", "scope": "external", "kind": "card",
                                 "identifier_field": "id", "field": "description", "operation": "description.update",

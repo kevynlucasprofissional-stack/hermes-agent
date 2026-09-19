@@ -2,12 +2,11 @@
 
 ## H-076 integration — learn transformation and verifier separately (2026-09-19)
 
-Post-PR #33 audit found that the Experience Compiler preserves that verification
-occurred better than it preserves **how to verify again**. Current verifier compilation
-is still dominated by effects + minimum evidence and therefore loses observer,
-extraction, relation, temporal/freshness, failure-domain and predicate-coverage detail.
+H-076 now preserves **how to verify again**: observer/source/extractor, relation and
+canonicalizer version, temporal signal, failure-domain provenance, predicate coverage,
+validation receipts and verifier fingerprint.
 
-The next corrective milestone is
+The implemented corrective milestone is
 [VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
 
 Experience Compiler must therefore split learning into two hypotheses:

@@ -6,6 +6,7 @@ from typing import Any
 
 from workstation.control_plane.ir import Effect, Predicate
 from workstation.control_plane.lattice import AuthorityScope
+from workstation.control_plane.verification import VerificationContract
 
 
 @dataclass
@@ -19,7 +20,7 @@ class CapabilityFormalContract:
     effect_footprint: list[Effect] = field(default_factory=list)
     authority_required: AuthorityScope = field(default_factory=AuthorityScope)
     preserves: list[Predicate] = field(default_factory=list)
-    verifier: dict[str, Any] = field(default_factory=dict)
+    verifier: VerificationContract | dict[str, Any] = field(default_factory=dict)
     event_contract: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -31,7 +32,7 @@ class CapabilityFormalContract:
             "effect_footprint": [e.to_dict() for e in self.effect_footprint],
             "authority_required": self.authority_required.to_dict(),
             "preserves": [p.to_dict() for p in self.preserves],
-            "verifier": dict(self.verifier),
+            "verifier": self.verifier.to_dict() if isinstance(self.verifier, VerificationContract) else dict(self.verifier),
             "event_contract": dict(self.event_contract) if self.event_contract else None,
         }
 
@@ -54,6 +55,6 @@ class CapabilityFormalContract:
                 else data.get("authority_required") or AuthorityScope()
             ),
             preserves=[Predicate.from_dict(p) if isinstance(p, dict) else p for p in preserves_raw],
-            verifier=dict(data.get("verifier", {})),
+            verifier=VerificationContract.from_dict(data.get("verifier", {})),
             event_contract=dict(data["event_contract"]) if data.get("event_contract") else None,
         )

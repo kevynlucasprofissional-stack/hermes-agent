@@ -3,9 +3,9 @@
 ## H-076 — Verification Contract Synthesis / verdade operacional — 2026-09-19
 
 Depois do merge do H-075 no main@e010c8981a4bdeb89ac94479e0d7e891d48eadae,
-o gargalo seguinte ficou explícito: Hermes já consegue transferir trabalho adaptativo
-verificado para execução determinística, mas "verified" ainda pode carregar uma prova
-correlacionada, stale ou subespecificada.
+o gargalo seguinte ficou explícito e foi fechado: Hermes transfere trabalho adaptativo
+para execução determinística somente quando a prova canônica é admissível, fresca,
+coberta e livre de conflito.
 
 A hipótese de um Verifier Compiler separado foi refutada. O desenho correto é estender
 CapabilityFormalContract.verifier para um VerificationContract tipado, usar um
@@ -25,7 +25,7 @@ quando ele consegue **discriminar sucesso de ausência/corrupção/staleness/con
 Isso exige Verifier Sensitivity, negativos seguros, held-out evidence, drift/fingerprint
 e separação entre discovery evidence e validation evidence.
 
-O H-075 permanece implementado. H-076 endurece a verdade consumida por RunClosureProof,
+O H-075 permanece implementado. H-076 agora endurece a verdade consumida por RunClosureProof,
 Router, Kernel, Dispatcher, Await, composition e Experience Compiler.
 
 Canônico:

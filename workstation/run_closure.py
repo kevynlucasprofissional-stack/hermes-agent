@@ -26,6 +26,9 @@ from workstation.control_plane.ir import Effect, effect_contained
 from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope, authority_covers
 from workstation.durable_tasks import DurableTaskStore, WorkItem, WorkItemStatus
 from workstation.execution_policy import _operational_closure_proven
+from workstation.control_plane.verification import (
+    VerificationContract, VerificationLifecycle, VerificationResult, VerificationStatus,
+)
 
 
 @dataclass
@@ -53,6 +56,12 @@ class RunClosureProof:
     remaining_item_count: int
     expected_operational_utility: float
     source_trace_refs: list[str] = field(default_factory=list)
+    verifier_fingerprint: str = ""
+    verifier_lifecycle: str = "CANDIDATE"
+    first_verification_result: dict[str, Any] = field(default_factory=dict)
+    replay_verification_result: dict[str, Any] = field(default_factory=dict)
+    covered_predicates: list[str] = field(default_factory=list)
+    freshness_satisfied: bool = False
     created_at: str = field(default_factory=utc_now)
 
     def to_dict(self) -> dict[str, Any]:
@@ -125,6 +134,9 @@ def evaluate_run_local_closure(
     first_verified_ref: str | None = None,
     replay_verified_ref: str | None = None,
     verifier_contract: dict[str, Any] | None = None,
+    first_verification_result: VerificationResult | dict[str, Any] | None = None,
+    replay_verification_result: VerificationResult | dict[str, Any] | None = None,
+    required_predicates: set[str] | None = None,
     remaining_items_ref: str | None = None,
     remaining_item_count: int = 0,
     requested_authority: AuthorityScope | dict[str, Any] | None = None,
@@ -164,9 +176,36 @@ def evaluate_run_local_closure(
     if not first_verified_ref:
         reasons.append("missing_first_verified_evidence")
 
-    # 3. Independent readback/verifier
-    if not verifier_contract or not any(verifier_contract.values()):
-        reasons.append("insufficient_verifier_contract")
+    # 3. Typed validated readback/verifier. References identify artifacts; only
+    # canonical results establish what those artifacts proved.
+    typed_verifier = VerificationContract.from_dict(verifier_contract or {})
+    verifier_ok, verifier_reasons = typed_verifier.is_sufficient_for(
+        required_predicates=set(required_predicates or typed_verifier.covered_predicates),
+        mutation=bool(contract and contract.get("effect") not in {"read_only", "PURE_READ", "DISCOVERY"}),
+        temporal_required=typed_verifier.temporal_basis != "none",
+    )
+    if not verifier_ok:
+        reasons.extend(verifier_reasons or ("insufficient_verifier_contract",))
+    first_result = (
+        first_verification_result if isinstance(first_verification_result, VerificationResult)
+        else VerificationResult.from_dict(first_verification_result) if first_verification_result else None
+    )
+    replay_result = (
+        replay_verification_result if isinstance(replay_verification_result, VerificationResult)
+        else VerificationResult.from_dict(replay_verification_result) if replay_verification_result else None
+    )
+    for label, result in (("first", first_result), ("replay", replay_result)):
+        if result is None:
+            reasons.append(f"missing_{label}_verification_result")
+            continue
+        if result.status != VerificationStatus.VERIFIED:
+            reasons.append(f"{label}_verification_{result.status.value.lower()}")
+        if result.verifier_fingerprint != typed_verifier.fingerprint():
+            reasons.append(f"{label}_verifier_fingerprint_mismatch")
+        if set(required_predicates or ()) - set(result.covered_predicates):
+            reasons.append(f"{label}_predicate_coverage_insufficient")
+        if typed_verifier.temporal_basis != "none" and not result.freshness_satisfied:
+            reasons.append(f"{label}_verification_stale")
 
     # 4. Compatible verified replay/canary (for mutable operations)
     is_mutation = bool(
@@ -246,6 +285,12 @@ def evaluate_run_local_closure(
         authority_scope=req_auth,
         effect_budget=effect_budget or [],
         verifier_contract=verifier_contract or {},
+        verifier_fingerprint=typed_verifier.fingerprint(),
+        verifier_lifecycle=typed_verifier.lifecycle.value,
+        first_verification_result=first_result.to_dict() if first_result else {},
+        replay_verification_result=replay_result.to_dict() if replay_result else {},
+        covered_predicates=sorted(set(first_result.covered_predicates if first_result else ()) | set(replay_result.covered_predicates if replay_result else ())),
+        freshness_satisfied=bool(first_result and replay_result and first_result.freshness_satisfied and replay_result.freshness_satisfied),
         first_verified_evidence_ref=first_verified_ref,
         replay_evidence_ref=replay_verified_ref or first_verified_ref,
         uncertainty_clear=not agent_uncertain,
@@ -519,4 +564,3 @@ def recover_verified_prefix(task_id: str, *, task_store: DurableTaskStore | None
         "uncertain_ids": uncertain_ids,
         "pending_items": pending_items,
     }
-
