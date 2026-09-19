@@ -420,6 +420,18 @@ test('keeps four native Browser tasks aligned across controller and IPC while he
   }, hubBounds)
 
   expect(attached.viewportHost).toBe('hub')
+  // The renderer's ResizeObserver may publish its first layout immediately after
+  // attach. Reassert the owning host's requested bounds after that projection and
+  // wait for the native child to converge before evaluating the invariant.
+  await fixture.page.waitForTimeout(100)
+  await fixture.page.evaluate(async bounds => {
+    const api = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser
+    return api.setBounds(bounds, 'hub')
+  }, hubBounds)
+  await expect.poll(async () => {
+    const snapshot = await nativeViewportSnapshot(fixture.app)
+    return activeViewportChild(snapshot).bounds
+  }).toEqual(hubBounds)
   const initialNativeViewport = await nativeViewportSnapshot(fixture.app)
   const initialNativeChild = activeViewportChild(initialNativeViewport)
   expect(initialNativeChild.bounds).toEqual(hubBounds)
