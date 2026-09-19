@@ -49,29 +49,29 @@ high-level reuse.
 
 PR #32 component baseline (620 tests were reported at implementation time; H-075 supersedes the end-to-end CLOSED/QUALIFIED claim):
 
-1. **P0 — Truthful Control Plane closure (CLOSED / QUALIFIED).**
+1. **P0 — Truthful Control Plane closure (SUBSTANTIAL BASELINE / CORRECTIVE SEAMS OPEN).**
    CompositionCertificate hash method, CertifiedDispatcher fail-closed verification
    (NEEDS_VERIFICATION), TaskCompiler sequential child execution without synthetic
    wildcards, operational-closure-aware execution policy, terminal family narrowing.
-2. **P1 — Experience Compiler -> Router bridge (CLOSED / QUALIFIED).**
+2. **P1 — Experience Compiler -> Router bridge (BASELINE LANDED / PROVENANCE HARDENING OPEN).**
    Provenance extended with authority_ref and authority_scope; conservative deterministic
    CapabilityFormalContract derivation from verified experience; family_id indexing;
    OperationIntent routing to promoted learned capabilities without LLM.
-3. **P2 — Non-resident Await/Continuation (CLOSED / QUALIFIED).**
+3. **P2 — Non-resident Await/Continuation (COMPONENT CONTRACT LANDED / PRODUCT RESUME OPEN).**
    AwaitContinuation with durable subgraph and capability pins; TriggerCoordinator with
    run_id/task_id/operation_id fencing, authoritative state confirmation before wake,
    and atomic condition cleanup only after verified resumption.
-4. **P3 — Hierarchical Experience Compiler (CLOSED / QUALIFIED).**
+4. **P3 — Hierarchical Experience Compiler (SUBSTRATE LANDED / DURABLE CAUSAL PROMOTION OPEN).**
    OperationalKernel records verified CapabilityInvocation; HierarchicalExperienceCompiler
    mines recurring sequences across runs, validates causal/authority/verifier JOIN closure,
    and emits composite OperationalCapabilities preserving child dependencies (no flattening).
    Child drift or quarantine fails closed and strictly blocks composite execution.
-5. **P4 — Operational Reasoning Amortization metrics (CLOSED / QUALIFIED).**
+5. **P4 — Operational Reasoning Amortization metrics (SCHEMA LANDED / PRODUCTION TELEMETRY OPEN).**
    ORAMetrics implemented with ora_ratio, composite_reuse_rate, wait_non_residency_rate,
    wake_llm_rate, and WakeReason breakdown. All unknown denominators strictly preserved
    as None / null without synthetic figures.
 
-Hard properties:
+Target hard properties — H-075 requires end-to-end proof before these are called closed:
 - promoted learned capabilities become Router-visible only from provable typed
   contracts; missing proof fails closed;
 - composite plans cannot commit unless actually executed and verified;

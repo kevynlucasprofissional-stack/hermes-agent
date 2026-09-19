@@ -32,9 +32,9 @@ Canonical:
 ---
 
 
-## H-074 — Hierarchical Operational Learning / Operational Reasoning Amortization (P0–P4) Implementation & Qualification (2026-09-19)
+## H-074 — Hierarchical Operational Learning / Operational Reasoning Amortization (P0–P4) implementation claim (2026-09-19) — SUPERSEDED BY H-075 AUDIT
 
-**Classification:** IMPLEMENTED / CONTRACT VALIDATED / 100% REGRESSIONS GREEN (620 passed, 2 skipped, 0 failed).
+**Historical classification at implementation time:** IMPLEMENTED / CONTRACT VALIDATED / 620 passed, 2 skipped, 0 failed. **H-075 supersedes the end-to-end closure claim:** those receipts prove components, not the currently open integration properties.
 
 **Executive Invariant:**
 Hermes must learn not only facts about the world, but verified ways of acting on it. The more an operational transformation proves stable, causal, reusable and verifiable, the less reasoning should be required to execute it again.
