@@ -177,7 +177,7 @@ def test_repeated_read_discovery_not_counted_and_loose_writes_blocked(incident):
         calls = [call(name, {"id": str(i)}) for i in range(12)]
         assert not detects_fan_out(agent, calls) and not requires_compilation(agent, calls)
     writes = [call("incident_ui", {"id": str(i)}) for i in range(12)]
-    assert detects_fan_out(agent, writes) and requires_compilation(agent, writes)
+    assert detects_fan_out(agent, writes) and not requires_compilation(agent, writes)
 
 
 def test_uncertain_dispatched_effects_still_count_toward_fanout(incident):

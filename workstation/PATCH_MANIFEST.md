@@ -1,5 +1,13 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-025 — Browser operational admission corrective closure
+
+Extends canonical dispatcher, compiler, kernel, execution-policy, Browser runtime and
+ArtifactStore owners. Behavior contracts cover ACK-only non-commit, ordered verified
+composition, authority provenance, operational closure, terminal identity, same-origin
+native HTTP readback and complete spillover. H004 is extended in place for real rich
+editor hydration, cookie readback, deterministic replay and drift preservation.
+
 ## HW-023 — Upstream reliability hardening (P0 lane)
 
 Hardens the Workstation reliability boundary by adapting upstream field evidence

@@ -46,6 +46,12 @@ def execute(compiler, request, dispatch):
 
 def test_discovery_before_compilation(compiler):
     agent = SimpleNamespace(_work_batch_candidate=batch_intent("Crie 12 cards no board X."), valid_tool_names={"work_execute", "tool_call"})
+    agent.operational_closure_for_call = lambda _name, _args: {
+        "deterministic_representation": True, "executable_primitive": True,
+        "compatible_route": True, "authority_policy_compatible": True,
+        "verifier_readback": True, "certified_dispatch": True,
+        "uncertainty_clear": True,
+    }
     reads = [call(name, {}) for name in ("trello_search_board", "trello_list_columns", "trello_search_cards")]
     assert not requires_compilation(agent, reads)
     assert not requires_compilation(agent, [call("tool_call", {"name": "trello_list_columns", "arguments": {}})])

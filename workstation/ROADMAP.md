@@ -1,5 +1,13 @@
 # Workstation roadmap
 
+## Browser Operational Admission corrective P0 (2026-09-19) — IMPLEMENTED; EXACT-HEAD CI PENDING
+
+H-071 closes P0-A through P0-H in the existing owners: real ordered composition,
+evidence-gated commit, trusted authority only, explicit operational closure, native
+same-origin HTTP readback without process fallback, owner-declared terminal identity,
+repaired integration anchor, and a real Electron rich-editor/cookie/drift/replay fixture.
+Local candidate gates are green; final `QUALIFIED` status awaits exact-head CI.
+
 ## Browser Ownership & Recovery Reconciliation (2026-09-18) — COMPLETED & VALIDATED
 
 Canonical specification:

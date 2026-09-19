@@ -9,7 +9,15 @@
 
 ## Status
 
-**IMPLEMENTATION LANDED / POST-MERGE AUDIT REOPENED / PRODUCT QUALIFICATION BLOCKED (2026-09-19)**
+**CORRECTIVE P0 IMPLEMENTED / LOCAL PRODUCT GATES GREEN / EXACT-HEAD CI PENDING (2026-09-19)**
+
+H-071 closes the audited code gaps without a second control plane: composition executes
+and verifies its plan; ACK without accepted evidence stays non-terminal; requests cannot
+mint authority; mandatory compilation requires explicit operational closure; terminal
+syntax is not semantic identity; and Browser HTTP readback is same-origin, session-bound,
+reference-first and fail-closed. The real H004 Electron fixture proves delayed rich-editor
+hydration, exact-newline paste, Save, cookie readback, deterministic replay and drift
+isolation. Local gates are green; final closure awaits exact-head GitHub Actions.
 
 PR #29 landed P0.1–P0.8 implementation work and produced strong focused/local evidence:
 599 Workstation tests passed locally, the dedicated Browser admission suite passed 13/13,

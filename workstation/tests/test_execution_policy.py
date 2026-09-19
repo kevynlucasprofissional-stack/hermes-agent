@@ -6,9 +6,18 @@ from workstation.batch_detection import record_mutation
 from workstation.tests.test_durable_hardening import call
 
 
-def agent():
-    return SimpleNamespace(valid_tool_names={'work_execute'}, _work_repeatability_hint=True,
-                           session_id='owner', _conversation_root_id=lambda: 'owner')
+def agent(*, closure=True):
+    proof = {
+        'deterministic_representation': True, 'executable_primitive': True,
+        'compatible_route': True, 'authority_policy_compatible': True,
+        'verifier_readback': True, 'certified_dispatch': True,
+        'uncertainty_clear': True,
+    }
+    return SimpleNamespace(
+        valid_tool_names={'work_execute'}, _work_repeatability_hint=True,
+        session_id='owner', _conversation_root_id=lambda: 'owner',
+        operational_closure_for_call=(lambda _name, _args: proof) if closure else None,
+    )
 
 
 def test_repeatability_hint_does_not_block_stateful_browser():
@@ -118,6 +127,16 @@ def test_homogeneous_fanout_requires_compile_on_third_mutation():
     assert decisions[2] == CompilationDecision.REQUIRE_COMPILE
 
 
+def test_homogeneous_fanout_without_operational_closure_only_suggests():
+    from workstation.execution_policy import CompilationDecision, decisions_for_calls
+    a = agent(closure=False)
+    calls = [
+        call('browser_type', {'ref': f'@e{i}', 'text': f'val{i}', 'target_family': 'row_amount_field'})
+        for i in range(1, 4)
+    ]
+    assert decisions_for_calls(a, calls)[2] == CompilationDecision.SUGGEST_COMPILE
+
+
 def test_unknown_semantic_family_does_not_fabricate_homogeneity():
     from workstation.execution_policy import CompilationDecision, decisions_for_calls
     a = agent()
@@ -139,4 +158,3 @@ def test_executed_unverified_does_not_count_as_verified_success():
     for cand in candidates.values():
         assert cand.executed_occurrences >= 1
         assert cand.verified_successes == 0
-

@@ -1,5 +1,13 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Fechamento corretivo H-071 — candidato local verde; CI exato pendente — 2026-09-19
+
+Plano composto agora executa em ordem; ACK não vira verificação; o kernel só emite
+evidência aceita após readback/postcondition declarado ou observação semântica aprendida;
+request apenas restringe grants confiáveis; e `REQUIRE_COMPILE` exige closure operacional.
+O readback HTTP mantém cookies/sessão do Chromium, same-origin por default e payload
+integral no ArtifactStore. O fixture Electron real comprovou persistência, replay e drift.
+
 ## Auditoria pós-PR #29 — fechamento operacional ainda aberto — 2026-09-19
 
 O PR #29 melhorou a base, mas a revisão pós-merge separou **presença de mecanismo** de **prova de propriedade operacional**. O novo princípio de leitura é:

@@ -1,5 +1,15 @@
 # Hermes Workstation upstream delta
 
+## HW-025 — H-071 Browser operational admission corrective closure (2026-09-19)
+
+Downstream base: `main@6328894c0a5f51a61da772593842c25d377d553f`.
+Branch: `codex/browser-operational-admission-closure`.
+Extends HW-024 in `CertifiedDispatcher`, TaskCompiler, OperationalKernel, execution
+policy, Browser tool/runtime and reference plane. ACK is no longer proof; compositions
+execute and verify; authority has trusted provenance; mandatory compilation requires
+closure; native readback is same-origin/reference-first/fail-closed. No new store,
+browser engine, policy plane or model tool was introduced.
+
 
 ## HW-024 — Browser Operational Admission & Primitive Closure (2026-09-18)
 

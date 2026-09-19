@@ -1,5 +1,31 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-071 corrective implementation run — 2026-09-19
+
+**Baseline:** clean, synchronized `main@6328894c0a5f51a61da772593842c25d377d553f`.
+
+**Hypotheses / experiment order:**
+1. reproduce the committed-source `apply_core_integration.py --check` anchor failure;
+2. add behavioral RED coverage proving ACK without accepted evidence cannot commit and a
+   composition plan echo is not execution;
+3. repair dispatcher/composition through the existing CertifiedDispatcher and
+   OperationalKernel owners, then qualify focused suites before proceeding to authority,
+   operational closure, Browser-session HTTP hardening, integration metadata and native
+   Electron proof;
+4. retain exact command/results and classify any unavailable product/CI evidence honestly.
+
+**Result:** P0-A..H implemented on branch `codex/browser-operational-admission-closure`.
+ACK-only dispatch remains acknowledged; real composition executes in order and requires
+per-step verification; authority cannot originate in request/session defaults; mandatory
+compilation requires explicit operational closure; native readback is session-bound,
+same-origin/reference-first/fail-closed; the integration anchor and real Electron fixture
+are repaired.
+
+**GREEN receipts:** focused Python 27/27; Workstation 607 passed / 2 skipped; Electron
+1791 passed / 5 skipped; admission Vitest 4/4; Desktop typecheck; integration dry-run;
+H004 `VALIDATED`; H013 2/2; Work100 30/30. Required exact-head CI remains pending, so
+the candidate is implemented/local-qualified but not yet release-qualified.
+
 ## H-071 — Browser Ownership & Recovery Reconciliation (2026-09-18)
 
 **Classification:** IMPLEMENTED / FULLY VALIDATED / 100% REGRESSIONS GREEN / P0 CLOSED.

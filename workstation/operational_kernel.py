@@ -606,6 +606,15 @@ class OperationalKernel:
                 "capability_version": cap.version,
                 "output": output,
                 "savings": cap.savings,
+                # Primitive acknowledgement is not terminal evidence. Emit an
+                # accepted verifier only after declared readback or learned
+                # semantic observation has actually run.
+                "verification": {
+                    "accepted": bool(cap.postconditions or learned),
+                    "source": "semantic_observer" if learned else (
+                        "declared_postconditions" if cap.postconditions else "none"
+                    ),
+                },
             }
 
         except CapabilityDriftError as drift_err:
