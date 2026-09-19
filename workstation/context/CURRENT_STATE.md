@@ -1,5 +1,40 @@
 # Current State
 
+## 2026-09-19 H-078 Upstream Migration as Decoupling — ACTIVE STRATEGIC LANE
+
+The fork remains at `main@378b5a2df35ac05fe37a606298502d7bb974786d` while the
+upstream continues to advance. The architecture decision is now settled: **the next
+upstream migration must also reduce Workstation coupling**.
+
+The Workstation will use Hermes as the first-party laboratory/reference agent while moving
+toward a Workstation-owned runtime boundary. Generic Hermes core should not need
+Workstation-specific knowledge. Instead, Workstation will consume generic lifecycle,
+middleware and provider surfaces to observe and supervise normal Hermes behavior.
+
+Current code audit confirms direct inward seams that must be retired progressively:
+`agent/conversation_loop.py`, `agent/tool_executor.py`,
+`agent/turn_finalizer.py`, and `tools/browser_tool.py` directly import Workstation
+behavior. Product-edge integrations in Web/Kanban/Desktop are lower-priority adapter
+boundaries rather than equivalent core coupling.
+
+A key feasibility finding is that both the current fork and modern upstream already expose
+generic `pre_tool_call/post_tool_call`, `pre_verify`, API request/response lifecycle and
+behavior-changing `tool_request/tool_execution` and
+`llm_request/llm_execution` middleware. These are the preferred bridge for a
+Workstation-owned supervisory adapter.
+
+Immediate H-078 work:
+1. freeze one upstream SHA when migration execution starts;
+2. generate seam inventory with `workstation/scripts/audit_hermes_seams.py`;
+3. classify every overlap as ADOPT_UPSTREAM / KEEP_WORKSTATION / SEMANTIC_PORT /
+   EXTRACT_BOUNDARY;
+4. run new supervisory paths in shadow before removing old direct seams;
+5. prove ordinary Hermes tool use remains supervised even when the model never calls
+   `work_execute`.
+
+Canonical:
+[UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+
 ## 2026-09-19 H-077 Architectural Falsification / External Validity — ACTIVE
 
 Baseline: `main@2babc8b4cf89bab217cd76b5992d192776184337` after PR #34/H-076.
