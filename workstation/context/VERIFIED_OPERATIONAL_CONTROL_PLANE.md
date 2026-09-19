@@ -1,5 +1,45 @@
 # Verified Operational Control Plane — OperationIntent, Capability Router, Await/Trigger Plane
 
+
+## Hierarchical operational learning integration addendum — 2026-09-18
+
+The Control Plane remains the admission/selection owner for the new hierarchical
+learning layer described in
+[HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md).
+
+Three consequences are now explicit:
+
+1. **Learned does not mean routable until typed proof exists.**
+   Experience Compiler candidates may be reused by exact identity, but semantic
+   `OperationIntent -> CapabilityRouter` execution requires a conservative
+   `CapabilityFormalContract` derived from trusted evidence. The LLM cannot invent
+   or upgrade that contract.
+2. **WAIT must become non-resident control state.**
+   Persistent `AwaitCondition` plus a fenced durable continuation is the canonical
+   long-wait abstraction. Event reception is a wake hint; authoritative state
+   confirms the predicate; continuation re-enters Router admission. A blocked
+   thread/worker is an implementation fallback, not the target semantic contract.
+3. **Composition has two layers.**
+   Runtime `CompositionEngine` selects/certifies a plan for the current intent.
+   Hierarchical Experience Compilation may later learn a recurring verified
+   capability sequence as a composite OperationalCapability. Learned composition
+   still crosses the same Router/certificate/authority/verifier gates.
+
+The Control Plane therefore remains the narrow waist:
+
+~~~text
+reasoning proposal OR learned capability/composite
+  -> OperationIntent + SemanticState
+  -> Router proof
+  -> certificate
+  -> real deterministic execution
+  -> evidence/verifier
+  -> commit
+~~~
+
+No hierarchical learner may bypass this boundary.
+
+
 ## Post-merge dogfood qualification addendum — P0 open
 
 CP0–CP9 is implemented and contract-validated, but live native-Browser dogfooding
