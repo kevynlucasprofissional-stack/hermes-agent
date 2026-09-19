@@ -9,7 +9,20 @@ Canonical plan: `context/BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md`.
 Decision: `D-021`.
 Engineering evidence: H-070.
 
-Production adaptations implemented and contract-verified:
+
+**Post-merge qualification note (2026-09-19):** implementation landed in PR #29,
+but H-071 reopened product qualification. The list below records the intended/landed
+adaptations, not proof that every invariant is currently satisfied. Audit found:
+COMPOSE may commit without executing its plan; ACK may be treated as verifier success;
+authority can still be synthesized from request/task/session defaults; mandatory
+compilation does not yet require full operational closure; native Browser HTTP readback
+is not yet same-origin/policy/fail-closed end to end; terminal families are too broad;
+and exact-head Linux/Windows integration checks fail the `browser_type` patch anchor.
+HW-024 remains an active downstream delta until those contracts and candidate-head gates
+are green.
+
+
+Production adaptations landed (final contract/product qualification reopened by H-071):
 
 1. **Effect Truth & Dynamic Resolvers:**
    - Files: `tools/registry.py`, `tools/effects.py`, `tools/read_preview_tool.py`, `tools/read_window_tool.py`, `tools/drive_preview_tool.py`.
