@@ -16,44 +16,33 @@ Upstream candidate observed during the 2026-09-19 audit:
 
 `1f4fbd5145d641c3a815dc97332103679e6139d9`
 
-**Do not treat that candidate as permanently moving with `upstream/main`. Each
-integration cycle MUST pin one exact upstream SHA before conflict resolution begins.**
+**Every integration cycle MUST pin one exact upstream SHA before conflict resolution.**
 
-## Canonical strategy: synchronize while extracting seams
+## Canonical strategy: synchronize while minimizing seams
 
 The upstream update is not a plain fork sync. It is the first Runtime Independence
-migration.
+migration, but Runtime Independence does not require zero first-party integration.
 
 ```text
 UPSTREAM STRUCTURE
 + WORKSTATION SEMANTICS
-+ FEWER DIRECT SEAMS
++ MINIMUM NECESSARY FIRST-PARTY SEAMS
++ NO CAPABILITY REGRESSION FOR PURITY
 ```
 
-Hermes remains the first-party laboratory/reference reasoner. Workstation progressively
-moves behind a Workstation-owned adapter/runtime boundary.
+Hermes remains the first-party laboratory/reference reasoner.
 
-The target dependency is unidirectional:
+The Reasoner and generic agent core should not require Workstation-specific prompt
+compliance or imports when equivalent generic lifecycle/middleware/provider/plugin
+surfaces exist.
 
-```text
-Hermes generic lifecycle/middleware/provider contracts
-                    |
-                    v
-         Workstation Hermes adapter
-                    |
-                    v
-             Work Runtime
-```
+The first-party Hermes Work distribution may retain narrow integration seams when
+privileged lifecycle/native UI/correctness cannot be reproduced at the extension layer.
 
-Generic Hermes core should not know Workstation identity. Workstation may observe and
-intervene through generic contracts.
-
-This means removing seams must never rely on the model to "remember" to use Workstation.
-Normal Hermes tool/model behavior must remain observable and supervisable even when
-`work_execute` is never called.
-
-Canonical architecture:
-[context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
+Canonical:
+- [context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md)
+- [context/FIRST_PARTY_SEAM_POLICY.md](context/FIRST_PARTY_SEAM_POLICY.md)
+- `first_party_seams.json`
 
 ## Recommended remotes
 
@@ -65,69 +54,83 @@ git fetch upstream --prune
 
 ## Integration-cycle procedure
 
-1. Read the canonical Workstation context and H-078.
+1. Read H-078, D-026, D-027 and the seam policy.
 2. Fetch both remotes.
 3. Record downstream `main` SHA and exact upstream candidate SHA.
-4. Freeze the upstream SHA for the whole cycle.
+4. Freeze that upstream SHA for the cycle.
 5. Create immutable pre-migration backup/ref.
 6. Create `integration/upstream-YYYY-MM-DD`.
-7. Generate the direct seam inventory:
-   `python workstation/scripts/audit_hermes_seams.py --json`.
-8. Compare upstream and downstream from the merge base.
+7. Generate the seam inventory and apply `first_party_seams.json`.
+8. Compare upstream/downstream from merge base.
 9. Classify every overlap:
    - `ADOPT_UPSTREAM`
    - `KEEP_WORKSTATION`
    - `SEMANTIC_PORT`
    - `EXTRACT_BOUNDARY`
-10. Prefer `EXTRACT_BOUNDARY` when generic lifecycle/middleware/provider surfaces can
-    preserve Workstation semantics.
-11. Run new supervisory paths in shadow before removing old direct seams.
-12. Run upstream tests + Workstation contract/E2E gates on the exact candidate head.
-13. Update `UPSTREAM_DELTA.md`, `PATCH_MANIFEST.md`, current state and journal.
-14. Merge to main only after semantic qualification.
+10. Classify every remaining source seam:
+   - `REMOVE`
+   - `UPSTREAM_ABSTRACT`
+   - `PRESERVE_FIRST_PARTY`
+11. Prefer generic existing surfaces when they have full semantic parity.
+12. Prefer a small generic upstream-compatible abstraction over scattered
+    Workstation-specific branches when a capability gap exists.
+13. Preserve a narrow first-party seam when higher-level surfaces cannot reproduce the
+    required capability/lifecycle/correctness.
+14. Run replacement paths in shadow before changing authority.
+15. Run upstream tests + Workstation contract/E2E gates on the exact candidate head.
+16. Update seam registry, `UPSTREAM_DELTA.md`, patch manifest, current state and journal.
+17. Merge to main only after semantic qualification.
 
-## Generic integration surfaces preferred over patches
+## Generic integration surfaces preferred
 
-The modern Hermes architecture already exposes useful generic boundaries:
+The modern Hermes architecture exposes useful generic boundaries:
 
-- lifecycle hooks:
-  `pre_tool_call`, `post_tool_call`, `pre_verify`,
+- lifecycle: `pre_tool_call`, `post_tool_call`, `pre_verify`,
   `pre_api_request`, `post_api_request`, session/task lifecycle;
-- middleware:
-  `tool_request`, `tool_execution`, `llm_request`, `llm_execution`;
-- plugin/provider interfaces, including browser/provider abstractions.
+- middleware: `tool_request`, `tool_execution`, `llm_request`, `llm_execution`;
+- browser/provider interfaces;
+- Desktop Plugin SDK with contributed panes/workspaces and docking.
 
-A Workstation behavior that can move onto one of these surfaces should not be reinserted
-as a Workstation-specific import into a refactored upstream owner.
+A Workstation behavior that can move to these surfaces **with full parity** should not be
+reinserted as a Workstation-specific core import.
+
+But "a plugin can render something" is not proof that the plugin layer can replace native
+main-process lifecycle. The Browser's persistent `WebContentsView`, BrowserTask
+ownership, background continuity, human control and IPC are the reference example.
 
 ## Core rules
 
-- upstream Hermes remains authoritative for generic Hermes behavior and module structure;
-- Workstation-owned runtime truth remains under `workstation/`;
-- do not resurrect upstream god-files to keep an old patch location alive;
-- do not use "ours everywhere" or "theirs everywhere" conflict resolution;
-- a direct core modification is temporary debt unless no generic boundary can express the
-  required semantics;
-- every new direct Hermes -> Workstation dependency requires explicit rationale and a
-  retirement path;
-- generic improvements should be structured so they can be proposed upstream;
-- stable updates are promoted only after Workstation integration/E2E validation;
-- edge may follow upstream more aggressively for compatibility testing;
-- no second task DB, BrowserTask store, journal, capability registry or Control Plane is
-  created to ease the migration.
+- upstream remains authoritative for generic Hermes behavior/module structure;
+- Workstation runtime truth remains Workstation-owned;
+- do not resurrect old upstream monoliths;
+- do not resolve conflicts with blanket ours/theirs;
+- accidental direct coupling is debt;
+- deliberate first-party integration is permitted when the seam budget is satisfied;
+- no new **unclassified** Workstation seam in upstream-owned code;
+- a preserved seam must have rationale, behavioral tests, `UPSTREAM_DELTA` entry and
+  periodic re-evaluation;
+- generic improvements should be structured for possible upstream contribution;
+- stable updates promote only after Workstation E2E validation;
+- no second task DB, BrowserTask store, journal, capability registry or Control Plane.
 
-## Seam-retirement invariant
+## Seam change invariant
 
-Before deleting a direct seam, prove the replacement path preserves:
+Before removing a seam, prove the replacement preserves all relevant behavior.
 
+Before preserving/adding a seam, prove the higher-level extension path cannot preserve all
+relevant behavior.
+
+Relevant dimensions include:
 - canonical task/run/operation lineage;
 - authority/effect containment;
-- uncertain-mutation reconciliation;
+- exact ordering and pre-mutation control;
+- uncertain mutation reconciliation;
 - ACK != VERIFIED;
-- BrowserTask ownership/human fencing where relevant;
-- Experience Compiler observations and promotion gates;
+- BrowserTask ownership/human fencing;
+- Experience Compiler observations;
 - deterministic capability reuse;
-- normal Hermes operation without explicit Workstation model compliance.
+- UI placement/visibility and background continuity;
+- normal Hermes operation without model compliance.
 
-The migration succeeds only when upstream compatibility improves **and** the number/scope
-of inward Workstation seams monotonically decreases.
+Migration success is not measured by zero seams. It is measured by **upstream compatibility
+plus a small, deliberate, capability-preserving first-party seam budget**.
