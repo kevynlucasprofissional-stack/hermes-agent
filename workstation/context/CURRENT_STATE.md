@@ -1,5 +1,31 @@
 # Current State
 
+## 2026-09-19 H-076 Verification Contract Synthesis — CORRECTIVE IMPLEMENTATION OPEN
+
+PR #33 successfully landed the H-075 adaptive-to-deterministic handoff. A post-merge
+truth audit on main@e010c8981a4bdeb89ac94479e0d7e891d48eadae confirms that the next
+boundary is epistemic, not scheduling: Hermes can hand off after "verification", but
+verification is not yet uniformly typed enough to prove source authority/trust,
+failure-domain separation, temporal validity, semantic relation and predicate/goal
+coverage.
+
+Current-main confirmed gaps include the TaskCompiler undeclared-E3 fallback,
+presence-based Router verifier admission, default state_fresh=True, executor-result
+verification callbacks, correlated semantic-observer verification for learned
+capabilities, shallow RunClosure verifier admission, and Experience Compiler loss of
+verifier identity/validation detail.
+
+Target: typed VerificationContract + canonical VerificationResult, deterministic
+evaluator, conservative evidence/freshness/fault-domain admission, discriminative
+negative-control validation, and Experience Compiler synthesis of verifier candidates
+that remain CANDIDATE until independently validated.
+
+H-075 remains implemented and qualified as a handoff mechanism. H-076 strengthens the
+truth contract it consumes.
+
+Canonical:
+[VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md](VERIFICATION_CONTRACT_SYNTHESIS_2026-09-19.md).
+
 ## 2026-09-19 H-075 in-flight operationalization — IMPLEMENTED & QUALIFIED (Phases P0–P6 Passed)
 
 The In-Flight Operationalization Handoff Gap (KI-014) and remaining operational knowledge hierarchy seams (KI-013) are fully closed and verified across Phases P0–P6:
