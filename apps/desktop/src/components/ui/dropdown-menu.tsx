@@ -91,6 +91,7 @@ function DropdownMenuContent({
         // Keep the menu inside the viewport: Radix flips/shifts away from edges
         // (avoidCollisions defaults on); the padding stops it kissing the edge.
         collisionPadding={collisionPadding}
+        data-native-view-occluder="true"
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         {...props}

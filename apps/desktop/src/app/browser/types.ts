@@ -134,10 +134,14 @@ export interface WorkstationBrowserBridge {
   reload: () => Promise<WorkstationBrowserState>
   stop: () => Promise<WorkstationBrowserState>
   focus: () => Promise<WorkstationBrowserState>
-  attach: (bounds: WorkstationBrowserBounds, host?: string) => Promise<WorkstationBrowserState>
+  attach: (
+    bounds: WorkstationBrowserBounds,
+    host?: string,
+    preferredTaskId?: string
+  ) => Promise<WorkstationBrowserState>
   setBounds: (bounds: WorkstationBrowserBounds, expectedHost?: string) => Promise<WorkstationBrowserState>
-  detach: () => Promise<WorkstationBrowserState>
-  setVisible: (visible: boolean) => Promise<WorkstationBrowserState>
+  detach: (expectedHost?: string) => Promise<WorkstationBrowserState>
+  setVisible: (visible: boolean, expectedHost?: string) => Promise<WorkstationBrowserState>
   clearError: () => Promise<WorkstationBrowserState>
   transferViewport: (targetHost: string, bounds: WorkstationBrowserBounds) => Promise<WorkstationBrowserState>
   listTasks: () => Promise<BrowserTask[]>

@@ -44,6 +44,7 @@ function PopoverContent({
           className
         )}
         collisionPadding={collisionPadding}
+        data-native-view-occluder="true"
         data-slot="popover-content"
         sideOffset={sideOffset}
         {...props}

@@ -322,3 +322,100 @@ test('V1 #13 Golden Recovery Scenario: interruption -> pause -> reconnect/rebind
 
   await second.destroy()
 })
+
+test('multi-task restart recovery: attaching with preferredTaskId restores target task without about:blank, switching tasks preserves 1 page per task', async () => {
+  const persistence = createPersistence('multi-task-recovery')
+  const taskAId = 'task-recov-a'
+  const taskBId = 'task-recov-b'
+  const sessionA = 'session-a'
+  const sessionB = 'session-b'
+  const urlA = 'https://example.test/session-a'
+  const urlB = 'https://example.test/session-b'
+
+  // Step 1: Initialize first runtime and create Task A and Task B
+  const first = new WorkstationBrowserRuntime(persistence)
+  first.ensure()
+
+  await executeControlRequest(first, {
+    action: 'browser_navigate',
+    task_id: taskAId,
+    session_id: sessionA,
+    arguments: { url: urlA }
+  })
+
+  await executeControlRequest(first, {
+    action: 'browser_navigate',
+    task_id: taskBId,
+    session_id: sessionB,
+    arguments: { url: urlB }
+  })
+
+  // Verify both tasks are tracked with 1 tab each
+  assert.equal(first.state().tabs.filter(t => t.ownerTaskId === taskAId).length, 1)
+  assert.equal(first.state().tabs.filter(t => t.ownerTaskId === taskBId).length, 1)
+
+  // Step 2: Shutdown first runtime
+  await first.destroy()
+
+  // Step 3: Boot second runtime from same persistence
+  const second = new WorkstationBrowserRuntime(persistence)
+  const window = new electron.BrowserWindow()
+  const bounds = { x: 0, y: 0, width: 900, height: 600 }
+
+  // Step 4: Chat B attaches directly after restart with preferredTaskId = task-recov-b
+  second.attach(window as never, bounds, 'chat', taskBId)
+
+  // Invariant 1: Active tab must be Task B's tab
+  const activeTabB = second.state().tabs.find(t => t.id === second.state().activeTabId)
+  assert.ok(activeTabB, 'Active tab must exist after attach with preferredTaskId')
+  assert.equal(activeTabB.ownerTaskId, taskBId, 'Active tab must belong to Task B')
+  assert.equal(activeTabB.url, urlB, 'Active tab must have restored Task B URL, never about:blank')
+
+  // Invariant 2: No spurious empty/fallback about:blank tab was created
+  const unownedTabs = second.state().tabs.filter(t => !t.ownerTaskId)
+  assert.equal(unownedTabs.length, 0, 'No blank unowned tabs should be leaked on task attach')
+
+  // Invariant 3: Exactly 1 page for Task B
+  assert.equal(
+    second.state().tabs.filter(t => t.ownerTaskId === taskBId).length,
+    1,
+    'Exactly 1 page for Task B'
+  )
+
+  // Step 5: Background action on Task A while Chat B is active
+  await executeControlRequest(second, {
+    action: 'browser_navigate',
+    task_id: taskAId,
+    session_id: sessionA,
+    arguments: { url: 'https://example.test/session-a-updated' }
+  })
+
+  // Invariant 4: Foreground activeTabId did not get stolen by Task A background navigate
+  assert.equal(
+    second.state().activeTabId,
+    activeTabB.id,
+    'Task A background navigation must not steal foreground focus from Task B'
+  )
+
+  // Step 6: User switches chat to Chat A (preferredTaskId = task-recov-a)
+  second.attach(window as never, bounds, 'chat', taskAId)
+
+  const activeTabA = second.state().tabs.find(t => t.id === second.state().activeTabId)
+  assert.ok(activeTabA, 'Active tab must exist after switching to Task A')
+  assert.equal(activeTabA.ownerTaskId, taskAId, 'Active tab must belong to Task A')
+  assert.equal(activeTabA.url, 'https://example.test/session-a-updated')
+
+  // Invariant 5: Each task still has exactly 1 page
+  assert.equal(
+    second.state().tabs.filter(t => t.ownerTaskId === taskAId).length,
+    1,
+    'Task A has exactly 1 page'
+  )
+  assert.equal(
+    second.state().tabs.filter(t => t.ownerTaskId === taskBId).length,
+    1,
+    'Task B has exactly 1 page'
+  )
+
+  await second.destroy()
+})

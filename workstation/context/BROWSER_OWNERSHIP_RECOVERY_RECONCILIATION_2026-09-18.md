@@ -2,7 +2,7 @@
 
 ## Status
 
-**P0 OPEN / code-level root causes validated / implementation not yet applied.**
+**IMPLEMENTED & FULLY VALIDATED (2026-09-18)** — Code-level root causes resolved, regressions added across renderer, preload, and Electron runtime, all 88 Vitest tests green, H004 native browser smoke passed, Work100 passed 30/30, and TypeScript typecheck clean.
 
 This lane is complementary to
 [BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md](BROWSER_OPERATIONAL_ADMISSION_2026-09-18.md).
@@ -242,3 +242,29 @@ Chat <-> Hub transfer -> no stale cleanup blanking viewport
 
 with one BrowserTask owner, one native Chromium runtime, bounded lazy recovery and
 no regression in Browser Operational Admission, H004/H013 or TaskRun fencing.
+
+## Implementation & Validation Summary (2026-09-18)
+
+1. **Native-View Occlusion Centralization (BOR-001):**
+   - Created `apps/desktop/src/app/browser/native-view-occlusion.ts` with selector `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Stripped all authority from `[data-radix-popper-content-wrapper]`.
+   - Added `data-native-view-occluder="true"` to `dialog.tsx`, `dropdown-menu.tsx`, `context-menu.tsx`, `select.tsx`, and `popover.tsx`.
+   - Wired `useNativeViewOcclusion(bridge, host)` in both `workstation-browser-pane.tsx` and Browser Hub `index.tsx`.
+2. **Host Fencing across IPC & Runtime (BOR-007):**
+   - Extended IPC handlers and runtime methods `detach(expectedHost?)` and `setVisible(visible, expectedHost?)` in `apps/desktop/electron/workstation-browser-runtime.ts`.
+   - Rejects stale calls if `expectedHost !== viewportHost`. Ensures `attach()` always sets `viewVisible = true` to prevent inheriting stale hidden state.
+3. **Preferred-Task Wiring (BOR-005):**
+   - Extended `WorkstationBrowserBridge` and preload to pass `preferredTaskId` through `attach(bounds, host, preferredTaskId?)`.
+   - `workstation-browser-pane.tsx` matches active session, parent session, and lineage roots to select `preferredTaskId` deterministically and reattaches when switching chats.
+4. **Task-Bound Lazy Recovery (BOR-002, BOR-003, BOR-006):**
+   - Restructured `WorkstationBrowserRuntime.attach()`: materializes `preferredTaskId` from `pendingSessionTabs` via `rawEntryForTask(preferredTaskId, true)` before physical fallback blank creation.
+   - Restores safe URL metadata and discards ephemeral unnavigated `about:blank`.
+   - Fails closed against cross-session leakage when a chat attaches without an owned task.
+5. **Separation of Visibility and Activity (BOR-004, BOR-008):**
+   - In `task-rail.tsx`, implemented `getTaskExecutionActivity` deriving `working | waiting | human_control | idle` from `$sessionDotStateById` and session lineage without conflating viewport visibility (`visible | parked`).
+   - Added `Working` section in TaskRail and preserved parked working tasks against premature clearing.
+6. **Verification Results:**
+   - Vitest suite: 88 passed across 9 test files (100% green).
+   - Dedicated regressions: `native-view-occlusion.test.ts` (7/7 passed), `task-rail.test.ts` (5/5 passed), `workstation-browser-runtime-task.test.ts` (28/28 passed), `workstation-browser-runtime-recovery.test.ts` (2/2 passed).
+   - TypeScript check: 0 errors across `.` (`tsconfig.json`), `tsconfig.electron.json`, `tsconfig.e2e.json`.
+   - H004 native browser smoke probe: passed all phases (`H004_CLASSIFICATION=VALIDATED`).
+   - Work100 regression suite: 30 PASS, 0 FAIL, 0 COVERAGE_GAP, 0 NOT_RUN_ENVIRONMENT.

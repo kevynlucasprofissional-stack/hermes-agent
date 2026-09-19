@@ -23,6 +23,7 @@ import {
   openWorkstationBrowserPreview
 } from '@/store/preview'
 
+import { useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
 import { TaskRail } from './task-rail'
 import type {
@@ -309,7 +310,7 @@ export function BrowserView() {
       off()
       // Detaching removes the native view from the React page while preserving
       // its WebContents and persistent profile. Background tasks can continue.
-      void bridge.detach()
+      void bridge.detach('hub')
     }
   }, [bridge, publishBounds])
 
@@ -371,37 +372,7 @@ export function BrowserView() {
     }
   }, [bridge, publishBounds])
 
-  useEffect(() => {
-    if (!bridge?.setVisible) {
-      return
-    }
-
-    let isOverlayPresent = false
-
-    const checkOverlay = () => {
-      const active = Boolean(
-        document.querySelector(
-          '[data-radix-menu-content], [data-slot="context-menu-content"], [data-slot="dropdown-menu-content"], [role="menu"], [data-radix-popper-content-wrapper], [data-radix-dialog-content], [data-radix-select-content]'
-        )
-      )
-
-      if (active !== isOverlayPresent) {
-        isOverlayPresent = active
-        void bridge.setVisible(!active)
-      }
-    }
-
-    const observer = new MutationObserver(checkOverlay)
-    observer.observe(document.body, { childList: true, subtree: true })
-
-    return () => {
-      observer.disconnect()
-
-      if (isOverlayPresent) {
-        void bridge.setVisible(true)
-      }
-    }
-  }, [bridge])
+  useNativeViewOcclusion(bridge, 'hub')
 
   const submitAddress = (event: FormEvent) => {
     event.preventDefault()

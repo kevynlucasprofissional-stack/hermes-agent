@@ -1,29 +1,20 @@
 # Workstation roadmap
 
-## Browser Ownership & Recovery Reconciliation (2026-09-18) — P0 OPEN
+## Browser Ownership & Recovery Reconciliation (2026-09-18) — COMPLETED & VALIDATED
 
 Canonical specification:
 [context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
 
-A current-main audit found a cross-layer ownership/recovery gap distinct from
-Browser Operational Admission. BrowserTask and BrowserSessionState retain logical
-recovery data, but Chat preview state, lazy task-tab materialization, the one native
-viewport and Browser Hub can diverge after restart or host transfer. The same audit
-identified chat-hover flicker as native-view occlusion triggered by generic Radix
-popper wrappers used by tooltips.
+Implemented and validated cross-layer reconciliation between Chat preview, Browser Hub,
+BrowserTask lifecycle, lazy task-tab materialization, and the single native Chromium viewport:
+1. Shared native-view occlusion contract (`useNativeViewOcclusion`, `data-native-view-occluder="true"`); tooltips completely de-authorized from hiding Chromium;
+2. Host fencing across IPC and runtime (`detach(expectedHost)`, `setVisible(visible, expectedHost)`) preventing cross-host race conditions;
+3. `preferredTaskId` wired through `WorkstationBrowserBridge`, preload, and Chat UI (`workstation-browser-pane.tsx`), resolving task identity via canonical session lineage;
+4. Task-bound lazy recovery in `WorkstationBrowserRuntime.attach()`: recovers pending task tabs before fallback `about:blank`, restores safe URLs, prevents cross-session leakage;
+5. Independent projection of execution activity (`working | waiting | human_control | idle`) in Browser Hub TaskRail without conflating `visible | parked` viewport status;
+6. Verified across 88 Vitest tests (9 test files, 100% green), typecheck clean, H004 native browser smoke passed, and Work100 passed 30/30.
 
-P0 sequence:
-1. explicit/shared native-view occlusion contract; tooltips never hide Chromium;
-2. host-fence `detach` and `setVisible` as `setBounds` already is;
-3. finish `preferredTaskId` wiring through bridge/preload/Chat UI;
-4. task-bound attach materializes one pending restored tab before fallback `about:blank`;
-5. reconcile session -> BrowserTask -> pending/live tab -> activeTabId -> viewportHost;
-6. separate foreground visibility from execution activity so `parked + working` is valid;
-7. add renderer/preload/runtime restart, host-race and tooltip product regressions.
-
-Hard invariants: background work never steals foreground; stale host cleanup cannot
-detach/hide a newer owner; at most one live page exists per BrowserTask; no second
-Browser/session/presentation store is introduced.
+Hard invariants preserved: background work never steals foreground; stale host cleanup cannot detach/hide a newer owner; at most one live page exists per BrowserTask; no second Browser/session/presentation store was introduced.
 
 
 ## Browser Operational Admission / Primitive Closure (2026-09-18) — P0 NEXT MILESTONE

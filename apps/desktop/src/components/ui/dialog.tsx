@@ -140,6 +140,7 @@ function DialogContent({
             // it here so the banner can tuck under the body's rounded bottom edge.
             'gap-0'
           )}
+          data-native-view-occluder="true"
           data-slot="dialog-content"
           onOpenAutoFocus={onOpenAutoFocus}
           ref={setContentNode}
@@ -191,6 +192,7 @@ function DialogContent({
           widthClass,
           className
         )}
+        data-native-view-occluder="true"
         data-slot="dialog-content"
         onOpenAutoFocus={onOpenAutoFocus}
         ref={setContentNode}

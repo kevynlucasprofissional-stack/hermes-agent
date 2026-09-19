@@ -1167,3 +1167,114 @@ test('browser_click and browser_type return structured elements, target metadata
 
   await runtime.destroy()
 })
+
+test('host fencing prevents stale detach and setVisible calls from racing across hub and chat', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const window = hostWindow()
+  const bounds = { x: 0, y: 0, width: 900, height: 600 }
+
+  // 1. Attach from Hub
+  runtime.attach(window as never, bounds, 'hub')
+  assert.equal(window.contentView.children.length, 1)
+  assert.equal(runtime.state().attached, true)
+  assert.equal(runtime.state().viewportHost, 'hub')
+  assert.equal((runtime as unknown as { viewVisible: boolean }).viewVisible, true)
+
+  // 2. Delayed/stale detach from Chat must be rejected (ignored)
+  runtime.detach(window as never, 'chat')
+  assert.equal(runtime.state().attached, true, 'Hub viewport must remain attached despite stale chat detach')
+  assert.equal(runtime.state().viewportHost, 'hub')
+  assert.equal(window.contentView.children.length, 1)
+
+  // 3. Delayed/stale setVisible(false) from Chat must be rejected
+  runtime.setVisible(false, 'chat')
+  assert.equal((runtime as unknown as { viewVisible: boolean }).viewVisible, true, 'Hub view must remain visible despite stale chat setVisible(false)')
+  assert.equal(window.contentView.children.length, 1)
+
+  // 4. Valid setVisible(false) from Hub is applied
+  runtime.setVisible(false, 'hub')
+  assert.equal((runtime as unknown as { viewVisible: boolean }).viewVisible, false)
+  assert.equal(window.contentView.children.length, 0)
+
+  // 5. Valid setVisible(true) from Hub is applied
+  runtime.setVisible(true, 'hub')
+  assert.equal((runtime as unknown as { viewVisible: boolean }).viewVisible, true)
+  assert.equal(window.contentView.children.length, 1)
+
+  // 6. Valid detach from Hub is applied
+  runtime.detach(window as never, 'hub')
+  assert.equal(runtime.state().attached, false)
+  assert.equal(runtime.state().viewportHost, null)
+  assert.equal(window.contentView.children.length, 0)
+
+  // 7. Attach from Chat
+  runtime.attach(window as never, bounds, 'chat')
+  assert.equal(runtime.state().attached, true)
+  assert.equal(runtime.state().viewportHost, 'chat')
+  assert.equal((runtime as unknown as { viewVisible: boolean }).viewVisible, true)
+  assert.equal(window.contentView.children.length, 1)
+
+  // 8. Stale detach and setVisible from Hub are rejected
+  runtime.detach(window as never, 'hub')
+  assert.equal(runtime.state().attached, true)
+  assert.equal(runtime.state().viewportHost, 'chat')
+
+  runtime.setVisible(false, 'hub')
+  assert.equal((runtime as unknown as { viewVisible: boolean }).viewVisible, true)
+  assert.equal(window.contentView.children.length, 1)
+
+  // 9. Valid detach from Chat detaches
+  runtime.detach(window as never, 'chat')
+  assert.equal(runtime.state().attached, false)
+  assert.equal(runtime.state().viewportHost, null)
+
+  await runtime.destroy()
+})
+
+test('cross-session isolation: chat attaching without preferred task does not leak another session task', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const window = hostWindow()
+  const bounds = { x: 0, y: 0, width: 900, height: 600 }
+
+  const executeControlRequest = (
+    runtime as unknown as {
+      executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>
+    }
+  ).executeControlRequest.bind(runtime)
+
+  // Chat A navigates task-a to secret URL
+  runtime.attach(window as never, bounds, 'chat', 'task-a')
+  await executeControlRequest({
+    action: 'browser_navigate',
+    task_id: 'task-a',
+    session_id: 'session-a',
+    arguments: { url: 'https://session-a-confidential.test' }
+  })
+
+  const tabA = runtime.state().tabs.find(t => t.ownerTaskId === 'task-a')
+  assert.ok(tabA)
+  assert.equal(runtime.state().activeTabId, tabA.id)
+
+  // Chat B attaches with no preferred task
+  runtime.attach(window as never, bounds, 'chat')
+  assert.notEqual(
+    runtime.state().activeTabId,
+    tabA.id,
+    'Chat B without task must not inherit Chat A confidential task'
+  )
+
+  const activeTabB = runtime.state().tabs.find(t => t.id === runtime.state().activeTabId)
+  assert.notEqual(activeTabB?.ownerTaskId, 'task-a')
+
+  // Chat A attaches back with preferredTaskId = 'task-a' -> converges on Tab A
+  runtime.attach(window as never, bounds, 'chat', 'task-a')
+  assert.equal(
+    runtime.state().activeTabId,
+    tabA.id,
+    'Chat A reattaching with task-a restores Tab A'
+  )
+
+  await runtime.destroy()
+})

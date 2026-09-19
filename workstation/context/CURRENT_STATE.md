@@ -1,26 +1,20 @@
 # Current State
 
-## 2026-09-18 Browser Ownership & Recovery Reconciliation — P0 OPEN
+## 2026-09-18 Browser Ownership & Recovery Reconciliation — IMPLEMENTED & VALIDATED
 
-Current-main audit validated a Browser presentation/recovery gap rather than simple
-persistence loss. BrowserTask/BrowserSessionState retain logical recovery data, but
-the active Chat Browser surface, lazy restored tabs, Browser Hub and the one native
-Chromium viewport can diverge.
+The Browser Ownership & Recovery Reconciliation milestone is fully implemented, verified,
+and qualified across all test suites.
 
-Validated facts:
-- duplicated Chat/Hub overlay observers include generic Radix popper wrappers, so
-  tooltips can remove/re-add WebContentsView and cause hover flicker;
-- BrowserTask restore intentionally produces `parked/restored` tasks and lazy task tabs;
-- `ensure()` can activate fallback `about:blank` while a logical task tab is pending;
-- controller execution can use a recovered task entry that remains projected `parked`;
-- runtime `attach(... preferredTaskId)` is tested, but preload/types/Chat UI drop it;
-- `detach()` and `setVisible()` lack the expected-host fencing already in `setBounds`.
+Implemented and verified state:
+- Centralized `useNativeViewOcclusion` (`apps/desktop/src/app/browser/native-view-occlusion.ts`) with selector `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Radix tooltip wrappers no longer trigger occlusion; hover flicker eliminated.
+- Host fencing added to `detach(expectedHost)` and `setVisible(visible, expectedHost)` across IPC, preload, and `WorkstationBrowserRuntime`. Viewports cannot be hidden or detached by racing stale callers from another host.
+- `preferredTaskId` fully plumbed through `WorkstationBrowserBridge`, `electron/preload.ts`, and `workstation-browser-pane.tsx`. Resolves preferred tasks deterministically via session lineage and aliases.
+- Task-bound lazy recovery: `WorkstationBrowserRuntime.attach()` recovers pending task tabs from `pendingSessionTabs` via `rawEntryForTask(preferredTaskId, true)` before fallback `about:blank`, restores safe URLs, prevents cross-session leakage, and preserves 1 page per task.
+- Decoupled visibility (`visible | parked`) from execution activity (`working | waiting | human_control | idle`) in Browser Hub TaskRail (`getTaskExecutionActivity`).
+- 100% green status across all regression suites: 88 Vitest tests passed across 9 test files, `npm run typecheck` clean, H004 native browser smoke passed, and Work100 passed 30/30.
 
-Implementation is open. Canonical plan:
+Canonical reference:
 [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
-
-This lane is orthogonal to Browser Operational Admission: admission governs safe
-operation execution/verification; this lane governs task/session/viewport convergence.
 
 
 ## 2026-09-18 Browser Operational Admission / Primitive Closure — P0 CLOSED & QUALIFIED

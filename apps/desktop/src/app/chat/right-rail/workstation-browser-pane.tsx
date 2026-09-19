@@ -1,9 +1,12 @@
+import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
 import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from '@/app/browser/types'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { $activeSessionId, $selectedStoredSessionId, $sessions, lineageAliases, sessionMatchesStoredId } from '@/store/session'
 
 export interface WorkstationBrowserPaneProps {
   onPopOut?: () => void
@@ -79,6 +82,38 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   const [busy, setBusy] = useState(false)
   const hostRef = useRef<HTMLDivElement | null>(null)
 
+  const selectedStoredSessionId = useStore($selectedStoredSessionId)
+  const activeSessionId = useStore($activeSessionId)
+  const sessions = useStore($sessions)
+
+  const activeSessionKey = selectedStoredSessionId ?? activeSessionId ?? null
+
+  const activeSessionAliases = useMemo(() => {
+    if (!activeSessionKey) {
+      return []
+    }
+
+    return lineageAliases(activeSessionKey, sessions)
+  }, [activeSessionKey, sessions])
+
+  const preferredTaskId = useMemo(() => {
+    if (activeSessionAliases.length === 0 || !state.tasks || state.tasks.length === 0) {
+      return null
+    }
+
+    const matched = state.tasks.find(task => {
+      if (!task.sessionHost) {
+        return false
+      }
+
+      return activeSessionAliases.some(
+        alias => task.sessionHost === alias || sessionMatchesStoredId({ id: task.sessionHost! }, alias)
+      )
+    })
+
+    return matched?.taskId ?? null
+  }, [activeSessionAliases, state.tasks])
+
   const activeTab = useMemo(
     () => state.tabs.find(tab => tab.id === state.activeTabId) ?? state.tabs[0] ?? null,
     [state.activeTabId, state.tabs]
@@ -115,13 +150,15 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       const bounds = rectToBounds(rect)
 
       if (attach) {
-        setState(await bridge.attach(bounds, 'chat'))
+        setState(await bridge.attach(bounds, 'chat', preferredTaskId ?? undefined))
       } else {
         setState(await bridge.setBounds(bounds, 'chat'))
       }
     },
-    [bridge]
+    [bridge, preferredTaskId]
   )
+
+  const lastAttachedRef = useRef<{ sessionKey: string | null; preferredTaskId: string | null } | null>(null)
 
   useEffect(() => {
     if (!bridge) {
@@ -136,28 +173,35 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       }
     })
 
-    void bridge
-      .ensure()
-      .then(next => {
-        if (disposed) {
-          return
-        }
-
-        setState(next)
-        requestAnimationFrame(() => void publishBounds(true))
-      })
-      .catch(error => {
-        if (!disposed) {
-          setState(current => ({ ...current, lastError: String(error) }))
-        }
-      })
-
     return () => {
       disposed = true
       off()
-      void bridge.detach()
+      lastAttachedRef.current = null
+      void bridge.detach('chat')
     }
-  }, [bridge, publishBounds])
+  }, [bridge])
+
+  useEffect(() => {
+    if (!bridge || !hostRef.current) {
+      return
+    }
+
+    const currentKey = {
+      sessionKey: activeSessionKey,
+      preferredTaskId: preferredTaskId ?? null
+    }
+
+    const last = lastAttachedRef.current
+    const keyChanged =
+      !last ||
+      last.sessionKey !== currentKey.sessionKey ||
+      last.preferredTaskId !== currentKey.preferredTaskId
+
+    if (keyChanged || !state.attached || state.viewportHost !== 'chat') {
+      lastAttachedRef.current = currentKey
+      void publishBounds(true)
+    }
+  }, [activeSessionKey, preferredTaskId, bridge, publishBounds, state.attached, state.viewportHost])
 
   useEffect(() => {
     if (!bridge || !hostRef.current) {
@@ -184,37 +228,7 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     }
   }, [bridge, publishBounds])
 
-  useEffect(() => {
-    if (!bridge?.setVisible) {
-      return
-    }
-
-    let isOverlayPresent = false
-
-    const checkOverlay = () => {
-      const active = Boolean(
-        document.querySelector(
-          '[data-radix-menu-content], [data-slot="context-menu-content"], [data-slot="dropdown-menu-content"], [role="menu"], [data-radix-popper-content-wrapper], [data-radix-dialog-content], [data-radix-select-content]'
-        )
-      )
-
-      if (active !== isOverlayPresent) {
-        isOverlayPresent = active
-        void bridge.setVisible(!active)
-      }
-    }
-
-    const observer = new MutationObserver(checkOverlay)
-    observer.observe(document.body, { childList: true, subtree: true })
-
-    return () => {
-      observer.disconnect()
-
-      if (isOverlayPresent) {
-        void bridge.setVisible(true)
-      }
-    }
-  }, [bridge])
+  useNativeViewOcclusion(bridge, 'chat')
 
   const transferToChat = useCallback(async () => {
     if (!bridge || !hostRef.current) {

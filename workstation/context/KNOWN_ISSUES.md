@@ -1,6 +1,6 @@
 # Workstation Known Issues
 
-## KI-012 — Browser viewport ownership can diverge from BrowserTask after hover/restart [P0 OPEN — 2026-09-18]
+## KI-012 — Browser viewport ownership can diverge from BrowserTask after hover/restart [RESOLVED & QUALIFIED — 2026-09-18]
 
 **Observed:** Browser flickers while hovering other chats; after restart a chat can
 show `Blank Page` though BrowserTask recovery metadata exists; the agent can
@@ -11,13 +11,21 @@ BrowserTasks are parked/lazy while `ensure()` can foreground `about:blank`;
 controller recovery can use a non-attached parked task; production attach drops
 runtime `preferredTaskId`; and `detach`/`setVisible` lack host fencing.
 
-**Classification:** root causes validated by current-main code audit; corrective
-implementation and product-level proof remain open.
+**Resolution:**
+1. Centralized native-view occlusion with explicit occluders (`data-native-view-occluder="true"` on dialogs/menus/popovers/selects), de-authorizing Radix tooltip poppers;
+2. Host fencing on `detach(expectedHost)` and `setVisible(visible, expectedHost)` across IPC, preload, and runtime;
+3. `preferredTaskId` wired through bridge, preload, and Chat UI with session-lineage resolution;
+4. Task-bound lazy recovery materializes the requested BrowserTask before fallback `about:blank` can claim the foreground;
+5. Independent execution activity projection (`working | waiting | human_control | idle`) in Browser Hub TaskRail without conflating `visible | parked` viewport status.
+
+**Evidence:**
+- Vitest workstation-browser suite: 88 passed across 9 test files (100% green);
+- `native-view-occlusion.test.ts` (7/7 passed), `task-rail.test.ts` (5/5 passed), `workstation-browser-runtime-task.test.ts` (28/28 passed), `workstation-browser-runtime-recovery.test.ts` (2/2 passed);
+- Desktop TypeScript typecheck passed with 0 errors;
+- H004 native browser smoke probe passed (`H004_CLASSIFICATION=VALIDATED`);
+- Work100 regression benchmark passed with 30 PASS / 0 FAIL.
 
 **Canonical plan:** [BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
-
-Do not close from direct runtime tests alone. Closure requires renderer/preload/runtime
-restart + Chat<->Hub race coverage and H004/H013 where affected.
 
 
 

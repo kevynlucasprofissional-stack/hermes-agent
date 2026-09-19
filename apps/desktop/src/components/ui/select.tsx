@@ -58,6 +58,7 @@ function SelectContent({
             'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
           className
         )}
+        data-native-view-occluder="true"
         data-slot="select-content"
         position={position}
         {...props}

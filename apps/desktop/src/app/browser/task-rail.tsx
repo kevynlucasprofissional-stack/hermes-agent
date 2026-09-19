@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 import { $sessions } from '@/store/session'
+import { $sessionDotStateById } from '@/store/session-dot-state'
+import type { SessionInfo } from '@/types/hermes'
 
 import type { BrowserTask, WorkstationBrowserTabState } from './types'
 
@@ -21,8 +23,58 @@ export interface TaskRailProps {
   className?: string
 }
 
+export type BrowserTaskExecutionActivity = 'human_control' | 'waiting' | 'working' | 'idle'
+
+export interface TaskRailSessionLookup {
+  id: string
+  parent_session_id?: string | null
+  _lineage_root_id?: string | null
+}
+
+export function getTaskExecutionActivity(
+  task: BrowserTask,
+  dotStates: Record<string, string>,
+  sessions: readonly TaskRailSessionLookup[]
+): BrowserTaskExecutionActivity {
+  if (task.humanControlLease) {
+    return 'human_control'
+  }
+
+  if (task.leaseState === 'waiting' || task.sessionHost?.includes('waiting')) {
+    return 'waiting'
+  }
+
+  if (task.sessionHost) {
+    const dot = dotStates[task.sessionHost]
+    if (dot === 'working' || dot === 'stalled') {
+      return 'working'
+    }
+    if (dot === 'needs-input') {
+      return 'waiting'
+    }
+
+    for (const s of sessions) {
+      if (
+        s.id === task.sessionHost ||
+        s.parent_session_id === task.sessionHost ||
+        s._lineage_root_id === task.sessionHost
+      ) {
+        const sDot = dotStates[s.id]
+        if (sDot === 'working' || sDot === 'stalled') {
+          return 'working'
+        }
+        if (sDot === 'needs-input') {
+          return 'waiting'
+        }
+      }
+    }
+  }
+
+  return 'idle'
+}
+
 interface TaskGroup {
-  id: 'active' | 'waiting-for-human' | 'background' | 'recent'
+  id: 'working' | 'active' | 'waiting-for-human' | 'background' | 'recent'
   title: string
   icon: string
   tasks: BrowserTask[]
@@ -70,32 +122,51 @@ export function TaskRail({
 }: TaskRailProps) {
   const [collapsed, setCollapsed] = useState(false)
   const sessions = useStore($sessions)
+  const dotStates = useStore($sessionDotStateById)
 
   const groups: TaskGroup[] = useMemo(() => {
+    const working: BrowserTask[] = []
     const active: BrowserTask[] = []
     const waiting: BrowserTask[] = []
     const background: BrowserTask[] = []
     const recent: BrowserTask[] = []
 
     for (const task of tasks) {
-      if (task.status === 'visible') {
+      const activity = getTaskExecutionActivity(task, dotStates, sessions)
+
+      if (
+        activity === 'human_control' ||
+        activity === 'waiting' ||
+        task.sessionHost?.includes('waiting') ||
+        task.leaseState === 'waiting'
+      ) {
+        waiting.push(task)
+      } else if (activity === 'working') {
+        working.push(task)
+      } else if (task.status === 'visible') {
         active.push(task)
       } else if (task.status === 'parked') {
         background.push(task)
-      } else if (task.sessionHost?.includes('waiting') || task.leaseState === 'waiting') {
-        waiting.push(task)
       } else {
         recent.push(task)
       }
     }
 
-    return [
-      { id: 'active', title: 'Active', icon: 'eye', tasks: active },
+    const result: TaskGroup[] = []
+
+    if (working.length > 0) {
+      result.push({ id: 'working', title: 'Working', icon: 'sync', tasks: working })
+    }
+
+    result.push(
+      { id: 'active', title: 'Active Viewport', icon: 'eye', tasks: active },
       { id: 'waiting-for-human', title: 'Waiting for Human', icon: 'person', tasks: waiting },
-      { id: 'background', title: 'Background', icon: 'history', tasks: background },
+      { id: 'background', title: 'Parked / Background', icon: 'history', tasks: background },
       { id: 'recent', title: 'Recent', icon: 'check-all', tasks: recent }
-    ]
-  }, [tasks])
+    )
+
+    return result
+  }, [tasks, dotStates, sessions])
 
   if (collapsed) {
     return (
@@ -125,19 +196,24 @@ export function TaskRail({
       <div className="flex h-9 items-center justify-between border-b border-(--ui-stroke-tertiary) px-2.5">
         <span className="font-semibold text-(--ui-text-secondary)">Task Rail ({tasks.length})</span>
         <div className="flex items-center gap-1">
-          {tasks.some(t => t.status === 'parked' || t.status === 'hidden') && onClearParked && (
-            <Button
-              aria-label="Clear Parked Tasks"
-              className="h-6 px-1.5 text-[10px] text-(--ui-text-tertiary) hover:bg-red-500/10 hover:text-red-300"
-              onClick={onClearParked}
-              size="xs"
-              title="Clear all parked/inactive tasks"
-              variant="ghost"
-            >
-              <Codicon name="clear-all" size="0.7rem" />
-              Clear
-            </Button>
-          )}
+          {tasks.some(
+            t =>
+              (t.status === 'parked' || t.status === 'hidden') &&
+              getTaskExecutionActivity(t, dotStates, sessions) !== 'working'
+          ) &&
+            onClearParked && (
+              <Button
+                aria-label="Clear Parked Tasks"
+                className="h-6 px-1.5 text-[10px] text-(--ui-text-tertiary) hover:bg-red-500/10 hover:text-red-300"
+                onClick={onClearParked}
+                size="xs"
+                title="Clear parked idle tasks"
+                variant="ghost"
+              >
+                <Codicon name="clear-all" size="0.7rem" />
+                Clear
+              </Button>
+            )}
           <Button
             aria-label="Collapse Task Rail"
             onClick={() => setCollapsed(true)}
@@ -166,9 +242,15 @@ export function TaskRail({
             ) : (
               <div className="space-y-1">
                 {group.tasks.map(task => {
+                  const activity = getTaskExecutionActivity(task, dotStates, sessions)
+                  const isWorking = activity === 'working'
                   const badge = statusBadge(task)
                   const isCurrent = task.taskId === activeTaskId
-                  const isWaitingForHuman = group.id === 'waiting-for-human' || task.leaseState === 'waiting'
+                  const isWaitingForHuman =
+                    group.id === 'waiting-for-human' ||
+                    task.leaseState === 'waiting' ||
+                    activity === 'waiting' ||
+                    activity === 'human_control'
 
                   const boundSession = sessions.find(s =>
                     (task.sessionHost && (s.id === task.sessionHost || s.parent_session_id === task.sessionHost)) ||
@@ -221,9 +303,16 @@ export function TaskRail({
                             </span>
                           )}
                         </div>
-                        <span className={cn('shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase', isWaitingForHuman ? 'border-amber-500/60 text-amber-400 bg-amber-500/20 font-bold' : badge.color)}>
-                          {isWaitingForHuman ? 'Action Required' : badge.label}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isWorking && (
+                            <span className="shrink-0 rounded border border-emerald-500/50 bg-emerald-500/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400 uppercase">
+                              Working
+                            </span>
+                          )}
+                          <span className={cn('shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase', isWaitingForHuman ? 'border-amber-500/60 text-amber-400 bg-amber-500/20 font-bold' : badge.color)}>
+                            {isWaitingForHuman ? 'Action Required' : badge.label}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-(--ui-text-quaternary)">

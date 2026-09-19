@@ -1555,21 +1555,68 @@ export class WorkstationBrowserRuntime {
     host: 'hub' | 'chat' | string = 'hub',
     preferredTaskId?: string | null
   ): WorkstationBrowserState {
-    this.ensure()
+    this.ensureSession()
+    this.ensureBrowserSessionStateRestored()
+    this.viewVisible = true
     this.preferredTaskId = preferredTaskId || null
 
     if (preferredTaskId) {
-      const tabId = this.taskTabs.get(preferredTaskId)
+      const task = this.taskLifecycle().task(preferredTaskId)
 
-      if (tabId && this.entries.has(tabId)) {
-        const candidate = this.entries.get(tabId)
+      if (task) {
+        const tabId = this.taskTabs.get(preferredTaskId)
+        let candidate = tabId ? (this.entries.get(tabId) ?? null) : null
 
-        if (candidate && !candidate.crashed && !candidate.view.webContents.isDestroyed()) {
-          if (this.activeTabId !== tabId) {
-            this.activateTab(tabId)
+        if (candidate && (candidate.crashed || candidate.view.webContents.isDestroyed())) {
+          this.discardEntry(candidate)
+          candidate = null
+        }
+
+        if (!candidate) {
+          candidate = this.rawEntryForTask(preferredTaskId, true)
+        }
+
+        if (candidate) {
+          if (this.activeTabId !== candidate.id) {
+            this.activateTab(candidate.id)
+          }
+
+          // Discard ephemeral unnavigated placeholder about:blank if one was created earlier
+          for (const [id, extra] of this.entries) {
+            if (
+              id !== candidate.id &&
+              !extra.ownerTaskId &&
+              (extra.safeUrl === 'about:blank' || !extra.safeUrl) &&
+              (extra.safeTitle === 'New Tab' || !extra.safeTitle) &&
+              !extra.view.webContents.navigationHistory.canGoBack() &&
+              !extra.view.webContents.navigationHistory.canGoForward()
+            ) {
+              this.discardEntry(extra)
+              break
+            }
           }
         }
       }
+    } else if (host === 'chat') {
+      // Cross-session leakage check: if current active tab is owned by some task,
+      // Chat without preferredTaskId must NOT show another session's task.
+      const currentActive = this.activeEntry()
+
+      if (currentActive?.ownerTaskId) {
+        const unowned = Array.from(this.entries.values()).find(
+          e => !e.ownerTaskId && !e.crashed && !e.view.webContents.isDestroyed()
+        )
+
+        if (unowned) {
+          this.activateTab(unowned.id)
+        } else {
+          this.withBrowserSessionProjectionSuppressed(() => this.createTab('about:blank', true))
+        }
+      }
+    }
+
+    if (!this.activeTabId || !this.entries.has(this.activeTabId)) {
+      this.withBrowserSessionProjectionSuppressed(() => this.createTab('about:blank', true))
     }
 
     const entry = this.activeEntry()
@@ -1603,6 +1650,7 @@ export class WorkstationBrowserRuntime {
     }
 
     this.attached = true
+    this.viewVisible = true
     this.emitState()
 
     return this.state()
@@ -1645,8 +1693,12 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
-  detach(window?: BrowserWindow | null): WorkstationBrowserState {
+  detach(window?: BrowserWindow | null, expectedHost?: string): WorkstationBrowserState {
     if (window && this.ownerWindow && window !== this.ownerWindow) {
+      return this.state()
+    }
+
+    if (expectedHost !== undefined && this.viewportHost !== null && expectedHost !== this.viewportHost) {
       return this.state()
     }
 
@@ -1658,7 +1710,11 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
-  setVisible(visible: boolean): WorkstationBrowserState {
+  setVisible(visible: boolean, expectedHost?: string): WorkstationBrowserState {
+    if (expectedHost !== undefined && this.viewportHost !== null && expectedHost !== this.viewportHost) {
+      return this.state()
+    }
+
     this.viewVisible = visible
     const entry = this.activeEntry()
 
@@ -3993,11 +4049,17 @@ function registerIpc(): void {
       typeof expectedHost === 'string' ? expectedHost : undefined
     )
   )
-  ipcMain.handle('hermes:workstation-browser:detach', event =>
-    getWorkstationBrowserRuntime().detach(senderWindow(event))
+  ipcMain.handle('hermes:workstation-browser:detach', (event, expectedHost) =>
+    getWorkstationBrowserRuntime().detach(
+      senderWindow(event),
+      typeof expectedHost === 'string' ? expectedHost : undefined
+    )
   )
-  ipcMain.handle('hermes:workstation-browser:set-visible', (_event, visible) =>
-    getWorkstationBrowserRuntime().setVisible(Boolean(visible))
+  ipcMain.handle('hermes:workstation-browser:set-visible', (_event, visible, expectedHost) =>
+    getWorkstationBrowserRuntime().setVisible(
+      Boolean(visible),
+      typeof expectedHost === 'string' ? expectedHost : undefined
+    )
   )
   ipcMain.handle('hermes:workstation-browser:clear-error', () => getWorkstationBrowserRuntime().clearError())
   ipcMain.handle('hermes:workstation-browser:transfer-viewport', (event, targetHost, bounds) =>

@@ -1,40 +1,24 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## Browser ownership, recovery e verdade visual — 2026-09-18
+## Browser ownership, recovery e verdade visual — IMPLEMENTADO (2026-09-18)
 
 A investigação de flicker + restart revelou um problema de reconciliação entre
-owners existentes, não uma simples perda de persistência. A relação que precisa
-convergir é:
+owners existentes, não uma simples perda de persistência. A relação que agora
+converge deterministicamente é:
 
 `Chat -> BrowserTask -> tab lógica/restaurada -> activeTabId -> viewportHost -> superfície visível`.
 
-BrowserTask pode sobreviver como `parked/restored`, sua tab pode ficar lazy e o
-runtime ainda criar `about:blank` ativo. O controller pode depois operar a página
-correta em background sem que Chat/Hub assumam essa task. Logo, `Parked` pode
-coexistir com execução real: visibilidade e atividade são dimensões diferentes.
+Correções implementadas e qualificadas:
+- Oclusão nativa centralizada em `useNativeViewOcclusion` e seletor `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Tooltips Radix (`OverflowTip`/`Tip`) foram desautorizados de ocultar Chromium; flicker de hover resolvido.
+- Fencing de host em `detach(expectedHost)` e `setVisible(visible, expectedHost)` no IPC, preload e runtime Electron, impedindo que desmontagens tardias de Chat ou Hub ocultem/destaquem a viewport do outro host.
+- `preferredTaskId` propagado via `WorkstationBrowserBridge`, `preload.ts` e `workstation-browser-pane.tsx`, resolvendo tarefas através da linhagem e aliases canônicos de sessão.
+- Recuperação preguiçosa vinculada a task no `attach()` do runtime: materializa a BrowserTask antes de criar `about:blank`, restaura URLs seguras e previne vazamento de abas entre sessões.
+- Separação entre visibilidade e atividade no TaskRail do Browser Hub (`getTaskExecutionActivity`), permitindo que tasks em background executem (`working`) sem roubar foco nem colapsar com `parked`.
 
-Falhas concretas:
-- tooltip Radix usa wrapper genérico que o detector atual trata como native-view
-  occluder, causando remove/add do WebContentsView durante hover;
-- `preferredTaskId` existe e é testado no runtime, mas não atravessa
-  preload/types/WorkstationBrowserPane;
-- `detach` e `setVisible` não são host-fenced, apesar de Chat/Hub compartilharem
-  BrowserWindow e `setBounds` já ter `expectedHost`.
+Invariante comprovado: se o chat C está ativo, sua superfície Browser está aberta e C possui T, há no máximo uma página viva de T e Chat UI, Hub, BrowserTask, activeTabId e viewportHost convergem para a mesma identidade, inclusive após restart.
 
-Regra de UX permanece: evento em background não rouba foco/foreground. Recuperação
-reconcilia a BrowserTask quando a própria superfície Browser daquele chat está
-requisitada; outra task continua background e o Hub projeta atividade sem transferir
-viewport automaticamente.
-
-Invariante: se chat C está ativo, sua superfície Browser está aberta e C possui T,
-há no máximo uma página viva de T e Chat UI, Hub, BrowserTask, activeTabId e
-viewportHost convergem para a mesma identidade, inclusive após restart.
-
-Não criar `desiredPresentation` persistente por reflexo: primeiro derivar intenção
-dos owners existentes (session-scoped preview + sessão ativa + BrowserTask/
-BrowserSessionState). Visibilidade não é lifecycle nem execution activity.
-
-Plano: `workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
+Validação: 88 testes Vitest verdes em `apps/desktop`, typecheck sem erros, H004 smoke validado e Work100 com 30/30 PASS.
+Plano canônico: `workstation/context/BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
 
 
 ## Browser dogfood pós-Control Plane — admission e primitive closure — 2026-09-18

@@ -1,5 +1,35 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-071 — Browser Ownership & Recovery Reconciliation (2026-09-18)
+
+**Classification:** IMPLEMENTED / FULLY VALIDATED / 100% REGRESSIONS GREEN / P0 CLOSED.
+
+**Observed & Diagnosed:**
+1. Browser flickers when hovering other chats because Radix tooltips (`OverflowTip`/`Tip`) share `[data-radix-popper-content-wrapper]`, which was included in the native-view occlusion observer, triggering unnecessary remove/add of the `WebContentsView`.
+2. After restart, chats with associated BrowserTasks reopened on `Blank Page` because `ensure()` created/activated an `about:blank` tab while the recovered BrowserTask tabs were parked/lazy in `pendingSessionTabs`.
+3. Background actions resurrected the BrowserTask entry in the background while the visible viewport remained stranded on `about:blank`.
+4. Browser Hub TaskRail displayed active tasks as `Parked` because visibility (`visible | parked`) was conflated with execution activity (`working | idle`).
+5. Switching between Chat A and Chat B did not restore the respective task because `preferredTaskId` was dropped at the bridge/preload/UI seam, and unowned chats inherited whichever tab was active.
+6. Delayed cleanup on chat switch detached/hid viewports owned by the newer host due to missing host fencing.
+
+**Implementation & Verification:**
+- **Shared Native-View Occlusion:** Created `apps/desktop/src/app/browser/native-view-occlusion.ts` with `useNativeViewOcclusion` and selector `[data-native-view-occluder="true"], [role="dialog"], [role="menu"]`. Marked real occluders in `dialog.tsx`, `dropdown-menu.tsx`, `context-menu.tsx`, `select.tsx`, and `popover.tsx`. Tooltips never occlude Chromium.
+- **IPC & Runtime Host Fencing:** Added `expectedHost` to `detach` and `setVisible` in `WorkstationBrowserBridge`, preload, IPC handlers, and `WorkstationBrowserRuntime`. Calls from stale hosts are safely rejected. On `attach()`, `viewVisible` is always set to `true`.
+- **Preferred-Task Plumbing:** Extended `WorkstationBrowserBridge.attach()` and preload to forward `preferredTaskId`. `workstation-browser-pane.tsx` resolves `preferredTaskId` via session lineage and aliases, reattaching when session identity changes.
+- **Task-Bound Lazy Recovery:** Restructured `WorkstationBrowserRuntime.attach()` to restore session and durable browser state, materialize `preferredTaskId` from `pendingSessionTabs` via `rawEntryForTask(preferredTaskId, true)` before any physical blank fallback is created, discard unnavigated placeholder `about:blank`, and prevent cross-session leakage.
+- **Activity vs. Visibility Decoupling:** In `task-rail.tsx`, implemented `getTaskExecutionActivity(task, dotStates, sessions)` projecting `working | waiting | human_control | idle` from `$sessionDotStateById` and session lineage without conflating viewport visibility. Added `Working` section and protected active working tasks against premature clearing.
+- **Test Suite Results:**
+  - `native-view-occlusion.test.ts`: 7/7 passed.
+  - `task-rail.test.ts`: 5/5 passed.
+  - `workstation-browser-runtime-task.test.ts`: 28/28 passed (including host fencing and cross-session isolation).
+  - `workstation-browser-runtime-recovery.test.ts`: 2/2 passed (including multi-task restart sequence with 1 page per task invariant).
+  - Full Vitest workstation-browser suite: 88 passed across 9 test files (100% green).
+  - TypeScript check (`npm run typecheck`): 0 errors.
+  - H004 native browser smoke probe: validated all phases (`H004_CLASSIFICATION=VALIDATED`).
+  - Work100 regression benchmark: 30 PASS / 0 FAIL.
+
+**Canonical plan:** [../BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md](../BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md).
+
 ## H-070 — Native Browser operational admission & primitive closure (2026-09-18)
 
 **Classification:** IMPLEMENTED / CONTRACT QUALIFIED / 100% REGRESSIONS GREEN / P0 CLOSED.
