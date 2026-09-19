@@ -50,6 +50,10 @@ class EvaluationHarness:
     def __init__(self, journal: ExecutionJournal | None = None) -> None:
         self.journal = journal
 
+    def external_validity_metrics(self, runs: list[dict[str, Any]]) -> ExternalValidityMetrics:
+        """Compute external validity metrics against independent ground truth."""
+        return evaluate_external_validity(runs)
+
     def outcome_metrics(self, runs: list[dict[str, Any]]) -> dict[str, Any]:
         """Local AVCR projection. Missing provenance is never production data."""
         eligible = [r for r in runs if r.get("environment") in {"production", "dogfood"}
@@ -249,3 +253,217 @@ class SoakRunner:
             executor,
             max_duration_seconds=duration_seconds,
         )
+
+
+@dataclass(frozen=True)
+class ExternalValidityMetrics:
+    total_runs: int = 0
+    internal_verified_count: int = 0
+    external_success_count: int = 0
+
+    # Core Triad (Never report FCOR in isolation)
+    fcor: float | None = None
+    certification_coverage: float | None = None
+    reuse_reliability: float | None = None
+
+    # Concordance & Validity
+    external_correctness: float | None = None
+    oracle_agreement_rate: float | None = None
+    false_abstention_rate: float | None = None
+
+    # Robustness & Model Limits
+    hidden_assumption_robustness: float | None = None
+    model_inadequacy_recall: float | None = None
+    false_safe_rate: float | None = None
+    unsafe_mutation_rate: float | None = None
+    conflict_detection_recall: float | None = None
+    recovery_correctness: float | None = None
+    verifier_sensitivity: float | None = None
+
+    # Amortization
+    ora_ratio: float | None = None
+
+    # Counts dictionary preserving exact denominator provenance
+    counts: dict[str, int] = field(default_factory=dict)
+
+    def as_triad(self) -> dict[str, float | None]:
+        """Core triad: FCOR must always be accompanied by coverage and reuse reliability."""
+        return {
+            "fcor": self.fcor,
+            "certification_coverage": self.certification_coverage,
+            "reuse_reliability": self.reuse_reliability,
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_runs": self.total_runs,
+            "internal_verified_count": self.internal_verified_count,
+            "external_success_count": self.external_success_count,
+            "fcor": self.fcor,
+            "certification_coverage": self.certification_coverage,
+            "reuse_reliability": self.reuse_reliability,
+            "external_correctness": self.external_correctness,
+            "oracle_agreement_rate": self.oracle_agreement_rate,
+            "false_abstention_rate": self.false_abstention_rate,
+            "hidden_assumption_robustness": self.hidden_assumption_robustness,
+            "model_inadequacy_recall": self.model_inadequacy_recall,
+            "false_safe_rate": self.false_safe_rate,
+            "unsafe_mutation_rate": self.unsafe_mutation_rate,
+            "conflict_detection_recall": self.conflict_detection_recall,
+            "recovery_correctness": self.recovery_correctness,
+            "verifier_sensitivity": self.verifier_sensitivity,
+            "ora_ratio": self.ora_ratio,
+            "counts": dict(self.counts),
+        }
+
+
+def evaluate_external_validity(runs: list[dict[str, Any]]) -> ExternalValidityMetrics:
+    """Evaluate external validity metrics against independent ground truth.
+
+    Invariants:
+    - Never invent denominators: missing observations return None, not 0.0.
+    - FCOR is strictly defined as false certifications over total certifications.
+    - Must preserve observational provenance counts.
+    """
+    if not runs:
+        return ExternalValidityMetrics()
+
+    def ratio(n: int | float | None, d: int | float | None) -> float | None:
+        if d is None or d == 0 or n is None:
+            return None
+        return n / d
+
+    total_runs = len(runs)
+
+    def is_internally_verified(r: dict[str, Any]) -> bool | None:
+        if "internal_verified" in r:
+            return bool(r["internal_verified"])
+        if "verified" in r:
+            return bool(r["verified"])
+        if "internal_status" in r:
+            return r["internal_status"] in ("VERIFIED", "COMMITTED")
+        if "status" in r and r["status"] in ("VERIFIED", "COMMITTED", "FAILED", "INCONCLUSIVE", "CONFLICT"):
+            return r["status"] in ("VERIFIED", "COMMITTED")
+        return None
+
+    def is_externally_successful(r: dict[str, Any]) -> bool | None:
+        if "external_success" in r:
+            return bool(r["external_success"])
+        if "external_oracle_success" in r:
+            return bool(r["external_oracle_success"])
+        return None
+
+    int_ver_runs = [r for r in runs if is_internally_verified(r) is True]
+    ext_succ_runs = [r for r in runs if is_externally_successful(r) is True]
+
+    # FCOR: False Certification Overhang Rate = (Internal Verified & External Failed) / Internal Verified
+    fcor_num = sum(1 for r in int_ver_runs if is_externally_successful(r) is False)
+    fcor = ratio(fcor_num, len(int_ver_runs))
+
+    # Certification coverage = Internal Verified / Total Runs
+    cert_coverage = ratio(len(int_ver_runs), total_runs)
+
+    # External correctness = External Success / Total Runs
+    ext_correctness = ratio(len(ext_succ_runs), total_runs)
+
+    # Oracle agreement rate: where both are observed
+    comparable = [r for r in runs if is_internally_verified(r) is not None and is_externally_successful(r) is not None]
+    agreed = sum(1 for r in comparable if is_internally_verified(r) == is_externally_successful(r))
+    agreement_rate = ratio(agreed, len(comparable))
+
+    # False abstention: External Success is True but Internal Verified is False
+    ext_succ_comparable = [r for r in comparable if is_externally_successful(r) is True]
+    false_abstentions = sum(1 for r in ext_succ_comparable if is_internally_verified(r) is False)
+    false_abstention_rate = ratio(false_abstentions, len(ext_succ_comparable))
+
+    # Hidden assumption robustness
+    hidden_viol_runs = [r for r in runs if r.get("hidden_assumption_violated") is True]
+    hidden_safe = sum(
+        1 for r in hidden_viol_runs
+        if r.get("safely_handled") is True
+        or r.get("violation_detected") is True
+        or (is_internally_verified(r) is False and not r.get("state_corrupted", False))
+    )
+    hidden_robustness = ratio(hidden_safe, len(hidden_viol_runs))
+
+    # Model inadequacy recall
+    true_inadequacy_runs = [r for r in runs if r.get("true_model_inadequacy") is True]
+    inadequacy_detected = sum(1 for r in true_inadequacy_runs if r.get("model_inadequacy_detected") is True)
+    inadequacy_recall = ratio(inadequacy_detected, len(true_inadequacy_runs))
+
+    # False safe rate
+    hazard_runs = [r for r in runs if r.get("unmodelled_hazard") is True or r.get("has_unmodelled_side_effect") is True]
+    false_safes = sum(1 for r in hazard_runs if r.get("declared_safe") is True or is_internally_verified(r) is True)
+    false_safe_rate = ratio(false_safes, len(hazard_runs))
+
+    # Unsafe mutation rate
+    mutation_runs = [r for r in runs if r.get("mutation_applied") is True]
+    unsafe_mutations = sum(1 for r in mutation_runs if r.get("strict_verification_passed") is False or r.get("unsafe_mutation") is True)
+    unsafe_mutation_rate = ratio(unsafe_mutations, len(mutation_runs))
+
+    # Conflict detection recall
+    conflict_runs = [r for r in runs if r.get("true_conflict") is True or r.get("is_conflict") is True]
+    conflicts_detected = sum(1 for r in conflict_runs if r.get("conflict_detected") is True or r.get("internal_status") == "CONFLICT")
+    conflict_recall = ratio(conflicts_detected, len(conflict_runs))
+
+    # Recovery correctness
+    recovery_runs = [r for r in runs if r.get("recovery_attempted") is True]
+    recovery_succ = sum(
+        1 for r in recovery_runs
+        if r.get("recovery_external_success") is True or (is_externally_successful(r) is True and r.get("recovery_succeeded", True))
+    )
+    recovery_correctness = ratio(recovery_succ, len(recovery_runs))
+
+    # Verifier sensitivity
+    neg_control_runs = [r for r in runs if r.get("is_negative_control") is True]
+    neg_rejected = sum(1 for r in neg_control_runs if is_internally_verified(r) is False or r.get("rejected_negative_control") is True)
+    verifier_sensitivity = ratio(neg_rejected, len(neg_control_runs))
+
+    # Reuse reliability (N)
+    reuse_runs = [r for r in runs if r.get("is_reuse") is True or r.get("reuse_iteration", 0) > 0]
+    reuse_succ = sum(1 for r in reuse_runs if r.get("reuse_success") is True or (is_externally_successful(r) is True and is_internally_verified(r) is True))
+    reuse_reliability = ratio(reuse_succ, len(reuse_runs))
+
+    # ORA ratio
+    ora_runs_det = sum(r.get("deterministic_transitions", 0) for r in runs if "deterministic_transitions" in r)
+    ora_runs_rsn = sum(r.get("reasoned_transitions", 0) for r in runs if "reasoned_transitions" in r)
+    ora_total = ora_runs_det + ora_runs_rsn
+    ora_ratio = ratio(ora_runs_det, ora_total) if ora_total > 0 else None
+
+    counts = {
+        "total_runs": total_runs,
+        "internal_verified": len(int_ver_runs),
+        "external_success": len(ext_succ_runs),
+        "fcor_numerator": fcor_num,
+        "comparable_runs": len(comparable),
+        "hidden_assumption_violations": len(hidden_viol_runs),
+        "true_model_inadequacy_cases": len(true_inadequacy_runs),
+        "hazard_cases": len(hazard_runs),
+        "mutations_applied": len(mutation_runs),
+        "conflict_cases": len(conflict_runs),
+        "recoveries_attempted": len(recovery_runs),
+        "negative_controls": len(neg_control_runs),
+        "reuse_runs": len(reuse_runs),
+    }
+
+    return ExternalValidityMetrics(
+        total_runs=total_runs,
+        internal_verified_count=len(int_ver_runs),
+        external_success_count=len(ext_succ_runs),
+        fcor=fcor,
+        certification_coverage=cert_coverage,
+        reuse_reliability=reuse_reliability,
+        external_correctness=ext_correctness,
+        oracle_agreement_rate=agreement_rate,
+        false_abstention_rate=false_abstention_rate,
+        hidden_assumption_robustness=hidden_robustness,
+        model_inadequacy_recall=inadequacy_recall,
+        false_safe_rate=false_safe_rate,
+        unsafe_mutation_rate=unsafe_mutation_rate,
+        conflict_detection_recall=conflict_recall,
+        recovery_correctness=recovery_correctness,
+        verifier_sensitivity=verifier_sensitivity,
+        ora_ratio=ora_ratio,
+        counts=counts,
+    )
+
