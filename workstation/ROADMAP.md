@@ -1,40 +1,54 @@
 # Workstation roadmap
 
-## H-078 — Upstream Migration as Decoupling / Unidirectional Supervision (2026-09-19) — ACTIVE STRATEGIC LANE
+## H-078 — Upstream Migration as Decoupling / Minimum Necessary First-Party Seams (2026-09-19) — ACTIVE STRATEGIC LANE
 
 Canonical program:
 [context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md](context/UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md).
 
-Decision: **adapt Hermes Work to the current upstream while progressively extracting
-Workstation seams instead of re-inserting them into the upstream's new internals.**
+Seam policy:
+[context/FIRST_PARTY_SEAM_POLICY.md](context/FIRST_PARTY_SEAM_POLICY.md).
 
-Hermes remains the first-party laboratory/reference reasoner, but Workstation correctness
-must progressively stop depending on Hermes core knowing that Workstation exists or on the
-LLM remembering to call `work_execute`. The target is unidirectional supervision:
-generic Hermes lifecycle/middleware/provider surfaces emit/mediate execution; a
-Workstation-owned adapter observes and can wrap/veto/pause/reconcile/verify through those
-generic contracts.
+Decision: **adapt Hermes Work to the current upstream while removing accidental coupling
+and minimizing first-party seams without sacrificing capability, lifecycle control,
+correctness or integrated UX.**
 
-Migration rule for every upstream overlap:
+The target is not "zero source changes". The Reasoner and generic agent core should avoid
+Workstation-specific knowledge where generic hooks/middleware/providers can preserve the
+same semantics. The first-party Hermes Work Desktop may deliberately retain narrow native
+integration seams when plugin/extension surfaces cannot provide equivalent behavior.
+
+Every upstream overlap:
 `ADOPT_UPSTREAM | KEEP_WORKSTATION | SEMANTIC_PORT | EXTRACT_BOUNDARY`.
-Whenever a generic hook/middleware/provider boundary can preserve the invariant,
-`EXTRACT_BOUNDARY` is preferred over restoring a direct `agent/* -> workstation/*`
-or `tools/* -> workstation/*` import.
+
+Every remaining first-party seam:
+`REMOVE | UPSTREAM_ABSTRACT | PRESERVE_FIRST_PARTY`.
+
+The Browser is the reference case: use modern upstream Plugin SDK/pane surfaces for UI
+integration when they preserve parity, but do not sacrifice the persistent native
+`WebContentsView`, BrowserTask ownership, background continuity, human takeover, fencing,
+Hub/Chat transfer or recovery merely to make the downstream diff smaller.
 
 Sequence:
-P0 decision + seam audit -> P1 pinned upstream baseline migration -> P2 supervisory adapter
-shadow mode -> P3 tool-execution seam retirement -> P4 turn/finalizer seam retirement ->
-P5 browser provider boundary -> P6 session/Kanban/API edge isolation -> P7 Work Gateway ->
-P8 Hermes-less qualification.
+P0 seam policy + registry -> P1 pinned upstream baseline migration -> P2 supervisory adapter
+shadow mode -> P3 tool-execution minimization -> P4 turn/finalizer minimization -> P5
+Browser generic boundary + justified native seams -> P6 Session/Kanban/API/Desktop edge
+minimization -> P7 Work Gateway -> P8 Hermes-less qualification.
 
-Retirement gate: **shadow parity first**. No seam is removed until normal Hermes behavior
-(without model compliance or explicit `work_execute`) is still observed/supervised with
-equivalent lineage, authority, uncertainty, verification, BrowserTask and Experience
-Compiler semantics.
+Gate: **shadow parity before seam removal; evidence before seam preservation.** A seam may
+remain only when its first-party privilege is materially necessary, concentrated,
+documented, tested and re-evaluated on every upstream cycle.
 
-This lane is architectural/migration work and does not supersede H-077's external-validity
-program. H-077 governs what Workstation may claim as true; H-078 governs how Workstation
-is coupled to Hermes while upstream is adopted.
+Canonical rule:
+
+```text
+UPSTREAM STRUCTURE
++ WORKSTATION SEMANTICS
++ MINIMUM NECESSARY FIRST-PARTY SEAMS
++ NO CAPABILITY REGRESSION FOR PURITY
+```
+
+H-077 remains orthogonal: it governs external validity/truth claims; H-078 governs how the
+first-party Workstation integrates with Hermes while moving toward Runtime Independence.
 
 ## H-077 — Architectural Falsification / External Validity (2026-09-19) — ACTIVE
 
