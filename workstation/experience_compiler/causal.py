@@ -200,7 +200,11 @@ def refine_counterexample(capability, counterexample, positive_states):
     common = _intersection(positive_states)
     refinements = {k: v for k, v in common.items() if k in counterexample and counterexample[k] != v}
     if not refinements:
-        raise ValueError('counterexample not discriminated; adaptive reasoning required')
+        cap.learning_metadata['model_inadequacy_detected'] = True
+        cap.learning_metadata['model_inadequacy_reason'] = 'model_inadequacy_non_discriminable_outcome'
+        cap.learning_metadata['unresolved_counterexamples'] = cap.learning_metadata.get('unresolved_counterexamples', 0) + 1
+        cap.drift_state = 'quarantined'
+        raise ValueError('model_inadequacy_non_discriminable_outcome: counterexample not discriminated; adaptive reasoning required')
     parts = [int(p) for p in cap.version.split('.')]
     parts[-1] += 1
     cap.version = '.'.join(map(str, parts))

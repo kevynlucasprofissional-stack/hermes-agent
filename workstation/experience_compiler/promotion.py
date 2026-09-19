@@ -28,6 +28,8 @@ class ExperiencePromotionPolicy:
             'cross_run_diversity': len(set(m.get('run_ids', []))) >= 2,
             'drift': cap.drift_state == 'healthy' and m.get('drift_rate', 1) <= .1
                      and not m.get('unresolved_counterexamples', 0),
+            'model_inadequacy': not m.get('model_inadequacy_detected', False)
+                                and not m.get('unresolved_counterexamples', 0),
             'utility': m.get('utility', 0) > 0,
             'risk': m.get('risk', 'ordinary') == 'ordinary' and m.get('blast_radius', 1) <= 1,
             # No global automatic authority for external/high-impact effects in V1.
