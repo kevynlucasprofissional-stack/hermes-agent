@@ -1,5 +1,93 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+
+## Aprendizado operacional hierárquico e amortização de raciocínio — 2026-09-18
+
+A auditoria do fluxo Experience Compiler -> Operational Capability -> Router ->
+Await/Trigger consolidou a abstração central do Hermes Work:
+
+> **Hermes deve aprender não apenas fatos sobre o mundo, mas maneiras comprovadas
+> de agir sobre ele. Quanto mais uma transformação operacional se provar estável,
+> causal, reutilizável e verificável, menos raciocínio novo deve ser necessário
+> para executá-la novamente.**
+
+Isso **não** significa aprender a menor sequência física possível. A unidade
+canônica continua sendo a **Verified Operational Transition (VOT)**: a menor
+transformação semanticamente fechada, parametrizável, executável e verificável
+com valor positivo de reutilização. Atomicidade é definida pelo boundary de
+efeito/postcondition, não por contagem de cliques/tool calls.
+
+Hierarquia-alvo:
+
+~~~text
+Trusted Operational Primitives
+  -> VOT / OperationalCapability
+  -> Composite OperationalCapability
+  -> Deterministic Workflow
+  -> AwaitCondition / causal event
+  -> OpenCondition / AttentionPacket / WAKE_LLM
+~~~
+
+O produto de um nível de compilação pode virar o vocabulário do nível seguinte.
+Isso permite aprendizado operacional hierárquico sem transformar o sistema em um
+gravador de macros.
+
+**Estado real atual:**
+- Experience Compiler já minera experiência aceita em `kanban.py`, produz
+  candidatos, faz slicing, anti-unification, C0-C5, replay/ablation e promoção
+  conservadora;
+- Operational Kernel já executa capabilities deterministicamente com zero LLM
+  intermediária;
+- Capability dependencies e CompositionEngine já existem;
+- AwaitCondition/TriggerCoordinator já existem como contratos persistentes;
+- Router/OpenCondition/AttentionPacket já modelam a fronteira entre execução
+  conhecida e raciocínio.
+
+**Quatro costuras ainda abertas:**
+1. capability aprendida ainda não ganha automaticamente um
+   `CapabilityFormalContract` conservador; portanto exact fingerprint reuse e
+   semantic Router permanecem parcialmente separados;
+2. composição runtime e composição aprendida são coisas distintas: primeiro é
+   preciso executar COMPOSE de verdade; depois adicionar mineração de sequências
+   recorrentes de CapabilityInvocation para composite capabilities;
+3. espera produtiva ainda usa `event_bus.wait()`/polling residente em partes do
+   TaskCompiler; AwaitCondition precisa possuir continuation executável e liberar o
+   worker até evento/observer futuro;
+4. o Control Plane precisa fechar os P0s já reproduzidos: falso COMPOSE,
+   ACK != verification, authority trust root e branches/contratos de decisão.
+
+Fluxo canônico final:
+
+~~~text
+reason once
+  -> observe
+  -> prove
+  -> compile
+  -> reuse
+  -> compose
+  -> wait without resident reasoning/worker
+  -> event wakes
+  -> authoritative state confirms
+  -> Router resumes deterministically
+  -> WAKE_LLM only for the smallest unresolved semantic condition
+  -> learn again
+~~~
+
+A métrica estratégica passa a incluir **Operational Reasoning Amortization (ORA)**:
+
+~~~text
+verified semantic transitions executed with zero LLM
+----------------------------------------------------
+total verified semantic transitions
+~~~
+
+ORA deve subir e LLM calls / verified transition deve cair sem reduzir qualidade de
+verificação, aumentar uncertain mutations ou esconder drift.
+
+Plano canônico:
+`workstation/context/HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md`.
+
+
 ## Auditoria pós-PR #29 — fechamento operacional ainda aberto — 2026-09-19
 
 O PR #29 melhorou a base, mas a revisão pós-merge separou **presença de mecanismo** de **prova de propriedade operacional**. O novo princípio de leitura é:
