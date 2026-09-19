@@ -73,6 +73,7 @@ describe('WorkstationBrowserPane cold attach', () => {
       async (_bounds: unknown, _host?: string, _preferredTaskId?: string) =>
         ({ ...restoredState, attached: true, viewportHost: 'chat' }) as WorkstationBrowserState
     )
+
     const bridge = {
       ensure: vi.fn(async () => restoredState),
       attach,

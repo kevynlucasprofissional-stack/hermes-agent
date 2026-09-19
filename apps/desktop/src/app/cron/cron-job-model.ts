@@ -88,7 +88,7 @@ export function cronEditorUpdates(values: CronEditorSaveValues, options: { scrip
   // write both axes so resetting to "default" clears a previous pin (the
   // backend normalizes null/'' to "no override").
   if (!options.scriptOnlyJob) {
-    if (values.modelPolicy) updates.model_policy = values.modelPolicy
+    if (values.modelPolicy) {updates.model_policy = values.modelPolicy}
     updates.model = values.model.trim() || null
     updates.provider = values.provider.trim() || null
   }

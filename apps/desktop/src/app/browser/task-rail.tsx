@@ -6,7 +6,6 @@ import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 import { $sessions } from '@/store/session'
 import { $sessionDotStateById } from '@/store/session-dot-state'
-import type { SessionInfo } from '@/types/hermes'
 
 import type { BrowserTask, WorkstationBrowserTabState } from './types'
 
@@ -46,9 +45,11 @@ export function getTaskExecutionActivity(
 
   if (task.sessionHost) {
     const dot = dotStates[task.sessionHost]
+
     if (dot === 'working' || dot === 'stalled') {
       return 'working'
     }
+
     if (dot === 'needs-input') {
       return 'waiting'
     }
@@ -60,9 +61,11 @@ export function getTaskExecutionActivity(
         s._lineage_root_id === task.sessionHost
       ) {
         const sDot = dotStates[s.id]
+
         if (sDot === 'working' || sDot === 'stalled') {
           return 'working'
         }
+
         if (sDot === 'needs-input') {
           return 'waiting'
         }
@@ -137,6 +140,7 @@ export function TaskRail({
   const [collapsed, setCollapsed] = useState(false)
   const sessions = useStore($sessions)
   const dotStates = useStore($sessionDotStateById)
+
   const clearableTaskIds = useMemo(
     () => getClearableBrowserTaskIds(tasks, dotStates, sessions),
     [tasks, dotStates, sessions]
@@ -260,6 +264,7 @@ export function TaskRail({
                   const isWorking = activity === 'working'
                   const badge = statusBadge(task)
                   const isCurrent = task.taskId === activeTaskId
+
                   const isWaitingForHuman =
                     group.id === 'waiting-for-human' ||
                     task.leaseState === 'waiting' ||
