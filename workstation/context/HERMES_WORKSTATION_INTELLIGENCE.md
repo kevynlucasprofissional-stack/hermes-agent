@@ -1,5 +1,42 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-078B — Code-to-code audit: preserve causal properties, not patch locations — 2026-09-19
+
+A deeper audit of the exact downstream/upstream trees refines the central intelligence:
+
+> **The synchronization must not preserve the places where we put the code. It must preserve
+> the causal properties that code guarantees, then move each property into the narrowest
+> modern upstream owner capable of expressing it.**
+
+The most important consequences are:
+
+- `run_agent.py` is no longer a future integration point. Progressive Compilation,
+  human handoff, execution scope and route authority must be extracted into decomposed
+  owners plus the Hermes first-party adapter.
+- `tool_executor.py` is a mixed semantic container. The mutation uncertainty checkpoint
+  needs a new generic hook after final args+authorization but before real I/O;
+  post-effect/raw-result observation can move to upstream raw `post_tool_call`; internal
+  compiled persistence needs a generic OWNER_MANAGED/DEFER-like disposition.
+- completion is an **admission** boundary, not an observer. Workstation must still be able
+  to prevent canonical DONE.
+- upstream Kanban PR acceptance already demonstrates the right two-phase pattern:
+  prepare outside txn, snapshot, revalidate inside txn, record receipt, then terminal
+  update.
+- upstream `BrowserControlBroker` now naturally owns controller routing/identity/
+  dispatch/fail-closed. Workstation continues to own BrowserTask/page lifecycle, native
+  Chromium, human control, persistence, semantic anchors, recovery and learning.
+- Browser migration uses dual-control/shadow routing. Mutations never execute through both
+  old and new paths.
+- `web_server.py`, `toolsets.py` and likely `model_tools.py` contain seams that modern
+  plugin/controller surfaces can remove with little loss.
+- trusted ingress and route authority remain semantic requirements: text is not authority,
+  so `TurnIngress` and `TurnRoutePolicy` are generic abstractions worth adding.
+
+This is the implementation meaning of agent/harness agnosticism: Workstation domain truth
+stays in `workstation/`; Hermes becomes the best first-party adapter/reference reasoner,
+not the owner of operational truth.
+
+
 ## H-078A — Minimum Necessary First-Party Seams — 2026-09-19
 
 A arquitetura não persegue mais "zero costuras" como valor em si. O objetivo é reduzir o
