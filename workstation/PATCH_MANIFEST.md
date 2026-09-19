@@ -1,5 +1,29 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-029 — First-Party Workstation Adapter Implementation Manifest
+
+Implementation of H-078B decouples Hermes core from Workstation.
+
+Touched core modules:
+- `agent/turn_ingress.py`: generic turn ingress metadata (origin, trust class, session).
+- `agent/turn_admission.py`: turn admission registration & invocation.
+- `agent/tool_batch_admission.py`: tool batch admission provider registry & actions.
+- `agent/scoped_execution.py`: scoped execution provider registry & context boundary.
+- `agent/pre_dispatch.py`: pre-authorized dispatch checkpoint hooks.
+- `agent/post_tool.py`: raw post-tool observation hooks.
+- `agent/execution_persistence.py`: execution persistence disposition provider & context.
+- `agent/turn_route_policy.py`: route policy contracts & enforcement.
+- `agent/completion_admission.py`: completion candidate admission provider registry.
+- `agent/compression_admission.py`: compression bypass provider registry.
+- `agent/conversation_projection.py`: provider wire projection registry.
+- `agent/task_completion_admission.py`: task acceptance admission provider registry.
+- `workstation/integrations/hermes/`: adapter façade translating all generic contracts into Workstation kernel calls.
+- Decoupled core files: `run_agent.py`, `agent/conversation_loop.py`, `agent/tool_executor.py`,
+  `agent/turn_finalizer.py`, `agent/turn_constraints.py`, `agent/chat_completion_helpers.py`,
+  `agent/conversation_compression.py`, `cli.py`, `gateway/run.py`, `hermes_cli/kanban_db.py`,
+  `hermes_cli/web_server.py`, `tools/file_tools.py`, `tools/tool_search.py`, `tools/close_preview_tool.py` (0 direct imports each).
+
+
 ## HW-028 — Semantic seam migration manifest
 
 The H-078 code-to-code refinement upgrades the seam manifest from path-level intent to

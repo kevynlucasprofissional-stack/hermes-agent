@@ -1,39 +1,36 @@
 # Current State
 
-## 2026-09-19 H-078B Code-to-Code Migration Specification — ACTIVE / RECONCILED WITH MAIN
+## 2026-09-19 H-078B Code-to-Code Migration & Semantic Decoupling — COMPLETE / ACTIVE
 
-The deeper audit has superseded the original file-level seam assumptions.
+The H-078B semantic decoupling and code migration has been fully executed and empirically verified.
 
-Repository state observed during this refresh:
-
-- downstream `main`: `9f4ce89e56e204b3c8119d4b937be4462d0dfeaf` (with H-077.1 qualification closure applied);
-- PR #35 head reconciled against current main;
-- deep upstream research snapshot: `ea94d88e25d7699115a668c1757433361f3420dd`;
-- later upstream head observed during refresh:
-  `af2e9a4313f9a8a96618207ae111f9e824241949`;
-- upstream research snapshot is not an integration pin.
-
-Verified downstream hotspots on current main include:
-
-- `run_agent.py::_execute_tool_calls` calling Workstation
-  `decisions_for_calls()`;
-- `conversation_loop.py` calling `prepare_turn_work`, publishing
-  `TurnConstraintContext`, and applying `project_for_provider`;
-- `tool_executor.py` directly calling `prepare_mutation`, `record_mutation`,
-  `capture_raw_result` and suppressing normal SessionDB flush during durable execution;
-- `turn_finalizer.py` delegating candidate completion to
-  `WorkstationKanbanBridge.finalize_turn_candidate()`;
-- `cli.py` constructing trusted MessageEnvelope authority;
-- `web_server.py`, `toolsets.py`, `model_tools.py` carrying removable Workstation
-  edges.
-
-Verified modern upstream affordances include `turn_tool_round.py`, raw tool lifecycle,
-`BrowserControlBroker` with lane-registered fail-closed semantics, and the
-`prepare_acceptance()/record_acceptance()` Kanban transaction pattern.
-
-Immediate state rule: **do not merge PR #35 and do not start the upstream merge until
-H-078 is reconciled with H-077/H-077.1 and the semantic seam inventory is the active
-specification.**
+Current architectural state:
+- **Zero Direct Workstation Imports in Core**:
+  `run_agent.py` (0), `agent/conversation_loop.py` (0), `agent/tool_executor.py` (0),
+  `agent/turn_finalizer.py` (0), `agent/turn_constraints.py` (0), `agent/chat_completion_helpers.py` (0),
+  `agent/conversation_compression.py` (0), `cli.py` (0), `gateway/run.py` (0),
+  `hermes_cli/kanban_db.py` (0), `hermes_cli/web_server.py` (0), `tools/file_tools.py` (0),
+  `tools/tool_search.py` (0), `tools/close_preview_tool.py` (0).
+- **Generic Core Lifecycles (`agent/`)**:
+  Generic upstream-safe extension points provide turn ingress (`TurnIngress`), turn admission (`admit_turn`),
+  batch admission (`admit_tool_batch`), scoped execution (`scoped_execution`), pre-authorized dispatch
+  checkpoints (`dispatch_pre_authorized_checkpoint`), raw post-tool observations (`dispatch_raw_post_tool_observation`),
+  persistence disposition (`ExecutionPersistenceDisposition`), turn route policy (`TurnRoutePolicy`),
+  completion admission (`admit_completion`), compression bypass (`should_bypass_compression`),
+  wire projection (`project_messages_for_provider`), and task completion admission (`admit_task_completion`).
+- **First-Party Adapter Façade (`workstation/integrations/hermes/`)**:
+  All Workstation capabilities (Progressive Compilation, durable dispatch, mutation journals,
+  procedure traces, kanban completion contracts, browser capabilities, and continuation projections)
+  are wired cleanly through generic registries upon installation (`install_workstation_adapter`).
+- **Seam Audit Verification**:
+  `workstation/scripts/audit_hermes_seams.py --strict` passes with:
+  `Direct core seams: 18 (all classified first-party tools), unclassified: 0, budget regressions: 0`.
+- **Runtime Independence Verified**:
+  Verified via `workstation/tests/test_h078b_runtime_independence.py` that a foreign / alternate reasoner
+  can drive the entire Workstation kernel through the generic lifecycle contracts without ever importing `run_agent.py`.
+- **All Core Test Suites Green**:
+  Passed H-077.1 qualification closure, architectural falsification, control plane integration,
+  canonical work loop, continuity, durable agent integration, and generic seam suites.
 
 
 ## 2026-09-19 H-078A Minimum Necessary First-Party Seams — ACTIVE

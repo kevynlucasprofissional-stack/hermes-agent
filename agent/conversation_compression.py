@@ -2294,8 +2294,8 @@ def compress_context(
         no-op via ``len(returned) == len(input)`` and stop the retry loop.
     """
     if not force and commit_fence is None:
-        from workstation.continuation import durable_compaction
-        if durable_compaction(agent, messages):
+        from agent.compression_admission import should_bypass_compression
+        if should_bypass_compression(agent, messages):
             # No narrative summary, session rotation or transcript rewrite.
             # The provider boundary applies the authenticated projection.
             return messages, getattr(agent, "_cached_system_prompt", None) or system_message

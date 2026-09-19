@@ -59,7 +59,7 @@
           "sunset_condition": "remove direct seam after shadow projection parity"
         }
       ],
-      "current_direct_imports": 3
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-TOOL-001",
@@ -131,7 +131,7 @@
           "sunset_condition": "direct durable_execution_active branch removed after owner-managed persistence parity"
         }
       ],
-      "current_direct_imports": 6
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-RUN-001",
@@ -186,7 +186,7 @@
           "sunset_condition": "route enforcement no longer depends on run_agent Workstation branches"
         }
       ],
-      "current_direct_imports": 8
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-FINAL-001",
@@ -211,7 +211,7 @@
           "sunset_condition": "direct Workstation finalizer import removed after admission can veto terminal commit"
         }
       ],
-      "current_direct_imports": 2
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-KANBAN-001",
@@ -237,7 +237,7 @@
           "sunset_condition": "kanban_db has no Workstation-specific import"
         }
       ],
-      "current_direct_imports": 1
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-BROWSER-001",
@@ -388,7 +388,7 @@
           "sunset_condition": "generic web_server contains no Workstation route implementation"
         }
       ],
-      "current_direct_imports": 3
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-CLI-001",
@@ -412,7 +412,7 @@
           "sunset_condition": "cli.py no longer imports workstation.contracts"
         }
       ],
-      "current_direct_imports": 1
+      "current_direct_imports": 0
     },
     {
       "id": "FPS-ROUTE-001",
@@ -437,7 +437,70 @@
           "sunset_condition": "Workstation only produces policy; Hermes core owns generic enforcement"
         }
       ],
+      "current_direct_imports": 0
+    },
+    {
+      "id": "FPS-VAULT-001",
+      "path": "tools/vault_tools.py",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "workstation.vault PKM local-first model tools",
+      "rationale": "First-party Obsidian-compatible Markdown vault engine model tool integration.",
+      "concerns": [
+        {
+          "id": "SEAM-VAULT-ENGINE",
+          "symbol_or_concern": "workstation.vault.VaultManager / get_default_vault_manager",
+          "semantic_owner": "workstation.vault",
+          "current_behavior": "Provides vault_search, vault_read, vault_write, vault_append, vault_backlinks, vault_graph.",
+          "required_ordering": "Tool execution time.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "preserve first-party tool surface",
+          "parity_tests": ["vault tools operate correctly"],
+          "sunset_condition": "none"
+        }
+      ],
       "current_direct_imports": 1
+    },
+    {
+      "id": "FPS-WS-EXT-001",
+      "path": "tools/workstation_extensions.py",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "Workstation runtime extension tools",
+      "rationale": "First-party Workstation model tools exposing journal, policy, and contracts inspection.",
+      "concerns": [
+        {
+          "id": "SEAM-WS-EXT",
+          "symbol_or_concern": "workstation.contracts, extensions, journal, policy",
+          "semantic_owner": "workstation kernel",
+          "current_behavior": "Exposes workstation extension inspection tools.",
+          "required_ordering": "Tool execution time.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "preserve first-party tool surface",
+          "parity_tests": ["extension tools operate correctly"],
+          "sunset_condition": "none"
+        }
+      ],
+      "current_direct_imports": 4
+    },
+    {
+      "id": "FPS-WS-WORK-001",
+      "path": "tools/workstation_work.py",
+      "disposition": "PRESERVE_FIRST_PARTY",
+      "target": "Workstation work_execute tool",
+      "rationale": "First-party Workstation work_execute tool driving compiled durable batch execution.",
+      "concerns": [
+        {
+          "id": "SEAM-WS-WORKEXEC",
+          "symbol_or_concern": "workstation.task_compiler, config",
+          "semantic_owner": "workstation.task_compiler",
+          "current_behavior": "Executes compiled durable work batches through work_execute.",
+          "required_ordering": "Tool execution time.",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "preserve first-party tool surface",
+          "parity_tests": ["work_execute runs durable batches"],
+          "sunset_condition": "none"
+        }
+      ],
+      "current_direct_imports": 2
     },
     {
       "id": "FPS-DESKTOP-MAIN",

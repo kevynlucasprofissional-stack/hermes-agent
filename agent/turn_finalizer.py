@@ -837,21 +837,25 @@ def finalize_turn(
     canonical_task_id = getattr(agent, "_canonical_work_task_id", None)
     canonical_run_id = getattr(agent, "_canonical_work_run_id", None)
     if canonical_task_id:
-        try:
-            from workstation.kanban import WorkstationKanbanBridge
-            root = agent._conversation_root_id() or agent.session_id
-            from workstation.procedure_trace import candidate_steps, trace_compatibility
-            result['_adaptive_procedure_steps'] = [] if getattr(agent, '_work_procedure_trace_truncated', False) else candidate_steps(getattr(agent, '_work_procedure_trace', []))
-            result['_adaptive_repeatability_hint'] = getattr(agent, '_work_repeatability_hint', False)
-            result['_adaptive_procedure_compatibility'] = trace_compatibility(getattr(agent, '_work_procedure_trace', []))
-            result["work_outcome"] = WorkstationKanbanBridge().finalize_turn_candidate(
-                canonical_task_id, root, result, expected_run_id=canonical_run_id
-            )
-        except Exception as exc:
-            logger.warning("canonical outcome candidate verification failed: %s", exc)
-            result["work_outcome"] = {"task_id": canonical_task_id, "status": "uncertain", "acceptance_approved": False}
-        finally:
-            for key in ('_adaptive_procedure_steps', '_adaptive_repeatability_hint', '_adaptive_procedure_compatibility'):
-                result.pop(key, None)
+        from agent.completion_admission import admit_completion
+        root = agent._conversation_root_id() or agent.session_id
+        state = {
+            "session_id": root,
+            "agent": agent,
+            "turn_result": result,
+            "_work_procedure_trace": getattr(agent, "_work_procedure_trace", []),
+            "_work_procedure_trace_truncated": getattr(agent, "_work_procedure_trace_truncated", False),
+            "_work_repeatability_hint": getattr(agent, "_work_repeatability_hint", False),
+        }
+        admission_res = admit_completion(str(canonical_task_id), str(canonical_run_id or ""), state)
+        if admission_res.receipt:
+            result["work_outcome"] = admission_res.receipt
+        elif not admission_res.admitted:
+            result["work_outcome"] = {
+                "task_id": canonical_task_id,
+                "status": "uncertain",
+                "acceptance_approved": False,
+                "reason": admission_res.reason,
+            }
 
     return result

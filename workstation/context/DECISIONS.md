@@ -1,5 +1,27 @@
 # Architectural Decisions
 
+## D-029 — First-Party Workstation Adapter via Generic Core Registries
+
+**Decision:** The Hermes generic core is completely decoupled from Workstation internals.
+All Workstation capabilities are provided via a first-party adapter (`workstation/integrations/hermes/`)
+that wires into generic lifecycle, admission, persistence, and observation registries in `agent/`.
+
+Principles enforced:
+- **Zero Core Seams**: Generic agent modules (`run_agent.py`, `conversation_loop.py`, `tool_executor.py`,
+  `turn_finalizer.py`, `chat_completion_helpers.py`, `conversation_compression.py`, `turn_constraints.py`,
+  `cli.py`, `gateway/run.py`, `kanban_db.py`, `web_server.py`, `file_tools.py`, `tool_search.py`,
+  `close_preview_tool.py`) contain **zero** direct imports from `workstation`.
+- **Reasoner Independence**: Any Reasoner (AIAgent or an alternate foreign Reasoner) can drive
+  the Workstation kernel through the generic lifecycle contracts without importing `run_agent.py`.
+- **Causal Invariants**:
+  1. Pre-authorized checkpoint fires after argument resolution and authorization, strictly before external I/O.
+  2. Raw post-tool observation captures unmutated results and procedure traces before truncation or spilling.
+  3. Owner-managed persistence disposition prevents intermediate SessionDB flushes during compiled durable batches.
+  4. Completion admission validates verification contracts before DONE commits.
+- **Fail-Closed Seam Policy**: `audit_hermes_seams.py --strict` acts as an automated regression
+  gate enforcing zero unclassified core seams.
+
+
 ## D-028 — Migrate semantic causal contracts, not historical patch locations
 
 **Decision:** H-078 implementation is governed by semantic concerns and causal ordering.

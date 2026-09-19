@@ -9,21 +9,28 @@ that asked and never steals a background session's view.
 """
 
 import json
+from typing import Any
 
 from tools import desktop_ui
 from tools.open_preview_tool import _normalize_target
 from tools.registry import registry, tool_error
 
 
+_PREVIEW_ACTION_GUARDS: list[Any] = []
+
+
+def register_preview_action_guard(guard: Any) -> None:
+    if guard not in _PREVIEW_ACTION_GUARDS:
+        _PREVIEW_ACTION_GUARDS.append(guard)
+
+
 def close_preview_tool(url: str = "", task_id: str = "") -> str:
     """Ask the desktop GUI to close the preview pane, or the tab for ``url``."""
     if task_id:
-        try:
-            from workstation.browser_session import BrowserControlLeaseManager, HumanTakeoverActiveError
-            BrowserControlLeaseManager.get_instance().assert_action_allowed(task_id, "close_preview")
-        except Exception as exc:
-            if exc.__class__.__name__ == "HumanTakeoverActiveError":
-                return tool_error(str(exc))
+        for guard in _PREVIEW_ACTION_GUARDS:
+            err = guard(task_id, "close_preview")
+            if err:
+                return tool_error(err)
 
     target = _normalize_target(url or "")
 

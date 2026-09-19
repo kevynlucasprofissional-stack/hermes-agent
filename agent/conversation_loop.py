@@ -1890,17 +1890,20 @@ def run_conversation(
         logger.debug("per-turn env credential refresh failed", exc_info=True)
 
     # ── Per-turn setup (the prologue) ──
-    from workstation.work_intent import prepare_turn_work
-    prepare_turn_work(agent, user_message, message_envelope)
-    agent._work_compile_replans = 0
-    agent._work_completed_mutations = {}
-    agent._work_mutation_evidence = {}
-    agent._work_mutation_shapes = {}
-    agent._work_compilation_candidates = {}
-    agent._work_procedure_trace = []
-    agent._work_procedure_trace_truncated = False
+    from agent.turn_admission import admit_turn
+    from agent.turn_ingress import TurnIngress, TurnOrigin, TurnTrustClass
+    ingress = message_envelope
+    if ingress is None:
+        ingress = TurnIngress(
+            origin=TurnOrigin.HUMAN,
+            trust_class=TurnTrustClass.AUTHENTICATED_USER,
+            session_id=agent._conversation_root_id() or getattr(agent, "session_id", ""),
+            content=user_message if isinstance(user_message, str) else "",
+        )
+    admit_turn(agent, user_message, ingress)
+
     from agent.turn_constraints import TurnConstraintContext
-    from workstation.routing import ConstraintViolation
+    from agent.turn_route_policy import ConstraintViolation
     try:
         agent._turn_constraints = TurnConstraintContext.from_user(user_message)
         agent._work_user_constraints = agent._turn_constraints.routes
@@ -2505,8 +2508,8 @@ def run_conversation(
         # results before sending to the API.  Runs unconditionally — not
         # gated on context_compressor — so orphans from session loading or
         # manual message manipulation are always caught.
-        from workstation.continuation import project_for_provider
-        api_messages = project_for_provider(agent, api_messages, messages)
+        from agent.conversation_projection import project_messages_for_provider
+        api_messages = project_messages_for_provider(agent, api_messages, messages)
         api_messages = agent._sanitize_api_messages(api_messages)
 
         # Drop thinking-only assistant turns (reasoning but no visible

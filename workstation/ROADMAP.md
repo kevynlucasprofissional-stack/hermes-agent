@@ -1,27 +1,34 @@
 # Workstation roadmap
 
-## H-078B — Code-to-Code Migration Refinement (2026-09-19) — ACTIVE / PRE-MIGRATION HARD GATE
+## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED
 
-The deep three-tree audit changes H-078 from a path-oriented seam-retirement plan into a
-**semantic/causal migration specification**.
+The H-078B Code-to-Code Upstream Migration / Semantic Decoupling has been fully implemented and
+empirically validated.
 
-Structural finding: downstream changed 467 files since the common ancestor; upstream
-10,165; only 129 paths overlap; 338 downstream-changed paths do not collide with upstream,
-including 254 under `workstation/`. The runtime core is comparatively protected. The
-migration risk is concentrated in bridges.
+Key achievements:
+- **Core Decoupling (Zero Direct Imports)**: `run_agent.py`, `agent/conversation_loop.py`,
+  `agent/tool_executor.py`, `agent/turn_finalizer.py`, `agent/turn_constraints.py`,
+  `agent/chat_completion_helpers.py`, `agent/conversation_compression.py`, `cli.py`,
+  `gateway/run.py`, `hermes_cli/kanban_db.py`, `hermes_cli/web_server.py`, `tools/file_tools.py`,
+  `tools/tool_search.py`, and `tools/close_preview_tool.py` now have exactly **0** direct imports
+  from `workstation`.
+- **Generic Core Abstractions**: Added generic, upstream-safe extension points in `agent/`:
+  `turn_ingress.py`, `turn_admission.py`, `tool_batch_admission.py`, `scoped_execution.py`,
+  `pre_dispatch.py`, `post_tool.py`, `execution_persistence.py`, `turn_route_policy.py`,
+  `completion_admission.py`, `compression_admission.py`, `conversation_projection.py`,
+  and `task_completion_admission.py`.
+- **First-Party Workstation Adapter**: Established `workstation/integrations/hermes/` wiring all
+  Workstation capabilities through generic registries (`install_workstation_adapter`).
+- **Seam Policy Audit**: Strict policy audit passes with 0 unclassified seams and 0 budget
+  regressions (`audit_hermes_seams.py --strict`).
+- **Runtime Independence Verified**: An alternate reasoner (`AlternateReasoner`) successfully
+  drives the Workstation runtime through all lifecycle boundaries with zero imports from `run_agent.py`.
+- **Qualification Ladder Green**: Passed full regression suites including H-077.1 qualification
+  closure (`test_h0771_qualification_closure.py`), architectural falsification (`test_architectural_falsification.py`),
+  control plane integration (`test_control_plane_integration.py`), canonical work loop & continuity
+  (`test_canonical_work_loop.py`, `test_canonical_continuity.py`), durable agent integration
+  (`test_durable_agent_integration.py`), and seam tests (`test_h078b_generic_seams.py`, `test_h078b_runtime_independence.py`).
 
-Current downstream prerequisite: PR #35 must be reconciled with the then-current
-`main` before any upstream integration. At this refresh GitHub shows
-`main@9f4ce89e56e204b3c8119d4b937be4462d0dfeaf`; H-077/H-077.1 truth/external-validity
-invariants are mandatory migration invariants.
-
-Upstream rule: `ea94d88e...` is a research snapshot, not the target. At implementation
-start fetch upstream, choose one exact SHA, record it, pin it, and do not chase moving
-`upstream/main` until the cycle closes.
-
-Implementation order:
-
-1. reconcile H-078 with current downstream main; do not integrate upstream yet;
 2. refresh/pin one upstream SHA and create a separate integration branch;
 3. adopt upstream decomposition first; do not preserve old god-files as owners;
 4. create `workstation/integrations/hermes/` or equivalent first-party plugin façade;

@@ -1,5 +1,41 @@
 # Hermes Workstation upstream delta
 
+## HW-029 — First-Party Workstation Adapter and Generic Core Decoupling (2026-09-19)
+
+H-078B implementation has been completed, eliminating all direct Workstation imports from the generic
+Hermes core without losing any Workstation capability.
+
+Summary of changes:
+- **Generic Core Extensions (`agent/`)**:
+  - `turn_ingress.py`: `TurnIngress` metadata class, `TurnOrigin`, `TurnTrustClass`.
+  - `turn_admission.py`: `register_turn_admission_provider`, `admit_turn`.
+  - `tool_batch_admission.py`: `register_tool_batch_admission_provider`, `admit_tool_batch`, `BatchAdmissionAction`.
+  - `scoped_execution.py`: `register_scoped_execution_provider`, `scoped_execution`.
+  - `pre_dispatch.py`: `register_pre_authorized_dispatch_hook`, `dispatch_pre_authorized_checkpoint`.
+  - `post_tool.py`: `register_raw_post_tool_observer`, `dispatch_raw_post_tool_observation`.
+  - `execution_persistence.py`: `ExecutionPersistenceDisposition`, `get_persistence_disposition`, `register_persistence_disposition_provider`.
+  - `turn_route_policy.py`: `TurnRoutePolicy`, `require_allowed_route`.
+  - `completion_admission.py`: `register_completion_admission_provider`, `admit_completion`.
+  - `compression_admission.py`: `register_compression_bypass_provider`, `should_bypass_compression`.
+  - `conversation_projection.py`: `register_conversation_projection_provider`, `project_messages_for_provider`.
+  - `task_completion_admission.py`: `register_task_completion_admission_provider`, `admit_task_completion`.
+- **First-Party Adapter (`workstation/integrations/hermes/`)**:
+  - `adapter.py`: registers first-party handlers with all generic core extension points upon `install_workstation_adapter()`.
+  - `turn_admission.py`: maps `TurnIngress` to canonical `MessageEnvelope` & prepares work intent.
+  - `tool_batch_admission.py`: translates progressive compilation & human handoffs into `BatchAdmissionResult`.
+  - `scoped_execution.py`: manages execution context and attaches operational reference envelopes.
+  - `tool_observer.py`: records mutation checkpoints and raw results.
+  - `completion_admission.py`: verifies procedure trace steps and kanban run candidates.
+  - `task_completion_admission.py`: validates two-phase kanban task acceptance contracts.
+  - `browser_controller.py`: registers workstation browser capabilities with `BrowserControlBroker`.
+  - `api.py`: FastAPI endpoints for Workstation control plane.
+- **Core Decoupling Audit**:
+  - `run_agent.py`, `conversation_loop.py`, `tool_executor.py`, `turn_finalizer.py`, `turn_constraints.py`,
+    `chat_completion_helpers.py`, `conversation_compression.py`, `cli.py`, `gateway/run.py`, `kanban_db.py`,
+    `web_server.py`, `file_tools.py`, `tool_search.py`, `close_preview_tool.py` all have **0** direct imports from `workstation`.
+  - `audit_hermes_seams.py --strict` passes with 0 unclassified seams and 0 budget regressions.
+
+
 ## HW-028 — Semantic seam registry / causal upstream migration (2026-09-19)
 
 H-078B refines HW-026/HW-027 after a three-tree code-to-code audit.

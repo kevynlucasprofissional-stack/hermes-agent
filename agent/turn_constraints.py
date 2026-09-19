@@ -6,7 +6,7 @@ import json
 import re
 from urllib.parse import urlparse
 
-from workstation.routing import ConstraintViolation, require_allowed_route
+from agent.turn_route_policy import ConstraintViolation, require_allowed_route
 
 _current: ContextVar = ContextVar("turn_route_constraints", default=None)
 
@@ -101,3 +101,35 @@ def guard_provider_call(agent):
     context = getattr(agent, "_turn_constraints", None)
     if context is not None:
         context.require_provider(getattr(agent, "provider", ""), getattr(agent, "base_url", ""))
+
+
+BROWSER_TOOL_NAMES = frozenset({
+    "browser_navigate", "browser_snapshot", "browser_click", "browser_type",
+    "browser_press", "browser_scroll", "browser_extract_items", "browser_console",
+    "browser_get_images", "browser_back", "browser_close", "browser_tab",
+})
+
+
+def canonical_route_for_tool(name: str, *, runtime: str | None = None) -> str:
+    from tools.effects import tool_contract
+    _, metadata = tool_contract(name)
+    routes = metadata.get("routes") or []
+    if name in BROWSER_TOOL_NAMES and (runtime == "internal" or runtime is None):
+        return "native_browser"
+    if runtime and runtime != "internal":
+        return runtime
+    if len(routes) == 1:
+        return routes[0]
+    return f"tool.{name}"
+
+
+def guard_tool_call(agent, function_name: str, function_args: dict) -> None:
+    context = getattr(agent, "_turn_constraints", None)
+    if context is None or function_name == "work_execute":
+        return
+    from tools.effects import tool_contract
+    target = function_args.get("name", "") if function_name == "tool_call" else function_name
+    _, contract = tool_contract(target)
+    require_allowed_route(canonical_route_for_tool(target), context.routes)
+    for route in contract.get("routes") or []:
+        require_allowed_route(route, context.routes)

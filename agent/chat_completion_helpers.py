@@ -2490,7 +2490,7 @@ def try_activate_fallback(agent, reason: "FailoverReason | None" = None) -> bool
     if not fb_provider or not fb_model:
         return agent._try_activate_fallback(reason)  # skip invalid, try next
 
-    from workstation.routing import ConstraintViolation
+    from agent.turn_route_policy import ConstraintViolation
     turn_constraints = getattr(agent, "_turn_constraints", None)
     if turn_constraints is not None:
         try:

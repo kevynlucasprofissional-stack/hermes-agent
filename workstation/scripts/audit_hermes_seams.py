@@ -92,18 +92,17 @@ def _edge_references(path: Path, root: Path) -> list[Seam]:
 
 
 def _iter_files(root: Path, base: str) -> Iterable[Path]:
+    import os
     target = root / base
     if not target.exists():
         return []
     if target.is_file():
         return [target]
     out: list[Path] = []
-    for path in target.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in DEFAULT_EXCLUDES for part in path.parts):
-            continue
-        out.append(path)
+    for dirpath, dirnames, filenames in os.walk(target):
+        dirnames[:] = [d for d in dirnames if d not in DEFAULT_EXCLUDES]
+        for f in filenames:
+            out.append(Path(dirpath) / f)
     return out
 
 

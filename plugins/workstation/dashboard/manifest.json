@@ -1,0 +1,8 @@
+{
+  "name": "workstation",
+  "label": "Workstation",
+  "description": "Hermes Workstation product layer and runtime kernel",
+  "icon": "Layers",
+  "version": "1.0.0",
+  "api": "plugin_api.py"
+}

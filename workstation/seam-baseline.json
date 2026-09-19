@@ -1,0 +1,23 @@
+{
+  "schema": "hermes.workstation.seam-baseline.v1",
+  "core_seam_keys": [
+    "tools/browser_tool.py:3952:python_import:workstation.artifacts",
+    "tools/browser_tool.py:3953:python_import:workstation.reference_plane",
+    "tools/browser_tool.py:5984:python_import:workstation.capabilities",
+    "tools/browser_tool.py:5996:python_import:workstation.artifacts",
+    "tools/browser_tool.py:6022:python_import:workstation.durable_tasks",
+    "tools/browser_tool.py:6023:python_import:workstation.semantic_validation",
+    "tools/browser_workstation.py:553:python_import:workstation.artifacts",
+    "tools/browser_workstation.py:659:python_import:workstation.batch_detection",
+    "tools/browser_workstation.py:699:python_import:workstation.task_compiler",
+    "tools/browser_workstation.py:700:python_import:workstation.routing",
+    "tools/browser_workstation.py:738:python_import:workstation.browser_session",
+    "tools/vault_tools.py:13:python_import:workstation.vault",
+    "tools/workstation_extensions.py:16:python_import:workstation.contracts",
+    "tools/workstation_extensions.py:17:python_import:workstation.extensions",
+    "tools/workstation_extensions.py:18:python_import:workstation.journal",
+    "tools/workstation_extensions.py:19:python_import:workstation.policy",
+    "tools/workstation_work.py:3:python_import:workstation.task_compiler",
+    "tools/workstation_work.py:7:python_import:workstation.config"
+  ]
+}

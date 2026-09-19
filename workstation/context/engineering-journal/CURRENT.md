@@ -1,5 +1,42 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-078B — Code-to-Code Upstream Migration / Semantic Decoupling — 2026-09-19
+
+**Status:** COMPLETE / EMPIRICALLY VERIFIED / GREEN TEST LADDER.
+
+The H-078B implementation has successfully retired `run_agent.py` as an integration owner and eliminated
+all accidental Workstation coupling from the generic Hermes core.
+
+Key achievements:
+1. **Generic Core Abstractions Added (`agent/`)**:
+   - `TurnIngress` (`origin`, `trust_or_authority_class`, `session_id`, `correlation_id`, `metadata`);
+   - `admit_turn` (`agent.turn_admission`);
+   - `admit_tool_batch` (`agent.tool_batch_admission`);
+   - `scoped_execution` (`agent.scoped_execution`);
+   - `dispatch_pre_authorized_checkpoint` (`agent.pre_dispatch`);
+   - `dispatch_raw_post_tool_observation` (`agent.post_tool`);
+   - `ExecutionPersistenceDisposition` (`agent.execution_persistence`);
+   - `TurnRoutePolicy` (`agent.turn_route_policy`);
+   - `admit_completion` (`agent.completion_admission`);
+   - `should_bypass_compression` (`agent.compression_admission`);
+   - `project_messages_for_provider` (`agent.conversation_projection`);
+   - `admit_task_completion` (`agent.task_completion_admission`).
+2. **First-Party Adapter Façade (`workstation/integrations/hermes/`)**:
+   - Centralized `install_workstation_adapter()` registers all first-party providers with generic core registries;
+   - Zero direct imports from `workstation` in `run_agent.py`, `conversation_loop.py`, `tool_executor.py`,
+     `turn_finalizer.py`, `turn_constraints.py`, `chat_completion_helpers.py`, `conversation_compression.py`,
+     `cli.py`, `gateway/run.py`, `kanban_db.py`, `web_server.py`, `file_tools.py`, `tool_search.py`, `close_preview_tool.py`.
+3. **Causal Invariants Strictly Enforced**:
+   - Pre-authorized checkpoint fires after final args + authorization, before real I/O;
+   - Raw post-tool observation captures untruncated results and mutation metadata before truncation or spill;
+   - Owner-managed persistence suppresses intermediate SessionDB flushes during durable compiled batches.
+4. **Verification & Audit**:
+   - `audit_hermes_seams.py --strict`: 18 classified core seams (all first-party tools), 0 unclassified, 0 budget regressions;
+   - `workstation/tests/test_h078b_generic_seams.py`: 9/9 passed;
+   - `workstation/tests/test_h078b_runtime_independence.py`: 3/3 passed (verifying foreign reasoner drives kernel with zero `run_agent` imports);
+   - Regression suites passed: `test_h0771_qualification_closure.py`, `test_architectural_falsification.py`, `test_control_plane_integration.py`, `test_canonical_work_loop.py`, `test_canonical_continuity.py`, `test_durable_agent_integration.py`.
+
+
 ## H-078B — Deep code-to-code audit / semantic migration spec — 2026-09-19
 
 **Status:** DOCUMENTATION + MACHINE-READABLE MIGRATION SPEC UPDATED; NO RUNTIME AUTHORITY

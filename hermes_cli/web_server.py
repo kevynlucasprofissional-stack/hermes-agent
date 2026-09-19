@@ -3593,40 +3593,23 @@ async def get_health():
 
 @app.get("/api/workstation/resources")
 async def get_workstation_resources():
-    """Project the Electron Workstation resources for Dashboard clients.
-
-    The controller call is blocking and runs off the event loop. A missing
-    Desktop controller is returned as an explicit degraded snapshot so a
-    Dashboard can remain usable while the browser runtime is unavailable.
-    """
-    from workstation.client import get_workstation_resources as read_resources
-
-    return await asyncio.to_thread(read_resources)
+    """Project the Electron Workstation resources for Dashboard clients (delegates to workstation plugin)."""
+    from plugins.workstation.dashboard.plugin_api import get_workstation_resources as handler
+    return await handler()
 
 
 @app.get("/api/workstation/events")
 async def get_workstation_events(task_id: str | None = None, limit: int = 200):
-    """Project bounded canonical Workstation journal events for clients."""
-    from workstation.client import get_workstation_events as read_events
-
-    return await asyncio.to_thread(read_events, task_id=task_id, limit=limit)
+    """Project bounded canonical Workstation journal events for clients (delegates to workstation plugin)."""
+    from plugins.workstation.dashboard.plugin_api import get_workstation_events as handler
+    return await handler(task_id=task_id, limit=limit)
 
 
 @app.get("/api/workstation/tasks/{task_id}/cockpit")
 async def get_workstation_task_cockpit(task_id: str, request: Request, board: str | None = None):
     _require_token(request)
-    def read():
-        from hermes_cli import kanban_db
-        from workstation.cockpit import task_cockpit
-        conn = kanban_db.connect(board=board)
-        try:
-            return task_cockpit(conn, task_id)
-        finally:
-            conn.close()
-    try:
-        return await asyncio.to_thread(read)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    from plugins.workstation.dashboard.plugin_api import get_workstation_task_cockpit as handler
+    return await handler(task_id=task_id, request=request, board=board)
 
 
 _PROFILE_PLATFORM_STATUS_KEY_RE = re.compile(
