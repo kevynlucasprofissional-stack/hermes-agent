@@ -1,5 +1,29 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-078C — Conflict audit changes the interpretation of H-078B — 2026-09-19
+
+The actual upstream merge falsifies one implicit assumption of the first H-078B closure:
+**zero direct Workstation imports did not imply adoption of modern upstream structure.**
+
+GitHub tree measurements show the downstream still carries much larger historical owners
+than the pin (`run_agent.py` 9,314 vs 1,593 lines; `conversation_loop.py` 8,634 vs
+1,746; `kanban_db.py` 12,433 vs 4,415; `browser_tool.py` 6,118 vs 1,390).
+
+Therefore H-078C treats the H-078B generic contracts and
+`workstation/integrations/hermes/` adapter as **semantic assets to transplant**, while the
+modern upstream files remain the preferred structural owners.
+
+The merge conflicts are not incidental noise; they are the empirical map of the remaining
+coupling debt. In particular:
+- batch admission should move to the upstream full-batch/turn-round owner;
+- authorized pre-effect checkpoint must be inserted into the modern tool execution path;
+- Workstation completion must compose with upstream two-phase acceptance;
+- upstream BrowserControlBroker/router should own routing, while Workstation retains native
+  BrowserTask/runtime semantics;
+- native Electron seams remain first-party only where process privilege is genuinely
+  required.
+
+
 ## H-078B — Code-to-code audit: preserve causal properties, not patch locations — 2026-09-19
 
 A deeper audit of the exact downstream/upstream trees refines the central intelligence:
