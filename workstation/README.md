@@ -6,6 +6,30 @@ of truth for sessions, Kanban, memory, skills, Gateway, Desktop and Dashboard.
 Workstation adds tightly integrated product capabilities rather than parallel
 state.
 
+## Primary development rule — upstream first
+
+Every new Workstation code-change cycle starts by executing
+[`context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md`](context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+The Workstation is not maintained as a long-lived patch stack that occasionally catches up.
+The normal cycle is now:
+
+```text
+qualified upstream-aligned baseline
+        ↓
+seam reconciliation
+        ↓
+target downstream implementation
+        ↓
+exact-head qualification
+        ↓
+final upstream drift classification
+```
+
+This does **not** mean continuously chasing a moving upstream HEAD while implementing a
+feature. One exact upstream SHA is pinned for the cycle; the baseline is made green first;
+the target change is then implemented from that stable baseline.
+
 ## V1 invariants
 
 1. **One Hermes state.** No Workstation session DB, task DB or memory DB when

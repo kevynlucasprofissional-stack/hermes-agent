@@ -2,7 +2,7 @@
   "schema": "hermes.workstation.first-party-seams.v2",
   "policy": "minimum-necessary-first-party-seams",
   "established": "2026-09-19",
-  "refined": "2026-09-19-code-to-code-audit",
+  "refined": "2026-09-20-h079-upstream-first-post-h078c-audit",
   "rule": "Classify semantic concerns, not whole files. Preserve causal properties in the narrowest modern upstream owner.",
   "invariant": "UPSTREAM STRUCTURE + WORKSTATION SEMANTICS + MINIMUM NECESSARY FIRST-PARTY SEAMS + NO CAPABILITY REGRESSION FOR PURITY",
   "research_baselines": {
@@ -11,7 +11,10 @@
     "downstream_main_latest_observed": "9f4ce89e56e204b3c8119d4b937be4462d0dfeaf",
     "upstream_deep_audit_snapshot": "ea94d88e25d7699115a668c1757433361f3420dd",
     "upstream_latest_observed_during_repo_refresh": "af2e9a4313f9a8a96618207ae111f9e824241949",
-    "note": "The upstream deep-audit SHA is a research snapshot only. At implementation start fetch upstream, choose one exact SHA, pin it, and do not move it until the migration cycle closes."
+    "note": "Historical research SHAs remain provenance only. H-079 requires a fresh upstream fetch and one newly pinned exact SHA before each downstream code-change cycle.",
+    "actual_upstream_merge_pin": "6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170",
+    "downstream_main_post_h078c": "6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a",
+    "upstream_latest_observed_2026_09_20": "501d8ba4e075281d5d7ea97b59cbac810ef12d89"
   },
   "dispositions": [
     "REMOVE",
@@ -153,7 +156,9 @@
             "discovery reads can pass while repeated mutations compile",
             "no member executes before admission"
           ],
-          "sunset_condition": "run_agent batch policy removed after turn_tool_round admission parity"
+          "sunset_condition": "run_agent batch policy removed after turn_tool_round admission parity",
+          "current_status": "OPEN",
+          "observed_gap": "admit_tool_batch is invoked in agent/turn_tool_round.py and again in run_agent.py::_execute_tool_calls(); one canonical owner is required."
         },
         {
           "id": "SEAM-RUN-EXEC-SCOPE",
@@ -186,7 +191,8 @@
           "sunset_condition": "route enforcement no longer depends on run_agent Workstation branches"
         }
       ],
-      "current_direct_imports": 0
+      "current_direct_imports": 0,
+      "current_status": "OPEN_DUPLICATE_BATCH_ADMISSION"
     },
     {
       "id": "FPS-FINAL-001",
@@ -259,7 +265,9 @@
             "registered-but-offline lane fails closed",
             "same BrowserTask/controller selected"
           ],
-          "sunset_condition": "generic browser_tool contains no Workstation route conditional"
+          "sunset_condition": "generic browser_tool contains no Workstation route conditional",
+          "current_status": "OPEN",
+          "observed_gap": "Normal browser path still retains Workstation-specific routing/domain logic; BrowserControlBroker authority switch is incomplete."
         },
         {
           "id": "SEAM-BROWSER-DOMAIN",
@@ -273,7 +281,9 @@
             "BrowserTask refs preserved",
             "evidence/reference plane unchanged"
           ],
-          "sunset_condition": "generic browser_tool returns generic result while adapter owns Workstation projection"
+          "sunset_condition": "generic browser_tool returns generic result while adapter owns Workstation projection",
+          "current_status": "OPEN",
+          "observed_gap": "Normal browser path still retains Workstation-specific routing/domain logic; BrowserControlBroker authority switch is incomplete."
         },
         {
           "id": "SEAM-BROWSER-CAP-REG",
@@ -290,7 +300,9 @@
           "sunset_condition": "no if-workstation capability list in broker"
         }
       ],
-      "current_direct_imports": 6
+      "current_direct_imports": 6,
+      "current_status": "OPEN_REMOVE_DEBT",
+      "observed_direct_imports": 6
     },
     {
       "id": "FPS-BROWSER-LEGACY",
@@ -312,10 +324,14 @@
             "no dual mutation I/O",
             "timeout/cancel semantics preserved"
           ],
-          "sunset_condition": "legacy Hermes route is deleted after controller authority switch"
+          "sunset_condition": "legacy Hermes route is deleted after controller authority switch",
+          "current_status": "OPEN",
+          "observed_gap": "Legacy tools.browser_workstation route remains part of the authoritative normal path."
         }
       ],
-      "current_direct_imports": 5
+      "current_direct_imports": 5,
+      "current_status": "OPEN_REMOVE_DEBT",
+      "observed_direct_imports": 5
     },
     {
       "id": "FPS-MODEL-001",
@@ -339,7 +355,8 @@
           "sunset_condition": "model_tools has no Workstation browser import"
         }
       ],
-      "current_direct_imports": 0
+      "current_direct_imports": 0,
+      "current_status": "STRUCTURALLY_CLOSED_ON_H078C_BASELINE"
     },
     {
       "id": "FPS-TOOLSET-001",
@@ -363,7 +380,8 @@
           "sunset_condition": "toolsets.py has no Workstation tool name"
         }
       ],
-      "current_direct_imports": 0
+      "current_direct_imports": 0,
+      "current_status": "STRUCTURALLY_CLOSED_ON_H078C_BASELINE"
     },
     {
       "id": "FPS-WEB-001",
@@ -388,7 +406,8 @@
           "sunset_condition": "generic web_server contains no Workstation route implementation"
         }
       ],
-      "current_direct_imports": 0
+      "current_direct_imports": 0,
+      "current_status": "STRUCTURALLY_CLOSED_ON_H078C_BASELINE"
     },
     {
       "id": "FPS-CLI-001",
@@ -454,7 +473,9 @@
           "required_ordering": "Tool execution time.",
           "disposition": "PRESERVE_FIRST_PARTY",
           "replacement": "preserve first-party tool surface",
-          "parity_tests": ["vault tools operate correctly"],
+          "parity_tests": [
+            "vault tools operate correctly"
+          ],
           "sunset_condition": "none"
         }
       ],
@@ -475,7 +496,9 @@
           "required_ordering": "Tool execution time.",
           "disposition": "PRESERVE_FIRST_PARTY",
           "replacement": "preserve first-party tool surface",
-          "parity_tests": ["extension tools operate correctly"],
+          "parity_tests": [
+            "extension tools operate correctly"
+          ],
           "sunset_condition": "none"
         }
       ],
@@ -496,7 +519,9 @@
           "required_ordering": "Tool execution time.",
           "disposition": "PRESERVE_FIRST_PARTY",
           "replacement": "preserve first-party tool surface",
-          "parity_tests": ["work_execute runs durable batches"],
+          "parity_tests": [
+            "work_execute runs durable batches"
+          ],
           "sunset_condition": "none"
         }
       ],
@@ -577,5 +602,25 @@
         }
       ]
     }
-  ]
+  ],
+  "operating_policy": {
+    "id": "H-079",
+    "canonical_document": "workstation/context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md",
+    "rule": "upstream-first-qualified-baseline-before-downstream-change",
+    "baseline_and_target_changes_separate": true,
+    "final_upstream_drift_check_required": true,
+    "exact_head_qualification_required": true
+  },
+  "current_baseline": {
+    "observed_at": "2026-09-20",
+    "downstream_main": "6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a",
+    "adopted_upstream_pin": "6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170",
+    "latest_upstream_observed": "501d8ba4e075281d5d7ea97b59cbac810ef12d89",
+    "ahead_of_latest_upstream": 504,
+    "behind_latest_upstream": 365,
+    "merge_base": "6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170",
+    "qualification_status": "REOPENED_RED_EXACT_HEAD",
+    "workstation_ci": "FAIL",
+    "browser_convergence": "PARTIAL"
+  }
 }

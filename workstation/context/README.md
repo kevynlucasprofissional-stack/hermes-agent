@@ -7,6 +7,11 @@ This directory is the operational entry point for coding agents working on the d
 Before changing Workstation code, read these documents in order:
 
 1. [`../../AGENTS.md`](../../AGENTS.md) — repository-wide engineering rules and invariants.
+> **Primary gate before any code-changing Workstation task:** read and execute
+> [UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md)
+> before target implementation. Upstream baseline refresh, seam reconciliation and baseline
+> qualification happen before the requested downstream change.
+
 2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
    - Required migration direction: [`UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md`](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md) — **H-078 / H-078B** adapt-to-upstream while extracting seams, unidirectional Workstation supervision, shadow-before-retirement and Runtime Independence sequencing.
    - Required seam policy: [`FIRST_PARTY_SEAM_POLICY.md`](FIRST_PARTY_SEAM_POLICY.md) — **H-078A / D-027** minimum necessary first-party seams; REMOVE vs UPSTREAM_ABSTRACT vs PRESERVE_FIRST_PARTY; no capability regression for plugin purity.

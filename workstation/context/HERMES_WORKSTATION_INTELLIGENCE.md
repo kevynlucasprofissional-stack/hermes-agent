@@ -1,5 +1,47 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-079 — Upstream freshness becomes an admission condition for downstream change — 2026-09-20
+
+The key systems insight from H-078C is that **upstream drift is part of the input state of
+every downstream engineering task**. Treating synchronization as occasional maintenance
+lets local improvements accumulate on an obsolete structural model and makes later
+conflict resolution disproportionately expensive.
+
+The correct control loop is:
+```text
+observe upstream -> pin -> reconcile structure/seams -> qualify
+-> implement target -> qualify -> observe drift again
+```
+
+This is stronger than “sync often” and safer than “always work on upstream HEAD”:
+- synchronization has a separate causal stage;
+- the pin is stable during implementation;
+- feature regressions can be distinguished from migration regressions;
+- seam decisions are revisited while the owning upstream code is fresh;
+- ancestry remains auditable.
+
+New engineering invariants:
+1. **No stale-baseline feature work.**
+2. **No mixed sync+feature patch when the two can be separated.**
+3. **No seam closure claim from classification alone.**
+4. **No QUALIFIED claim without exact-head CI.**
+5. **No final merge without a last upstream-drift classification.**
+
+### Post-H-078C evidence
+
+The ancestry problem is solved, but several remaining gaps demonstrate why H-079 is
+necessary:
+- Browser controller abstraction exists but normal routing authority has not fully switched;
+- duplicate `admit_tool_batch()` means structural transplant left two semantic owners;
+- silent adapter bootstrap failure can remove supervisory guarantees without an explicit
+  degraded state;
+- local/focused test receipts overstated qualification relative to the exact GitHub head.
+
+These are not reasons to abandon the H-078 architecture. They are evidence that baseline
+qualification and seam state must be an explicit prerequisite to the *next* downstream
+change.
+
+
 ## H-078B — Code-to-code audit: preserve causal properties, not patch locations — 2026-09-19
 
 A deeper audit of the exact downstream/upstream trees refines the central intelligence:

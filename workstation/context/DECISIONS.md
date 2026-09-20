@@ -1,5 +1,34 @@
 # Architectural Decisions
 
+## D-030 — Upstream-first qualified baseline before downstream implementation
+
+**Decision:** upstream synchronization is now a mandatory admission gate for downstream
+runtime work, not a periodic maintenance activity.
+
+Before any bug fix, feature, refactor or behavioral adjustment:
+1. fetch current upstream;
+2. select and pin one exact upstream SHA;
+3. establish a true upstream-history baseline on a separate integration lane;
+4. reconcile affected seam dispositions;
+5. require baseline qualification;
+6. only then implement the requested downstream change.
+
+The pin remains immutable during target implementation. Before promotion, fetch upstream
+again and classify drift; relevant overlap requires another baseline cycle.
+
+This decision deliberately separates **baseline migration** from **target implementation**
+so test failures, ownership changes and rollback remain attributable.
+
+An explicit temporary exception is allowed only when the candidate upstream itself is
+known broken/unadoptable and the exception is recorded in CURRENT_STATE and the engineering
+journal. Silent exceptions are forbidden.
+
+Canonical:
+[UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+D-030 refines D-001/D-002/D-011/D-012 and operationalizes D-027/D-028/D-029.
+
+
 ## D-029 — First-Party Workstation Adapter via Generic Core Registries
 
 **Decision:** The Hermes generic core is completely decoupled from Workstation internals.

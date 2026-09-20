@@ -9,6 +9,20 @@ Desktop itself.
 
 Start here: [`workstation/README.md`](workstation/README.md).
 
+## Engineering change protocol — upstream baseline first
+
+For coding/maintenance work, “upstream-first” now has a strict operational meaning:
+**before any downstream runtime implementation or adjustment, refresh/pin upstream,
+establish a qualified upstream-aligned baseline, reconcile seams, and only then implement
+the target change**.
+
+Canonical procedure:
+[`workstation/context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md`](workstation/context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+Do not continuously chase a moving upstream HEAD during the feature. Pin one exact SHA for
+the cycle, qualify it, implement the target on top, then classify final upstream drift.
+
+
 ## Windows first run
 
 From the repository root, prefer the `.cmd` launchers so Windows PowerShell's

@@ -1,12 +1,18 @@
 # H-078C Upstream Merge Implementation & Verification Report
 
-> **Status**: COMPLETED (TWO-PARENT MERGE COMMITTED)  
+> **Status**: BASELINE ADOPTED / TWO-PARENT MERGE COMMITTED / **QUALIFICATION REOPENED**  
 > **Integration Branch**: `integration/upstream-6a078969-h078b`  
 > **Merge Commit**: `c85063e17e`  
 > **Parent 1 (Downstream)**: `1192c016cfc59c4fb8edca27c309eb1e983c6aae`  
 > **Parent 2 (Upstream Target)**: `6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170`  
 > **Merge Ancestry Status**: True two-parent merge verified (`git merge-base --is-ancestor 6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170 HEAD` succeeded with exit code 0)  
 > **Seam Audit Verification**: PASSED (`python workstation/scripts/audit_hermes_seams.py --strict` -> 18 classified, 0 unclassified, 0 budget regressions)  
+
+> **Post-merge correction (2026-09-20):** the ancestry/structural merge is valid, but the
+> original report overstates final qualification. Exact-head GitHub evidence after the
+> follow-up commit is red, Browser convergence is partial, and several H-078C closure
+> requirements remain open. Read sections 6+ before using this report as a qualification
+> receipt.
 
 ---
 
@@ -158,3 +164,128 @@ Verification command:
 git merge-base --is-ancestor 6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170 HEAD
 # Exit code: 0
 ```
+
+
+---
+
+## 6. Post-Merge Exact-Head Qualification Correction
+
+Downstream exact head audited after the merge:
+`6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`.
+
+The upstream ancestry objective remains proven: `6a078969...` is an ancestor of main.
+However, exact-head Workstation CI is not green.
+
+Observed Workstation contract result:
+
+```text
+728 passed
+1 failed
+1 warning
+```
+
+The failing test is
+`workstation/tests/test_h078b_runtime_independence.py::test_alternate_reasoner_drives_workstation_lifecycle`,
+which observes `run_agent` already present in `sys.modules` in the combined suite.
+This may be order/import contamination rather than a fundamental Runtime Independence
+regression, but qualification remains failed until the cause is reproduced and closed.
+
+The exact-head `core-patch-dry-run` also fails with:
+
+```text
+ERROR: browser AppView: expected one anchor, found 0
+```
+
+A deprecated `hermes_cli.kanban_db.connect` compatibility warning also remains in
+`test_canonical_work_loop.py`.
+
+## 7. Browser Ownership Map — PARTIAL, NOT CLOSED
+
+The target remains:
+
+```text
+generic browser tool
+-> browser_extension_router
+-> BrowserControlBroker
+-> WorkstationBrowserController
+-> native Electron Browser runtime
+```
+
+Current code contains `WorkstationBrowserController.attach_to_broker()` and a generic
+broker capability registry, but the adapter currently registers capabilities without
+proving the controller authority switch as the normal path. `tools/browser_tool.py` still
+routes through `tools.browser_workstation.workstation_routed_browser_handler`, and the
+machine-readable seam registry still classifies Browser route/domain/legacy concerns as
+REMOVE debt.
+
+Therefore Browser convergence is **PARTIAL**.
+
+## 8. Tool Batch Admission Ownership — OPEN
+
+The structural migration introduced/retained two admission points:
+
+```text
+agent/turn_tool_round.py
+    admit_tool_batch(...)
+        -> agent._execute_tool_calls(...)
+
+run_agent.py::_execute_tool_calls()
+    admit_tool_batch(...)
+```
+
+The normal full-batch boundary must have one canonical owner. A fallback admission path
+may exist only for callers that explicitly bypass the turn-round owner and must not cause
+normal calls to be admitted twice.
+
+## 9. Adapter Bootstrap Semantics — OPEN
+
+`workstation/__init__.py` currently catches broad adapter-installation exceptions and
+continues silently. This is inconsistent with Workstation supervision being a correctness
+boundary. The final design must distinguish:
+
+- Workstation intentionally disabled;
+- optional degraded operation;
+- Workstation expected but adapter installation failed.
+
+The last case must not silently continue as if supervision were installed.
+
+## 10. Seam Audit Interpretation
+
+A strict seam audit result of zero unclassified seams means the current seams are known and
+classified. It does **not** mean every concern whose disposition is REMOVE has actually
+been removed or that authority has switched to the replacement path.
+
+The registry is updated under H-079 with explicit open Browser and duplicate-batch debt.
+
+## 11. Documentation / Qualification State
+
+Historical H-078B COMPLETE/VERIFIED language is not exact-head evidence after H-078C.
+The correct current classification is:
+
+```text
+H-078C:
+ACTUAL UPSTREAM BASELINE ADOPTED
+STRUCTURAL MIGRATION SUCCESSFUL
+QUALIFICATION REOPENED
+BROWSER CONVERGENCE PARTIAL
+```
+
+Canonical operating rule for the next cycle:
+`workstation/context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md`.
+
+## 12. Final Recommendation
+
+```text
+H-078C actual upstream merge completed: YES
+Pinned upstream ancestor: YES
+Historical 13k divergence closed: YES
+Exact-head Workstation qualification: NO
+Browser authority convergence complete: NO
+Batch admission ownership unique: NO
+Adapter bootstrap fail-closed: NO
+Ready to serve as unquestioned baseline for new downstream feature work: NO
+```
+
+Before any new downstream code-change lane, execute H-079 Stage A: refresh current
+upstream, choose a new exact pin, reconcile seams, and establish a green exact-head
+baseline first.

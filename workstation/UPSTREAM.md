@@ -1,5 +1,36 @@
 # Upstream strategy
 
+## Primary sync model — H-079 upstream-first change gate
+
+Canonical:
+[context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+Upstream synchronization is now the **first phase of every downstream code-change cycle**.
+
+Operational model:
+```text
+fetch latest upstream
+-> pin one exact SHA
+-> integrate/qualify baseline
+-> reconcile seam registry
+-> implement target downstream change
+-> exact-head qualification
+-> final upstream drift classification
+```
+
+Do not continuously move the pin during implementation. Do not postpone upstream
+synchronization until after a feature is already built.
+
+Current observation when H-079 was established:
+- adopted pin: `6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170`;
+- downstream main: `6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`;
+- latest upstream observed: `501d8ba4e075281d5d7ea97b59cbac810ef12d89`;
+- downstream is already 365 commits behind current upstream.
+
+Therefore the next code-changing lane must select a new exact upstream pin before target
+implementation begins.
+
+
 ## H-078B synchronization rule (2026-09-19)
 
 For the next major sync:

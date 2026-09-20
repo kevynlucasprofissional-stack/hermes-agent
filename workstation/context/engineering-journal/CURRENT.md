@@ -1,5 +1,45 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-079 — Make upstream synchronization the first phase of every downstream change (2026-09-20)
+
+**Status:** POLICY ESTABLISHED / MANDATORY FOR FUTURE CODE-CHANGE LANES.
+
+H-078C proved that waiting for large divergence is expensive and that dependency-clean
+downstream code can still sit on obsolete structural owners. The operating model is
+therefore changed from periodic upstream migration to an **upstream-first change gate**.
+
+The improved form is two-stage rather than continuously chasing upstream:
+1. Stage A selects one exact current upstream SHA, performs a true history merge, reconciles
+   seams and reaches a qualified baseline.
+2. Stage B implements the requested downstream change on that frozen baseline.
+3. Immediately before promotion, upstream drift is fetched/classified; relevant overlap
+   reopens Stage A, non-overlap is recorded for the next cycle.
+
+At policy creation, current upstream has already advanced 365 commits beyond the adopted
+H-078C pin, so the next code-changing cycle must begin with Stage A again.
+
+### H-078C post-merge audit correction
+
+The merge itself is structurally successful and ancestry-correct, but exact-head evidence
+reopens closure:
+- Workstation CI: 728 passed / 1 failed / 1 warning;
+- runtime-independence assertion fails in the combined suite;
+- Browser AppView integration-anchor dry-run fails;
+- Browser broker/controller convergence remains partial;
+- tool-batch admission has two owners;
+- adapter initialization can silently fail open.
+
+Engineering interpretation:
+```text
+UPSTREAM BASELINE ADOPTED != DOWNSTREAM QUALIFIED
+CLASSIFIED SEAM != CLOSED SEAM
+FOCUSED GREEN != EXACT-HEAD GREEN
+```
+
+No further downstream feature work should be layered over this stale/red baseline without
+first executing H-079 Stage A.
+
+
 ## H-078B — Code-to-Code Upstream Migration / Semantic Decoupling — 2026-09-19
 
 **Status:** COMPLETE / EMPIRICALLY VERIFIED / GREEN TEST LADDER.

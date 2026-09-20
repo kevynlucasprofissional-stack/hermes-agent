@@ -1,5 +1,18 @@
 # H-078 — Upstream Migration as Decoupling / Minimum Necessary First-Party Seams
 
+## H-079 operational refinement — synchronization is now a pre-change gate
+
+H-078/H-078B/H-078C define *how* to migrate semantics and seams. H-079 defines *when* that
+migration discipline must run: **before every downstream code-change cycle**, not after a
+large divergence accumulates.
+
+Canonical operating procedure:
+[UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+The pin is frozen during one target-change cycle. A final drift check determines whether
+new upstream overlap requires another Stage A sync before promotion.
+
+
 Date established: 2026-09-19  
 Status: **ACTIVE STRATEGIC MIGRATION PROGRAM**  
 Downstream baseline when established: `main@378b5a2df35ac05fe37a606298502d7bb974786d`  
