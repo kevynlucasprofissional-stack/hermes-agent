@@ -947,7 +947,9 @@ class TaskCompiler:
         elif canonical_task_id or task_id:
             try:
                 from hermes_cli import kanban_db
-                conn = kanban_db.connect()
+                from hermes_cli.kanban_db_connect import connect
+                conn = connect()
+
                 try:
                     t = kanban_db.get_task(conn, canonical_task_id or task_id)
                     if t and getattr(t, "authority_scope", None):

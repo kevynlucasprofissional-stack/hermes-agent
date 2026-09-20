@@ -167,6 +167,7 @@ def test_headless_backend_soak_uses_real_server_and_never_launches_electron() ->
 def test_integrated_desktop_browser_load_e2e_is_hidden_and_resolves_workspace_electron() -> None:
     spec = read("apps/desktop/e2e/workstation-headless-load.spec.ts")
     fixtures = read("apps/desktop/e2e/fixtures.ts")
+    electron_binary = read("apps/desktop/e2e/electron-binary.ts")
     workflow = read(".github/workflows/workstation-browser-windows.yml")
 
     assert "setupMockBackend({ headless: true })" in spec
@@ -174,9 +175,9 @@ def test_integrated_desktop_browser_load_e2e_is_hidden_and_resolves_workspace_el
     assert "HERMES_DESKTOP_E2E_HEADLESS" in fixtures
     assert "HERMES_DESKTOP_E2E_REPORT" in spec
     assert "sustainedLoadEvidence" in spec
-    assert "const electronExecutable = process.platform === 'win32' ? 'electron.exe'" in fixtures
-    assert "path.join(REPO_ROOT, 'node_modules', 'electron', 'dist', electronExecutable)" in fixtures
-    assert "path.join(DESKTOP_ROOT, 'node_modules', 'electron', 'dist', electronExecutable)" in fixtures
+    assert "resolveElectronBinary([DESKTOP_ROOT, REPO_ROOT])" in fixtures
+    assert "platform === 'win32' ? 'electron.exe' : 'electron'" in electron_binary
+    assert "electronDistCandidates(roots: string[]" in electron_binary
     assert '$env:HERMES_DESKTOP_E2E_SUSTAINED_TASKS = "16"' in workflow
     assert '$env:HERMES_DESKTOP_E2E_SUSTAINED_DURATION_MS = "120000"' in workflow
     assert "HERMES_DESKTOP_E2E_REPORT" in workflow

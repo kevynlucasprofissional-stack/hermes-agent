@@ -82,8 +82,8 @@ def run(root: Path, n: int = 12, scenario="corrected", capability="description-c
         def response(content, tools, finish):
             return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content, tool_calls=tools), finish_reason=finish)], model="fake/provider", usage=None)
         try:
-            with patch("run_agent.get_tool_definitions", return_value=schemas), patch("run_agent.check_toolset_requirements", return_value={}), \
-                 patch("hermes_cli.config.load_config", return_value={}), patch("hermes_cli.config.load_config_readonly", return_value={}), patch("run_agent.OpenAI"):
+            with patch("model_tools.get_tool_definitions", return_value=schemas), patch("model_tools.check_toolset_requirements", return_value={}), \
+                 patch("hermes_cli.config.load_config", return_value={}), patch("hermes_cli.config.load_config_readonly", return_value={}), patch("agent.process_bootstrap.OpenAI"):
                 agent = AIAgent(api_key="fake", base_url="https://openrouter.ai/api/v1", quiet_mode=True, skip_memory=True, skip_context_files=True)
             agent.client = MagicMock()
             agent._cached_system_prompt = "Execute verified work."
@@ -96,7 +96,7 @@ def run(root: Path, n: int = 12, scenario="corrected", capability="description-c
                     return response("", [compiled], "tool_calls")
                 return response(f"{n} cards verified" if len(cards) == n and not scenario.startswith("broken") else "Workflow blocked; review exceptions", None, "stop")
             agent.client.chat.completions.create.side_effect = provider
-            with patch("run_agent.handle_function_call", side_effect=handler):
+            with patch("model_tools.handle_function_call", side_effect=handler):
                 result = agent.run_conversation(f"Crie {n} cards no board ACIRV.", task_id="trello-task")
             tool_message = next(m for m in result["messages"] if m["role"] == "tool")
             envelope = json.loads(tool_message["content"])
@@ -166,5 +166,8 @@ def run_scenarios(root: Path, n=12):
 
 if __name__ == "__main__":
     import tempfile
-    with tempfile.TemporaryDirectory() as root:
+    import gc
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as root:
         print(json.dumps(run_scenarios(Path(root)), indent=2))
+        gc.collect()
+

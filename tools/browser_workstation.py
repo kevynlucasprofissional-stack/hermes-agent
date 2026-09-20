@@ -637,7 +637,9 @@ def _dispatch(
     rid = (run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
     if card_id and rid:
         from hermes_cli import kanban_db
-        conn = kanban_db.connect()
+        from hermes_cli.kanban_db_connect import connect
+        conn = connect()
+
         try:
             task = kanban_db.get_task(conn, card_id)
             if task and (str(task.current_run_id) != str(rid) or task.status in {'done', 'cancelled'}):

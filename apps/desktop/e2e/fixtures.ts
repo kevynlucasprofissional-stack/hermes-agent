@@ -20,28 +20,19 @@
  * Prerequisite: `npm run build` must have been run so that `dist/` exists.
  */
 
-import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
-import { createRequire } from 'node:module'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
 import { _electron, type ElectronApplication, type Page } from '@playwright/test'
 
-import { startMockServer, type MockServerOptions } from './mock-server'
+import { resolveElectronBinary } from './electron-binary'
+import { startMockServer, type MockServerOptions } from '../../../tests-js/scripts/mock-server'
 import { installErrorBannerGuard } from './test'
 
 const DESKTOP_ROOT = path.resolve(import.meta.dirname, '..')
 const REPO_ROOT = path.resolve(DESKTOP_ROOT, '..', '..')
 const RELEASE_ROOT = path.join(DESKTOP_ROOT, 'release')
-const resolveFromFixtures = createRequire(import.meta.url).resolve
-const PLAYWRIGHT_ELECTRON_LOADER = path.join(
-  path.dirname(resolveFromFixtures('playwright-core')),
-  'lib',
-  'server',
-  'electron',
-  'loader.js'
-)
 
 // ─── Credential stripping (matches launch.spec.ts) ──────────────────────
 
@@ -53,7 +44,7 @@ const CREDENTIAL_SUFFIXES: string[] = [
   '_CREDENTIALS',
   '_ACCESS_KEY',
   '_PRIVATE_KEY',
-  '_OAUTH_TOKEN'
+  '_OAUTH_TOKEN',
 ]
 
 const CREDENTIAL_NAMES = new Set([
@@ -68,7 +59,7 @@ const CREDENTIAL_NAMES = new Set([
   'OPENROUTER_BASE_URL',
   'OLLAMA_BASE_URL',
   'GROQ_BASE_URL',
-  'XAI_BASE_URL'
+  'XAI_BASE_URL',
 ])
 
 function isCredentialEnvVar(name: string): boolean {
@@ -76,7 +67,7 @@ function isCredentialEnvVar(name: string): boolean {
     return true
   }
 
-  return CREDENTIAL_SUFFIXES.some(suffix => name.endsWith(suffix))
+  return CREDENTIAL_SUFFIXES.some((suffix) => name.endsWith(suffix))
 }
 
 function stripCredentials(env: Record<string, string | undefined>): Record<string, string> {
@@ -121,8 +112,12 @@ export function createSandbox(prefix: string): Sandbox {
   // may resize after launch.
   fs.writeFileSync(
     path.join(userDataDir, 'window-state.json'),
-    JSON.stringify({ x: 0, y: 0, width: 1220, height: 800, isMaximized: false }, null, 2),
-    'utf8'
+    JSON.stringify(
+      { x: 0, y: 0, width: 1220, height: 800, isMaximized: false },
+      null,
+      2,
+    ),
+    'utf8',
   )
 
   // Pin Chromium actual-size zoom (level 0) for the suite. Fresh installs
@@ -130,7 +125,11 @@ export function createSandbox(prefix: string): Sandbox {
   // click hit-testing and the committed visual baselines were calibrated at
   // 100%. Without this file every sandbox would inherit the product default
   // and fail pointer interception + snapshot diffs.
-  fs.writeFileSync(path.join(userDataDir, 'zoom-state.json'), JSON.stringify({ zoomLevel: 0 }, null, 2), 'utf8')
+  fs.writeFileSync(
+    path.join(userDataDir, 'zoom-state.json'),
+    JSON.stringify({ zoomLevel: 0 }, null, 2),
+    'utf8',
+  )
 
   return {
     root,
@@ -142,7 +141,7 @@ export function createSandbox(prefix: string): Sandbox {
       } catch {
         // best-effort
       }
-    }
+    },
   }
 }
 
@@ -163,11 +162,36 @@ export function writeMockProviderConfig(
   mockUrl: string,
   extraDisplayConfig?: string,
   extraConfig?: string,
-  modelContextLength?: number
+  modelContextLength?: number,
 ): void {
   const configPath = path.join(hermesHome, 'config.yaml')
 
-  const displaySection = extraDisplayConfig ? `\ndisplay:\n${extraDisplayConfig}\n` : ''
+  const displaySection = extraDisplayConfig
+    ? `\ndisplay:\n${extraDisplayConfig}\n`
+    : ''
+
+  // Title generation rides the MAIN model since 87af576e60 (#83636), so every
+  // completed turn fires an extra background /v1/chat/completions at the mock.
+  // That request contains the whole conversation — trigger keywords included —
+  // which advances the mock's scripted-turn indices and trips hold-for-prompt
+  // matchers from a request no spec ever sent. Disable it by default (no e2e
+  // spec asserts on session titles); a test that passes its own `auxiliary:`
+  // section via extraConfig owns the whole section instead.
+  const autoTitleDefault = extraConfig?.includes('auxiliary:')
+    ? ''
+    : 'auxiliary:\n  title_generation:\n    enabled: false\n'
+
+  // The scripted turns run REAL terminal commands, and anything the guard
+  // classifies as dangerous (e.g. the sidebar sentinel-wait loop) parks the
+  // turn behind a Run/Reject approval card. The default 'smart' mode then
+  // fires an aux LLM approval call at the SAME mock provider — consuming a
+  // scripted-turn index and never resolving — so the turn stalls until the
+  // spec times out (the CI failure mode for the sidebar-dot family). No e2e
+  // spec asserts on the approval flow, so run gate-free by default; a test
+  // that passes its own `approvals:` section via extraConfig owns it.
+  const approvalsDefault = extraConfig?.includes('approvals:')
+    ? ''
+    : 'approvals:\n  mode: "off"\n'
 
   const config = `# Auto-generated by E2E test fixtures
 model:
@@ -181,8 +205,8 @@ ${modelContextLength ? `  context_length: ${modelContextLength}\n` : ''}provider
     key_env: MOCK_API_KEY
     models:
       mock-model: {}
-    context_length: 4096
-${displaySection}${extraConfig ? `\n${extraConfig.trim()}\n` : ''}`
+    context_length: 64000
+${autoTitleDefault}${approvalsDefault}${displaySection}${extraConfig ? `\n${extraConfig.trim()}\n` : ''}`
 
   fs.writeFileSync(configPath, config, 'utf8')
 }
@@ -213,7 +237,6 @@ function writeEmptyConfig(hermesHome: string): void {
  * Key env vars:
  *  - HERMES_HOME → sandbox hermes-home (isolated config/sessions)
  *  - HERMES_DESKTOP_USER_DATA_DIR → sandbox electron-user-data
- *  - HERMES_WORKSTATION_HOME → sandbox Workstation state/profile
  *  - HERMES_DESKTOP_IGNORE_EXISTING=1 → don't pick up `hermes` from PATH
  *    (we want the dev checkout at REPO_ROOT)
  *  - HERMES_DESKTOP_HERMES_ROOT → REPO_ROOT (dev checkout resolution)
@@ -238,7 +261,6 @@ export function buildAppEnv(sandbox: Sandbox, extra: Record<string, string> = {}
     ...clean,
     HERMES_HOME: sandbox.hermesHome,
     HERMES_DESKTOP_USER_DATA_DIR: sandbox.userDataDir,
-    HERMES_WORKSTATION_HOME: path.join(sandbox.root, 'workstation'),
     HERMES_DESKTOP_IGNORE_EXISTING: '1',
     HERMES_DESKTOP_HERMES_ROOT: REPO_ROOT,
     HERMES_DESKTOP_APP_NAME: `HermesE2E-${Date.now()}`,
@@ -249,7 +271,7 @@ export function buildAppEnv(sandbox: Sandbox, extra: Record<string, string> = {}
     // Clear dev-server override — we want the built dist/, not a vite server.
     // The dev-server check in main.ts looks for this env var; if it's set,
     // it loads from the vite URL instead of the local file.
-    ...extra
+    ...extra,
   }
 }
 
@@ -267,47 +289,33 @@ function assertDistBuilt(): void {
 
   if (!fs.existsSync(electronMain)) {
     throw new Error(
-      `Desktop dist not built. Run 'cd apps/desktop && npm run build' first.\n` + `Missing: ${electronMain}`
+      `Desktop dist not built. Run 'cd apps/desktop && npm run build' first.\n` +
+        `Missing: ${electronMain}`,
     )
   }
 
   if (!fs.existsSync(indexHtml)) {
     throw new Error(
-      `Desktop dist/index.html not found. Run 'cd apps/desktop && npm run build' first.\n` + `Missing: ${indexHtml}`
+      `Desktop dist/index.html not found. Run 'cd apps/desktop && npm run build' first.\n` +
+        `Missing: ${indexHtml}`,
     )
   }
 }
 
 /**
  * Find the Electron binary. In the nix devshell, `electron` is on PATH.
- * As a fallback, use the node_modules/.bin/electron from the desktop package.
+ * As a fallback, use the node_modules/electron install from either package.
  */
 export function findElectron(): string {
   // In dev mode, we use the `electron` binary directly (not the packaged app).
   // The dev:electron script in package.json does exactly this: `electron .`
   // after building. We replicate that here.
-  const electronExecutable = process.platform === 'win32' ? 'electron.exe' : 'electron'
-  const localElectronCandidates = [
-    path.join(REPO_ROOT, 'node_modules', 'electron', 'dist', electronExecutable),
-    path.join(DESKTOP_ROOT, 'node_modules', 'electron', 'dist', electronExecutable)
-  ]
-
-  for (const localElectron of localElectronCandidates) {
-    if (fs.existsSync(localElectron)) {
-      return localElectron
-    }
-  }
-
-  // Fall back to PATH
-  const result = spawnSync('which', ['electron'], {
-    encoding: 'utf8'
-  })
-
-  if (result.status === 0 && result.stdout.trim()) {
-    return result.stdout.trim()
-  }
-
-  throw new Error('Electron binary not found. Run "npm install" from the repo root to install devDependencies.')
+  //
+  // The desktop package is searched first: npm workspaces only hoist
+  // `electron` to the repo root when nothing conflicts, so a workspace-local
+  // install is just as ordinary an outcome as a hoisted one. The rules live in
+  // ./electron-binary so they can be unit-tested per platform.
+  return resolveElectronBinary([DESKTOP_ROOT, REPO_ROOT])
 }
 
 /**
@@ -317,7 +325,9 @@ export function findElectron(): string {
  * @param env      - the process environment (already has HERMES_HOME etc.)
  * @returns the ElectronApplication + first Page
  */
-export async function launchDesktop(env: Record<string, string>): Promise<{ app: ElectronApplication; page: Page }> {
+export async function launchDesktop(
+  env: Record<string, string>,
+): Promise<{ app: ElectronApplication; page: Page }> {
   assertDistBuilt()
 
   const electronBin = findElectron()
@@ -329,10 +339,10 @@ export async function launchDesktop(env: Record<string, string>): Promise<{ app:
     args: [
       DESKTOP_ROOT, // `electron .` — the `.` is the desktop package dir
       '--disable-gpu',
-      '--no-sandbox'
+      '--no-sandbox',
     ],
     env,
-    cwd: DESKTOP_ROOT
+    cwd: DESKTOP_ROOT,
   })
 
   const page = await app.firstWindow()
@@ -366,19 +376,9 @@ export interface MockBackendOptions {
   extraConfig?: string
   /** Override the mock model's context window for compression scenarios. */
   modelContextLength?: number
+  mockServer?: MockServerOptions
   /** Keep every Electron window hidden while still exercising Chromium. */
   headless?: boolean
-}
-
-/**
- * Set up a full mock-backend E2E environment:
- *   1. Start the mock inference server
- *   2. Create a sandbox with config.yaml pointing at it
- *   3. Launch the desktop app
- *   4. Return handles for test interaction
- */
-export interface MockBackendOptions {
-  mockServer?: MockServerOptions
 }
 
 export async function setupMockBackend(options: MockBackendOptions = {}): Promise<MockBackendFixture> {
@@ -392,7 +392,7 @@ export async function setupMockBackend(options: MockBackendOptions = {}): Promis
     mock.url,
     options.extraDisplayConfig,
     options.extraConfig,
-    options.modelContextLength
+    options.modelContextLength,
   )
   writeEnvFile(sandbox.hermesHome)
 
@@ -401,9 +401,9 @@ export async function setupMockBackend(options: MockBackendOptions = {}): Promis
     sandbox,
     options.headless
       ? {
-          HERMES_DESKTOP_E2E_HEADLESS: '1'
+          HERMES_DESKTOP_E2E_HEADLESS: '1',
         }
-      : {}
+      : {},
   )
   const { app, page } = await launchDesktop(env)
 
@@ -417,7 +417,7 @@ export async function setupMockBackend(options: MockBackendOptions = {}): Promis
       await app.close().catch(() => undefined)
       await mock.close()
       sandbox.cleanup()
-    }
+    },
   }
 }
 
@@ -446,7 +446,7 @@ export async function setupNoProvider(): Promise<NoProviderFixture> {
     cleanup: async () => {
       await app.close().catch(() => undefined)
       sandbox.cleanup()
-    }
+    },
   }
 }
 
@@ -491,18 +491,13 @@ providers:
     key_env: MOCK_API_KEY
     models:
       mock-model: {}
-    context_length: 4096
+    context_length: 64000
 `,
-    'utf8'
+    'utf8',
   )
   writeEnvFile(sandbox.hermesHome)
 
-  const env = buildAppEnv(
-    sandbox,
-    options.fakeError
-      ? { HERMES_DESKTOP_BOOT_FAKE_ERROR: 'Failed to connect to Hermes backend: connection refused' }
-      : {}
-  )
+  const env = buildAppEnv(sandbox, options.fakeError ? { HERMES_DESKTOP_BOOT_FAKE_ERROR: 'Failed to connect to Hermes backend: connection refused' } : {})
   const { app, page } = await launchDesktop(env)
 
   return {
@@ -512,7 +507,7 @@ providers:
     cleanup: async () => {
       await app.close().catch(() => undefined)
       sandbox.cleanup()
-    }
+    },
   }
 }
 
@@ -552,8 +547,7 @@ export interface PackagedAppFixture {
 /**
  * Launch the *packaged* Electron binary (from `npm run pack` →
  * `electron-builder --dir`) with `BOOT_FAKE=1` so it simulates boot
- * progress delays. Backend startup may still occur; provider-free setup is
- * a valid first-launch outcome, and sustained-load specs prove backend readiness.
+ * progress without spawning a real Hermes backend.
  *
  * Uses the same sandbox isolation (credential stripping, isolated
  * HERMES_HOME + userData, unique app name) as the dev-mode fixtures.
@@ -562,7 +556,9 @@ export interface PackagedAppFixture {
  */
 export async function setupPackagedApp(): Promise<PackagedAppFixture> {
   if (!packagedBinaryExists()) {
-    throw new Error(`Built app binary not found: ${PACKAGED_BINARY_PATH}. Run 'npm run pack' first.`)
+    throw new Error(
+      `Built app binary not found: ${PACKAGED_BINARY_PATH}. Run 'npm run pack' first.`,
+    )
   }
 
   const sandbox = createSandbox('packaged')
@@ -570,12 +566,12 @@ export async function setupPackagedApp(): Promise<PackagedAppFixture> {
   // Build the sandbox env using the shared helpers, then add the
   // packaged-binary-specific overrides.
   const env = buildAppEnv(sandbox, {
-    // Fake boot adds progress delays; it does not suppress backend startup.
+    // Fake boot: simulates progress steps without spawning the real backend.
     HERMES_DESKTOP_BOOT_FAKE: '1',
     HERMES_DESKTOP_BOOT_FAKE_STEP_MS: '120',
     // Keep packaged boundary tests headless: Playwright can inspect the
     // hidden renderer window while the user's desktop remains untouched.
-    HERMES_DESKTOP_E2E_HEADLESS: '1'
+    HERMES_DESKTOP_E2E_HEADLESS: '1',
   })
 
   // Clear dev-server + hermes-root overrides — the packaged binary
@@ -586,12 +582,8 @@ export async function setupPackagedApp(): Promise<PackagedAppFixture> {
 
   const app = await _electron.launch({
     executablePath: PACKAGED_BINARY_PATH,
-    // Playwright injects this loader automatically when it launches the npm
-    // Electron binary. With a packaged executablePath it cannot do so, but
-    // ElectronApplication still needs __playwright_run() to synchronize the
-    // app's ready lifecycle before exposing windows/pages.
-    args: ['-r', PLAYWRIGHT_ELECTRON_LOADER, '--disable-gpu', '--no-sandbox'],
-    env
+    args: ['--disable-gpu', '--no-sandbox'],
+    env,
   })
 
   const page = await app.firstWindow()
@@ -604,7 +596,7 @@ export async function setupPackagedApp(): Promise<PackagedAppFixture> {
     cleanup: async () => {
       await app.close().catch(() => undefined)
       sandbox.cleanup()
-    }
+    },
   }
 }
 
@@ -631,14 +623,14 @@ export async function setupPackagedApp(): Promise<PackagedAppFixture> {
 export async function waitForAppReady(
   fixture: MockBackendFixture | NoProviderFixture | DeadBackendFixture,
   timeoutMs = 60_000,
-  requireVisible = true
+  requireVisible = true,
 ): Promise<void> {
   const { page, app } = fixture
 
   // Wait for the composer to exist in the DOM (not necessarily interactive yet).
   await page.waitForSelector('textarea, [contenteditable="true"]', {
     state: 'attached',
-    timeout: timeoutMs
+    timeout: timeoutMs,
   })
 
   // Now poll until no full-screen overlay covers the viewport center.
@@ -674,7 +666,7 @@ export async function waitForAppReady(
       return true
     },
     undefined,
-    { timeout: timeoutMs }
+    { timeout: timeoutMs },
   )
 
   // On Electron 40.x, ready-to-show may never fire (electron/electron#51972)
@@ -687,17 +679,13 @@ export async function waitForAppReady(
     const deadline = Date.now() + timeoutMs
 
     while (Date.now() < deadline) {
-      const visible = await app
-        .evaluate(({ BrowserWindow }) => {
-          const w = BrowserWindow.getAllWindows()[0]
+      const visible = await app.evaluate(({ BrowserWindow }) => {
+        const w = BrowserWindow.getAllWindows()[0]
 
-          return w ? w.isVisible() : false
-        })
-        .catch(() => false)
+        return w ? w.isVisible() : false
+      }).catch(() => false)
 
-      if (visible) {
-        break
-      }
+      if (visible) {break}
       await page.waitForTimeout(500)
     }
   }
@@ -728,7 +716,7 @@ export async function waitForOnboarding(page: Page, timeoutMs = 60_000): Promise
       )
     },
     undefined,
-    { timeout: timeoutMs }
+    { timeout: timeoutMs },
   )
 }
 
@@ -759,6 +747,6 @@ export async function waitForBootFailure(page: Page, timeoutMs = 60_000): Promis
       return hasFailureUI || hasErrorToast
     },
     undefined,
-    { timeout: timeoutMs }
+    { timeout: timeoutMs },
   )
 }

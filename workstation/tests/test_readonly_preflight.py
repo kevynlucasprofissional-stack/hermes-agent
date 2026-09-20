@@ -261,7 +261,7 @@ def test_repeated_compile_refusal_keeps_agent_discovery_available(incident):
     messages = []
     def handler(name, args, task, **kw):
         return execute_compiled_work(args, task_id=task) if name == "work_execute" else '{"selector":"textarea.description"}'
-    with patch("run_agent.handle_function_call", side_effect=handler):
+    with patch("model_tools.handle_function_call", side_effect=handler):
         for i in range(3):
             agent._execute_tool_calls(SimpleNamespace(tool_calls=[call("incident_ui", {"id": str(i)})]), messages, "task")
         assert agent._tool_guardrail_halt_decision is None

@@ -25,6 +25,7 @@ import { BROWSER_ROUTE, contributedRoutes, NEW_CHAT_ROUTE, ROUTES_AREA, sessionR
 import { useStatusSnapshot } from '../shell/hooks/use-status-snapshot'
 import { useStatusbarItems } from '../shell/hooks/use-statusbar-items'
 import { ModelMenuPanel } from '../shell/model-menu-panel'
+import { ReasoningMenuPanel } from '../shell/reasoning-menu-panel'
 import { StatusbarControls } from '../shell/statusbar-controls'
 
 import { latestChatActions, latestSidebarActions } from './latest-actions'
@@ -37,7 +38,7 @@ import type { SidebarActions, WiringActions } from './types'
 const ArtifactsView = lazy(async () => ({ default: (await import('../artifacts')).ArtifactsView }))
 const BrowserView = lazy(async () => ({ default: (await import('../browser')).BrowserView }))
 const MessagingView = lazy(async () => ({ default: (await import('../messaging')).MessagingView }))
-const SkillsView = lazy(async () => ({ default: (await import('../skills')).SkillsView }))
+const CapabilitiesView = lazy(async () => ({ default: (await import('../capabilities')).CapabilitiesView }))
 
 export function LegacySessionRedirect() {
   const { sessionId } = useParams()
@@ -118,11 +119,12 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
   actions: WiringActions
   maxVoiceRecordingSeconds?: number
 }) {
+  const activeConnectionId = useStore($activeConnectionId)
   const activeGatewayProfile = useStore($activeGatewayProfile)
   const gateway = useStore($gateway)
   const gatewayState = useStore($gatewayState)
-  useContributions(ROUTES_AREA)
-  const routeContributions = contributedRoutes()
+  const routeSnapshot = useContributions(ROUTES_AREA)
+  const routeContributions = contributedRoutes(routeSnapshot)
 
   const modelMenuContent = useMemo(
     () =>
@@ -130,11 +132,26 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
         <ModelMenuPanel
           gateway={gateway || undefined}
           onSelectModel={actions.selectModel}
+          ownerConnectionId={activeConnectionId || undefined}
           profile={activeGatewayProfile}
           requestGateway={actions.requestGateway}
         />
       ) : null,
-    [actions, activeGatewayProfile, gateway, gatewayState]
+    [actions, activeConnectionId, activeGatewayProfile, gateway, gatewayState]
+  )
+
+  const reasoningMenuContent = useMemo(
+    () =>
+      gatewayState === 'open' ? (
+        <ReasoningMenuPanel
+          gateway={gateway || undefined}
+          onSelectModel={actions.selectModel}
+          ownerConnectionId={activeConnectionId || undefined}
+          profile={activeGatewayProfile}
+          requestGateway={actions.requestGateway}
+        />
+      ) : null,
+    [actions, activeConnectionId, activeGatewayProfile, gateway, gatewayState]
   )
 
   const chatActions = useMemo(() => latestChatActions(actions), [actions])
@@ -144,6 +161,10 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
       gateway={gateway}
       maxVoiceRecordingSeconds={maxVoiceRecordingSeconds}
       modelMenuContent={modelMenuContent}
+      modelOptionsOwnerConnectionId={activeConnectionId || undefined}
+      modelOptionsProfile={activeGatewayProfile}
+      reasoningMenuContent={reasoningMenuContent}
+      requestModelOptionsForOwner={actions.requestGateway}
       {...chatActions}
     />
   )
@@ -163,7 +184,7 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
     <Routes>
       <Route element={chatView} index />
       <Route element={chatView} path=":sessionId" />
-      <Route element={page(<SkillsView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="skills" />
+      <Route element={page(<CapabilitiesView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="capabilities" />
       <Route element={page(<MessagingView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="messaging" />
       <Route element={page(<ArtifactsView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="artifacts" />
       <Route element={page(<BrowserView />)} path={BROWSER_ROUTE.slice(1)} />

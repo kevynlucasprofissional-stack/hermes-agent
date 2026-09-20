@@ -277,7 +277,7 @@ def test_adaptive_browser_loop_uses_one_task_despite_repeatability(controller):
             fallback=lambda: pytest.fail('different browser'))
         decoded.append(json.loads(result))
         return result
-    with patch('run_agent.handle_function_call', side_effect=handler):
+    with patch('model_tools.handle_function_call', side_effect=handler):
         for name, args in sequence:
             agent._execute_tool_calls(SimpleNamespace(tool_calls=[call(name, args, name)]), messages, 'task-a')
     assert len(messages) == 5 and all('durable_compile_required' not in m['content'] for m in messages)

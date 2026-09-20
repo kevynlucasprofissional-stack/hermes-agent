@@ -410,7 +410,7 @@ def test_fake_planner_uses_only_published_schema_and_contract(compiler):
         reads.append(args["path"])
         return '{"ok":true}'
     agent.client.chat.completions.create.side_effect = model
-    with patch("run_agent.handle_function_call", side_effect=handler):
+    with patch("model_tools.handle_function_call", side_effect=handler):
         result = agent.run_conversation("Read a.txt using the published contract.")
     assert result["final_response"] == "verified" and reads == ["a.txt"]
     assert agent.client.chat.completions.create.call_count == 2

@@ -1,10 +1,11 @@
 import { atom, computed } from 'nanostores'
 
 import { persistentAtom } from '@/lib/persisted'
+import { readKey } from '@/lib/storage'
 import { normalize } from '@/lib/text'
 
 import { $rightRailActiveTabId, type RightRailTabId, selectRightRailTab } from './layout'
-import { $activeSessionId, $selectedStoredSessionId } from './session'
+import { canOpenBrowserWindow, openBrowserInNewWindow } from './windows'
 
 /**
  * PREVIEW RAIL — one list of tabs, one way in.
@@ -119,20 +120,11 @@ function isPdfFileTarget(target: PreviewTarget): boolean {
 export function decodePreviewTabs(raw: string): PreviewTab[] {
   const parsed = JSON.parse(raw) as unknown
 
-  const tabs = (Array.isArray(parsed) ? parsed.filter(isPreviewTab) : []).map(tab =>
+  return (Array.isArray(parsed) ? parsed.filter(isPreviewTab) : []).map(tab =>
     isPdfFileTarget(tab.target) && tab.target.previewKind === 'binary'
       ? { ...tab, target: { ...tab.target, previewKind: 'pdf' as const } }
       : tab
   )
-
-  // One Browser: rekey restored URL tabs onto the singleton id (rows written
-  // before the id existed carried one id per address) and keep only the
-  // LAST — the most recently opened page is the one the browser shows.
-  const lastUrl = tabs.findLast(tab => tab.target.kind === 'url')
-
-  return tabs
-    .filter(tab => tab.target.kind !== 'url' || tab === lastUrl)
-    .map(tab => (tab.target.kind === 'url' ? { ...tab, id: previewTabId(tab.target) } : tab))
 }
 
 export const $previewTabs = persistentAtom<PreviewTab[]>(TABS_STORAGE_KEY, [], {
@@ -184,19 +176,193 @@ export const $previewTarget = computed(
  *  preview open and closed by the target they were handed. */
 export const $previewTabSources = computed($previewTabs, tabs => tabs.map(tab => tab.target.source))
 
+export interface BrowserPage {
+  title: string
+  url: string
+}
+
+/**
+ * What each Browser tab is SHOWING right now, as opposed to the target it was
+ * opened with. Kept out of the target on purpose: the pane builds its guest
+ * from `target.url`, so folding navigation back in would tear the webview down
+ * and lose the history behind it. Memory-only — a restored tab reports again
+ * on its first load.
+ */
+export const $browserPages = atom<Record<string, BrowserPage>>({})
+
+export function noteBrowserPage(tabId: string, page: BrowserPage) {
+  const current = $browserPages.get()[tabId]
+
+  if (current?.title === page.title && current.url === page.url) {
+    return
+  }
+
+  $browserPages.set({ ...$browserPages.get(), [tabId]: page })
+}
+
+export function forgetBrowserPage(tabId: string) {
+  const { [tabId]: gone, ...rest } = $browserPages.get()
+
+  if (gone) {
+    $browserPages.set(rest)
+  }
+}
+
+/** Write the page a Browser is showing back onto its persisted tab. The
+ *  webview is built from `target.url`, so this is for hand-off (pop-out /
+ *  dock-back), not for every in-page hop — that would tear the guest down. */
+export function commitBrowserTabLocation(tabId: string, url: string, title?: string) {
+  const nextUrl = url.trim()
+
+  if (!tabId || !nextUrl) {
+    return
+  }
+
+  const tabs = $previewTabs.get()
+  const index = tabs.findIndex(tab => tab.id === tabId)
+
+  if (index === -1) {
+    return
+  }
+
+  const tab = tabs[index]
+  const nextTitle = title?.trim()
+
+  if (tab.target.kind !== 'url' || (tab.target.url === nextUrl && (!nextTitle || tab.target.label === nextTitle))) {
+    return
+  }
+
+  $previewTabs.set(
+    tabs.map((item, i) =>
+      i === index
+        ? {
+            ...item,
+            target: {
+              ...item.target,
+              ...(nextTitle ? { label: nextTitle } : {}),
+              url: nextUrl
+            }
+          }
+        : item
+    )
+  )
+}
+
+/** Pull one tab from storage into this renderer's atom. A sibling window
+ *  (the pop-out) may have committed a newer URL that we never saw. */
+export function adoptPersistedBrowserTab(tabId: string) {
+  if (!tabId) {
+    return
+  }
+
+  try {
+    const raw = readKey(TABS_STORAGE_KEY)
+
+    if (!raw) {
+      return
+    }
+
+    const persisted = decodePreviewTabs(raw).find(tab => tab.id === tabId)
+
+    if (!persisted || persisted.target.kind !== 'url') {
+      return
+    }
+
+    commitBrowserTabLocation(tabId, persisted.target.url, persisted.target.label)
+  } catch {
+    // Storage can throw; the in-memory tab stays as it was.
+  }
+}
+
+/** Pop the in-app Browser into its own OS window. Shared by the address-bar
+ *  glyph and the tab context menu so they cannot drift. */
+export function popOutBrowserTab(tabId: string) {
+  if (!tabId || !canOpenBrowserWindow()) {
+    return
+  }
+
+  const tab = $previewTabs.get().find(item => item.id === tabId)
+
+  if (!tab || tab.target.kind !== 'url') {
+    return
+  }
+
+  const page = $browserPages.get()[tabId]
+
+  markBrowserTabPopped(tabId, true)
+  commitBrowserTabLocation(tabId, page?.url || tab.target.url, page?.title)
+  void openBrowserInNewWindow(tabId).then(ok => {
+    if (!ok) {
+      markBrowserTabPopped(tabId, false)
+    }
+  })
+}
+
+/** Tabs currently shown in a popped-out Browser window. The docked tree
+ *  hides them so the page isn't in two places; closing the window docks
+ *  them again. Memory-only — a relaunch with no pop-out window restores. */
+export const $poppedBrowserTabIds = atom<ReadonlySet<string>>(new Set())
+
+export function markBrowserTabPopped(tabId: string, popped: boolean) {
+  const current = $poppedBrowserTabIds.get()
+
+  if (current.has(tabId) === popped) {
+    return
+  }
+
+  const next = new Set(current)
+
+  if (popped) {
+    next.add(tabId)
+  } else {
+    next.delete(tabId)
+  }
+
+  $poppedBrowserTabIds.set(next)
+}
+
+/** Preview tabs that still belong in the layout tree (not popped out). */
+export const $dockedPreviewTabs = computed([$previewTabs, $poppedBrowserTabIds], (tabs, popped) =>
+  popped.size === 0 ? tabs : tabs.filter(tab => !popped.has(tab.id))
+)
+
 export const $previewReloadRequest = atom(0)
 export const $previewServerRestart = atom<PreviewServerRestart | null>(null)
 export const $previewServerRestartStatus = computed($previewServerRestart, restart => restart?.status ?? 'idle')
 
-/** The one Browser tab's id. URL targets all share it: the tab names the
- *  SURFACE (Browser), not the page, so opening a second URL navigates the
- *  browser it already has — re-front the tab, swap its target, and the pane
- *  rebuilds its webview against the new url. Files and artifacts stay keyed
- *  by identity; only the web surface is a singleton. */
-const BROWSER_TAB_ID: RightRailTabId = 'url:browser'
-
+/** The tab that owns `target`. Files and artifacts are keyed by IDENTITY —
+ *  the same file is always the same tab, reopening it re-fronts the one it
+ *  already has. A URL has no identity here: a Browser tab is a vessel you
+ *  navigate, so it is picked (`browserTabId`) rather than derived. */
 export function previewTabId(target: PreviewTarget): RightRailTabId {
-  return target.kind === 'url' ? BROWSER_TAB_ID : `${target.kind}:${target.url}`
+  return `${target.kind}:${target.url}`
+}
+
+const isBrowserTab = (tab: PreviewTab): boolean => tab.target.kind === 'url'
+
+/** A Browser tab's id, minted the way a terminal's is — there is no identity to
+ *  derive one from. Random rather than the lowest free slot: an id is never
+ *  handed out twice, so per-tab state keyed by it (`$browserPages`, the console
+ *  buffer) cannot resurface under a later tab if a close ever fails to wipe it. */
+function mintBrowserTabId(): RightRailTabId {
+  const unique =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+
+  return `url:browser-${unique}`
+}
+
+/** The Browser a URL should open in: the one you're looking at, else the one
+ *  you used last. A link from chat navigates the browser you already have
+ *  rather than stacking another identical tab — new tabs are something you
+ *  ask for (the strip's "+"), the way they are in a real browser. */
+function browserTabId(tabs: PreviewTab[]): RightRailTabId {
+  const active = tabs.find(tab => tab.id === $rightRailActiveTabId.get())
+
+  if (active && isBrowserTab(active)) {
+    return active.id
+  }
+
+  return tabs.findLast(isBrowserTab)?.id ?? mintBrowserTabId()
 }
 
 // Browsing files is "peek at the source"; a tool or an explicit link handing
@@ -218,8 +384,8 @@ function previewTargetForSource(target: PreviewTarget, source: PreviewRecordSour
  *  only way anything reaches a preview. */
 export function openPreview(target: PreviewTarget, source: PreviewRecordSource = 'manual') {
   const resolved = previewTargetForSource(target, source)
-  const id = previewTabId(resolved)
   const current = $previewTabs.get()
+  const id = resolved.kind === 'url' ? browserTabId(current) : previewTabId(resolved)
   const index = current.findIndex(tab => tab.id === id)
   const tab: PreviewTab = { id, target: resolved }
 
@@ -227,38 +393,25 @@ export function openPreview(target: PreviewTarget, source: PreviewRecordSource =
   selectRightRailTab(id)
 }
 
-/** Open the Browser tab — the surface, not a page. Keeps whatever it was last
- *  showing so the hotkey re-fronts your page instead of wiping it; a fresh tab
- *  lands on `about:blank`, where the pane's empty state invites an address. */
+const blankPage = (): PreviewTarget => ({ kind: 'url', label: 'Browser', source: 'about:blank', url: 'about:blank' })
+
+/** Show the Browser — the surface, not a page. Keeps whatever it was last
+ *  showing so the hotkey re-fronts your page instead of wiping it; with no
+ *  browser open it lands on `about:blank`, where the pane's empty state
+ *  invites an address. */
 export function openBrowserTab() {
-  const existing = $previewTabs.get().find(tab => tab.id === BROWSER_TAB_ID)
+  const tabs = $previewTabs.get()
+  const current = tabs.find(tab => tab.id === browserTabId(tabs))
 
-  openPreview(existing?.target ?? { kind: 'url', label: 'Browser', source: 'about:blank', url: 'about:blank' })
+  openPreview(current?.target ?? blankPage())
 }
 
-export function isBrowserHubRoute(): boolean {
-  if (typeof window === 'undefined') {return false}
-  const path = window.location.pathname || ''
-  const hash = window.location.hash || ''
+/** Another Browser, always — the strip's "+". */
+export function newBrowserTab() {
+  const id = mintBrowserTabId()
 
-  return path.startsWith('/browser') || hash.includes('/browser')
-}
-
-/**
- * Open or re-front the Workstation Browser tab. Reuses the single live
- * Workstation Chromium instance rather than launching an isolated guest webview.
- */
-export function openWorkstationBrowserPreview() {
-  if (isBrowserHubRoute()) {
-    return
-  }
-
-  openPreview({
-    kind: 'url',
-    label: 'Workstation Browser',
-    source: 'workstation-browser',
-    url: 'workstation:browser'
-  })
+  $previewTabs.set([...$previewTabs.get(), { id, target: blankPage() }])
+  selectRightRailTab(id)
 }
 
 export function closeRightRailTab(tabId: string) {
@@ -374,157 +527,5 @@ export function failPreviewServerRestart(taskId: string, message: string) {
     ...current,
     message,
     status: 'error'
-  })
-}
-
-/**
- * Session-scoped preview tabs store.
- * Pins preview/browser panels to the chat session where they were created.
- */
-const SESSION_TABS_STORAGE_KEY = 'hermes.desktop.sessionPreviewTabs.v2'
-
-export const $sessionPreviewTabs = persistentAtom<Record<string, PreviewTab[]>>(
-  SESSION_TABS_STORAGE_KEY,
-  {},
-  {
-    decode: raw => {
-      try {
-        const parsed = JSON.parse(raw) as Record<string, unknown>
-
-        if (!parsed || typeof parsed !== 'object') {return {}}
-        const result: Record<string, PreviewTab[]> = {}
-
-        for (const [key, value] of Object.entries(parsed)) {
-          if (Array.isArray(value)) {
-            result[key] = decodePreviewTabs(JSON.stringify(value))
-          }
-        }
-
-        return result
-      } catch {
-        return {}
-      }
-    },
-    encode: map => JSON.stringify(map)
-  }
-)
-
-let currentActiveSessionKey: string | null = null
-let isSyncingSessionTabs = false
-let lastSelectedStoredSessionId: string | null = null
-
-export function activeSessionKey(): string | null {
-  return $selectedStoredSessionId.get() || $activeSessionId.get() || null
-}
-
-/** Promote the tabs opened by a fresh runtime session onto the stored id that
- * arrives when the first turn is persisted. The runtime id and stored id are
- * aliases for that one conversation; treating the stored id as a brand-new
- * session would clear the rail in the middle of the first turn. */
-function promoteRuntimeSessionTabs(runtimeSessionKey: string, storedSessionKey: string) {
-  if (currentActiveSessionKey !== runtimeSessionKey) {
-    syncSessionPreviewTabs(storedSessionKey)
-
-    return
-  }
-
-  const currentTabs = $previewTabs.get()
-  const map = { ...$sessionPreviewTabs.get() }
-  const nextTabs = currentTabs.length > 0 ? currentTabs : (map[storedSessionKey] ?? [])
-
-  if (nextTabs.length > 0) {
-    map[storedSessionKey] = [...nextTabs]
-  } else {
-    delete map[storedSessionKey]
-  }
-
-  delete map[runtimeSessionKey]
-  $sessionPreviewTabs.set(map)
-  currentActiveSessionKey = storedSessionKey
-
-  isSyncingSessionTabs = true
-
-  try {
-    $previewTabs.set([...nextTabs])
-    selectRightRailTab(nextTabs[0]?.id ?? null)
-  } finally {
-    isSyncingSessionTabs = false
-  }
-}
-
-export function syncSessionPreviewTabs(nextSessionKey: string | null) {
-  if (nextSessionKey === currentActiveSessionKey) {return}
-
-  // Stash current tabs under previous session
-  if (currentActiveSessionKey) {
-    const current = $previewTabs.get()
-    const map = { ...$sessionPreviewTabs.get() }
-
-    if (current.length > 0) {
-      map[currentActiveSessionKey] = [...current]
-    } else {
-      delete map[currentActiveSessionKey]
-    }
-
-    $sessionPreviewTabs.set(map)
-  }
-
-  currentActiveSessionKey = nextSessionKey
-
-  // For the new session:
-  isSyncingSessionTabs = true
-
-  try {
-    if (!nextSessionKey) {
-      // Clean slate for brand-new session draft
-      closeRightRail()
-    } else {
-      const map = $sessionPreviewTabs.get()
-      const saved = map[nextSessionKey] ?? []
-      $previewTabs.set([...saved])
-      selectRightRailTab(saved.length > 0 ? saved[0].id : null)
-    }
-  } finally {
-    isSyncingSessionTabs = false
-  }
-}
-
-if (typeof window !== 'undefined') {
-  currentActiveSessionKey = activeSessionKey()
-  lastSelectedStoredSessionId = $selectedStoredSessionId.get()
-
-  $selectedStoredSessionId.listen(id => {
-    const wasFreshDraft = lastSelectedStoredSessionId === null
-    const runtimeSessionId = $activeSessionId.get()
-    lastSelectedStoredSessionId = id
-
-    if (wasFreshDraft && id && runtimeSessionId && currentActiveSessionKey === runtimeSessionId) {
-      promoteRuntimeSessionTabs(runtimeSessionId, id)
-
-      return
-    }
-
-    syncSessionPreviewTabs(id || $activeSessionId.get() || null)
-  })
-
-  $activeSessionId.listen(id => {
-    syncSessionPreviewTabs($selectedStoredSessionId.get() || id || null)
-  })
-
-  $previewTabs.listen(tabs => {
-    if (isSyncingSessionTabs) {return}
-    const key = activeSessionKey()
-
-    if (key) {
-      const map = { ...$sessionPreviewTabs.get() }
-
-      if (tabs.length > 0) {
-        map[key] = [...tabs]
-      } else {
-        delete map[key]
-      }
-
-      $sessionPreviewTabs.set(map)
-    }
   })
 }

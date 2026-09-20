@@ -5,7 +5,7 @@ import json
 from typing import Any, Iterable, Optional
 import sqlite3
 
-from hermes_cli import kanban_db
+from hermes_cli import kanban_db, kanban_db_connect
 from workstation.config import load_workstation_config
 from workstation.contracts import BrowserTaskReport, DiscoveredTask, ExecutionEventKind, RiskLevel
 from workstation.journal import ExecutionJournal
@@ -69,7 +69,7 @@ class WorkstationKanbanBridge:
         self.board = board
 
     def get_connection(self) -> sqlite3.Connection:
-        return kanban_db.connect(board=self.board)
+        return kanban_db_connect.connect(board=self.board)
 
     def promote_request_if_multistep(
         self,
@@ -161,7 +161,9 @@ class WorkstationKanbanBridge:
             )
             if followup.required_for_parent:
                 try:
-                    kanban_db.link_tasks(conn, child_task_id, parent_task_id)
+                    parent_task = kanban_db.get_task(conn, parent_task_id)
+                    expected_run_id = parent_task.current_run_id if parent_task else None
+                    kanban_db.link_tasks(conn, child_task_id, parent_task_id, expected_child_run_id=expected_run_id)
                     kanban_db.block_task(
                         conn,
                         parent_task_id,

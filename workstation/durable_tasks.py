@@ -18,7 +18,7 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from hermes_cli import kanban_db
+from hermes_cli import kanban_db, kanban_db_connect
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +283,7 @@ class DurableTaskStore:
             conn = self._external_conn
         else:
             if self._conn is None:
-                self._conn = kanban_db.connect(board=self.board)
+                self._conn = kanban_db_connect.connect(board=self.board)
             conn = self._conn
         if not self._tables_ensured:
             self._ensure_tables(conn)

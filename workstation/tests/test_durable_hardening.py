@@ -184,7 +184,7 @@ def test_dynamic_fan_out_blocks_third_and_adopts_completed(compiler):
         if name == "trello_verify_card":
             return json.dumps({"id": args["id"]})
         return json.dumps({"ok": True})
-    with patch("run_agent.handle_function_call", side_effect=handler):
+    with patch("model_tools.handle_function_call", side_effect=handler):
         for i in range(3):
             agent._execute_tool_calls(SimpleNamespace(tool_calls=[call("trello_create_card", {"id": i}, str(i))]), messages, "task")
         assert writes == [0, 1]
@@ -204,7 +204,7 @@ def test_mixed_response_discovery_is_not_blocked_with_mutations(compiler):
     from workstation.batch_detection import structural_signature
     agent._work_mutation_shapes = {structural_signature('trello_create_card', {}): 2}
     messages, calls = [], []
-    with patch("run_agent.handle_function_call", side_effect=lambda name, *args, **kw: calls.append(name) or '{"board_id":"B"}'):
+    with patch("model_tools.handle_function_call", side_effect=lambda name, *args, **kw: calls.append(name) or '{"board_id":"B"}'):
         agent._execute_tool_calls(SimpleNamespace(tool_calls=[call("trello_search_board", {}), call("trello_create_card", {})]), messages, "task")
     assert calls == ["trello_search_board"]
     assert json.loads(messages[-1]["content"])["code"] == "durable_compile_required"

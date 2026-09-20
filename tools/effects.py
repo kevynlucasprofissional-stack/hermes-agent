@@ -49,12 +49,16 @@ def tool_contract(name, *, scope=None, schema=None, args=None):
             import importlib
             for candidate in (f"tools.{name}_tool", f"tools.{name}"):
                 try:
-                    importlib.import_module(candidate)
+                    mod = importlib.import_module(candidate)
                     entry = registry.get_entry(name, scope=scope)
+                    if entry is None:
+                        importlib.reload(mod)
+                        entry = registry.get_entry(name, scope=scope)
                     if entry is not None:
                         break
                 except ImportError:
                     pass
+
         except Exception:
             pass
     metadata = dict(schema or {})

@@ -5,8 +5,8 @@
  * through `ctx.rest` (namespace-scoped to `/api/plugins/kanban`). No new
  * backend, no core edits.
  *
- * Hermes Workstation ships this bundled plugin ON by default (`defaultEnabled: true`): it inventories in
- * Settings ▸ Plugins and registers nothing until the user flips the switch.
+ * Ships OFF by default (`defaultEnabled: false`): it inventories in
+ * Capabilities ▸ Plugins and registers nothing until the user flips the switch.
  */
 
 import './kanban.css'
@@ -32,7 +32,6 @@ import {
 
 import { $boardSlug, bindApi, boardKey, fetchBoard } from './api'
 import { KanbanBoardPage } from './board'
-import { HybridBoardPage } from './hybrid-board'
 import { KANBAN_LOCALES } from './i18n'
 import { $newTaskLane, useKanban } from './ui'
 
@@ -82,7 +81,7 @@ const plugin: HermesPlugin = {
   id: 'kanban',
   name: 'Kanban',
   description: 'Multi-agent task board — board page, sidebar entry, and a live in-flight count in the status bar.',
-  defaultEnabled: true,
+  defaultEnabled: false,
   register(ctx) {
     ctx.i18n.register(KANBAN_LOCALES)
     ctx.onDispose(bindApi(ctx.rest, ctx.storage, ctx.socket, { os: ctx.os, t: ctx.i18n.t }))
@@ -112,12 +111,6 @@ const plugin: HermesPlugin = {
         render: () => <KanbanBoardPage />
       },
       {
-        id: 'hybrid-page',
-        area: ROUTES_AREA,
-        data: { path: '/kanban/hybrid' } satisfies RouteContribution,
-        render: () => <HybridBoardPage />
-      },
-      {
         id: 'nav',
         area: SIDEBAR_NAV_AREA,
         order: 50,
@@ -137,16 +130,6 @@ const plugin: HermesPlugin = {
           label: 'Kanban: Open board',
           keywords: ['kanban', 'board', 'tasks', 'agents'],
           run: () => host.navigate('/kanban')
-        } satisfies PaletteContribution
-      },
-      {
-        id: 'open-hybrid',
-        area: PALETTE_AREA,
-        data: {
-          id: 'kanban.openHybrid',
-          label: 'Kanban: Open shared board',
-          keywords: ['kanban', 'hybrid', 'trello', 'shared', 'human'],
-          run: () => host.navigate('/kanban/hybrid')
         } satisfies PaletteContribution
       },
       {

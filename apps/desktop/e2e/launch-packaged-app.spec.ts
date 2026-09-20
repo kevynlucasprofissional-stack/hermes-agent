@@ -1,9 +1,11 @@
-import fs from 'node:fs'
-import path from 'node:path'
-
 import { expect, test } from './test'
 
-import { PACKAGED_BINARY_PATH, type PackagedAppFixture, packagedBinaryExists, setupPackagedApp } from './fixtures'
+import {
+  PACKAGED_BINARY_PATH,
+  type PackagedAppFixture,
+  packagedBinaryExists,
+  setupPackagedApp,
+} from './fixtures'
 import { expectVisualSnapshot } from './visual-snapshot'
 
 /**
@@ -18,14 +20,11 @@ import { expectVisualSnapshot } from './visual-snapshot'
 
 let fixture: PackagedAppFixture | null = null
 
-interface PackagedBootWindow extends Window {
-  hermesDesktop: {
-    getBootProgress(): Promise<{ error: string | null; phase: string; progress: number; running: boolean }>
-  }
-}
-
 test.beforeAll(async () => {
-  test.skip(!packagedBinaryExists(), `Built app binary not found: ${PACKAGED_BINARY_PATH}. Run 'npm run pack' first.`)
+  test.skip(
+    !packagedBinaryExists(),
+    `Built app binary not found: ${PACKAGED_BINARY_PATH}. Run 'npm run pack' first.`,
+  )
 
   fixture = await setupPackagedApp()
 })
@@ -47,100 +46,34 @@ test('renderer loads and shows DOM content', async () => {
   expect(childCount).toBeGreaterThan(0)
 })
 
-test('Desktop IPC and the loopback controller expose the same resource and event identities', async () => {
+test('boots to the app UI, not the QueryClient error boundary (#95560)', async () => {
   const page = fixture!.page
-  const ipcSnapshot = (await page.evaluate(async () =>
-    (
-      window as typeof window & {
-        hermesDesktop?: {
-          workstationBrowser?: {
-            resources: () => Promise<unknown>
-          }
-        }
-      }
-    ).hermesDesktop?.workstationBrowser?.resources()
-  )) as
-    | {
-        schema_version: number
-        runtime: string
-        resources: Array<{ resource_id: string; resource_type: string; state: Record<string, unknown> }>
-      }
-    | undefined
+  await page.waitForSelector('#root', { state: 'attached', timeout: 30_000 })
 
-  expect(ipcSnapshot?.schema_version).toBe(1)
-  expect(ipcSnapshot?.runtime).toBe('electron-chromium')
-
-  const controlPath = path.join(fixture!.sandbox.root, 'workstation', 'Runtime', 'browser-control.json')
-  await expect.poll(() => fs.existsSync(controlPath), { timeout: 15_000 }).toBe(true)
-  const control = JSON.parse(fs.readFileSync(controlPath, 'utf8')) as { url: string; token: string }
-  const response = await fetch(`${control.url}/resources`, {
-    headers: { Authorization: `Bearer ${control.token}` }
-  })
-  expect(response.ok).toBe(true)
-  const controllerSnapshot = (await response.json()) as {
-    success: boolean
-    schema_version: number
-    runtime: string
-    resources: Array<{ resource_id: string; resource_type: string; state: Record<string, unknown> }>
-  }
-
-  expect(controllerSnapshot.success).toBe(true)
-  expect(controllerSnapshot.schema_version).toBe(ipcSnapshot?.schema_version)
-  expect(controllerSnapshot.runtime).toBe(ipcSnapshot?.runtime)
-  expect(controllerSnapshot.resources.map(resource => [resource.resource_type, resource.resource_id])).toEqual(
-    ipcSnapshot?.resources.map(resource => [resource.resource_type, resource.resource_id])
+  // Wait until the root has real content (boot overlay fades, app paints) —
+  // the error boundary also paints, so assert on its absence explicitly.
+  await page.waitForFunction(
+    () => (document.getElementById('root')?.textContent ?? '').trim().length > 0,
+    undefined,
+    { timeout: 60_000 },
   )
 
-  const ipcEvents = (await page.evaluate(async () =>
-    (
-      window as typeof window & {
-        hermesDesktop?: {
-          workstationBrowser?: {
-            events: (taskId?: string | null, limit?: number) => Promise<unknown>
-          }
-        }
-      }
-    ).hermesDesktop?.workstationBrowser?.events(null, 200)
-  )) as
-    | {
-        schema_version: number
-        runtime: string
-        task_id: string | null
-        events: Array<{ event_id: string; task_id: string; session_id: string; timestamp: string }>
-      }
-    | undefined
-
-  expect(ipcEvents?.schema_version).toBe(1)
-  expect(ipcEvents?.runtime).toBe('electron-chromium')
-
-  const eventsResponse = await fetch(`${control.url}/events?limit=200`, {
-    headers: { Authorization: `Bearer ${control.token}` }
-  })
-  expect(eventsResponse.ok).toBe(true)
-  const controllerEvents = (await eventsResponse.json()) as {
-    success: boolean
-    schema_version: number
-    runtime: string
-    task_id: string | null
-    events: Array<{ event_id: string; task_id: string; session_id: string; timestamp: string }>
-  }
-
-  expect(controllerEvents.success).toBe(true)
-  expect(controllerEvents.schema_version).toBe(ipcEvents?.schema_version)
-  expect(controllerEvents.runtime).toBe(ipcEvents?.runtime)
-  expect(controllerEvents.task_id).toBe(ipcEvents?.task_id)
-  expect(controllerEvents.events).toEqual(ipcEvents?.events)
+  const text = await page.locator('#root').textContent()
+  // The #95560 crash: a duplicate @tanstack/react-query runtime made the
+  // QueryClientProvider's context invisible to useQuery, so the app hit the
+  // error boundary at launch. Neither the boundary headline nor the throw
+  // message may appear on a healthy boot.
+  expect(text).not.toContain('No QueryClient set')
+  expect(text).not.toContain('Something broke in the interface')
 })
 
 test('HUD composer remains fully inside the transparent window', async () => {
   const hudPagePromise = fixture!.app.waitForEvent('window')
 
   await fixture!.page.evaluate(() =>
-    (
-      window as typeof window & {
-        hermesDesktop?: { hud?: { open: (options: { sessionId: null }) => Promise<void> } }
-      }
-    ).hermesDesktop?.hud?.open({ sessionId: null })
+    (window as typeof window & {
+      hermesDesktop?: { hud?: { open: (options: { sessionId: null }) => Promise<void> } }
+    }).hermesDesktop?.hud?.open({ sessionId: null })
   )
 
   const hudPage = await hudPagePromise
@@ -173,29 +106,24 @@ test('HUD composer remains fully inside the transparent window', async () => {
       // Tailwind's standalone `translate: -50%` live and shifting the dock
       // half a window off-screen. Surface the computed value so a failure
       // says WHY the dock moved, not just that it did.
-      dockTranslate: getComputedStyle(dock).translate
+      dockTranslate: getComputedStyle(dock).translate,
     }
   })
-
-  // Native window scaling can leave CSS geometry a fraction of a pixel past
-  // the integer viewport edge. Keep the tolerance below any meaningful
-  // off-screen regression while avoiding false failures from subpixel layout.
-  const containmentTolerance = 1
 
   // Horizontal containment — the composer shifted half a window left when the
   // standalone `translate: -50%` survived optimization (#82214, #82233).
   expect(geometry.dockLeft).toBeGreaterThanOrEqual(0)
   expect(geometry.inputLeft).toBeGreaterThanOrEqual(0)
-  expect(geometry.dockRight).toBeLessThanOrEqual(geometry.viewportWidth + containmentTolerance)
-  expect(geometry.inputRight).toBeLessThanOrEqual(geometry.viewportWidth + containmentTolerance)
+  expect(geometry.dockRight).toBeLessThanOrEqual(geometry.viewportWidth)
+  expect(geometry.inputRight).toBeLessThanOrEqual(geometry.viewportWidth)
 
   // Vertical containment — the toolbar/transcript clipping reported on
   // Windows (#82203) and macOS (#82214) is the same "composer escapes the
   // window" class on the other axis.
   expect(geometry.dockTop).toBeGreaterThanOrEqual(0)
   expect(geometry.inputTop).toBeGreaterThanOrEqual(0)
-  expect(geometry.dockBottom).toBeLessThanOrEqual(geometry.viewportHeight + containmentTolerance)
-  expect(geometry.inputBottom).toBeLessThanOrEqual(geometry.viewportHeight + containmentTolerance)
+  expect(geometry.dockBottom).toBeLessThanOrEqual(geometry.viewportHeight)
+  expect(geometry.inputBottom).toBeLessThanOrEqual(geometry.viewportHeight)
 
   // The dock's centering translate must be fully neutralized. Any live
   // percentage translate means the HUD override lost to the app's centering.
@@ -207,40 +135,34 @@ test('HUD composer remains fully inside the transparent window', async () => {
   await hudPage.close()
 })
 
-test('packaged first launch reaches setup or a terminal boot state', async () => {
+test('boot progress overlay fades out or shows error state', async () => {
   const page = fixture!.page
-  // Match the actual boot state, not unrelated shell text such as "waiting".
-  await expect
-    .poll(
-      async () => {
-        const boot = await page.evaluate(() =>
-          (window as unknown as PackagedBootWindow).hermesDesktop.getBootProgress()
-        )
+  await page.waitForFunction(
+    () => {
+      const root = document.getElementById('root')
 
-        // Provider-free first launch can require user setup while the backend
-        // is still starting. That recovery/setup surface is a valid outcome.
-        if (await page.getByTestId('desktop-onboarding').isVisible()) {
-          return true
-        }
+      if (!root) {
+        return false
+      }
 
-        if (await page.getByTestId('boot-failure-overlay').isVisible()) {
-          return true
-        }
+      const text = root.textContent ?? ''
 
-        return !boot.running && (boot.progress >= 100 || Boolean(boot.error))
-      },
-      { timeout: 60_000 }
-    )
-    .toBe(true)
+      // Error path: boot failure overlay renders an error message.
+      if (text.includes('error') || text.includes('Error') || text.includes('failed')) {
+        return true
+      }
 
-  const boot = await page.evaluate(() => (window as unknown as PackagedBootWindow).hermesDesktop.getBootProgress())
-  if (await page.getByTestId('desktop-onboarding').isVisible()) {
-    await expect(page.getByTestId('desktop-onboarding')).toBeVisible()
-  } else if (boot.error || (await page.getByTestId('boot-failure-overlay').isVisible())) {
-    await expect(page.getByTestId('boot-failure-overlay')).toBeVisible()
-  } else {
-    await expect(page.getByTestId('gateway-connecting-overlay')).toBeHidden()
-  }
+      // Success path: overlay disappears and the app renders. If there's
+      // no "boot" / "starting" / "installing" text visible, boot has
+      // completed (either to the main UI or to onboarding).
+      const bootIndicators = ['starting', 'resolving', 'spawning', 'waiting', 'installing']
+      const lower = text.toLowerCase()
+
+      return !bootIndicators.some((word) => lower.includes(word))
+    },
+    undefined,
+    { timeout: 60_000 },
+  )
 })
 
 test('can capture a screenshot for the CI artifact', async () => {

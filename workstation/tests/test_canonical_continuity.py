@@ -19,7 +19,7 @@ def test_trusted_ingress_creates_and_reuses_work_but_internal_text_never_creates
     from types import SimpleNamespace
     from workstation.contracts import MessageEnvelope, MessageOrigin, IntentAuthority
     from workstation.work_intent import prepare_turn_work
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     agent = SimpleNamespace(session_id="session")
     text = "First extract reports then verify each result"
     assert not prepare_turn_work(agent, text).requires_task
@@ -30,7 +30,7 @@ def test_trusted_ingress_creates_and_reuses_work_but_internal_text_never_creates
     assert task_id
     prepare_turn_work(agent, text, envelope)
     assert agent._canonical_work_task_id == task_id
-    conn = kanban_db.connect()
+    conn = kanban_db_connect.connect()
     try:
         assert conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 1
         task = kanban_db.get_task(conn, task_id)
@@ -48,7 +48,7 @@ def test_turn_candidate_reverifies_actual_durable_outputs_before_acceptance(stop
     from workstation.work_intent import prepare_turn_work
     from workstation.task_compiler import TaskCompiler
     from workstation.kanban import WorkstationKanbanBridge
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     agent = SimpleNamespace(session_id="session")
     text = "First extract reports then verify each result"
     prepare_turn_work(agent, text, MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, "session", text))
@@ -63,7 +63,7 @@ def test_turn_candidate_reverifies_actual_durable_outputs_before_acceptance(stop
             compiler.artifacts.resolve_ref(item.normalized_output_ref).write_text("corrupted", encoding="utf-8")
         candidate = WorkstationKanbanBridge().finalize_turn_candidate(agent._canonical_work_task_id, "session",
             {"completed": not stopped, "interrupted": stopped, "final_response": "Record verified"})
-        conn = kanban_db.connect()
+        conn = kanban_db_connect.connect()
         try:
             task = kanban_db.get_task(conn, agent._canonical_work_task_id)
             assert (task.status == "done") is (not stopped and not tampered)
@@ -126,10 +126,10 @@ def test_cron_creation_policy_pins_or_explicitly_follows_global(tmp_path, monkey
 
 
 def test_canonical_lineage_resolves_workplan(tmp_path):
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     from workstation.cockpit import task_cockpit
     from workstation.durable_tasks import DurableTaskStore
-    conn = kanban_db.connect(db_path=tmp_path / "kanban.db")
+    conn = kanban_db_connect.connect(db_path=tmp_path / "kanban.db")
     try:
         task_id = kanban_db.create_task(conn, title="Real work", session_id="session", initial_status="running")
         store = DurableTaskStore(conn=conn)
@@ -144,9 +144,9 @@ def test_canonical_lineage_resolves_workplan(tmp_path):
 
 
 def test_trello_legacy_migration_preview_is_idempotent(tmp_path):
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     from workstation.trello_migration import reconcile_trello_legacy
-    conn = kanban_db.connect(db_path=tmp_path / "kanban.db")
+    conn = kanban_db_connect.connect(db_path=tmp_path / "kanban.db")
     try:
         task_id = kanban_db.create_task(conn, title="Legacy human card", body="Description", created_by="trello-sync", initial_status="running")
         original_status = kanban_db.get_task(conn, task_id).status
@@ -164,11 +164,11 @@ def test_trello_legacy_migration_preview_is_idempotent(tmp_path):
 
 
 def test_precommit_outcome_candidate_is_not_presented_as_accepted():
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     from workstation.cockpit import task_cockpit
     from workstation.contracts import ExecutionEventKind
     from workstation.journal import ExecutionJournal
-    conn = kanban_db.connect()
+    conn = kanban_db_connect.connect()
     try:
         task_id = kanban_db.create_task(conn, title="Work", session_id="session", created_by="workstation")
         ExecutionJournal(task_id, "session").record(ExecutionEventKind.PROGRESS, "candidate persisted before commit",
@@ -182,9 +182,9 @@ def test_precommit_outcome_candidate_is_not_presented_as_accepted():
 
 
 def test_trello_migration_same_name_lists_keep_distinct_remote_identity_and_rollback(tmp_path):
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     from workstation.trello_migration import reconcile_trello_legacy
-    conn = kanban_db.connect(db_path=tmp_path / "kanban.db")
+    conn = kanban_db_connect.connect(db_path=tmp_path / "kanban.db")
     try:
         tasks = [kanban_db.create_task(conn, title="Card", created_by="trello-sync") for _ in range(2)]
         records = [{"agent_task_id": task_id, "board_id": "board", "list_id": f"list-{i}", "card_id": f"card-{i}",
@@ -203,15 +203,15 @@ def test_two_processes_migrate_same_trello_manifest_once(tmp_path):
     import json
     import subprocess
     import sys
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     db_path = tmp_path / "kanban.db"
-    conn = kanban_db.connect(db_path=db_path)
+    conn = kanban_db_connect.connect(db_path=db_path)
     try:
         task_id = kanban_db.create_task(conn, title="Card", created_by="trello-sync")
         records = [{"agent_task_id": task_id, "board_id": "board", "list_id": "list", "card_id": "card",
                     "board_name": "Board", "list_name": "List"}]
-        source = "from hermes_cli import kanban_db; from workstation.trello_migration import reconcile_trello_legacy; from pathlib import Path; import sys,json; " \
-                 "conn=kanban_db.connect(db_path=Path(sys.argv[1])); reconcile_trello_legacy(conn,json.loads(sys.argv[2]),dry_run=False); conn.close()"
+        source = "from hermes_cli import kanban_db, kanban_db_connect; from workstation.trello_migration import reconcile_trello_legacy; from pathlib import Path; import sys,json; " \
+                 "conn=kanban_db_connect.connect(db_path=Path(sys.argv[1])); reconcile_trello_legacy(conn,json.loads(sys.argv[2]),dry_run=False); conn.close()"
         processes = [subprocess.Popen([sys.executable, "-c", source, str(db_path), json.dumps(records)],
                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for _ in range(2)]
         for process in processes:
@@ -226,16 +226,16 @@ def test_two_processes_migrate_same_trello_manifest_once(tmp_path):
 
 
 def test_kanban_db_connect_handles_str_and_path(tmp_path):
-    from hermes_cli import kanban_db
+    from hermes_cli import kanban_db, kanban_db_connect
     p_path = tmp_path / "as_path" / "kanban.db"
-    conn1 = kanban_db.connect(db_path=p_path)
+    conn1 = kanban_db_connect.connect(db_path=p_path)
     try:
         assert p_path.is_file()
     finally:
         conn1.close()
 
     p_str = str(tmp_path / "as_str" / "kanban.db")
-    conn2 = kanban_db.connect(db_path=p_str)
+    conn2 = kanban_db_connect.connect(db_path=p_str)
     try:
         assert Path(p_str).is_file()
     finally:

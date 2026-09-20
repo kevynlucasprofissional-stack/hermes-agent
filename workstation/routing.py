@@ -5,8 +5,8 @@ from enum import Enum
 from typing import Any, Mapping
 
 
-class ConstraintViolation(RuntimeError):
-    pass
+from agent.turn_route_policy import ConstraintViolation
+
 
 
 # Explicit first-party surface, not a wildcard alias for third-party browser tools.

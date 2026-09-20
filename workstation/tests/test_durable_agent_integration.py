@@ -11,11 +11,11 @@ def make_agent():
     definitions = [{"type": "function", "function": {"name": name,
                     "parameters": {"type": "object", "properties": {}}}}
                    for name in ["work_execute", "read_file", "write_file"]]
-    with patch("run_agent.get_tool_definitions", return_value=definitions), \
-         patch("run_agent.check_toolset_requirements", return_value={}), \
+    with patch("model_tools.get_tool_definitions", return_value=definitions), \
+         patch("model_tools.check_toolset_requirements", return_value={}), \
          patch("hermes_cli.config.load_config", return_value={}), \
          patch("hermes_cli.config.load_config_readonly", return_value={}), \
-         patch("run_agent.OpenAI"):
+         patch("agent.process_bootstrap.OpenAI"):
         agent = AIAgent(api_key="test-key", base_url="https://openrouter.ai/api/v1",
                         quiet_mode=True, skip_memory=True, skip_context_files=True)
         agent.operational_closure_for_call = lambda _name, _args: {
@@ -44,7 +44,7 @@ def test_real_agent_dispatch_routes_100_items_without_model(tmp_path, monkeypatc
     call = SimpleNamespace(id="compiled", type="function", function=SimpleNamespace(
         name="work_execute", arguments=json.dumps(req)))
     messages = []
-    with patch("run_agent.handle_function_call", side_effect=handler):
+    with patch("model_tools.handle_function_call", side_effect=handler):
         agent._execute_tool_calls(SimpleNamespace(content="", tool_calls=[call]), messages, "task")
     assert calls == [str(i) for i in range(100)]
     assert len(messages) == 1
@@ -89,7 +89,7 @@ def test_quantified_request_cannot_enter_item_mutation_loop(tmp_path, monkeypatc
     call = SimpleNamespace(id="item-write", type="function", function=SimpleNamespace(
         name="write_file", arguments='{"path":"one.json","content":"one"}'))
     messages = []
-    with patch("run_agent.handle_function_call") as dispatch:
+    with patch("model_tools.handle_function_call") as dispatch:
         agent._execute_tool_calls(SimpleNamespace(tool_calls=[call]), messages, "task")
         assert not dispatch.called
         assert json.loads(messages[0]["content"])["code"] == "durable_compile_required"
@@ -122,7 +122,7 @@ def test_full_conversation_two_provider_boundaries_for_100_items(tmp_path, monke
             return execute_compiled_work(args, task_id=task)
         calls.append(args["path"])
         return json.dumps({"ok": True, "path": args["path"]})
-    with patch("run_agent.handle_function_call", side_effect=handler):
+    with patch("model_tools.handle_function_call", side_effect=handler):
         result = agent.run_conversation("Crie 100 registros para estes itens", task_id="task")
     assert result["final_response"] == "100 completed"
     assert len(calls) == 100
