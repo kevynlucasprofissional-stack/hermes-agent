@@ -1,5 +1,36 @@
 # H-079 Pre-Change Baseline Audit
 
+## H-079.1 reopened pre-change gate — 2026-09-20
+
+The earlier baseline table above is historical. The gate was reopened for the dogfood installer correction.
+
+```text
+DOWNSTREAM_MAIN_SHA:
+d0ade123c0060503abb1a297cd00c602c18b44e6
+
+UPSTREAM_MAIN_SHA / PIN:
+8d153b26aae49f471312f48c93d8913d7d8df7f9
+
+PRE-SYNC MERGE BASE:
+c1488ac947c9bc33fd65ec464548dc9d8edd6122
+
+PRE-SYNC:
+ahead 542
+behind 381
+
+INTEGRATION:
+integration/upstream-20260920-8d153b26-h0791
+
+TRUE MERGE:
+3db94236cf103841473cf94d8577626d181b5e8b
+
+POST-MERGE:
+behind selected pin = 0
+```
+
+The upstream delta overlapped 26 downstream-modified paths. Non-overlapping semantic hunks were combined; obsolete/superseded downstream conflicts in cron/config/lock/Anthropic fixture/Kanban fixture/TUI gateway were resolved in favor of current upstream owners.
+
+
 Date: 2026-09-20  
 Status: `STAGE A & B COMPLETE — LOCALLY QUALIFIED (see H079_BASELINE_QUALIFICATION_REPORT.md)`  
 Repository: `kevynlucasprofissional-stack/hermes-agent`
