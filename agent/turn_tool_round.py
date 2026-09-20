@@ -152,6 +152,10 @@ def run_tool_round(
     from agent.scoped_execution import scoped_execution
     from agent.tool_batch_admission import admit_tool_batch, BatchAdmissionAction
     admission = admit_tool_batch(agent, list(assistant_message.tool_calls), {"task_id": effective_task_id})
+    # This full assistant batch has crossed the canonical admission boundary.
+    # The executor still admits direct/external calls that bypass this owner,
+    # but must never re-admit normal turn-round work.
+    assistant_message._tool_batch_admitted = True
     with scoped_execution(agent, effective_task_id, messages):
         if admission is None or all(
             decision.action == BatchAdmissionAction.EXECUTE for decision in admission.decisions
@@ -162,9 +166,9 @@ def run_tool_round(
             from types import SimpleNamespace
             for call, decision in zip(assistant_message.tool_calls, admission.decisions):
                 if decision.action == BatchAdmissionAction.EXECUTE:
-                    agent._execute_tool_calls(
-                        SimpleNamespace(tool_calls=[call]), messages, effective_task_id, api_call_count
-                    )
+                    agent._execute_tool_calls(SimpleNamespace(
+                        tool_calls=[call], _tool_batch_admitted=True,
+                    ), messages, effective_task_id, api_call_count)
                 else:
                     append_message(messages, make_tool_result_message(
                         call.function.name,

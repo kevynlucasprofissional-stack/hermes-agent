@@ -1316,7 +1316,7 @@ class AIAgent(
         targets, opted-in MCP) separated by sequential barriers, run in emission order.
         """
         tool_calls = assistant_message.tool_calls
-        if tool_calls:
+        if tool_calls and not getattr(assistant_message, "_tool_batch_admitted", False):
             from agent.tool_batch_admission import admit_tool_batch, BatchAdmissionAction
             admission_result = admit_tool_batch(self, list(tool_calls), {"task_id": effective_task_id})
             if admission_result is not None:
@@ -1326,7 +1326,9 @@ class AIAgent(
                     from types import SimpleNamespace
                     for call, decision in zip(tool_calls, admission_result.decisions):
                         if decision.action == BatchAdmissionAction.EXECUTE:
-                            self._execute_tool_calls(SimpleNamespace(tool_calls=[call]), messages, effective_task_id, api_call_count)
+                            self._execute_tool_calls(SimpleNamespace(
+                                tool_calls=[call], _tool_batch_admitted=True,
+                            ), messages, effective_task_id, api_call_count)
                             continue
                         messages.append(make_tool_result_message(
                             call.function.name,

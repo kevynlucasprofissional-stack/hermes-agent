@@ -401,6 +401,34 @@ def agent():
 
 
 class TestSegmentedDispatchIntegration:
+    def test_pre_admitted_turn_batch_is_not_admitted_again(self, agent):
+        calls = [_tc("web_search", '{"query":"a"}', call_id="s1")]
+        msg = SimpleNamespace(
+            content="", tool_calls=calls, _tool_batch_admitted=True,
+        )
+
+        with (
+            patch("agent.tool_batch_admission.admit_tool_batch") as admit,
+            patch.object(agent, "_execute_tool_calls_sequential") as execute,
+        ):
+            agent._execute_tool_calls(msg, [], "task-1")
+
+        admit.assert_not_called()
+        execute.assert_called_once()
+
+    def test_direct_batch_is_admitted_exactly_once(self, agent):
+        calls = [_tc("web_search", '{"query":"a"}', call_id="s1")]
+        msg = SimpleNamespace(content="", tool_calls=calls)
+
+        with (
+            patch("agent.tool_batch_admission.admit_tool_batch", return_value=None) as admit,
+            patch.object(agent, "_execute_tool_calls_sequential") as execute,
+        ):
+            agent._execute_tool_calls(msg, [], "task-1")
+
+        admit.assert_called_once()
+        execute.assert_called_once()
+
     def test_mixed_batch_runs_safe_prefix_concurrently_and_barrier_after(self, agent):
         """Two web_search calls must overlap in time; terminal must start only
         after both finish; results land in the model's emission order."""
