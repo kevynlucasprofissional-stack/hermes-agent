@@ -5,7 +5,7 @@ import pytest
 import model_tools
 from gateway.session_context import clear_session_vars, set_session_vars
 from tools import browser_workstation
-from tools.registry import registry
+from tools.registry import register_schema_availability_provider, registry
 
 TARGET = "browser_navigate"
 EXTENSION_TOOL = "browser_extension_install"
@@ -31,6 +31,7 @@ def clean_schema_cache(monkeypatch):
     monkeypatch.delenv("HERMES_DESKTOP", raising=False)
     monkeypatch.setenv("HERMES_WORKSTATION_BROWSER", "1")
     monkeypatch.setattr(browser_workstation, "_browser_config", lambda: {"enabled": True, "routing_enabled": True})
+    register_schema_availability_provider(browser_workstation.workstation_schema_tools_for_current_session)
     model_tools._clear_tool_defs_cache()
     yield
     model_tools._clear_tool_defs_cache()

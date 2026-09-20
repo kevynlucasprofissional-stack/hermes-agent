@@ -71,7 +71,10 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
         register_completion_admission_provider(workstation_completion_admission)
         register_workstation_browser_capabilities()
         from tools.browser_extension_router import register_browser_controller_provider
+        from tools.browser_workstation import workstation_schema_tools_for_current_session
+        from tools.registry import register_schema_availability_provider
         register_browser_controller_provider(ensure_workstation_browser_controller)
+        register_schema_availability_provider(workstation_schema_tools_for_current_session)
         register_compression_bypass_provider(durable_compaction)
         register_conversation_projection_provider(project_for_provider)
         register_task_completion_admission_provider(workstation_task_completion_admission)

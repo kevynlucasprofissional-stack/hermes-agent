@@ -219,12 +219,18 @@ def get_tool_definitions(enabled_toolsets: Optional[List[str]] = None, disabled_
     skip_tool_search_assembly returns raw schemas for every enabled tool — only
     the tool_search bridge should use it (it reads the real, uncollapsed catalog).
     """
+    force_available_tools = _session_force_available_tools()
+
     def compute():
         return _compute_tool_definitions(enabled_toolsets, disabled_toolsets, quiet_mode,
-                                         skip_tool_search_assembly=skip_tool_search_assembly)
+                                         skip_tool_search_assembly=skip_tool_search_assembly,
+                                         force_available_tools=set(force_available_tools))
     if not quiet_mode:
         return compute()
-    cache_key = _tool_defs_cache_key(enabled_toolsets, disabled_toolsets, skip_tool_search_assembly)
+    cache_key = _tool_defs_cache_key(
+        enabled_toolsets, disabled_toolsets, skip_tool_search_assembly,
+        force_available_tools=force_available_tools,
+    )
     # Cache the freshly-computed list, but hand callers a shallow copy so downstream mutations (e.g.
     # run_agent appending memory/LCM tool schemas to self.tools) don't poison the cache. Without this, a
     # long-lived Gateway process accumulates duplicate tool names across agent inits and providers that
@@ -254,6 +260,7 @@ def get_tool_definitions(enabled_toolsets: Optional[List[str]] = None, disabled_
 
 def _tool_defs_cache_key(
     enabled_toolsets: Optional[List[str]], disabled_toolsets: Optional[List[str]], skip_tool_search_assembly: bool,
+    *, force_available_tools: frozenset[str] = frozenset(),
 ) -> Optional[tuple]:
     """Memo key for get_tool_definitions, or None when caching must be bypassed.
 
@@ -275,7 +282,15 @@ def _tool_defs_cache_key(
         frozenset(disabled_toolsets) if disabled_toolsets else None, registry._generation, cfg_fp,
         bool(os.environ.get("HERMES_KANBAN_TASK")), bool(skip_tool_search_assembly),
         _is_delegated_child_context(), _is_dispatcher_owned_worker(), profile_scope,
+        force_available_tools,
     )
+
+
+def _session_force_available_tools() -> frozenset[str]:
+    """Schemas guaranteed by the current session surface, outside check_fn."""
+    from tools.registry import session_force_available_tools
+
+    return session_force_available_tools()
 
 
 def _apply_toolset_selection(tools: set, names: List[str], quiet_mode: bool, *, disable: bool) -> None:
@@ -498,14 +513,24 @@ _TOOL_SEARCH_LISTING_FORMS = {
 
 
 def _compute_tool_definitions(enabled_toolsets: Optional[List[str]] = None, disabled_toolsets: Optional[List[str]] = None,
-                              quiet_mode: bool = False, skip_tool_search_assembly: bool = False) -> List[Dict[str, Any]]:
+                              quiet_mode: bool = False, skip_tool_search_assembly: bool = False,
+                              force_available_tools: Optional[set[str]] = None) -> List[Dict[str, Any]]:
     """Uncached implementation of :func:`get_tool_definitions`."""
     tools_to_include = _select_tool_names(enabled_toolsets, disabled_toolsets, quiet_mode)
+    forced = set(force_available_tools or ())
+    if disabled_toolsets:
+        for toolset_name in disabled_toolsets:
+            if validate_toolset(toolset_name):
+                forced.difference_update(resolve_toolset(toolset_name))
+    tools_to_include.update(forced)
     # Selection is per schema, not per process/profile. Kanban's local checks
     # are uncached; the outer definitions cache already keys on this selection.
     from tools.kanban_toolset_context import scoped_kanban_toolset_selection
     with scoped_kanban_toolset_selection(enabled_toolsets):
-        filtered_tools = _apply_dynamic_schemas(registry.get_definitions(tools_to_include, quiet=quiet_mode))
+        forced &= tools_to_include
+        filtered_tools = _apply_dynamic_schemas(registry.get_definitions(
+            tools_to_include, quiet=quiet_mode, force_available=forced,
+        ))
     global _last_resolved_tool_names
     _last_resolved_tool_names = [t["function"]["name"] for t in filtered_tools]
 
