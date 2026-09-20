@@ -18,26 +18,28 @@ The improved form is two-stage rather than continuously chasing upstream:
 At policy creation, current upstream has already advanced 365 commits beyond the adopted
 H-078C pin, so the next code-changing cycle must begin with Stage A again.
 
-### H-078C post-merge audit correction
+### H-079 Implementation & Baseline Qualification (2026-09-20)
 
-The merge itself is structurally successful and ancestry-correct, but exact-head evidence
-reopens closure:
-- Workstation CI: 728 passed / 1 failed / 1 warning;
-- runtime-independence assertion fails in the combined suite;
-- Browser AppView integration-anchor dry-run fails;
-- Browser broker/controller convergence remains partial;
-- tool-batch admission has two owners;
-- adapter initialization can silently fail open.
+**Status:** STAGE A & B LOCALLY QUALIFIED / READY FOR GITHUB ACTIONS CI GATING.
 
-Engineering interpretation:
-```text
-UPSTREAM BASELINE ADOPTED != DOWNSTREAM QUALIFIED
-CLASSIFIED SEAM != CLOSED SEAM
-FOCUSED GREEN != EXACT-HEAD GREEN
-```
-
-No further downstream feature work should be layered over this stale/red baseline without
-first executing H-079 Stage A.
+The H-079 + H-078C Corrective Cycle was executed under the upstream-first protocol:
+1. **Stage A (Upstream Baseline Sync)**:
+   - Pinned upstream commit `b7d7d2929a10e0658a98a7a03f4531093e1480ed`.
+   - Executed real two-parent Git merge in `a13929fb35`.
+   - Proved ancestry: `git merge-base --is-ancestor b7d7d2929a HEAD` returns 0.
+2. **Stage B (H-078C Debt Closure)**:
+   - *Runtime Independence*: Resolved test collection import pollution; isolated subprocess test proves alternate reasoner runs with 0 `run_agent` imports.
+   - *Browser AppView Dry-Run*: Updated anchor pattern in `apply_core_integration.py` to match current Desktop layout; dry-run passes.
+   - *Browser Control Broker Authority*: Switched normal `browser_tool` dispatch to `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`; legacy router downgraded to compatibility adapter. Single mutation executor invariant preserved.
+   - *Tool Batch Admission*: Owned exclusively by `agent/turn_tool_round.py` with admission marker; duplicate execution in `run_agent.py` eliminated.
+   - *Adapter Bootstrap*: Replaced silent exception swallowing with explicit fail-closed bootstrap when Workstation supervision is expected.
+   - *H013 Headless Load Spec*: Fixed active `BrowserTask` owner ID preservation on viewport transfer and restored Chat PreviewPane routing for `workstation:` targets. Spec passes 3/3 in 1.4m.
+3. **Comprehensive Verification Matrix**:
+   - Seams audit: 18 classified, 0 unclassified, 0 budget regressions (`audit_hermes_seams.py --strict`).
+   - Workstation full pytest suite: 741 passed, 2 skipped, 1 warning (291s).
+   - Desktop: `npm run typecheck` 0 errors, `npm run build` clean.
+   - Probes: H004 native browser smoke probe VALIDATED; Work100 benchmark 30 PASS / 0 FAIL.
+   - Upstream drift check: Observed 86 commits drift on upstream main (`2ed6387d87`), classified as non-overlapping with Workstation core. Pin frozen at `b7d7d2929a`.
 
 
 ## H-078B — Code-to-Code Upstream Migration / Semantic Decoupling — 2026-09-19

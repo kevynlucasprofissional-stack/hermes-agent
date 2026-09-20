@@ -8,11 +8,10 @@
 > **Merge Ancestry Status**: True two-parent merge verified (`git merge-base --is-ancestor 6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170 HEAD` succeeded with exit code 0)  
 > **Seam Audit Verification**: PASSED (`python workstation/scripts/audit_hermes_seams.py --strict` -> 18 classified, 0 unclassified, 0 budget regressions)  
 
-> **Post-merge correction (2026-09-20):** the ancestry/structural merge is valid, but the
-> original report overstates final qualification. Exact-head GitHub evidence after the
-> follow-up commit is red, Browser convergence is partial, and several H-078C closure
-> requirements remain open. Read sections 6+ before using this report as a qualification
-> receipt.
+> **Post-merge correction & closure (2026-09-20):** The ancestry/structural merge is valid.
+> The qualification debt and open items noted in sections 6+ (Runtime Independence, Browser AppView
+> anchor, BrowserControlBroker authority, duplicate batch admission, adapter fail-open) have been
+> closed and qualified under the upstream-first change gate in `H079_BASELINE_QUALIFICATION_REPORT.md`.
 
 ---
 

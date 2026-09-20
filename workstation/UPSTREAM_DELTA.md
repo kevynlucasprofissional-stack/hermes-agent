@@ -17,16 +17,15 @@ upstream preflight -> pinned baseline sync -> seam reconciliation -> baseline qu
 
 The sync lane and feature/fix lane remain separately reviewable.
 
-H-078C post-merge state at this decision:
-- the pinned upstream history is now a real ancestor of downstream main;
-- historical 13k-commit divergence is closed;
-- exact-head qualification is reopened because Workstation CI is red;
-- Browser routing still has REMOVE debt through `tools/browser_workstation`;
-- batch admission currently has two owners;
-- adapter bootstrap can silently fail open.
-
-A classified seam is not considered retired until the actual authority path changes and
-parity/qualification proves it.
+H-079 candidate qualification state (2026-09-20):
+- upstream pin `b7d7d2929a10e0658a98a7a03f4531093e1480ed` merged into integration lane (`a13929fb35`);
+- ancestry verified: pin is a true ancestor of HEAD;
+- `FPS-RUN-001` (`SEAM-RUN-BATCH`) closed: single tool batch admission in `agent/turn_tool_round.py`;
+- `FPS-BROWSER-001` (`SEAM-BROWSER-ROUTE`) closed: authoritative browser dispatch via `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`;
+- `FPS-BROWSER-LEGACY` retained as non-authoritative compatibility adapter;
+- adapter bootstrap made explicit and fail-closed when Workstation supervision is expected;
+- Desktop multi-tab structure ported with active BrowserTask viewport persistence and preview routing;
+- Workstation test suite (741 passed), H004, H013 (3/3), and Work100 (30 PASS) green.
 
 
 ## HW-029 — First-Party Workstation Adapter and Generic Core Decoupling (2026-09-19)

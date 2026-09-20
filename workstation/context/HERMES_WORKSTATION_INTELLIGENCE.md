@@ -27,19 +27,16 @@ New engineering invariants:
 4. **No QUALIFIED claim without exact-head CI.**
 5. **No final merge without a last upstream-drift classification.**
 
-### Post-H-078C evidence
+### Post-H-078C evidence & H-079 Resolution
 
-The ancestry problem is solved, but several remaining gaps demonstrate why H-079 is
-necessary:
-- Browser controller abstraction exists but normal routing authority has not fully switched;
-- duplicate `admit_tool_batch()` means structural transplant left two semantic owners;
-- silent adapter bootstrap failure can remove supervisory guarantees without an explicit
-  degraded state;
-- local/focused test receipts overstated qualification relative to the exact GitHub head.
+The ancestry problem was solved in H-078C, but remaining structural gaps required the H-079 corrective cycle:
+- **Browser Control Broker authority**: Generic `browser_tool` switched to `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`, keeping single mutation authority while legacy router became a compatibility adapter.
+- **Batch admission single owner**: `turn_tool_round.py` acts as sole admission owner for agent turns, stamping batches with an admission marker to prevent double execution.
+- **Explicit adapter bootstrap**: Replaced silent exception catching with explicit fail-closed semantics when Workstation supervision is expected.
+- **Runtime Independence**: Proven with fresh-process tests showing alternate reasoners drive the kernel with zero `run_agent` imports.
+- **E2E Desktop Viewport Continuity**: H013 passed after active `BrowserTask` owner ID preservation across viewports was fixed.
 
-These are not reasons to abandon the H-078 architecture. They are evidence that baseline
-qualification and seam state must be an explicit prerequisite to the *next* downstream
-change.
+These resolutions confirm that the two-stage upstream-first discipline produces a clean, qualified downstream baseline without regression of core invariants.
 
 
 ## H-078B — Code-to-code audit: preserve causal properties, not patch locations — 2026-09-19

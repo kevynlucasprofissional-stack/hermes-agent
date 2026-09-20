@@ -17,14 +17,14 @@ Required order:
 
 A focused local pass cannot override a red exact-head baseline.
 
-Current H-078C exact-head evidence at policy creation:
-- Workstation contract suite: 728 passed, 1 failed, 1 warning;
-- failing gate: H-078B runtime independence (`run_agent` already present in
-  `sys.modules` during combined suite);
-- `core-patch-dry-run`: Browser AppView expected one anchor, found zero.
-
-Until these are reproduced/closed on the next synchronized baseline, the repository must
-not describe H-078C or Runtime Independence as fully QUALIFIED.
+Current H-079 candidate qualification evidence (2026-09-20):
+- Workstation test suite: 741 passed, 2 skipped, 1 warning (291s).
+- Runtime independence: PASSED (isolated subprocess test proves AlternateReasoner loads 0 `run_agent` modules).
+- Desktop dry-run: `apply_core_integration.py --check` passes with all anchors found.
+- Desktop validation: `npm run typecheck` 0 errors, `npm run build` green, H013 E2E 3/3 passed in 1.4m.
+- Native Browser task: H004 smoke probe VALIDATED (live destroy and restart passed).
+- Seam audit: `audit_hermes_seams.py --strict` passes with 18 classified, 0 unclassified, 0 regressions.
+- Candidate head is locally qualified across all tiers and pending exact-head CI evaluation.
 
 
 ## H-077.1 truthful-core qualification gate — IMPLEMENTATION COMPLETE / EXACT-HEAD CI PENDING (2026-09-19)

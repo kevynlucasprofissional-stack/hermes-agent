@@ -16,11 +16,12 @@ next patch cycle must not use `main@6dd02b9...` as an unquestioned baseline beca
 current upstream has already advanced beyond the adopted pin and exact-head Workstation CI
 is red.
 
-Known open patch-surface debt to carry into the next baseline cycle:
-- duplicate batch admission;
-- Browser legacy routing / incomplete broker authority switch;
-- silent Workstation adapter bootstrap failure;
-- exact-head runtime-independence and Browser AppView gate failures.
+H-079 resolution of patch-surface debt (2026-09-20):
+- **Batch admission**: single owner in `agent/turn_tool_round.py` with explicit admission marker; duplicate admission in `run_agent.py` eliminated.
+- **Browser authority**: switched to `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`; single mutation executor preserved.
+- **Adapter bootstrap**: explicit fail-closed semantics in `workstation/__init__.py`.
+- **Patch anchors**: `apply_core_integration.py` updated to current Desktop workspace layout (dry-run passes).
+- **Runtime independence**: isolated subprocess test proves AlternateReasoner lifecycle without `run_agent`.
 
 
 ## HW-029 — First-Party Workstation Adapter Implementation Manifest

@@ -21,14 +21,13 @@ fetch latest upstream
 Do not continuously move the pin during implementation. Do not postpone upstream
 synchronization until after a feature is already built.
 
-Current observation when H-079 was established:
-- adopted pin: `6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170`;
-- downstream main: `6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`;
-- latest upstream observed: `501d8ba4e075281d5d7ea97b59cbac810ef12d89`;
-- downstream is already 365 commits behind current upstream.
-
-Therefore the next code-changing lane must select a new exact upstream pin before target
-implementation begins.
+H-079 candidate status (2026-09-20):
+- adopted pin: `b7d7d2929a10e0658a98a7a03f4531093e1480ed`;
+- downstream starting main: `6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`;
+- merge commit: `a13929fb3568ce4c0423c5cf8cbe4f479ea22849`;
+- ancestry status: verified ancestor (`git merge-base --is-ancestor b7d7d2929a... HEAD` -> 0);
+- final upstream drift observed: `2ed6387d8789375e24b74dfb29aeaf867d3d2aa9` (86 commits ahead of pin, non-overlapping with Workstation core);
+- H-079 Stage A & B locally qualified.
 
 
 ## H-078B synchronization rule (2026-09-19)

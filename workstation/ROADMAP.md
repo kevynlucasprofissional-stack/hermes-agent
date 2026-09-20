@@ -20,31 +20,26 @@ upstream fetch -> exact SHA pin -> true baseline merge
 Do not chase a moving HEAD inside the feature. Pin one SHA for the cycle. Do not combine
 an unqualified upstream merge and the requested feature into an opaque patch.
 
-Current 2026-09-20 snapshot:
-- downstream main: `6dd02b9e...`;
-- last adopted upstream pin: `6a078969a...`;
-- latest upstream main observed: `501d8ba4e...`;
-- downstream is already 365 commits behind current upstream;
-- therefore the **next runtime-changing cycle must begin with a new Stage A baseline sync**.
+Current 2026-09-20 candidate status:
+- downstream starting main: `6dd02b9e3f...`;
+- adopted upstream pin: `b7d7d2929a...` (true two-parent merge in `a13929fb35...`);
+- merge ancestry verified: `git merge-base --is-ancestor b7d7d2929a... HEAD` -> 0;
+- integration branch: `integration/upstream-20260920-b7d7d292-h079`;
+- H-079 Stage A (Upstream Baseline Sync) and Stage B (H-078C Corrective Closure) are LOCALLY QUALIFIED.
 
-### H-078C post-merge closure — REOPENED / BLOCKING
+### H-078C post-merge closure items — CLOSED ON H-079 CANDIDATE
 
-H-078C achieved the hard ancestry/structural migration goal: the pinned `6a078969...`
-upstream is a real ancestor of downstream main and the historical 13k-commit divergence is
-closed.
+The open qualification debt from H-078C has been resolved on the H-079 integration candidate:
+- **Runtime Independence**: Root-caused suite-order import contamination; fresh-process test proves AlternateReasoner runs with 0 `run_agent` imports.
+- **Browser AppView Core Patch Anchor**: Anchor in `apply_core_integration.py` updated to contemporary Desktop layout; dry-run passes.
+- **BrowserControlBroker Authority**: Generic `browser_tool` routes through `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`; legacy router downgraded to non-authoritative compatibility adapter.
+- **Tool Batch Admission**: Owned exclusively by `agent/turn_tool_round.py` with explicit admission marker; duplicate execution eliminated.
+- **Adapter Bootstrap**: Silent try-except pass replaced by explicit fail-closed bootstrap when Workstation supervision is expected.
+- **Desktop & Native Browser**: H004 native probe VALIDATED, Desktop typecheck 0 errors, Desktop build green, H013 3/3 passed.
+- **Full Workstation Suite**: 741 passed, 2 skipped, 1 warning (291s).
+- **Seams Audit**: 18 classified, 0 unclassified, 0 budget regressions.
 
-It is **not yet fully qualified**:
-- exact-head Workstation CI is red: 728 passed / 1 failed / 1 warning;
-- runtime-independence exact-head gate fails because `run_agent` is already loaded;
-- `core-patch-dry-run` reports `browser AppView: expected one anchor, found 0`;
-- BrowserControlBroker authority switch is incomplete;
-- `admit_tool_batch()` currently has duplicate ownership in
-  `turn_tool_round.py` and `run_agent.py::_execute_tool_calls()`;
-- required Workstation adapter bootstrap can silently fail open;
-- seam/documentation/report state is stale/incomplete.
-
-H-078C may be called **BASELINE ADOPTED / STRUCTURAL MIGRATION SUCCESSFUL**, not
-COMPLETE/VERIFIED, until these exact-head gates and authority-path gaps close.
+Final promotion to main is gated on exact-head GitHub Actions CI verification.
 
 
 ## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED
