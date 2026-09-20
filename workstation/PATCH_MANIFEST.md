@@ -1,5 +1,28 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-030 — Pre-change upstream baseline gate
+
+This manifest now has a process-level prerequisite in addition to file-level patch
+tracking.
+
+Before a new downstream runtime patch is authored:
+1. refresh upstream and pin one exact SHA;
+2. adopt/qualify that baseline on an integration lane;
+3. refresh `first_party_seams.json`;
+4. only then author the target patch from the qualified baseline.
+
+The current H-078C migration is structurally adopted but qualification is reopened. The
+next patch cycle must not use `main@6dd02b9...` as an unquestioned baseline because
+current upstream has already advanced beyond the adopted pin and exact-head Workstation CI
+is red.
+
+Known open patch-surface debt to carry into the next baseline cycle:
+- duplicate batch admission;
+- Browser legacy routing / incomplete broker authority switch;
+- silent Workstation adapter bootstrap failure;
+- exact-head runtime-independence and Browser AppView gate failures.
+
+
 ## HW-029 — First-Party Workstation Adapter Implementation Manifest
 
 Implementation of H-078B decouples Hermes core from Workstation.
