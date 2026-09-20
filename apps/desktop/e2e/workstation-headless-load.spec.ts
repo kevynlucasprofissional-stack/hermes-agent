@@ -273,8 +273,8 @@ async function nativePageUrls(app: MockBackendFixture['app']): Promise<string[]>
   return app.evaluate(({ webContents }) =>
     webContents
       .getAllWebContents()
-      .filter(contents => !contents.isDestroyed())
-      .map(contents => contents.getURL())
+      .filter((contents: any) => !contents.isDestroyed())
+      .map((contents: any) => contents.getURL())
   )
 }
 

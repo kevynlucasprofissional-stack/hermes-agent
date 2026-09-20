@@ -74,7 +74,7 @@ jobs:
       - name: Install locked project environment
         uses: ./.github/actions/retry
         with:
-          command: uv sync --locked --python 3.13 --extra dev
+          command: uv sync --locked --python 3.13 --extra dev --extra anthropic
       - name: Validate lockfile
         run: .venv/bin/python workstation/scripts/validate_lock.py
       - name: Validate license policy

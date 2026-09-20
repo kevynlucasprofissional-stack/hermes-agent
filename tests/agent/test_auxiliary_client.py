@@ -3154,11 +3154,13 @@ class TestAnthropicAuxiliaryReasoningTranslation:
         # profile's declared wire, or the ``_reasoning_config`` kwarg above would reach a plain
         # OpenAI client and TypeError.
         import model_tools  # noqa: F401
+        from unittest.mock import MagicMock, patch
         from agent.auxiliary_client import AnthropicAuxiliaryClient, resolve_provider_client
 
         monkeypatch.setenv("COMMANDCODE_API_KEY", "sk-test-" + "x" * 20)
-        client, _ = resolve_provider_client("commandcode-anthropic", model="claude-haiku-4-5-20251001")
-        assert isinstance(client, AnthropicAuxiliaryClient)
+        with patch("agent.anthropic_adapter.build_anthropic_client", return_value=MagicMock()):
+            client, _ = resolve_provider_client("commandcode-anthropic", model="claude-haiku-4-5-20251001")
+            assert isinstance(client, AnthropicAuxiliaryClient)
 
 
 class TestAuxiliaryProviderProfileReasoning:
