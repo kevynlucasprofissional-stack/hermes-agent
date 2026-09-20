@@ -1,6 +1,6 @@
 # H-079 Baseline Qualification & Seam Closure Report
 
-> **Status**: STAGE A REOPENED & REQUALIFIED / STAGE B RE-VERIFIED / GITHUB ACTIONS CI GATES FIXED  
+> **Status**: H-079.1 UPSTREAM BASELINE REFRESHED / DOGFOOD INSTALL FIX IMPLEMENTED / EXACT-HEAD CI PENDING  
 > **Integration Branch**: `integration/upstream-20260920-b7d7d292-h079`  
 > **Starting Downstream Main SHA**: `6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`  
 > **Observed Upstream Main SHA (Preflight)**: `b7d7d2929a10e0658a98a7a03f4531093e1480ed`  
@@ -93,26 +93,25 @@ command: uv sync --locked --python 3.13 --extra dev --extra anthropic
 
 ### Failure A2: Tool Guardrail / actual_delta Semantics (Workstation CI / contracts)
 
-**Root Cause**: The test `test_browser_retry_after_action_is_not_a_replay` in `tests/agent/test_tool_guardrails.py` expects a successful `browser_click` to reset the replay streak after a failed `browser_navigate`. The `ToolCallGuardrailController.after_call()` logic only marks progress when:
-1. `actual_delta is True` (explicit verified external delta), OR
-2. `actual_delta is None AND (tool_name in PROGRESS_RESET_TOOL_NAMES OR file_mutation_result_landed(...))`
+**Post-merge correction**: The temporary OR-based implementation was rejected because it allowed a successful-looking tool ACK to count as progress merely because the tool name belonged to `PROGRESS_RESET_TOOL_NAMES`. That violates H-077's invariant `ACK != VERIFIED`.
 
-The bug: the condition was written as `(actual_delta is None and tool_name in PROGRESS_RESET_TOOL_NAMES and file_mutation_result_landed(...))` — an **AND** instead of **OR** between the tool-name whitelist and the file mutation check. Since `browser_click` is not a file mutation, it failed to reset progress.
+The authoritative H-079.1 semantics are:
 
-**Fix Applied** (`agent/tool_guardrails.py:495-497`):
 ```python
-# Before (buggy AND):
-if ((actual_delta is None and tool_name in PROGRESS_RESET_TOOL_NAMES
-     and file_mutation_result_landed(tool_name, result)) or actual_delta is True):
-
-# After (correct OR):
-if (actual_delta is True or
-    (actual_delta is None and (tool_name in PROGRESS_RESET_TOOL_NAMES or file_mutation_result_landed(tool_name, result)))):
+if (
+    (
+        actual_delta is None
+        and tool_name in PROGRESS_RESET_TOOL_NAMES
+        and file_mutation_result_landed(tool_name, result)
+    )
+    or actual_delta is True
+):
+    ...
 ```
 
-**H-077 Preservation**: The fix maintains the invariant that `actual_delta=True` requires **verified external evidence** (never optimistic success text). The `PROGRESS_RESET_TOOL_NAMES` whitelist contains tools that structurally represent progress (mutations, navigations, dispatches) — this is a semantic classification, not an optimistic assumption.
+A Browser call such as `browser_click -> {"ok": true}` does **not** prove external progress by itself. The positive retry test passes `actual_delta=True` explicitly, and H-079.1 adds a negative regression proving that the same ACK without `actual_delta=True` does not reset the replay streak.
 
-**Verification**: All 21 guardrail tests pass locally.
+**Status**: semantics corrected and negative regression added on the H-079.1 integration candidate.
 
 ---
 
@@ -230,5 +229,58 @@ ae8a50aec3 merge: include canonical upstream-first change gate
 - [x] Ancestry proof included
 - [x] New CI matrix (all gates green locally) documented
 - [x] Final upstream drift (3 commits, non-relevant) logged
-- [x] `READY_FOR_MAIN` declared pending GitHub Actions exact-head run 
- 
+- [x] `READY_FOR_MAIN` declared pending GitHub Actions exact-head run
+
+
+---
+
+## 11. H-079.1 — Dogfood Install & Current Upstream Closure
+
+This report was extended after the previous H-079 candidate was merged and a real Windows one-click dogfood run exposed a new installer defect.
+
+### Baseline refresh
+
+- downstream starting main: `d0ade123c0060503abb1a297cd00c602c18b44e6`;
+- exact upstream pin selected for this cycle: `8d153b26aae49f471312f48c93d8913d7d8df7f9`;
+- true two-parent semantic merge: `3db94236cf103841473cf94d8577626d181b5e8b`;
+- ancestry proof: integration branch is **0 commits behind the selected pin** and has merge-base at that exact pin;
+- 26 paths changed on both sides since the previous merge-base; 20 non-overlapping semantic hunks were combined and 6 conflicts were deliberately resolved by adopting current upstream owners/fixtures.
+
+The deliberately upstream-owned conflict resolutions include current cron/config semantics, the current npm lock, the unmocked Anthropic routing contract test, the already-correct Kanban dashboard fixture, and current TUI gateway owner behavior.
+
+### Anthropic contract correction
+
+Current upstream removed the H-079 temporary mock from `test_anthropic_messages_profile_resolves_to_messages_adapter`. The integration candidate now exercises `resolve_provider_client(...)` through the real `build_anthropic_client` path while Workstation CI installs `--extra anthropic`. This closes the previously incomplete unit-vs-integration concern without weakening the routing test.
+
+### One-click dogfood installer failure
+
+Observed real failure:
+
+```text
+Using existing isolated Python environment: C:\Github\hermes-agent\.venv
+Installing Hermes into .venv (editable mode)...
+C:\Github\hermes-agent\.venv\Scripts\python.exe: No module named pip
+```
+
+Root cause: `workstation/install.ps1` considered an existing version-valid `.venv` healthy but then unconditionally invoked `python -m pip`. uv-managed or deliberately pipless virtual environments can be valid while not containing pip.
+
+H-079.1 fix:
+
+1. prefer `uv pip install --python <venv-python> -e .` when `uv` is available;
+2. otherwise probe pip explicitly;
+3. when pip is missing, self-heal with `ensurepip --upgrade` and verify it before editable installation;
+4. preserve checkout-cleanliness and isolated-environment invariants;
+5. Windows CI now creates an existing `--without-pip` `.venv` before the installer step, reproducing the exact dogfood failure class.
+
+### Qualification disposition
+
+The code and regression tests are implemented, but this cycle must not be called fully qualified until the exact integration head passes the required GitHub Actions, including the Windows Browser workflow that exercises the pipless existing-venv fixture.
+
+```text
+UPSTREAM_PIN: 8d153b26aae49f471312f48c93d8913d7d8df7f9
+UPSTREAM_MERGE: 3db94236cf103841473cf94d8577626d181b5e8b
+DOGFOOD_PIPLESS_VENV_FIX: IMPLEMENTED
+H077_NEGATIVE_ACK_TEST: ADDED
+ANTHROPIC_REAL_BUILDER_CONTRACT: RESTORED BY CURRENT UPSTREAM
+READY_FOR_MAIN: PENDING EXACT-HEAD CI
+```
