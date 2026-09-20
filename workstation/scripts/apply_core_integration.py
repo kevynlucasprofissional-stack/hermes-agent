@@ -113,17 +113,13 @@ def patch_routes(text: str) -> str:
         marker="BROWSER_ROUTE",
         label="browser route constant",
     )
-    text = replace_once(
-        text,
-        "  | 'artifacts'\n  | 'chat'",
-        "  | 'artifacts'\n  | 'browser'\n  | 'chat'",
-        label="browser AppView",
+    text = insert_union_member(
+        text, declaration="export type AppView =", after="artifacts",
+        member="browser", label="browser AppView",
     )
-    text = replace_once(
-        text,
-        "  | 'artifacts'\n  | 'command-center'",
-        "  | 'artifacts'\n  | 'browser'\n  | 'command-center'",
-        label="browser AppRouteId",
+    text = insert_union_member(
+        text, declaration="export type AppRouteId =", after="artifacts",
+        member="browser", label="browser AppRouteId",
     )
     text = insert_after(
         text,
@@ -133,6 +129,31 @@ def patch_routes(text: str) -> str:
         label="browser APP_ROUTES row",
     )
     return text
+
+
+def insert_union_member(
+    text: str, *, declaration: str, after: str, member: str, label: str,
+) -> str:
+    """Insert a TypeScript union member without depending on its next sibling.
+
+    Upstream may add or reorder other members; the declaration and the selected
+    existing member are the stable semantic anchors.
+    """
+    start = text.find(declaration)
+    if start < 0:
+        raise PatchError(f"{label}: declaration anchor not found")
+    end = text.find("\n\n", start)
+    if end < 0:
+        raise PatchError(f"{label}: declaration terminator not found")
+    block = text[start:end]
+    member_line = f"  | '{member}'"
+    if member_line in block:
+        return text
+    anchor = f"  | '{after}'"
+    if block.count(anchor) != 1:
+        raise PatchError(f"{label}: expected one member anchor, found {block.count(anchor)}")
+    patched = block.replace(anchor, f"{anchor}\n{member_line}", 1)
+    return text[:start] + patched + text[end:]
 
 
 BROWSER_NAV = r"""  {
@@ -147,8 +168,8 @@ BROWSER_NAV = r"""  {
 def patch_sidebar(text: str) -> str:
     text = replace_once(
         text,
-        "  ARTIFACTS_ROUTE,\n  CRON_ROUTE,",
-        "  ARTIFACTS_ROUTE,\n  BROWSER_ROUTE,\n  CRON_ROUTE,",
+        "  ARTIFACTS_ROUTE,\n  CAPABILITIES_ROUTE,",
+        "  ARTIFACTS_ROUTE,\n  BROWSER_ROUTE,\n  CAPABILITIES_ROUTE,",
         label="sidebar Browser route import",
     )
     text = insert_after(
@@ -206,70 +227,16 @@ def patch_kanban(text: str) -> str:
 
 
 def patch_browser_tool(text: str) -> str:
-    text = insert_after(
-        text,
-        "from tools.browser_extension_router import (\n    extension_controller_available,\n    routed_browser_handler,\n)\n",
-        "from tools.browser_workstation import (\n    workstation_controller_available,\n    workstation_routed_browser_handler,\n)\n",
-        marker="workstation_routed_browser_handler",
-        label="Workstation browser router import",
+    # Browser authority now enters through the generic extension router. The
+    # Workstation adapter registers its controller provider there; this patch
+    # gate must never recreate the retired product-specific outer router.
+    required = (
+        "from tools.browser_extension_router import extension_controller_available, routed_browser_handler",
+        "def _routed_handler(name: str, fallback):",
     )
-    text = insert_after(
-        text,
-        "def _browser_router_kw(kw: dict) -> dict:\n    \"\"\"Identity kwargs forwarded to the extension router wrapper.\"\"\"\n    return {\n        \"task_id\": kw.get(\"task_id\"),\n        \"session_id\": kw.get(\"session_id\"),\n    }\n",
-        "\n\ndef _workstation_or_legacy(action: str, args: dict, kw: dict, fallback):\n    \"\"\"Prefer the embedded Hermes Browser; preserve legacy fallback for unbound tasks.\"\"\"\n    return workstation_routed_browser_handler(\n        action,\n        args,\n        fallback=fallback,\n        task_id=kw.get(\"task_id\"),\n        session_id=kw.get(\"session_id\"),\n    )\n",
-        marker="def _workstation_or_legacy",
-        label="Workstation browser fallback helper",
-    )
-    text = replace_once(
-        text,
-        "    return check_browser_requirements() or extension_controller_available(action)\n",
-        "    return (\n        check_browser_requirements()\n        or extension_controller_available(action)\n        or workstation_controller_available()\n    )\n",
-        label="Workstation browser availability",
-    )
-    # Workstation must be the OUTERMOST router. The official extension router
-    # and legacy backend are fallbacks only while an unbound task is allowed to
-    # route elsewhere. This also makes routing_enabled=false truly internal-only.
-    route_specs = {
-        "browser_navigate": 'browser_navigate(url=args.get("url", ""), task_id=kw.get("task_id"))',
-        "browser_snapshot": 'browser_snapshot(\n            full=args.get("full", False), task_id=kw.get("task_id"), user_task=kw.get("user_task"))',
-        "browser_click": 'browser_click(ref=args.get("ref", ""), task_id=kw.get("task_id"))',
-        "browser_type": 'browser_type(\n                ref=args.get("ref", ""),\n                text=args.get("text"),\n                text_ref=args.get("text_ref"),\n                artifact_ref=args.get("artifact_ref"),\n                clear=args.get("clear", True),\n                append=args.get("append", False),\n                mode=args.get("mode", "insert_text"),\n                semantic_anchor=args.get("semantic_anchor"),\n                task_id=kw.get("task_id"),\n            )',
-        "browser_scroll": 'browser_scroll(direction=args.get("direction", "down"), task_id=kw.get("task_id"))',
-        "browser_back": 'browser_back(task_id=kw.get("task_id"))',
-        "browser_press": 'browser_press(key=args.get("key", ""), task_id=kw.get("task_id"))',
-        "browser_get_images": 'browser_get_images(task_id=kw.get("task_id"))',
-        "browser_vision": 'browser_vision(question=args.get("question", ""), annotate=args.get("annotate", False), task_id=kw.get("task_id"))',
-        "browser_console": 'browser_console(clear=args.get("clear", False), expression=args.get("expression"), task_id=kw.get("task_id"))',
-    }
-    for action, legacy_call in route_specs.items():
-        old = (
-            f'handler=lambda args, **kw: routed_browser_handler(\n'
-            f'        "{action}",\n'
-            f'        args,\n'
-            f'        fallback=lambda: {legacy_call},\n'
-            f'        **_browser_router_kw(kw),\n'
-            f'    ),'
-        )
-        new = (
-            f'handler=lambda args, **kw: _workstation_or_legacy(\n'
-            f'        "{action}",\n'
-            f'        args,\n'
-            f'        kw,\n'
-            f'        lambda: routed_browser_handler(\n'
-            f'            "{action}",\n'
-            f'            args,\n'
-            f'            fallback=lambda: {legacy_call},\n'
-            f'            **_browser_router_kw(kw),\n'
-            f'        ),\n'
-            f'    ),'
-        )
-        if new not in text:
-            if old not in text:
-                raise PatchError(f"browser tool route anchor missing for {action}")
-            text = text.replace(old, new, 1)
-    text = text.replace("    check_fn=check_browser_requirements,\n    emoji=\"🖼️\",", "    check_fn=lambda: check_browser_routed_requirements(\"browser_get_images\"),\n    emoji=\"🖼️\",")
-    text = text.replace("    check_fn=check_browser_vision_requirements,\n    emoji=\"👁️\",", "    check_fn=lambda: check_browser_vision_requirements() or workstation_controller_available(),\n    emoji=\"👁️\",")
-    text = text.replace("    check_fn=check_browser_requirements,\n    emoji=\"🖥️\",", "    check_fn=lambda: check_browser_routed_requirements(\"browser_console\"),\n    emoji=\"🖥️\",")
+    missing = [anchor for anchor in required if anchor not in text]
+    if missing:
+        raise PatchError(f"generic browser broker anchors missing: {missing!r}")
     return text
 
 
