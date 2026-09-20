@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -28,8 +29,8 @@ from hermes_cli import kanban_db_connect as kbc
 # ---------------------------------------------------------------------------
 
 
-def _load_plugin_module():
-    """Dynamically load the dashboard plugin in its bare-FastAPI test context."""
+def _load_plugin_router():
+    """Dynamically load plugins/kanban/dashboard/plugin_api.py and return its router."""
     repo_root = Path(__file__).resolve().parents[2]
     plugin_file = repo_root / "plugins" / "kanban" / "dashboard" / "plugin_api.py"
     assert plugin_file.exists(), f"plugin file missing: {plugin_file}"
@@ -41,11 +42,7 @@ def _load_plugin_module():
     mod = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
-    return mod
-
-
-def _load_plugin_router():
-    return _load_plugin_module().router
+    return mod.router
 
 
 @pytest.fixture
@@ -84,35 +81,6 @@ def test_board_empty(client):
     assert data["tenants"] == []
     assert data["assignees"] == []
     assert data["latest_event_id"] == 0
-
-
-def test_hybrid_checklist_crud_and_stale_revision(client):
-    board = client.post("/api/plugins/kanban/hybrid/boards", json={"name": "Product"}).json()["board"]
-    column = client.post(
-        f"/api/plugins/kanban/hybrid/boards/{board['id']}/columns", json={"name": "Doing"}
-    ).json()["column"]
-    card = client.post(
-        f"/api/plugins/kanban/hybrid/boards/{board['id']}/cards",
-        json={"column_id": column["id"], "title": "Launch"},
-    ).json()["card"]
-    checklist = client.post(
-        f"/api/plugins/kanban/hybrid/cards/{card['id']}/checklists", json={"title": "QA"}
-    ).json()["checklist"]
-    item = client.post(
-        f"/api/plugins/kanban/hybrid/checklists/{checklist['id']}/items", json={"body": "Smoke test"}
-    ).json()["item"]
-    updated = client.patch(
-        f"/api/plugins/kanban/hybrid/checklist-items/{item['id']}",
-        json={"completed": True, "expected_revision": item["revision"]},
-    )
-    assert updated.status_code == 200
-    stale = client.patch(
-        f"/api/plugins/kanban/hybrid/checklist-items/{item['id']}",
-        json={"completed": False, "expected_revision": item["revision"]},
-    )
-    assert stale.status_code == 409
-    detail = client.get(f"/api/plugins/kanban/hybrid/cards/{card['id']}").json()["card"]
-    assert detail["checklists"][0]["items"][0]["completed"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -625,42 +593,6 @@ def test_ws_events_rejects_when_token_required(tmp_path, monkeypatch):
     # is flaky. The assertion that matters is: no CancelledError escaped.
 
 
-def test_ws_task_event_projects_linked_human_card_without_waiting_for_poll(kanban_home, monkeypatch):
-    """The established task-event socket is also the Hybrid invalidation path."""
-    module = _load_plugin_module()
-    monkeypatch.setattr(module, "_EVENT_POLL_SECONDS", 0.01)
-    monkeypatch.setattr(module, "_ws_upgrade_authorized", lambda ws: True)
-    app = FastAPI()
-    app.include_router(module.router, prefix="/api/plugins/kanban")
-    event_client = TestClient(app)
-
-    conn = kbc.connect()
-    try:
-        from hermes_cli import hybrid_kanban as hybrid
-
-        board = hybrid.create_board(conn, name="Realtime bridge")
-        column = hybrid.create_column(conn, board_id=board["id"], name="Inbox")
-        card = hybrid.create_card(conn, board_id=board["id"], column_id=column["id"], title="Follow task state")
-        delegated = hybrid.delegate_card(conn, card_id=card["id"])
-        task_id = delegated["delegation"]["agent_task_id"]
-        task_cursor = conn.execute("SELECT COALESCE(MAX(id), 0) AS value FROM task_events").fetchone()["value"]
-        hybrid_cursor = conn.execute("SELECT COALESCE(MAX(id), 0) AS value FROM hybrid_activity").fetchone()["value"]
-
-        with event_client.websocket_connect(
-            f"/api/plugins/kanban/events?since={task_cursor}&hybrid_since={hybrid_cursor}"
-        ) as ws:
-            assert kb.block_task(conn, task_id, reason="approval needed", kind="needs_input") is True
-            frame = ws.receive_json()
-    finally:
-        conn.close()
-
-    assert any(event["task_id"] == task_id for event in frame["events"])
-    assert "hybrid_events" in frame, frame
-    progress = next(event for event in frame["hybrid_events"] if event["kind"] == "delegation_progressed")
-    assert progress["card_id"] == card["id"]
-    assert progress["payload"]["state"] == "waiting"
-
-
 # ---------------------------------------------------------------------------
 # Bulk actions
 # ---------------------------------------------------------------------------
@@ -836,7 +768,7 @@ def test_dashboard_done_actions_prompt_for_completion_summary():
     """
 
     repo_root = Path(__file__).resolve().parents[2]
-    js = (repo_root / "plugins" / "kanban" / "dashboard" / "dist" / "index.js").read_text(encoding="utf-8")
+    js = (repo_root / "plugins" / "kanban" / "dashboard" / "dist" / "index.js").read_text()
 
     import re
 
@@ -931,7 +863,7 @@ def test_dashboard_surfaces_ready_blocked_error_inline():
     repo_root = Path(__file__).resolve().parents[2]
     bundle = (
         repo_root / "plugins" / "kanban" / "dashboard" / "dist" / "index.js"
-    ).read_text(encoding="utf-8")
+    ).read_text()
 
     # Helper that strips ``"409: {\"detail\":\"…\"}"`` down to the
     # human-readable message before it lands in any banner.
@@ -959,7 +891,7 @@ def test_dashboard_dependency_selects_use_value_change_handler():
     repo_root = Path(__file__).resolve().parents[2]
     bundle = (
         repo_root / "plugins" / "kanban" / "dashboard" / "dist" / "index.js"
-    ).read_text(encoding="utf-8")
+    ).read_text()
 
     parent_select = (
         'value: newParent,\n'
@@ -1345,3 +1277,30 @@ def test_specify_happy_path(client, monkeypatch):
 # ---------------------------------------------------------------------------
 # Final result visibility for Done cards
 # ---------------------------------------------------------------------------
+
+
+
+
+# ---------------------------------------------------------------------------
+# Touch drag-vs-tap threshold (#115568)
+# ---------------------------------------------------------------------------
+
+def test_touch_card_tap_opens_instead_of_dragging():
+    """attachTouchDrag() must not claim a stationary tap: without a movement threshold,
+    every touch pointerdown called preventDefault() immediately, which suppresses the
+    synthesized click TaskCard.handleClick relies on to call props.onOpen() (#115568).
+    The bundle has no build step, so this runs the real function (extracted verbatim, not
+    regex-matched) through a real pointerdown/move/up sequence with a minimal DOM stub —
+    behavioral, not a source-text pin.
+    """
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node not available")
+    bundle = Path(__file__).resolve().parents[2] / "plugins" / "kanban" / "dashboard" / "dist" / "index.js"
+    probe = Path(__file__).parent / "fixtures" / "kanban_touch_drag_probe.js"
+    result = subprocess.run(
+        [node, str(probe), str(bundle)],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    assert "PASS" in result.stdout

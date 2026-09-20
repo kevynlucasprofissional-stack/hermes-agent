@@ -2517,6 +2517,37 @@ class TestStaleBaseUrlWarning:
 
 
 class TestAuxiliaryTaskExtraBody:
+    def test_task_reasoning_disable_uses_deepseek_thinking_wire(self, monkeypatch):
+        """Task-level ``none`` must reach an always-toggle profile as its native disable shape."""
+        import agent.auxiliary_client as aux
+
+        monkeypatch.setattr(aux, "_get_auxiliary_task_config", lambda _task: {"reasoning_effort": "none"})
+
+        kwargs = aux._build_call_kwargs(
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            messages=[{"role": "user", "content": "hello"}],
+            extra_body=aux._get_task_extra_body("compression"),
+            task="compression",
+        )
+
+        assert kwargs["extra_body"]["thinking"] == {"type": "disabled"}
+        assert "reasoning" not in kwargs["extra_body"]
+
+    def test_explicit_deepseek_thinking_disable_beats_profile_default(self):
+        """An explicit vendor control is authoritative when no normalized config is present."""
+        import agent.auxiliary_client as aux
+
+        kwargs = aux._build_call_kwargs(
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            messages=[{"role": "user", "content": "hello"}],
+            extra_body={"thinking": {"type": "disabled"}},
+            task="compression",
+        )
+
+        assert kwargs["extra_body"]["thinking"] == {"type": "disabled"}
+
     def test_disabled_caller_reasoning_suppresses_task_reasoning_for_profile_wire(self, monkeypatch):
         """A profile-owned ``reasoning_effort=none`` must not ship with task reasoning."""
         import agent.auxiliary_client as aux
@@ -3154,13 +3185,11 @@ class TestAnthropicAuxiliaryReasoningTranslation:
         # profile's declared wire, or the ``_reasoning_config`` kwarg above would reach a plain
         # OpenAI client and TypeError.
         import model_tools  # noqa: F401
-        from unittest.mock import MagicMock, patch
         from agent.auxiliary_client import AnthropicAuxiliaryClient, resolve_provider_client
 
         monkeypatch.setenv("COMMANDCODE_API_KEY", "sk-test-" + "x" * 20)
-        with patch("agent.anthropic_adapter.build_anthropic_client", return_value=MagicMock()):
-            client, _ = resolve_provider_client("commandcode-anthropic", model="claude-haiku-4-5-20251001")
-            assert isinstance(client, AnthropicAuxiliaryClient)
+        client, _ = resolve_provider_client("commandcode-anthropic", model="claude-haiku-4-5-20251001")
+        assert isinstance(client, AnthropicAuxiliaryClient)
 
 
 class TestAuxiliaryProviderProfileReasoning:
