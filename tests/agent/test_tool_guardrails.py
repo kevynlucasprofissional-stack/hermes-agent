@@ -369,6 +369,30 @@ def test_browser_retry_after_action_is_not_a_replay():
     assert c.halt_decision is None
 
 
+def test_browser_ok_without_actual_delta_does_not_reset_replay():
+    """A successful-looking browser ACK is not verified external progress.
+
+    H-077 requires explicit/observed delta evidence; {"ok": true} alone must
+    not reset a failing replay streak.
+    """
+    c = _HARD()
+    nav = {"url": "https://example.test/app"}
+    for _ in range(5):
+        assert c.before_call("browser_navigate", nav).allows_execution
+        c.after_call("browser_navigate", nav, '{"error": "timeout"}', failed=True)
+
+    c.after_call(
+        "browser_click",
+        {"selector": "#retry"},
+        '{"ok": true}',
+        failed=False,
+    )
+
+    decision = c.before_call("browser_navigate", nav)
+    assert decision.action == "block"
+    assert decision.code == "repeated_exact_failure_block"
+
+
 def test_supervised_task_platforms_keep_warning_only_default():
     for platform in ("subagent", "api_server", "cli"):
         cfg = ToolCallGuardrailConfig.from_mapping({}, platform=platform)
