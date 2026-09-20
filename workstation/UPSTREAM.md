@@ -27,15 +27,14 @@ H-079 baseline status (2026-09-20):
 - downstream `main`: `d0ade123c0060503abb1a297cd00c602c18b44e6`;
 - merge commit: `24a8501934374e47a23b51f21183fb9c4edd3a76`;
 - ancestry status: verified (`git merge-base HEAD upstream/main` -> `c1488ac947...`);
-- upstream drift observed: `a4f9857ff5ec618064633e1070955fcc71d01a60` (396 commits ahead of the pin, 542 commits on `main` not in upstream);
+- upstream drift observed: `2c0b2a980c2d0e92f0452500089f5af91208f94c` (447 commits ahead of the pin, 543 commits on `main` not in upstream);
 - H-079 Stage A & B are merged to `main`.
 
 Upstream `main` is a moving target and advanced by 2 commits during this observation, so the drift
 figure above is a dated snapshot rather than a fixed target. The pin, not the observation, is what
 the next cycle is measured against.
 
-Exact-head CI is **red** at `d0ade123c0...`, so the H-079 baseline gate is not satisfied and the
-next code-change cycle must not begin until it is green.
+**Exact-head CI is green** at `d0ade123c0...` after the fix restoring the browser routing ladder was merged in `1716062f32`, so the H-079 baseline gate is satisfied and a new downstream code-change cycle may now start.
 
 
 ## H-078B synchronization rule (2026-09-19)

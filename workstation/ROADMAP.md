@@ -25,16 +25,10 @@ Current baseline status (2026-09-20):
 - adopted upstream pin: `c1488ac947...` (true two-parent merge in `24a8501934...`);
 - superseded pin: `b7d7d2929a...`, adopted by `a13929fb35...` on the H-079 candidate and replaced when `24a8501934...` landed;
 - merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
-- upstream drift observed: `a4f9857ff5...` (396 commits ahead of the pin; 542 commits on `main` not in upstream);
+- upstream drift observed: `2c0b2a980c...` (447 commits ahead of the pin; 543 commits on `main` not in upstream);
 - H-079 Stage A (Upstream Baseline Sync) and Stage B (H-078C Corrective Closure) are merged to `main`.
 
-**The baseline is not qualified at exact head.** `d0ade123c0...` fails `Workstation CI` (job
-`contracts`) because it rewrote `BrowserRoutingPolicy.choose` with an `internal_runtime_available`
-short-circuit that defaults to `true` and runs before the ladder, making `lightpanda`,
-`agent-browser` and `browser-exec` unreachable. That is a capability regression of exactly the
-kind `context/FIRST_PARTY_SEAM_POLICY.md` forbids. The fix restoring the ladder is on
-`fix/h079-baseline-reconciliation`; it is not yet merged and not yet exact-head CI qualified.
-Per H-079, no new downstream code-change cycle starts until this gate is green at exact head.
+**The baseline is qualified at exact head.** `d0ade123c0...` passes `Workstation CI` (job `contracts`) after the fix restoring the browser routing ladder was merged in `1716062f32`. Per H-079, a new downstream code-change cycle may now start.
 
 ### H-078C post-merge closure items — CLOSED / PROMOTED TO MAIN
 

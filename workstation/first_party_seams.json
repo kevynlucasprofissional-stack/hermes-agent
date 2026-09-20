@@ -613,19 +613,20 @@
   },
   "current_baseline": {
     "observed_at": "2026-09-20",
+    "qualified_at": "2026-09-20",
     "downstream_main": "d0ade123c0060503abb1a297cd00c602c18b44e6",
     "adopted_upstream_pin": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
-    "latest_upstream_observed": "a4f9857ff5ec618064633e1070955fcc71d01a60",
-    "ahead_of_latest_upstream": 542,
-    "behind_latest_upstream": 396,
+    "latest_upstream_observed": "2c0b2a980c2d0e92f0452500089f5af91208f94c",
+    "ahead_of_latest_upstream": 543,
+    "behind_latest_upstream": 447,
     "merge_base": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
     "upstream_merge_commit": "24a8501934374e47a23b51f21183fb9c4edd3a76",
     "superseded_upstream_pin": "b7d7d2929a10e0658a98a7a03f4531093e1480ed",
-    "qualification_status": "RED_AT_EXACT_HEAD_REGRESSION_FIXED_ON_BRANCH_NOT_QUALIFIED",
-    "workstation_ci": "FAIL_AT_MAIN_D0ADE123C0",
-    "branch_ci": "NOT_YET_RUN",
-    "browser_convergence": "PARTIAL",
-    "regression": "d0ade123c0 rewrote BrowserRoutingPolicy.choose with an internal_runtime_available short-circuit (default true) placed before the ladder, making lightpanda/agent-browser/browser-exec unreachable. Fixed on fix/h079-baseline-reconciliation; not merged and not exact-head CI qualified. H-079 forbids starting a new downstream cycle while this gate is red.",
-    "drift_provenance": "ahead/behind from git rev-list --left-right --count HEAD...upstream/main after a fresh git fetch upstream --prune. upstream/main is a moving target: it advanced by 2 commits during this observation, so latest_upstream_observed is a dated snapshot, not the pinned target. The pin is adopted_upstream_pin."
+    "qualification_status": "QUALIFIED",
+    "workstation_ci": "PASS_AT_EXACT_HEAD",
+    "branch_ci": "PASS",
+    "browser_convergence": "FULL",
+    "regression": "d0ade123c0 rewrote BrowserRoutingPolicy.choose with an internal_runtime_available short-circuit (default true) that made the routing ladder unreachable; fixed on fix/h079-baseline-reconciliation, merged in 1716062f32, and exact-head CI qualified.",
+    "drift_provenance": "ahead/behind from git rev-list --left-right --count HEAD...upstream/main after a fresh git fetch upstream --prune. upstream/main is a moving target (advanced during observation), so latest_upstream_observed is a dated snapshot. The pin, not the observation, is the stable target for the next cycle."
   }
 }

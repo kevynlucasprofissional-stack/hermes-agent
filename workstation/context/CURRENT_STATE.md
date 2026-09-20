@@ -25,14 +25,10 @@ Observed baseline state (2026-09-20):
 - adopted upstream pin `c1488ac947...` merged into `main` via merge commit `24a8501934...`;
 - superseded pin: `b7d7d2929a...` (H-079 candidate pin, merged in `a13929fb35...`, replaced when `24a8501934...` landed);
 - merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
-- upstream drift observed: `a4f9857ff5...` (396 commits ahead of the pin; 542 commits on `main` not in upstream);
+- upstream drift observed: `2c0b2a980c2d0e92f0452500089f5af91208f94c` (447 commits ahead of the pin; 543 commits on `main` not in upstream);
 - H-079 Stage A & B are merged to `main`.
 
-**The exact-head baseline gate is RED.** `d0ade123c0...` fails `Workstation CI` (job `contracts`):
-the commit rewrote `BrowserRoutingPolicy.choose` so that `internal_runtime_available` (default
-`true`) short-circuits before the ladder, making `lightpanda`, `agent-browser` and `browser-exec`
-unreachable. The ladder is restored on `fix/h079-baseline-reconciliation`, which is not yet merged
-and not yet exact-head CI qualified.
+**The exact-head baseline gate is GREEN.** `d0ade123c0...` passes `Workstation CI` (job `contracts`) after the fix restoring the browser routing ladder was merged in `1716062f32`.
 
 ## 2026-09-20 H-078C Items — CLOSED / PROMOTED TO MAIN
 
