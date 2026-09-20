@@ -20,15 +20,20 @@ upstream fetch -> exact SHA pin -> true baseline merge
 Do not chase a moving HEAD inside the feature. Pin one SHA for the cycle. Do not combine
 an unqualified upstream merge and the requested feature into an opaque patch.
 
-Current baseline status (2026-09-20):
-- downstream `main`: `d0ade123c0...`;
+Qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
+- observed downstream `main`: `9e8127e247...`;
 - adopted upstream pin: `c1488ac947...` (true two-parent merge in `24a8501934...`);
 - superseded pin: `b7d7d2929a...`, adopted by `a13929fb35...` on the H-079 candidate and replaced when `24a8501934...` landed;
-- merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
-- upstream drift observed: `2c0b2a980c...` (447 commits ahead of the pin; 543 commits on `main` not in upstream);
+- merge ancestry verified: `git merge-base 9e8127e247 2c0b2a980c` -> `c1488ac947...`;
+- drift at `9e8127e247...` versus upstream snapshot `2c0b2a980c...`: 544 downstream-only and 447 upstream-only commits;
 - H-079 Stage A (Upstream Baseline Sync) and Stage B (H-078C Corrective Closure) are merged to `main`.
 
-**The baseline is qualified at exact head.** `d0ade123c0...` passes `Workstation CI` (job `contracts`) after the fix restoring the browser routing ladder was merged in `1716062f32`. Per H-079, a new downstream code-change cycle may now start.
+**The baseline is qualified at exact head.** `9e8127e247...` — the head PR #41 merged, carrying the
+browser-routing-ladder fix `1716062f32...` — passes `Workstation CI` (job `contracts`, run
+`35536129052`). The red run was at `d0ade123c0...`, which that fix supersedes. This evidence does
+not automatically qualify later branch or main heads. Aggregate browser convergence is
+**UNMEASURED**: no named acceptance check is cited for the former `FULL` claim; the narrower
+browser-authority evidence below remains separate.
 
 ### H-078C post-merge closure items — CLOSED / PROMOTED TO MAIN
 
@@ -43,9 +48,10 @@ promoted to `main`:
 - **Full Workstation Suite**: 741 passed, 2 skipped, 1 warning (291s).
 - **Seams Audit**: 18 classified, 0 unclassified, 0 budget regressions.
 
-These items were promoted to `main` in `24a8501934...`. Exact-head CI verification has since
-been performed and is **red** at `d0ade123c0...` for an unrelated reason (the `BrowserRoutingPolicy`
-ladder regression described above); the H-078C closure items themselves were not implicated.
+These items were promoted to `main` in `24a8501934...`. Exact-head CI verification was subsequently
+performed: it was **red** at `d0ade123c0...` for the `BrowserRoutingPolicy` ladder regression
+described above, and is **green** at the qualified head `9e8127e247...`. The H-078C closure items
+themselves were not implicated in either run.
 
 
 ## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED

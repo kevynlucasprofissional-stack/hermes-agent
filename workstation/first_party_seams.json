@@ -614,10 +614,10 @@
   "current_baseline": {
     "observed_at": "2026-09-20",
     "qualified_at": "2026-09-20",
-    "downstream_main": "d0ade123c0060503abb1a297cd00c602c18b44e6",
+    "downstream_main": "9e8127e247accf6858f295e554cab7d4bb7adefe",
     "adopted_upstream_pin": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
     "latest_upstream_observed": "2c0b2a980c2d0e92f0452500089f5af91208f94c",
-    "ahead_of_latest_upstream": 543,
+    "ahead_of_latest_upstream": 544,
     "behind_latest_upstream": 447,
     "merge_base": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
     "upstream_merge_commit": "24a8501934374e47a23b51f21183fb9c4edd3a76",
@@ -625,8 +625,11 @@
     "qualification_status": "QUALIFIED",
     "workstation_ci": "PASS_AT_EXACT_HEAD",
     "branch_ci": "PASS",
-    "browser_convergence": "FULL",
-    "regression": "d0ade123c0 rewrote BrowserRoutingPolicy.choose with an internal_runtime_available short-circuit (default true) that made the routing ladder unreachable; fixed on fix/h079-baseline-reconciliation, merged in 1716062f32, and exact-head CI qualified.",
-    "drift_provenance": "ahead/behind from git rev-list --left-right --count HEAD...upstream/main after a fresh git fetch upstream --prune. upstream/main is a moving target (advanced during observation), so latest_upstream_observed is a dated snapshot. The pin, not the observation, is the stable target for the next cycle."
+    "browser_convergence": "UNMEASURED",
+    "browser_convergence_provenance": "No named acceptance check is cited for aggregate browser convergence. Workstation CI success and the narrower Browser Authority Convergence evidence do not establish FULL or PARTIAL for this field.",
+    "qualification_scope": "Qualification applies only to downstream_main at the cited Workstation CI run, not automatically to later branch or main heads.",
+    "workstation_ci_run": "https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/35536129052",
+    "regression": "d0ade123c0 rewrote BrowserRoutingPolicy.choose with an internal_runtime_available short-circuit (default true) that made the routing ladder unreachable; Workstation CI failed at that commit (run 35531064449). Restored by 1716062f32 on fix/h079-baseline-reconciliation (branch CI green) and merged to main as 9e8127e247 via PR #41, where Workstation CI passes (run 35536129052).",
+    "drift_provenance": "Reproduced with git rev-list --left-right --count 9e8127e247accf6858f295e554cab7d4bb7adefe...2c0b2a980c2d0e92f0452500089f5af91208f94c: 544 downstream-only and 447 upstream-only commits. git merge-base of the same SHAs is c1488ac947c9bc33fd65ec464548dc9d8edd6122. These counts describe downstream_main versus latest_upstream_observed, not moving HEAD or upstream/main. The adopted upstream pin remains unchanged."
   }
 }
