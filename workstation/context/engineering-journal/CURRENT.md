@@ -1,5 +1,20 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-079.1 — Current upstream refresh and pipless dogfood venv — 2026-09-20
+
+**Observation:** one-click dogfood failed on a reused repo-local `.venv` with `No module named pip`.
+
+**Falsified assumption:** “existing supported `.venv` implies `python -m pip` is available.” uv-managed and intentionally pipless venvs are legitimate counterexamples.
+
+**Upstream-first execution:** before changing the installer, Stage A was reopened against exact upstream pin `8d153b26aae49f471312f48c93d8913d7d8df7f9`. A true two-parent semantic merge was created at `3db94236cf103841473cf94d8577626d181b5e8b`; the integration branch is 0 commits behind that pin.
+
+**Implementation hypothesis:** installation should target the selected venv interpreter, not depend on pip being preinstalled inside it. Prefer `uv pip install --python`; if uv is absent, probe pip and bootstrap with `ensurepip` only when necessary.
+
+**Regression evidence added:** Windows Browser CI constructs an existing `python -m venv --without-pip .venv` before running the canonical installer. H-077 also gains a negative browser-ACK regression; upstream current restores the real Anthropic builder contract test.
+
+**Status:** implementation landed on integration; exact-head CI pending.
+
+
 ## H-079 — Make upstream synchronization the first phase of every downstream change (2026-09-20)
 
 **Status:** POLICY ESTABLISHED / MANDATORY FOR FUTURE CODE-CHANGE LANES.
