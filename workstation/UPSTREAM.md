@@ -24,7 +24,7 @@ synchronization until after a feature is already built.
 H-079 baseline status (2026-09-20):
 - adopted pin: `c1488ac947c9bc33fd65ec464548dc9d8edd6122`;
 - superseded pin: `b7d7d2929a10e0658a98a7a03f4531093e1480ed` (H-079 candidate pin, adopted by `a13929fb3568ce4c0423c5cf8cbe4f479ea22849`, replaced when the merge below landed);
-- downstream `main`: `d0ade123c0060503abb1a297cd00c602c18b44e6`;
+- downstream `main`: `9e8127e247accf6858f295e554cab7d4bb7adefe`;
 - merge commit: `24a8501934374e47a23b51f21183fb9c4edd3a76`;
 - ancestry status: verified (`git merge-base HEAD upstream/main` -> `c1488ac947...`);
 - upstream drift observed: `2c0b2a980c2d0e92f0452500089f5af91208f94c` (447 commits ahead of the pin, 543 commits on `main` not in upstream);
@@ -34,7 +34,10 @@ Upstream `main` is a moving target and advanced by 2 commits during this observa
 figure above is a dated snapshot rather than a fixed target. The pin, not the observation, is what
 the next cycle is measured against.
 
-**Exact-head CI is green** at `d0ade123c0...` after the fix restoring the browser routing ladder was merged in `1716062f32`, so the H-079 baseline gate is satisfied and a new downstream code-change cycle may now start.
+**Exact-head CI is green** at the merged head `9e8127e247...` (PR #41, carrying the fix
+`1716062f32...` that restores the browser routing ladder); the red run was at `d0ade123c0...`, which
+that fix supersedes. The H-079 baseline gate is satisfied, so a new downstream code-change cycle
+may now start.
 
 
 ## H-078B synchronization rule (2026-09-19)

@@ -21,14 +21,16 @@ feature against moving upstream. Baseline synchronization and target work remain
 and independently reviewable.
 
 Observed baseline state (2026-09-20):
-- `main@d0ade123c0...`;
+- `main@9e8127e247...`;
 - adopted upstream pin `c1488ac947...` merged into `main` via merge commit `24a8501934...`;
 - superseded pin: `b7d7d2929a...` (H-079 candidate pin, merged in `a13929fb35...`, replaced when `24a8501934...` landed);
 - merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
 - upstream drift observed: `2c0b2a980c2d0e92f0452500089f5af91208f94c` (447 commits ahead of the pin; 543 commits on `main` not in upstream);
 - H-079 Stage A & B are merged to `main`.
 
-**The exact-head baseline gate is GREEN.** `d0ade123c0...` passes `Workstation CI` (job `contracts`) after the fix restoring the browser routing ladder was merged in `1716062f32`.
+**The exact-head baseline gate is GREEN.** `9e8127e247...` (PR #41, carrying the
+browser-routing-ladder fix `1716062f32...`) passes `Workstation CI` (job `contracts`). The red run
+was at `d0ade123c0...`, which that fix supersedes.
 
 ## 2026-09-20 H-078C Items — CLOSED / PROMOTED TO MAIN
 
@@ -43,9 +45,10 @@ promoted to `main`:
 - **Desktop & Native Browser**: H004 native probe VALIDATED; Desktop typecheck 0 errors; Desktop production build clean; H013 sustained headless load spec passes 3/3 in 1.4m.
 - **Seam Audit**: 18 classified, 0 unclassified, 0 budget regressions; `first_party_seams.json` synchronized with exact reality.
 
-These items were promoted to `main` in `24a8501934...`. Exact-head CI was subsequently evaluated
-and is **red** at `d0ade123c0...` for an unrelated reason (the `BrowserRoutingPolicy` ladder
-regression described above); the H-078C closure items themselves were not implicated.
+These items were promoted to `main` in `24a8501934...`. Exact-head CI was subsequently evaluated:
+it was **red** at `d0ade123c0...` for the `BrowserRoutingPolicy` ladder regression described above,
+and is **green** at the qualified head `9e8127e247...`. The H-078C closure items themselves were
+not implicated in either run.
 
 
 ## 2026-09-19 H-078B Code-to-Code Migration & Semantic Decoupling — COMPLETE / ACTIVE
