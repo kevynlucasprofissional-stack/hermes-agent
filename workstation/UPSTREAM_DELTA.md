@@ -1,5 +1,34 @@
 # Hermes Workstation upstream delta
 
+## HW-030 — Upstream-first qualified baseline discipline (2026-09-20)
+
+Decision D-030 makes upstream freshness an admission condition for downstream code work.
+
+This changes the maintenance model from:
+```text
+feature work -> more feature work -> periodic large upstream catch-up
+```
+
+to:
+```text
+upstream preflight -> pinned baseline sync -> seam reconciliation -> baseline qualification
+-> target downstream work -> target qualification -> final drift check
+```
+
+The sync lane and feature/fix lane remain separately reviewable.
+
+H-078C post-merge state at this decision:
+- the pinned upstream history is now a real ancestor of downstream main;
+- historical 13k-commit divergence is closed;
+- exact-head qualification is reopened because Workstation CI is red;
+- Browser routing still has REMOVE debt through `tools/browser_workstation`;
+- batch admission currently has two owners;
+- adapter bootstrap can silently fail open.
+
+A classified seam is not considered retired until the actual authority path changes and
+parity/qualification proves it.
+
+
 ## HW-029 — First-Party Workstation Adapter and Generic Core Decoupling (2026-09-19)
 
 H-078B implementation has been completed, eliminating all direct Workstation imports from the generic
