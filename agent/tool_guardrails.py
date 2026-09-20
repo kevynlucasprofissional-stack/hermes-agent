@@ -492,8 +492,8 @@ class ToolCallGuardrailController:
         # A successful mutation is progress for every failing signature still counted
         # this turn. Pure loops never mutate between attempts, so the replay detector keeps its teeth.
         # actual_delta is a trusted caller argument, never parsed from tool text.
-        if (actual_delta is True or
-            (actual_delta is None and (tool_name in PROGRESS_RESET_TOOL_NAMES or file_mutation_result_landed(tool_name, result)))):
+        if ((actual_delta is None and tool_name in PROGRESS_RESET_TOOL_NAMES
+             and file_mutation_result_landed(tool_name, result)) or actual_delta is True):
             self._progress_since_failure.update(dict.fromkeys(self._exact_failure_counts, True))
             self._same_tool_failure_counts.clear()
         if not self._is_idempotent(tool_name):

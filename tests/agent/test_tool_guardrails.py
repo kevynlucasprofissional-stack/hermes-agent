@@ -365,7 +365,7 @@ def test_browser_retry_after_action_is_not_a_replay():
     for _ in range(8):
         assert c.before_call("browser_navigate", nav).allows_execution
         c.after_call("browser_navigate", nav, '{"error": "timeout"}', failed=True)
-        c.after_call("browser_click", {"selector": "#retry"}, '{"ok": true}', failed=False)
+        c.after_call("browser_click", {"selector": "#retry"}, '{"ok": true}', failed=False, actual_delta=True)
     assert c.halt_decision is None
 
 
