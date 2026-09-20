@@ -1,5 +1,23 @@
 # Workstation Testing
 
+## H-079.1 pipless existing-venv regression
+
+Windows one-click qualification must cover the real failure class observed in dogfood:
+
+```powershell
+python -m venv --without-pip .venv
+workstation\install.cmd
+```
+
+Expected: installer succeeds by using `uv pip --python <venv>` when uv exists or by self-healing pip through `ensurepip` when uv is unavailable. The install must keep the checkout clean and the resulting venv must import `hermes_cli`.
+
+H-077 guardrail qualification must also include both directions:
+- browser ACK without `actual_delta=True` does **not** prove external progress;
+- explicitly observed/verified `actual_delta=True` may reset the replay streak.
+
+The Anthropic routing contract is expected to exercise the real builder path with the Anthropic extra installed by Workstation CI.
+
+
 ## H-079 upstream-first baseline qualification gate — PRIMARY
 
 No downstream target change may claim a valid test baseline until the upstream-first gate
