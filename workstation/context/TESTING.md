@@ -1,5 +1,32 @@
 # Workstation Testing
 
+## H-079 upstream-first baseline qualification gate — PRIMARY
+
+No downstream target change may claim a valid test baseline until the upstream-first gate
+has completed.
+
+Required order:
+1. fetch upstream and pin exact SHA;
+2. true baseline integration + seam reconciliation;
+3. baseline-focused tests;
+4. full Workstation / affected upstream tests;
+5. exact-head required GitHub Actions;
+6. only then begin target implementation;
+7. target-focused + regression tests;
+8. final upstream drift classification before promotion.
+
+A focused local pass cannot override a red exact-head baseline.
+
+Current H-078C exact-head evidence at policy creation:
+- Workstation contract suite: 728 passed, 1 failed, 1 warning;
+- failing gate: H-078B runtime independence (`run_agent` already present in
+  `sys.modules` during combined suite);
+- `core-patch-dry-run`: Browser AppView expected one anchor, found zero.
+
+Until these are reproduced/closed on the next synchronized baseline, the repository must
+not describe H-078C or Runtime Independence as fully QUALIFIED.
+
+
 ## H-077.1 truthful-core qualification gate — IMPLEMENTATION COMPLETE / EXACT-HEAD CI PENDING (2026-09-19)
 
 Canonical:
