@@ -1,5 +1,17 @@
 # Hermes Workstation upstream delta
 
+## HW-031 — H-079.1 current-upstream refresh and pipless install closure (2026-09-20)
+
+- adopted exact upstream pin `8d153b26aae49f471312f48c93d8913d7d8df7f9` via true two-parent semantic merge `3db94236cf...`;
+- preserves downstream lifecycle/verification/browser/Workstation semantics while adopting current upstream cron/config/lock and already-landed fixture fixes;
+- fixes canonical Windows one-click installer so an existing supported venv does not require preinstalled pip;
+- adds a Windows CI regression using an existing pipless venv;
+- adds explicit H-077 negative ACK/no-delta replay coverage;
+- restores real Anthropic builder-path coverage through the current upstream fixture.
+
+Qualification state: implementation complete on integration branch; exact-head CI required before main promotion.
+
+
 ## HW-030 — Upstream-first qualified baseline discipline (2026-09-20)
 
 Decision D-030 makes upstream freshness an admission condition for downstream code work.
