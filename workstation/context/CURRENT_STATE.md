@@ -1,5 +1,57 @@
 # Current State
 
+## 2026-09-20 H-079 Upstream-First Change Gate — PRIMARY OPERATING POLICY
+
+Before any new downstream runtime adjustment or implementation, execute
+[UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+Current policy:
+```text
+fresh upstream preflight
+-> exact pin
+-> qualified upstream-aligned baseline
+-> seam reconciliation
+-> target implementation
+-> exact-head qualification
+-> final upstream drift classification
+```
+
+This is stricter than the old periodic-sync model and safer than continuously rebasing a
+feature against moving upstream. Baseline synchronization and target work remain separate
+and independently reviewable.
+
+Observed state at policy creation:
+- `main@6dd02b9e3f...`;
+- last adopted upstream pin `6a078969a2...` is a real ancestor of main;
+- current upstream main observed at `501d8ba4e0...`;
+- main is 504 commits ahead / 365 behind latest upstream with merge-base still
+  `6a078969...`.
+
+Therefore the next code-changing lane must start by selecting and adopting a new upstream
+pin before implementing unrelated downstream work.
+
+## 2026-09-20 H-078C — BASELINE ADOPTED / QUALIFICATION REOPENED
+
+The historical 13k-commit structural divergence is closed. Upstream decomposition is now
+materially present in downstream owners.
+
+Qualification remains open because exact-head Workstation CI is red:
+- full Workstation contracts: 728 passed, 1 failed, 1 warning;
+- runtime-independence test currently fails in the combined suite;
+- Browser core-patch dry-run fails because the expected AppView anchor is absent.
+
+Additional post-merge audit debt:
+- Browser normal authority still routes through `tools.browser_workstation` rather than a
+  completed `BrowserControlBroker -> WorkstationBrowserController` switch;
+- batch admission is invoked both in `agent/turn_tool_round.py` and
+  `run_agent.py::_execute_tool_calls()`;
+- `workstation/__init__.py` silently swallows adapter installation failures;
+- `first_party_seams.json`, roadmap and implementation report lag exact current state.
+
+Any prior COMPLETE/VERIFIED H-078B/H-078C wording is historical evidence, not exact-head
+qualification.
+
+
 ## 2026-09-19 H-078B Code-to-Code Migration & Semantic Decoupling — COMPLETE / ACTIVE
 
 The H-078B semantic decoupling and code migration has been fully executed and empirically verified.
