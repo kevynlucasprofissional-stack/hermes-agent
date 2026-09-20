@@ -1,5 +1,22 @@
 # Workstation roadmap
 
+## H-079.1 — Current-Upstream + Dogfood Installer Closure (2026-09-20) — ACTIVE / EXACT-HEAD CI PENDING
+
+The H-079 upstream-first gate was reopened before fixing the real one-click dogfood failure.
+
+Current cycle:
+- starting downstream main: `d0ade123c0060503abb1a297cd00c602c18b44e6`;
+- selected upstream pin: `8d153b26aae49f471312f48c93d8913d7d8df7f9`;
+- true two-parent semantic merge: `3db94236cf103841473cf94d8577626d181b5e8b`;
+- selected pin is an ancestor of the integration branch and the candidate is 0 commits behind it;
+- real Windows dogfood failure `No module named pip` is fixed by uv-first editable install with an ensurepip fallback;
+- Windows Browser CI now creates a pipless existing `.venv` before install to reproduce the exact failure class;
+- H-077 negative regression now proves `browser_click {"ok": true}` without explicit observed delta does not reset replay;
+- current upstream restored the unmocked Anthropic routing contract while Workstation CI continues to install `--extra anthropic`.
+
+Promotion remains blocked until required exact-head CI is green. Historical H-079 pin/drift values below are provenance, not current-cycle truth.
+
+
 ## H-079 — Upstream-First Change Gate / Qualified Baseline Discipline (2026-09-20) — PRIMARY POLICY / ACTIVE
 
 Canonical:
