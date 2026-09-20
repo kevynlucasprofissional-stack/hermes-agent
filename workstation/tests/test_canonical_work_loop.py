@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from hermes_cli import kanban_db
+from hermes_cli import kanban_db, kanban_db_connect
 from workstation.artifacts import ArtifactStore
 from workstation.contracts import (
     AcceptanceContract, BrowserTaskReport, EvidenceRef, ExecutionEventKind,
@@ -158,7 +158,7 @@ def test_wait_contract_uses_correlated_event():
 
 def test_hybrid_delegation_only_completes_from_verified_outcome():
     from hermes_cli import hybrid_kanban as hybrid
-    conn = kanban_db.connect()
+    conn = kanban_db_connect.connect()
     try:
         board = hybrid.create_board(conn, name="Human work")
         column = hybrid.create_column(conn, board_id=board["id"], name="A fazer")
@@ -501,7 +501,7 @@ def test_task_cockpit_exposes_canonical_lineage(tmp_path):
 
     db_path = tmp_path / "cockpit_test.db"
     kanban_db.init_db(board="default", db_path=db_path)
-    conn = kanban_db.connect(db_path=db_path)
+    conn = kanban_db_connect.connect(db_path=db_path)
 
     task_id = kanban_db.create_task(conn, title="Cockpit Lineage Test", body="Cockpit objective", session_id="sess_123")
     cur = conn.execute("INSERT INTO task_runs (task_id, started_at, status) VALUES (?, 100, 'running')", (task_id,))

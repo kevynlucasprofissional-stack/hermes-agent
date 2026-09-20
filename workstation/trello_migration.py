@@ -2,7 +2,7 @@
 import json
 
 from hermes_cli import hybrid_kanban as hybrid
-from hermes_cli import kanban_db
+from hermes_cli import kanban_db, kanban_db_connect
 
 
 def reconcile_trello_legacy(conn, records: list[dict], *, dry_run: bool = True) -> list[dict]:
@@ -58,7 +58,7 @@ def main():
     parser.add_argument("--board")
     parser.add_argument("--apply", action="store_true", help="Create human projections; default is preview")
     args = parser.parse_args()
-    conn = kanban_db.connect(board=args.board)
+    conn = kanban_db_connect.connect(board=args.board)
     try:
         print(json.dumps(reconcile_trello_legacy(conn, json.loads(args.input.read_text(encoding="utf-8")),
                                                 dry_run=not args.apply), ensure_ascii=False, indent=2))

@@ -27,9 +27,9 @@ async def get_workstation_events(task_id: Optional[str] = None, limit: int = 200
 @router.get("/tasks/{task_id}/cockpit")
 async def get_workstation_task_cockpit(task_id: str, request: Request, board: Optional[str] = None):
     def read():
-        from hermes_cli import kanban_db
+        from hermes_cli import kanban_db_connect
         from workstation.cockpit import task_cockpit
-        conn = kanban_db.connect(board=board)
+        conn = kanban_db_connect.connect(board=board)
         try:
             return task_cockpit(conn, task_id)
         finally:

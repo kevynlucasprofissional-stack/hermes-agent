@@ -634,7 +634,7 @@ def test_ws_task_event_projects_linked_human_card_without_waiting_for_poll(kanba
     app.include_router(module.router, prefix="/api/plugins/kanban")
     event_client = TestClient(app)
 
-    conn = kb.connect()
+    conn = kbc.connect()
     try:
         from hermes_cli import hybrid_kanban as hybrid
 

@@ -9,11 +9,12 @@ import pytest
 
 from hermes_cli import hybrid_kanban as hybrid
 from hermes_cli import kanban_db as kb
+from hermes_cli import kanban_db_connect
 
 
 @pytest.fixture
 def conn(tmp_path):
-    connection = kb.connect(db_path=tmp_path / "kanban.db")
+    connection = kanban_db_connect.connect(db_path=tmp_path / "kanban.db")
     try:
         yield connection
     finally:
@@ -50,7 +51,7 @@ def test_hybrid_board_persists_order_activity_and_agentic_boundary(conn, tmp_pat
     # Re-open through a fresh connection: canonical persistence survives restart.
     path = tmp_path / "kanban.db"
     conn.close()
-    reopened = kb.connect(db_path=path)
+    reopened = kanban_db_connect.connect(db_path=path)
     try:
         assert hybrid.get_card(reopened, campaign["id"])["description"] == "**Approved**"
         assert kb.get_task(reopened, task_id).status == agentic_status
@@ -99,7 +100,7 @@ def test_hybrid_checklists_persist_reorder_and_enforce_revisions(conn, tmp_path)
     assert any(event["kind"] == "checklist_item_updated" for event in detail["activity"])
 
     db_path = conn.execute("PRAGMA database_list").fetchone()[2]
-    reopened = kb.connect(db_path=Path(db_path))
+    reopened = kanban_db_connect.connect(db_path=Path(db_path))
     try:
         assert hybrid.get_card(reopened, card["id"])["checklists"][0]["items"][1]["completed"] == 1
     finally:
@@ -217,7 +218,7 @@ def test_human_card_delegation_is_durable_idempotent_and_contextual(conn, tmp_pa
     assert duplicate["delegation"]["agent_task_id"] == task_id
     path = tmp_path / "kanban.db"
     conn.close()
-    reopened = kb.connect(db_path=path)
+    reopened = kanban_db_connect.connect(db_path=path)
     try:
         restored = hybrid.delegate_card(reopened, card_id=card["id"], actor_id="kevyn", session_id="human-session")
         assert restored["delegation"]["agent_task_id"] == task_id

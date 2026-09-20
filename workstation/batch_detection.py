@@ -165,8 +165,8 @@ def prepare_mutation(agent, name, args):
         raise RuntimeError(decision.value + ': final mutable operation requires compiler or human review')
     task_id, run_id = getattr(agent, '_canonical_work_task_id', None), getattr(agent, '_canonical_work_run_id', None)
     if task_id:
-        from hermes_cli import kanban_db
-        conn = kanban_db.connect()
+        from hermes_cli import kanban_db, kanban_db_connect
+        conn = kanban_db_connect.connect()
         try:
             task = kanban_db.get_task(conn, task_id)
             if not task or task.current_run_id != run_id or task.status in {'done', 'cancelled'}:

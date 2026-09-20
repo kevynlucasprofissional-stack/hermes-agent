@@ -23,15 +23,16 @@ import pytest
 from agent.delegation_context import delegated_child_context
 from gateway.session_context import scoped_current_session_id
 from hermes_cli import kanban_db as kb
+from hermes_cli import kanban_db_connect
 from hermes_cli.kanban_db import (
     _classify_worker_exit,
-    detect_crashed_workers,
     extract_worker_exit_trailer,
     format_worker_exit_trailer,
     read_worker_log,
     strip_worker_exit_trailer,
     worker_log_path,
 )
+from hermes_cli.kanban_db_dispatch import detect_crashed_workers
 from tools import kanban_tools
 
 
@@ -92,7 +93,7 @@ def test_kanban_provenance_prefers_contextvar_and_drops_dangling(isolated_hermes
         )
         task_id = json.loads(res_raw)["task_id"]
 
-        conn = kb.connect(board="test_board")
+        conn = kanban_db_connect.connect(board="test_board")
         try:
             task = kb.get_task(conn, task_id)
             assert task is not None
@@ -110,7 +111,7 @@ def test_kanban_provenance_prefers_contextvar_and_drops_dangling(isolated_hermes
         }
     )
     task_dangling_id = json.loads(res_dangling)["task_id"]
-    conn = kb.connect(board="test_board")
+    conn = kanban_db_connect.connect(board="test_board")
     try:
         task2 = kb.get_task(conn, task_dangling_id)
         assert task2 is not None
@@ -240,7 +241,7 @@ def test_classify_worker_exit_fallback_to_durable_trailer(isolated_hermes_env):
 def test_detect_crashed_workers_handles_clean_exit_as_protocol_violation(isolated_hermes_env):
     """detect_crashed_workers detects clean exit via trailer as protocol violation when task is running."""
     board = "crash_board"
-    conn = kb.connect(board=board)
+    conn = kanban_db_connect.connect(board=board)
     try:
         # Create a task with max_retries=0 to force trip immediately on violation
         task_id = kb.create_task(conn, title="Protocol violation task", assignee="agent", max_retries=0)
