@@ -1,5 +1,26 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-079.1 — Environment capability is not implied by environment existence — 2026-09-20
+
+A reusable engineering lesson from real dogfood is:
+
+> **The existence of an environment does not prove the availability of a tool inside that environment.**
+
+The installer correctly recognized a supported repo-local Python venv but incorrectly inferred that it necessarily contained pip. This is the same epistemic class as H-077: presence/ACK is not evidence of the stronger property being claimed.
+
+Canonical installer rule:
+```text
+valid venv
+-> choose installation mechanism explicitly
+-> uv available: uv pip --python <venv>
+-> otherwise prove pip exists
+-> otherwise bootstrap pip with ensurepip and re-prove
+-> install
+```
+
+H-079 compounds this with upstream freshness: the fix was not layered onto stale downstream owners. The current exact upstream pin `8d153b26...` was first merged semantically, then the installer/regression work was applied.
+
+
 ## H-079 — Upstream freshness becomes an admission condition for downstream change — 2026-09-20
 
 The key systems insight from H-078C is that **upstream drift is part of the input state of
