@@ -1,5 +1,18 @@
 # Upstream strategy
 
+## H-079.1 current pin — 8d153b26 (2026-09-20)
+
+Current active baseline:
+- downstream start: `d0ade123c0060503abb1a297cd00c602c18b44e6`;
+- exact upstream pin: `8d153b26aae49f471312f48c93d8913d7d8df7f9`;
+- semantic two-parent merge: `3db94236cf103841473cf94d8577626d181b5e8b`;
+- selected pin ancestry: proven; behind selected pin: **0**.
+
+This H-079.1 cycle supersedes earlier “current” references to `b7d7d292...`, `c1488ac...`, and their historical drift counts. Those values remain useful only as provenance.
+
+The target downstream change for this cycle is the pipless-existing-venv one-click installer failure plus the remaining H-079 exact-truth regressions. Promotion requires exact-head CI after the upstream merge and target changes.
+
+
 ## Primary sync model — H-079 upstream-first change gate
 
 Canonical:
