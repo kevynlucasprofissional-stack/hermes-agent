@@ -504,7 +504,7 @@ test('keeps four native Browser tasks aligned across controller and IPC while he
     return api.setBounds(bounds, 'hub')
   }, hubBounds)
   await expect.poll(async () => {
-    const snapshot = await nativeViewportSnapshot(fixture.app)
+    const snapshot = await nativeViewportSnapshot(fixture!.app)
     return activeViewportChild(snapshot).bounds
   }).toEqual(hubBounds)
   const initialNativeViewport = await nativeViewportSnapshot(fixture.app)

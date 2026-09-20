@@ -5,6 +5,7 @@ import { readKey } from '@/lib/storage'
 import { normalize } from '@/lib/text'
 
 import { $rightRailActiveTabId, type RightRailTabId, selectRightRailTab } from './layout'
+import { $activeSessionId, $selectedStoredSessionId } from './session'
 import { canOpenBrowserWindow, openBrowserInNewWindow } from './windows'
 
 /**
@@ -406,6 +407,24 @@ export function openBrowserTab() {
   openPreview(current?.target ?? blankPage())
 }
 
+export function isBrowserHubRoute(): boolean {
+  if (typeof window === 'undefined') return false
+
+  return window.location.pathname.startsWith('/browser') || window.location.hash.includes('/browser')
+}
+
+/** Re-front the task-owned native Workstation Browser without creating a guest webview. */
+export function openWorkstationBrowserPreview() {
+  if (isBrowserHubRoute()) return
+
+  openPreview({
+    kind: 'url',
+    label: 'Workstation Browser',
+    source: 'workstation-browser',
+    url: 'workstation:browser'
+  })
+}
+
 /** Another Browser, always — the strip's "+". */
 export function newBrowserTab() {
   const id = mintBrowserTabId()
@@ -527,5 +546,74 @@ export function failPreviewServerRestart(taskId: string, message: string) {
     ...current,
     message,
     status: 'error'
+  })
+}
+
+/** Session-scoped preview tabs keep Browser ownership aligned with the selected chat. */
+const SESSION_TABS_STORAGE_KEY = 'hermes.desktop.sessionPreviewTabs.v2'
+
+export const $sessionPreviewTabs = persistentAtom<Record<string, PreviewTab[]>>(
+  SESSION_TABS_STORAGE_KEY,
+  {},
+  {
+    decode: raw => {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>
+        if (!parsed || typeof parsed !== 'object') return {}
+
+        return Object.fromEntries(
+          Object.entries(parsed)
+            .filter((entry): entry is [string, unknown[]] => Array.isArray(entry[1]))
+            .map(([key, value]) => [key, decodePreviewTabs(JSON.stringify(value))])
+        )
+      } catch {
+        return {}
+      }
+    },
+    encode: map => JSON.stringify(map)
+  }
+)
+
+let currentActiveSessionKey: string | null = null
+let isSyncingSessionTabs = false
+
+export function activeSessionKey(): string | null {
+  return $selectedStoredSessionId.get() || $activeSessionId.get() || null
+}
+
+export function syncSessionPreviewTabs(nextSessionKey: string | null) {
+  if (nextSessionKey === currentActiveSessionKey) return
+
+  if (currentActiveSessionKey) {
+    const map = { ...$sessionPreviewTabs.get() }
+    const current = $previewTabs.get()
+    if (current.length) map[currentActiveSessionKey] = [...current]
+    else delete map[currentActiveSessionKey]
+    $sessionPreviewTabs.set(map)
+  }
+
+  currentActiveSessionKey = nextSessionKey
+  isSyncingSessionTabs = true
+  try {
+    const saved = nextSessionKey ? ($sessionPreviewTabs.get()[nextSessionKey] ?? []) : []
+    $previewTabs.set([...saved])
+    selectRightRailTab(saved[0]?.id ?? null)
+  } finally {
+    isSyncingSessionTabs = false
+  }
+}
+
+if (typeof window !== 'undefined') {
+  currentActiveSessionKey = activeSessionKey()
+  $selectedStoredSessionId.listen(id => syncSessionPreviewTabs(id || $activeSessionId.get() || null))
+  $activeSessionId.listen(id => syncSessionPreviewTabs($selectedStoredSessionId.get() || id || null))
+  $previewTabs.listen(tabs => {
+    if (isSyncingSessionTabs) return
+    const key = activeSessionKey()
+    if (!key) return
+    const map = { ...$sessionPreviewTabs.get() }
+    if (tabs.length) map[key] = [...tabs]
+    else delete map[key]
+    $sessionPreviewTabs.set(map)
   })
 }

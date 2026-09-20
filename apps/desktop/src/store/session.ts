@@ -422,7 +422,7 @@ export const sessionMatchesStoredId = (
 // O(sessions) scan there multiplies out to states × sessions × ~30Hz per busy
 // session, which is what made a populated recents list drag every stream. The
 // list is replaced wholesale (never mutated), so its reference is the cache key.
-type LineageRow = Pick<SessionInfo, '_lineage_ids' | '_lineage_root_id' | 'id'>
+type LineageRow = Pick<SessionInfo, '_lineage_ids' | '_lineage_root_id' | 'id' | 'parent_session_id'>
 const lineageIndexBySessions = new WeakMap<readonly LineageRow[], Map<string, string[]>>()
 
 function lineageIndex(sessions: readonly LineageRow[]): Map<string, string[]> {
@@ -486,6 +486,27 @@ export function lineageAliases(storedId: string, sessions: readonly LineageRow[]
   // Every key is in its own bucket by construction, so the bucket IS the
   // alias set. Copied so no caller can mutate the shared index.
   return lineageIndex(sessions).get(storedId)?.slice() ?? [storedId]
+}
+
+/** Ownership aliases are directional: a selected child accepts its direct parent,
+ * while selecting a parent never grants ownership over every branch child. */
+export function conversationAliases(storedId: string, sessions: readonly LineageRow[]): string[] {
+  const aliases = lineageAliases(storedId, sessions)
+  const result = new Set(aliases)
+
+  for (const session of sessions) {
+    const lineageIds = session._lineage_ids ?? []
+    if (
+      aliases.includes(session.id) ||
+      Boolean(session._lineage_root_id && aliases.includes(session._lineage_root_id)) ||
+      lineageIds.some(id => aliases.includes(id))
+    ) {
+      const parentId = session.parent_session_id?.trim()
+      if (parentId) result.add(parentId)
+    }
+  }
+
+  return [...result]
 }
 
 /** True when two ids name the same conversation across compression tip rotation. */
