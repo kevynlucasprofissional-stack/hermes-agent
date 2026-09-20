@@ -21,23 +21,24 @@ fetch latest upstream
 Do not continuously move the pin during implementation. Do not postpone upstream
 synchronization until after a feature is already built.
 
-H-079 baseline status (2026-09-20):
+H-079 qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
 - adopted pin: `c1488ac947c9bc33fd65ec464548dc9d8edd6122`;
 - superseded pin: `b7d7d2929a10e0658a98a7a03f4531093e1480ed` (H-079 candidate pin, adopted by `a13929fb3568ce4c0423c5cf8cbe4f479ea22849`, replaced when the merge below landed);
 - downstream `main`: `9e8127e247accf6858f295e554cab7d4bb7adefe`;
 - merge commit: `24a8501934374e47a23b51f21183fb9c4edd3a76`;
-- ancestry status: verified (`git merge-base HEAD upstream/main` -> `c1488ac947...`);
-- upstream drift observed: `2c0b2a980c2d0e92f0452500089f5af91208f94c` (447 commits ahead of the pin, 543 commits on `main` not in upstream);
+- ancestry status: verified (`git merge-base 9e8127e247 2c0b2a980c` -> `c1488ac947...`);
+- drift at `9e8127e247...` versus upstream snapshot `2c0b2a980c2d0e92f0452500089f5af91208f94c`: 544 downstream-only and 447 upstream-only commits;
 - H-079 Stage A & B are merged to `main`.
 
-Upstream `main` is a moving target and advanced by 2 commits during this observation, so the drift
-figure above is a dated snapshot rather than a fixed target. The pin, not the observation, is what
-the next cycle is measured against.
+The drift figures describe the two recorded SHAs, not the moving branch tips. Reproduce them
+with `git rev-list --left-right --count 9e8127e247...2c0b2a980c`. The adopted pin is unchanged;
+later heads require their own qualification evidence.
 
 **Exact-head CI is green** at the merged head `9e8127e247...` (PR #41, carrying the fix
-`1716062f32...` that restores the browser routing ladder); the red run was at `d0ade123c0...`, which
-that fix supersedes. The H-079 baseline gate is satisfied, so a new downstream code-change cycle
-may now start.
+`1716062f32...` that restores the browser routing ladder; Workstation CI run `35536129052`); the
+red run was at `d0ade123c0...`, which that fix supersedes. Aggregate browser convergence is
+**UNMEASURED**: no named acceptance check is cited for the former `FULL` claim. The narrower
+Browser Authority Convergence evidence in `context/CURRENT_STATE.md` is not aggregate qualification.
 
 
 ## H-078B synchronization rule (2026-09-19)

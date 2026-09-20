@@ -20,17 +20,20 @@ This is stricter than the old periodic-sync model and safer than continuously re
 feature against moving upstream. Baseline synchronization and target work remain separate
 and independently reviewable.
 
-Observed baseline state (2026-09-20):
+Observed qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
 - `main@9e8127e247...`;
 - adopted upstream pin `c1488ac947...` merged into `main` via merge commit `24a8501934...`;
 - superseded pin: `b7d7d2929a...` (H-079 candidate pin, merged in `a13929fb35...`, replaced when `24a8501934...` landed);
-- merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
-- upstream drift observed: `2c0b2a980c2d0e92f0452500089f5af91208f94c` (447 commits ahead of the pin; 543 commits on `main` not in upstream);
+- merge ancestry verified: `git merge-base 9e8127e247 2c0b2a980c` -> `c1488ac947...`;
+- drift at `9e8127e247...` versus upstream snapshot `2c0b2a980c2d0e92f0452500089f5af91208f94c`: 544 downstream-only and 447 upstream-only commits;
 - H-079 Stage A & B are merged to `main`.
 
 **The exact-head baseline gate is GREEN.** `9e8127e247...` (PR #41, carrying the
 browser-routing-ladder fix `1716062f32...`) passes `Workstation CI` (job `contracts`). The red run
-was at `d0ade123c0...`, which that fix supersedes.
+was at `d0ade123c0...`, which that fix supersedes. The evidence is run `35536129052` and does not
+automatically qualify later branch or main heads. Aggregate browser convergence is
+**UNMEASURED**: no named acceptance check is cited for the former `FULL` claim; this is distinct
+from the narrower Browser Authority Convergence evidence below.
 
 ## 2026-09-20 H-078C Items — CLOSED / PROMOTED TO MAIN
 
