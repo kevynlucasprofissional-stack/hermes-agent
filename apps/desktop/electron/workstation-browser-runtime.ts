@@ -1761,11 +1761,14 @@ export class WorkstationBrowserRuntime {
     targetHost: 'hub' | 'chat' | string,
     rawBounds: WorkstationBrowserBounds
   ): WorkstationBrowserState {
+    const currentEntry = this.activeEntry()
+    const preferredTaskId = currentEntry?.ownerTaskId ?? this.preferredTaskId ?? null
+
     if (this.attached) {
       this.detachActiveView(false)
     }
 
-    return this.attach(window, rawBounds, targetHost)
+    return this.attach(window, rawBounds, targetHost, preferredTaskId)
   }
 
   getTaskJournal(taskId: string): any[] {
