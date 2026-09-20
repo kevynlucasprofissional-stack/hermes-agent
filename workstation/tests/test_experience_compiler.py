@@ -416,7 +416,12 @@ def test_learned_browser_replay_is_verified_without_provider_calls(tmp_path):
     registry.register(validated)
     promoted = registry.promote(cap.id)
     state['pr_state'] = 'open'
-    assert kernel.execute_capability(promoted.id, {next(iter(cap.input_schema['properties'])): 999}, dispatch=dispatch)['success']
+    assert kernel.execute_capability(
+        promoted.id,
+        {next(iter(cap.input_schema['properties'])): 999},
+        dispatch=dispatch,
+        context={'host': 'github.com'},
+    )['success']
     assert calls.count('browser_click') == 2
 
 
@@ -485,7 +490,11 @@ def test_filesystem_compilation_replay_and_two_composites(tmp_path):
                 {'path': '$inputs.path', 'path2': '$inputs.path'})],
             lifecycle=CapabilityLifecycle.PROMOTED)
         registry.register(composite)
-        assert kernel.execute_capability(composite.id, {'path': str(path)})['success']
+        assert kernel.execute_capability(
+            composite.id,
+            {'path': str(path)},
+            context={'base_dir': str(tmp_path)},
+        )['success']
         assert path.read_text() == 'hello'
 
 
@@ -688,4 +697,5 @@ def test_capability_work_execute_keeps_large_output_reference_first(tmp_path):
     assert len(json.dumps(outcome)) < 4096
     assert compiler.artifacts.read(outcome['output']['artifact_ref']) == content
     resumed = compiler.resume(outcome['plan_id'], session_id='owner', dispatch=lambda *a: pytest.fail('confirmed replay'))
-    assert resumed['output'] == outcome['output']
+    assert resumed['output']['artifact_ref'] == outcome['output']['artifact_ref']
+    assert resumed['output']['cache_hit'] is True

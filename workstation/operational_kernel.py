@@ -602,7 +602,14 @@ class OperationalKernel:
                 if durable_store:
                     cp = durable_store.get_item(durable_item_id).checkpoints
                     if cp.get(checkpoint + '_meta', {}).get('result_ref'):
-                        output = self.artifacts.read_json(cp[checkpoint + '_meta']['result_ref'])
+                        result_ref = cp[checkpoint + '_meta']['result_ref']
+                        try:
+                            output = self.artifacts.read_json(result_ref)
+                        except json.JSONDecodeError:
+                            # Primitive results can be either structured JSON or a
+                            # raw textual artifact.  A completed checkpoint must be
+                            # replayed exactly as persisted, never re-dispatched.
+                            output = self.artifacts.read(result_ref)
                         exec_context['steps'][step_id], exec_context['prev'] = output, output
                         continue
                     if cp.get(checkpoint + '_dispatch'):

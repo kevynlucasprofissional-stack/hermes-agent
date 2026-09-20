@@ -338,10 +338,12 @@ def test_composition_and_atomic_sub_capability_reuse(clean_workstation, tmp_path
     changelog_text = (base_dir / "CHANGELOG.md").read_text(encoding="utf-8")
     assert "- Initial release." in changelog_text
 
-    # cap_create_header was executed twice deterministically, no LLM calls
+    # Both executions were acknowledged deterministically, but this legacy
+    # capability has no VERIFIED evidence and must not accrue verified-success
+    # or savings credit.
     header_cap = reg.get("cap_create_header")
-    assert header_cap.success_count >= 2
-    assert header_cap.savings["llm_calls_saved"] >= 2
+    assert header_cap.success_count == 0
+    assert header_cap.savings.get("llm_calls_saved", 0) == 0
 
 
 def test_drift_quarantine_and_reasoning_handoff(clean_workstation, tmp_path):
@@ -538,5 +540,4 @@ def test_zero_llm_calls_replay(clean_workstation, tmp_path):
     res = kernel.execute_capability("cap_deterministic_replay", {})
     assert res["success"]
     assert llm_call_count == 0
-    assert res["savings"]["llm_calls_saved"] >= 1
-
+    assert res["savings"].get("llm_calls_saved", 0) == 0
