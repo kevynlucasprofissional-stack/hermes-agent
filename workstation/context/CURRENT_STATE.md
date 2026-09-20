@@ -1,5 +1,22 @@
 # Current State
 
+## 2026-09-20 H-079.1 — CURRENT CANDIDATE / EXACT-HEAD CI PENDING
+
+The active candidate is no longer the earlier `b7d7d292...` / `c1488ac...` baseline.
+
+Current truth:
+```text
+downstream starting main: d0ade123c0060503abb1a297cd00c602c18b44e6
+upstream pin:            8d153b26aae49f471312f48c93d8913d7d8df7f9
+semantic merge:          3db94236cf103841473cf94d8577626d181b5e8b
+behind selected pin:     0
+```
+
+A real one-click Windows run exposed a valid existing `.venv` without pip. The installer had conflated “version-valid venv” with “pip-bearing venv” and failed at `python -m pip install -e .`. H-079.1 now prefers `uv pip install --python <venv>` and falls back to a verified `ensurepip` bootstrap only when uv is unavailable.
+
+Current candidate also contains the explicit H-077 negative ACK regression and uses the current upstream unmocked Anthropic routing contract test. Exact-head GitHub Actions, especially the Windows Browser pipless-venv fixture, remain the release gate.
+
+
 ## 2026-09-20 H-079 Upstream-First Change Gate — PRIMARY OPERATING POLICY
 
 Before any new downstream runtime adjustment or implementation, execute
