@@ -157,8 +157,8 @@
             "no member executes before admission"
           ],
           "sunset_condition": "run_agent batch policy removed after turn_tool_round admission parity",
-          "current_status": "OPEN",
-          "observed_gap": "admit_tool_batch is invoked in agent/turn_tool_round.py and again in run_agent.py::_execute_tool_calls(); one canonical owner is required."
+          "current_status": "CLOSED_ON_H079_CANDIDATE",
+          "observed_gap": "Normal turn batches are admitted once by agent/turn_tool_round.py and carry an explicit admitted marker into the executor. Direct callers that bypass the turn owner are admitted once by the executor fallback boundary."
         },
         {
           "id": "SEAM-RUN-EXEC-SCOPE",
@@ -192,7 +192,7 @@
         }
       ],
       "current_direct_imports": 0,
-      "current_status": "OPEN_DUPLICATE_BATCH_ADMISSION"
+      "current_status": "CANDIDATE_PARITY_PROVEN"
     },
     {
       "id": "FPS-FINAL-001",
@@ -266,8 +266,8 @@
             "same BrowserTask/controller selected"
           ],
           "sunset_condition": "generic browser_tool contains no Workstation route conditional",
-          "current_status": "OPEN",
-          "observed_gap": "Normal browser path still retains Workstation-specific routing/domain logic; BrowserControlBroker authority switch is incomplete."
+          "current_status": "CLOSED_ON_H079_CANDIDATE",
+          "observed_gap": "The generic registry handler now routes through browser_extension_router; the Workstation adapter registers a provider that attaches WorkstationBrowserController to BrowserControlBroker for the exact Desktop session lane."
         },
         {
           "id": "SEAM-BROWSER-DOMAIN",
@@ -301,7 +301,7 @@
         }
       ],
       "current_direct_imports": 6,
-      "current_status": "OPEN_REMOVE_DEBT",
+      "current_status": "ROUTE_CLOSED_DOMAIN_REMOVE_DEBT_OPEN",
       "observed_direct_imports": 6
     },
     {
@@ -325,12 +325,12 @@
             "timeout/cancel semantics preserved"
           ],
           "sunset_condition": "legacy Hermes route is deleted after controller authority switch",
-          "current_status": "OPEN",
-          "observed_gap": "Legacy tools.browser_workstation route remains part of the authoritative normal path."
+          "current_status": "NON_AUTHORITATIVE_COMPATIBILITY_ADAPTER",
+          "observed_gap": "The legacy loopback transport and workstation_routed_browser_handler remain for direct compatibility callers and focused parity tests, but generic browser_tool dispatch no longer selects them as the normal authority. Remove after remaining direct callers migrate and controller parity covers their domain behavior."
         }
       ],
       "current_direct_imports": 5,
-      "current_status": "OPEN_REMOVE_DEBT",
+      "current_status": "OPEN_COMPATIBILITY_REMOVE_DEBT",
       "observed_direct_imports": 5
     },
     {
