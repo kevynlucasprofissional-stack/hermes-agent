@@ -1,5 +1,52 @@
 # Workstation roadmap
 
+## H-079 — Upstream-First Change Gate / Qualified Baseline Discipline (2026-09-20) — PRIMARY POLICY / ACTIVE
+
+Canonical:
+[context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+From this point forward, **every downstream code-change cycle starts with upstream
+preflight and, when upstream advanced, a separate baseline synchronization/qualification
+stage before the target implementation begins**.
+
+Required order:
+
+```text
+upstream fetch -> exact SHA pin -> true baseline merge
+-> seam reconciliation -> baseline qualification
+-> target change -> target qualification -> final drift check
+```
+
+Do not chase a moving HEAD inside the feature. Pin one SHA for the cycle. Do not combine
+an unqualified upstream merge and the requested feature into an opaque patch.
+
+Current 2026-09-20 snapshot:
+- downstream main: `6dd02b9e...`;
+- last adopted upstream pin: `6a078969a...`;
+- latest upstream main observed: `501d8ba4e...`;
+- downstream is already 365 commits behind current upstream;
+- therefore the **next runtime-changing cycle must begin with a new Stage A baseline sync**.
+
+### H-078C post-merge closure — REOPENED / BLOCKING
+
+H-078C achieved the hard ancestry/structural migration goal: the pinned `6a078969...`
+upstream is a real ancestor of downstream main and the historical 13k-commit divergence is
+closed.
+
+It is **not yet fully qualified**:
+- exact-head Workstation CI is red: 728 passed / 1 failed / 1 warning;
+- runtime-independence exact-head gate fails because `run_agent` is already loaded;
+- `core-patch-dry-run` reports `browser AppView: expected one anchor, found 0`;
+- BrowserControlBroker authority switch is incomplete;
+- `admit_tool_batch()` currently has duplicate ownership in
+  `turn_tool_round.py` and `run_agent.py::_execute_tool_calls()`;
+- required Workstation adapter bootstrap can silently fail open;
+- seam/documentation/report state is stale/incomplete.
+
+H-078C may be called **BASELINE ADOPTED / STRUCTURAL MIGRATION SUCCESSFUL**, not
+COMPLETE/VERIFIED, until these exact-head gates and authority-path gaps close.
+
+
 ## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED
 
 The H-078B Code-to-Code Upstream Migration / Semantic Decoupling has been fully implemented and
