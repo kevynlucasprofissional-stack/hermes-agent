@@ -10,14 +10,13 @@ import logging
 from typing import Any, Dict, Optional
 
 from tools.registry import registry, tool_error
-from workstation.vault import VaultManager, get_default_vault_manager
-
 logger = logging.getLogger(__name__)
 
-_vault_manager: Optional[VaultManager] = None
+_vault_manager: Optional[Any] = None
 
 
-def get_vault_manager() -> VaultManager:
+def get_vault_manager():
+    from workstation.vault import get_default_vault_manager
     return _vault_manager or get_default_vault_manager()
 
 

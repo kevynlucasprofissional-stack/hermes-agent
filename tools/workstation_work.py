@@ -1,6 +1,10 @@
 """Session-gated durable work capability; never part of the core toolset."""
 from tools.registry import registry
-from workstation.task_compiler import execute_compiled_work
+
+
+def _execute_compiled_work(args, **kwargs):
+    from workstation.task_compiler import execute_compiled_work
+    return execute_compiled_work(args, **kwargs)
 
 
 def _runtime_enabled():
@@ -10,7 +14,7 @@ def _runtime_enabled():
 
 registry.register(
     name="work_execute", toolset="desktop_ui", check_fn=_runtime_enabled,
-    handler=execute_compiled_work,
+    handler=_execute_compiled_work,
     schema={"name": "work_execute", "description": (
         "Execute decided repetitive work as a durable plan, with no model call between items. "
         "For homogeneous records, browser transactions or prompt queues, compile once into items "

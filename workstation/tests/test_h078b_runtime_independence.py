@@ -8,6 +8,9 @@ and observation contracts without any coupling to run_agent.py.
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from types import SimpleNamespace
 import pytest
 
@@ -51,10 +54,41 @@ def setup_adapter():
     install_workstation_adapter()
 
 
+def _assert_isolated_runtime_imports_do_not_load_run_agent(tmp_path) -> None:
+    """Prove dependency independence in a fresh interpreter, not suite-global state.
+
+    The combined CI suite legitimately imports ``run_agent`` earlier from
+    ``test_durable_agent_integration``. That says nothing about whether this
+    alternate runtime path depends on it; a child interpreter makes the causal
+    import boundary observable and order-independent.
+    """
+    script = """
+import sys
+assert 'run_agent' not in sys.modules
+from agent.turn_ingress import TurnIngress
+from agent.turn_admission import admit_turn
+from agent.tool_batch_admission import admit_tool_batch
+from agent.scoped_execution import scoped_execution
+from agent.pre_dispatch import dispatch_pre_authorized_checkpoint
+from agent.post_tool import dispatch_raw_post_tool_observation
+from agent.completion_admission import admit_completion
+from agent.task_completion_admission import admit_task_completion
+from workstation.integrations.hermes.adapter import install_workstation_adapter
+install_workstation_adapter()
+assert 'run_agent' not in sys.modules
+"""
+    env = dict(os.environ)
+    env["HERMES_HOME"] = str(tmp_path)
+    completed = subprocess.run(
+        [sys.executable, "-c", script], cwd=os.getcwd(), env=env,
+        text=True, capture_output=True, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+
+
 def test_alternate_reasoner_drives_workstation_lifecycle(tmp_path, monkeypatch):
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
-    import sys
-    assert "run_agent" not in sys.modules
+    _assert_isolated_runtime_imports_do_not_load_run_agent(tmp_path)
 
     reasoner = AlternateReasoner("alternate-session-42")
 
@@ -150,7 +184,6 @@ def test_alternate_reasoner_drives_workstation_lifecycle(tmp_path, monkeypatch):
         hybrid_owned=False,
     )
     assert task_completion_decision is True
-    assert "run_agent" not in sys.modules
 
 
 def test_alternate_reasoner_blocks_uncertain_mutation(tmp_path, monkeypatch):
