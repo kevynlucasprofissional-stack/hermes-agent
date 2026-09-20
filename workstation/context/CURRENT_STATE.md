@@ -20,16 +20,24 @@ This is stricter than the old periodic-sync model and safer than continuously re
 feature against moving upstream. Baseline synchronization and target work remain separate
 and independently reviewable.
 
-Observed candidate state (2026-09-20):
-- starting `main@6dd02b9e3f...`;
-- pinned upstream SHA `b7d7d2929a...` merged into `integration/upstream-20260920-b7d7d292-h079` via merge commit `a13929fb35...`;
-- merge ancestry verified: `git merge-base --is-ancestor b7d7d2929a... HEAD` -> 0;
-- upstream drift observed: `2ed6387d87...` (86 commits ahead of pin, classified as non-overlapping);
-- H-079 Stage A & B are LOCALLY QUALIFIED.
+Observed baseline state (2026-09-20):
+- `main@d0ade123c0...`;
+- adopted upstream pin `c1488ac947...` merged into `main` via merge commit `24a8501934...`;
+- superseded pin: `b7d7d2929a...` (H-079 candidate pin, merged in `a13929fb35...`, replaced when `24a8501934...` landed);
+- merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
+- upstream drift observed: `a4f9857ff5...` (396 commits ahead of the pin; 542 commits on `main` not in upstream);
+- H-079 Stage A & B are merged to `main`.
 
-## 2026-09-20 H-078C Items — CLOSED ON H-079 CANDIDATE
+**The exact-head baseline gate is RED.** `d0ade123c0...` fails `Workstation CI` (job `contracts`):
+the commit rewrote `BrowserRoutingPolicy.choose` so that `internal_runtime_available` (default
+`true`) short-circuits before the ladder, making `lightpanda`, `agent-browser` and `browser-exec`
+unreachable. The ladder is restored on `fix/h079-baseline-reconciliation`, which is not yet merged
+and not yet exact-head CI qualified.
 
-The open qualification debt from H-078C has been resolved and verified on candidate head:
+## 2026-09-20 H-078C Items — CLOSED / PROMOTED TO MAIN
+
+The open qualification debt from H-078C was resolved and verified on the H-079 candidate and
+promoted to `main`:
 - **Workstation Test Suite**: 741 passed, 2 skipped, 1 warning (291s).
 - **Runtime Independence**: Fresh-process isolation test proves AlternateReasoner runs without importing `run_agent`.
 - **Browser AppView Core Patch Anchor**: Semantic layout anchor updated; `apply_core_integration.py --check` passes cleanly.
@@ -39,7 +47,9 @@ The open qualification debt from H-078C has been resolved and verified on candid
 - **Desktop & Native Browser**: H004 native probe VALIDATED; Desktop typecheck 0 errors; Desktop production build clean; H013 sustained headless load spec passes 3/3 in 1.4m.
 - **Seam Audit**: 18 classified, 0 unclassified, 0 budget regressions; `first_party_seams.json` synchronized with exact reality.
 
-Candidate is ready for GitHub Actions exact-head CI evaluation.
+These items were promoted to `main` in `24a8501934...`. Exact-head CI was subsequently evaluated
+and is **red** at `d0ade123c0...` for an unrelated reason (the `BrowserRoutingPolicy` ladder
+regression described above); the H-078C closure items themselves were not implicated.
 
 
 ## 2026-09-19 H-078B Code-to-Code Migration & Semantic Decoupling — COMPLETE / ACTIVE

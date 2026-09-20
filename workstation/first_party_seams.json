@@ -12,7 +12,7 @@
     "upstream_deep_audit_snapshot": "ea94d88e25d7699115a668c1757433361f3420dd",
     "upstream_latest_observed_during_repo_refresh": "af2e9a4313f9a8a96618207ae111f9e824241949",
     "note": "Historical research SHAs remain provenance only. H-079 requires a fresh upstream fetch and one newly pinned exact SHA before each downstream code-change cycle.",
-    "actual_upstream_merge_pin": "6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170",
+    "actual_upstream_merge_pin": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
     "downstream_main_post_h078c": "6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a",
     "upstream_latest_observed_2026_09_20": "501d8ba4e075281d5d7ea97b59cbac810ef12d89"
   },
@@ -613,14 +613,19 @@
   },
   "current_baseline": {
     "observed_at": "2026-09-20",
-    "downstream_main": "6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a",
-    "adopted_upstream_pin": "6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170",
-    "latest_upstream_observed": "501d8ba4e075281d5d7ea97b59cbac810ef12d89",
-    "ahead_of_latest_upstream": 504,
-    "behind_latest_upstream": 365,
-    "merge_base": "6a078969a2e7e99c6eb9ad5ba8216c3fd9bef170",
-    "qualification_status": "REOPENED_RED_EXACT_HEAD",
-    "workstation_ci": "FAIL",
-    "browser_convergence": "PARTIAL"
+    "downstream_main": "d0ade123c0060503abb1a297cd00c602c18b44e6",
+    "adopted_upstream_pin": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
+    "latest_upstream_observed": "a4f9857ff5ec618064633e1070955fcc71d01a60",
+    "ahead_of_latest_upstream": 542,
+    "behind_latest_upstream": 396,
+    "merge_base": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
+    "upstream_merge_commit": "24a8501934374e47a23b51f21183fb9c4edd3a76",
+    "superseded_upstream_pin": "b7d7d2929a10e0658a98a7a03f4531093e1480ed",
+    "qualification_status": "RED_AT_EXACT_HEAD_REGRESSION_FIXED_ON_BRANCH_NOT_QUALIFIED",
+    "workstation_ci": "FAIL_AT_MAIN_D0ADE123C0",
+    "branch_ci": "NOT_YET_RUN",
+    "browser_convergence": "PARTIAL",
+    "regression": "d0ade123c0 rewrote BrowserRoutingPolicy.choose with an internal_runtime_available short-circuit (default true) placed before the ladder, making lightpanda/agent-browser/browser-exec unreachable. Fixed on fix/h079-baseline-reconciliation; not merged and not exact-head CI qualified. H-079 forbids starting a new downstream cycle while this gate is red.",
+    "drift_provenance": "ahead/behind from git rev-list --left-right --count HEAD...upstream/main after a fresh git fetch upstream --prune. upstream/main is a moving target: it advanced by 2 commits during this observation, so latest_upstream_observed is a dated snapshot, not the pinned target. The pin is adopted_upstream_pin."
   }
 }

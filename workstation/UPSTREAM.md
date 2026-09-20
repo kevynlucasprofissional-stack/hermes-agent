@@ -21,13 +21,21 @@ fetch latest upstream
 Do not continuously move the pin during implementation. Do not postpone upstream
 synchronization until after a feature is already built.
 
-H-079 candidate status (2026-09-20):
-- adopted pin: `b7d7d2929a10e0658a98a7a03f4531093e1480ed`;
-- downstream starting main: `6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`;
-- merge commit: `a13929fb3568ce4c0423c5cf8cbe4f479ea22849`;
-- ancestry status: verified ancestor (`git merge-base --is-ancestor b7d7d2929a... HEAD` -> 0);
-- final upstream drift observed: `2ed6387d8789375e24b74dfb29aeaf867d3d2aa9` (86 commits ahead of pin, non-overlapping with Workstation core);
-- H-079 Stage A & B locally qualified.
+H-079 baseline status (2026-09-20):
+- adopted pin: `c1488ac947c9bc33fd65ec464548dc9d8edd6122`;
+- superseded pin: `b7d7d2929a10e0658a98a7a03f4531093e1480ed` (H-079 candidate pin, adopted by `a13929fb3568ce4c0423c5cf8cbe4f479ea22849`, replaced when the merge below landed);
+- downstream `main`: `d0ade123c0060503abb1a297cd00c602c18b44e6`;
+- merge commit: `24a8501934374e47a23b51f21183fb9c4edd3a76`;
+- ancestry status: verified (`git merge-base HEAD upstream/main` -> `c1488ac947...`);
+- upstream drift observed: `a4f9857ff5ec618064633e1070955fcc71d01a60` (396 commits ahead of the pin, 542 commits on `main` not in upstream);
+- H-079 Stage A & B are merged to `main`.
+
+Upstream `main` is a moving target and advanced by 2 commits during this observation, so the drift
+figure above is a dated snapshot rather than a fixed target. The pin, not the observation, is what
+the next cycle is measured against.
+
+Exact-head CI is **red** at `d0ade123c0...`, so the H-079 baseline gate is not satisfied and the
+next code-change cycle must not begin until it is green.
 
 
 ## H-078B synchronization rule (2026-09-19)

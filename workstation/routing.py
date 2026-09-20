@@ -73,7 +73,6 @@ class BrowserRoutingContext:
     headless_ok: bool = False
     bound_to_internal: bool = False
     bound_to_any_runtime: bool = False  # Task is bound to any browser runtime
-    internal_runtime_available: bool = True  # Internal Electron Chromium is available
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,31 +81,18 @@ class BrowserRoutingPolicy:
     internal_only_when_disabled: bool = True
 
     def choose(self, ctx: BrowserRoutingContext) -> BrowserBackend:
-        # Implement the exact logic from ARCHITECTURE.md:
-        # browser_* tool call
-        #   -> Workstation router
-        #      -> internal Electron Chromium when available
-        #      -> if unavailable AND task is unbound AND routing is enabled:
-        #           official Hermes extension router
-        #           -> legacy local/cloud backend
-        #      -> if task is already bound OR routing is disabled:
-        #           fail closed and recover the internal runtime
-
-        # If task is already bound to any runtime, fail closed and recover internal runtime
-        if ctx.bound_to_any_runtime:
+        # Once bound, fail closed. Recovery is the internal runtime's job;
+        # never silently move a task to a browser with different state.
+        if ctx.bound_to_internal or ctx.bound_to_any_runtime:
             return BrowserBackend.INTERNAL
-
-        # If routing is disabled, fail closed and recover internal runtime
-        if not self.enabled:
+        if not self.enabled and self.internal_only_when_disabled:
             return BrowserBackend.INTERNAL
-
-        # If internal Electron Chromium is available, use it
-        if ctx.internal_runtime_available:
+        if ctx.requires_auth or ctx.requires_visible_state:
             return BrowserBackend.INTERNAL
-
-        # If internal is unavailable BUT task is unbound AND routing is enabled:
-        # Try extension router first, then fall back to legacy backend
-        # (In practice, the extension router would be attempted first,
-        #  and if it fails or is unavailable, it would fall back to legacy)
-        # For now, we'll return extension router as the first choice in this case
-        return BrowserBackend.AGENT_BROWSER  # This represents the extension router path
+        if ctx.heavy_adaptive_flow:
+            return BrowserBackend.BROWSER_EXEC
+        if ctx.public_read_only and ctx.headless_ok:
+            return BrowserBackend.LIGHTPANDA
+        if ctx.public_read_only:
+            return BrowserBackend.AGENT_BROWSER
+        return BrowserBackend.INTERNAL

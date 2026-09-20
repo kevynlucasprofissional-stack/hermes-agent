@@ -1,86 +1,13 @@
 # Architectural Decisions
 
-## D-030 — Upstream-first qualified baseline before downstream implementation
+**Reading this file.** Decisions are numbered in the order they were recorded and appear in
+ascending numeric order (`D-001` … `D-030`). Read by decision number, not by position. `D-028`,
+`D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
+position on 2026-09-20. A replacement decision states which decision it supersedes — see
+[Changing a decision](#changing-a-decision) below.
 
-**Decision:** upstream synchronization is now a mandatory admission gate for downstream
-runtime work, not a periodic maintenance activity.
-
-Before any bug fix, feature, refactor or behavioral adjustment:
-1. fetch current upstream;
-2. select and pin one exact upstream SHA;
-3. establish a true upstream-history baseline on a separate integration lane;
-4. reconcile affected seam dispositions;
-5. require baseline qualification;
-6. only then implement the requested downstream change.
-
-The pin remains immutable during target implementation. Before promotion, fetch upstream
-again and classify drift; relevant overlap requires another baseline cycle.
-
-This decision deliberately separates **baseline migration** from **target implementation**
-so test failures, ownership changes and rollback remain attributable.
-
-An explicit temporary exception is allowed only when the candidate upstream itself is
-known broken/unadoptable and the exception is recorded in CURRENT_STATE and the engineering
-journal. Silent exceptions are forbidden.
-
-Canonical:
-[UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
-
-D-030 refines D-001/D-002/D-011/D-012 and operationalizes D-027/D-028/D-029.
-
-
-## D-029 — First-Party Workstation Adapter via Generic Core Registries
-
-**Decision:** The Hermes generic core is completely decoupled from Workstation internals.
-All Workstation capabilities are provided via a first-party adapter (`workstation/integrations/hermes/`)
-that wires into generic lifecycle, admission, persistence, and observation registries in `agent/`.
-
-Principles enforced:
-- **Zero Core Seams**: Generic agent modules (`run_agent.py`, `conversation_loop.py`, `tool_executor.py`,
-  `turn_finalizer.py`, `chat_completion_helpers.py`, `conversation_compression.py`, `turn_constraints.py`,
-  `cli.py`, `gateway/run.py`, `kanban_db.py`, `web_server.py`, `file_tools.py`, `tool_search.py`,
-  `close_preview_tool.py`) contain **zero** direct imports from `workstation`.
-- **Reasoner Independence**: Any Reasoner (AIAgent or an alternate foreign Reasoner) can drive
-  the Workstation kernel through the generic lifecycle contracts without importing `run_agent.py`.
-- **Causal Invariants**:
-  1. Pre-authorized checkpoint fires after argument resolution and authorization, strictly before external I/O.
-  2. Raw post-tool observation captures unmutated results and procedure traces before truncation or spilling.
-  3. Owner-managed persistence disposition prevents intermediate SessionDB flushes during compiled durable batches.
-  4. Completion admission validates verification contracts before DONE commits.
-- **Fail-Closed Seam Policy**: `audit_hermes_seams.py --strict` acts as an automated regression
-  gate enforcing zero unclassified core seams.
-
-
-## D-028 — Migrate semantic causal contracts, not historical patch locations
-
-**Decision:** H-078 implementation is governed by semantic concerns and causal ordering.
-A source file is not the unit of preservation.
-
-The migration must:
-
-- adopt modern upstream owners/decomposition;
-- identify the Workstation property currently guaranteed by each seam;
-- preserve the exact authority/ordering/lineage property;
-- place it behind the narrowest generic upstream-compatible contract;
-- keep a first-party seam only when generic contracts cannot preserve equivalent
-  capability/correctness;
-- remove the historical patch location after parity.
-
-Required generic boundaries identified by the deep audit are
-`turn_admission`, `tool_batch_admission`, authorized pre-I/O dispatch,
-execution-persistence disposition, `completion_admission`, `TurnRoutePolicy`,
-`TaskCompletionAdmission`, browser capability registration and trusted `TurnIngress`.
-
-The critical causal invariant is that uncertain mutation state is persisted **after final
-arguments and authorization/guardrails, but before external I/O**. A hook at any other
-position is not equivalent.
-
-The Browser migration specifically uses dual-control/shadow prediction, never
-dual-execution for mutations.
-
-This decision refines D-026/D-027; it does not supersede the minimum-first-party-seam
-policy.
-
+For identifier collisions in other canonical documents (`H-*` in the engineering journal,
+`KI-*` in `KNOWN_ISSUES.md`), see [ID_DISAMBIGUATION.md](ID_DISAMBIGUATION.md).
 
 These are settled decisions for the Hermes Workstation downstream architecture. They narrow implementation choices; they are not a substitute for the detailed design in [`../ARCHITECTURE.md`](../ARCHITECTURE.md).
 
@@ -786,6 +713,85 @@ Every preserved seam must satisfy the first-party seam budget in
 [FIRST_PARTY_SEAM_POLICY.md](FIRST_PARTY_SEAM_POLICY.md), be tracked in
 `workstation/first_party_seams.json` / `UPSTREAM_DELTA.md`, have behavioral evidence,
 and be re-evaluated on each upstream migration.
+
+## D-028 — Migrate semantic causal contracts, not historical patch locations
+
+**Decision:** H-078 implementation is governed by semantic concerns and causal ordering.
+A source file is not the unit of preservation.
+
+The migration must:
+
+- adopt modern upstream owners/decomposition;
+- identify the Workstation property currently guaranteed by each seam;
+- preserve the exact authority/ordering/lineage property;
+- place it behind the narrowest generic upstream-compatible contract;
+- keep a first-party seam only when generic contracts cannot preserve equivalent
+  capability/correctness;
+- remove the historical patch location after parity.
+
+Required generic boundaries identified by the deep audit are
+`turn_admission`, `tool_batch_admission`, authorized pre-I/O dispatch,
+execution-persistence disposition, `completion_admission`, `TurnRoutePolicy`,
+`TaskCompletionAdmission`, browser capability registration and trusted `TurnIngress`.
+
+The critical causal invariant is that uncertain mutation state is persisted **after final
+arguments and authorization/guardrails, but before external I/O**. A hook at any other
+position is not equivalent.
+
+The Browser migration specifically uses dual-control/shadow prediction, never
+dual-execution for mutations.
+
+This decision refines D-026/D-027; it does not supersede the minimum-first-party-seam
+policy.
+
+## D-029 — First-Party Workstation Adapter via Generic Core Registries
+
+**Decision:** The Hermes generic core is completely decoupled from Workstation internals.
+All Workstation capabilities are provided via a first-party adapter (`workstation/integrations/hermes/`)
+that wires into generic lifecycle, admission, persistence, and observation registries in `agent/`.
+
+Principles enforced:
+- **Zero Core Seams**: Generic agent modules (`run_agent.py`, `conversation_loop.py`, `tool_executor.py`,
+  `turn_finalizer.py`, `chat_completion_helpers.py`, `conversation_compression.py`, `turn_constraints.py`,
+  `cli.py`, `gateway/run.py`, `kanban_db.py`, `web_server.py`, `file_tools.py`, `tool_search.py`,
+  `close_preview_tool.py`) contain **zero** direct imports from `workstation`.
+- **Reasoner Independence**: Any Reasoner (AIAgent or an alternate foreign Reasoner) can drive
+  the Workstation kernel through the generic lifecycle contracts without importing `run_agent.py`.
+- **Causal Invariants**:
+  1. Pre-authorized checkpoint fires after argument resolution and authorization, strictly before external I/O.
+  2. Raw post-tool observation captures unmutated results and procedure traces before truncation or spilling.
+  3. Owner-managed persistence disposition prevents intermediate SessionDB flushes during compiled durable batches.
+  4. Completion admission validates verification contracts before DONE commits.
+- **Fail-Closed Seam Policy**: `audit_hermes_seams.py --strict` acts as an automated regression
+  gate enforcing zero unclassified core seams.
+
+## D-030 — Upstream-first qualified baseline before downstream implementation
+
+**Decision:** upstream synchronization is now a mandatory admission gate for downstream
+runtime work, not a periodic maintenance activity.
+
+Before any bug fix, feature, refactor or behavioral adjustment:
+1. fetch current upstream;
+2. select and pin one exact upstream SHA;
+3. establish a true upstream-history baseline on a separate integration lane;
+4. reconcile affected seam dispositions;
+5. require baseline qualification;
+6. only then implement the requested downstream change.
+
+The pin remains immutable during target implementation. Before promotion, fetch upstream
+again and classify drift; relevant overlap requires another baseline cycle.
+
+This decision deliberately separates **baseline migration** from **target implementation**
+so test failures, ownership changes and rollback remain attributable.
+
+An explicit temporary exception is allowed only when the candidate upstream itself is
+known broken/unadoptable and the exception is recorded in CURRENT_STATE and the engineering
+journal. Silent exceptions are forbidden.
+
+Canonical:
+[UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+
+D-030 refines D-001/D-002/D-011/D-012 and operationalizes D-027/D-028/D-029.
 
 ## Changing a decision
 

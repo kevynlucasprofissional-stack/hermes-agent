@@ -1,5 +1,10 @@
 # CURRENT — Workstation Engineering Journal
 
+> **Identifier warning.** `H-046`…`H-051` and `H-054` are each used by **two different series** in
+> this file, and `H-053` collides across documents. Resolve an identifier through
+> [`../ID_DISAMBIGUATION.md`](../ID_DISAMBIGUATION.md) before citing it. New hypotheses take
+> `H-080` and above — do not reuse a retired number.
+
 ## H-079 — Make upstream synchronization the first phase of every downstream change (2026-09-20)
 
 **Status:** POLICY ESTABLISHED / MANDATORY FOR FUTURE CODE-CHANGE LANES.
@@ -20,7 +25,7 @@ H-078C pin, so the next code-changing cycle must begin with Stage A again.
 
 ### H-079 Implementation & Baseline Qualification (2026-09-20)
 
-**Status:** STAGE A & B LOCALLY QUALIFIED / READY FOR GITHUB ACTIONS CI GATING.
+**Status:** STAGE A & B LOCALLY QUALIFIED; SUPERSEDED BY MERGE TO MAIN — SEE THE POST-MERGE RECONCILIATION BELOW. The `b7d7d2929a` pin described in this entry was replaced by `c1488ac947` in `24a8501934`, and the exact-head baseline gate is currently **red**.
 
 The H-079 + H-078C Corrective Cycle was executed under the upstream-first protocol:
 1. **Stage A (Upstream Baseline Sync)**:
@@ -40,6 +45,49 @@ The H-079 + H-078C Corrective Cycle was executed under the upstream-first protoc
    - Desktop: `npm run typecheck` 0 errors, `npm run build` clean.
    - Probes: H004 native browser smoke probe VALIDATED; Work100 benchmark 30 PASS / 0 FAIL.
    - Upstream drift check: Observed 86 commits drift on upstream main (`2ed6387d87`), classified as non-overlapping with Workstation core. Pin frozen at `b7d7d2929a`.
+
+### H-079 post-merge reconciliation and baseline regression (2026-09-20)
+
+**Status:** REGRESSION CONFIRMED AND REPRODUCED / FIX ON BRANCH / BASELINE NOT QUALIFIED.
+
+The candidate above was promoted. `24a8501934` merged a refreshed upstream baseline
+(`c1488ac947`) into `main`, replacing the `b7d7d2929a` pin. Reconciliation of the state-carrying
+documents against the new `main` surfaced a **real product regression** introduced by the
+subsequent head commit.
+
+1. **Regression (exact reproduction)**: `d0ade123c0` (`feat(browser): implement BrowserTask
+   lifecycle and routing enhancements`) rewrote `BrowserRoutingPolicy.choose` in
+   `workstation/routing.py`. The new body short-circuits on
+   `internal_runtime_available` — a field defaulting to `True` whose only reader is that same
+   branch — *before* any ladder condition. Every rung below it therefore became unreachable:
+   `lightpanda`, `agent-browser` and `browser-exec` could never be selected. This is a capability
+   regression of exactly the kind `FIRST_PARTY_SEAM_POLICY.md` forbids, and it contradicts
+   `workstation/workstation.yaml` (also touched by that commit), which still declares
+   `fallback_runtime: lightpanda` and routes `headless_scan`/low-power work to `lightpanda`.
+2. **Evidence**: `Workstation CI` job `contracts` is green at the parent `9c9a00b84e` and red at
+   `d0ade123c0` (`1 failed, 742 passed`). Reproduced locally:
+   `test_lightpanda.py::test_routing_policy_chooses_lightpanda_for_stateless` fails
+   (1 failed, 3 passed).
+3. **Correction**: the ladder is restored on `fix/h079-baseline-reconciliation`. The
+   `bound_to_any_runtime` fail-closed guard is kept (it is a correct superset of
+   `bound_to_internal`, aligned with the "a bound BrowserTask never migrates silently"
+   invariant); `internal_runtime_available` is removed. Both pre-existing contracts pass:
+   `test_lightpanda.py` and `test_contracts.py` (the latter requires `enabled=False` -> INTERNAL,
+   which is why `internal_only_when_disabled` is restored).
+4. **Full ladder re-verified**: `scripts/run_tests.sh workstation/tests -j 4` — **741 passed,
+   0 failed, 2 skipped**, 80 files.
+5. **Drift re-measured** at reconciliation time: pin `c1488ac947`; upstream `main`
+   `a4f9857ff5` (396 ahead of pin); 542 commits on `main` not in upstream. Upstream advanced by 2
+   commits *during* the observation, so these are dated snapshots — the pin, not the observation,
+   is the stable target.
+6. **Consequence for the gate**: per H-079 ("do not begin target coding while required exact-head
+   Workstation baseline gates are red"), no new downstream code-change cycle starts until this
+   branch is merged and exact-head CI is green. The baseline is deliberately **not** recorded as
+   qualified.
+
+The earlier state documents naming `b7d7d2929a` are not rewritten: they are dated records of the
+candidate stage. Their live successors (`ROADMAP.md`, `UPSTREAM.md`, `UPSTREAM_DELTA.md`,
+`CURRENT_STATE.md`, `first_party_seams.json`) now carry the reconciled values.
 
 
 ## H-078B — Code-to-Code Upstream Migration / Semantic Decoupling — 2026-09-19

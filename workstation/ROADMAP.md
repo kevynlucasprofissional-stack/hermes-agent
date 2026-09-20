@@ -20,16 +20,26 @@ upstream fetch -> exact SHA pin -> true baseline merge
 Do not chase a moving HEAD inside the feature. Pin one SHA for the cycle. Do not combine
 an unqualified upstream merge and the requested feature into an opaque patch.
 
-Current 2026-09-20 candidate status:
-- downstream starting main: `6dd02b9e3f...`;
-- adopted upstream pin: `b7d7d2929a...` (true two-parent merge in `a13929fb35...`);
-- merge ancestry verified: `git merge-base --is-ancestor b7d7d2929a... HEAD` -> 0;
-- integration branch: `integration/upstream-20260920-b7d7d292-h079`;
-- H-079 Stage A (Upstream Baseline Sync) and Stage B (H-078C Corrective Closure) are LOCALLY QUALIFIED.
+Current baseline status (2026-09-20):
+- downstream `main`: `d0ade123c0...`;
+- adopted upstream pin: `c1488ac947...` (true two-parent merge in `24a8501934...`);
+- superseded pin: `b7d7d2929a...`, adopted by `a13929fb35...` on the H-079 candidate and replaced when `24a8501934...` landed;
+- merge ancestry verified: `git merge-base HEAD upstream/main` -> `c1488ac947...`;
+- upstream drift observed: `a4f9857ff5...` (396 commits ahead of the pin; 542 commits on `main` not in upstream);
+- H-079 Stage A (Upstream Baseline Sync) and Stage B (H-078C Corrective Closure) are merged to `main`.
 
-### H-078C post-merge closure items — CLOSED ON H-079 CANDIDATE
+**The baseline is not qualified at exact head.** `d0ade123c0...` fails `Workstation CI` (job
+`contracts`) because it rewrote `BrowserRoutingPolicy.choose` with an `internal_runtime_available`
+short-circuit that defaults to `true` and runs before the ladder, making `lightpanda`,
+`agent-browser` and `browser-exec` unreachable. That is a capability regression of exactly the
+kind `context/FIRST_PARTY_SEAM_POLICY.md` forbids. The fix restoring the ladder is on
+`fix/h079-baseline-reconciliation`; it is not yet merged and not yet exact-head CI qualified.
+Per H-079, no new downstream code-change cycle starts until this gate is green at exact head.
 
-The open qualification debt from H-078C has been resolved on the H-079 integration candidate:
+### H-078C post-merge closure items — CLOSED / PROMOTED TO MAIN
+
+The open qualification debt from H-078C was resolved on the H-079 integration candidate and
+promoted to `main`:
 - **Runtime Independence**: Root-caused suite-order import contamination; fresh-process test proves AlternateReasoner runs with 0 `run_agent` imports.
 - **Browser AppView Core Patch Anchor**: Anchor in `apply_core_integration.py` updated to contemporary Desktop layout; dry-run passes.
 - **BrowserControlBroker Authority**: Generic `browser_tool` routes through `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`; legacy router downgraded to non-authoritative compatibility adapter.
@@ -39,7 +49,9 @@ The open qualification debt from H-078C has been resolved on the H-079 integrati
 - **Full Workstation Suite**: 741 passed, 2 skipped, 1 warning (291s).
 - **Seams Audit**: 18 classified, 0 unclassified, 0 budget regressions.
 
-Final promotion to main is gated on exact-head GitHub Actions CI verification.
+These items were promoted to `main` in `24a8501934...`. Exact-head CI verification has since
+been performed and is **red** at `d0ade123c0...` for an unrelated reason (the `BrowserRoutingPolicy`
+ladder regression described above); the H-078C closure items themselves were not implicated.
 
 
 ## H-078B — Code-to-Code Migration & Semantic Decoupling (2026-09-19) — COMPLETE / VERIFIED

@@ -1,5 +1,11 @@
 # Workstation Known Issues
 
+> **Identifier warning.** `KI-007`…`KI-010` are used by **two numbering scopes** in this file: the
+> file-level registry and the self-contained "Canonical Work Loop Reliability Gaps" section at the
+> end, which restarts its own numbering. `KI-012` is duplicated even within the file-level scope.
+> Resolve an identifier through [`ID_DISAMBIGUATION.md`](ID_DISAMBIGUATION.md) before citing it.
+> New issues take `KI-017` and above — do not reuse a retired number.
+
 ## KI-016 — Post-H-076/H-077 false-confidence residuals can still overstate operational truth [IMPLEMENTED — EXACT-HEAD CI PENDING]
 
 Post-merge audit of `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`

@@ -17,9 +17,10 @@ upstream preflight -> pinned baseline sync -> seam reconciliation -> baseline qu
 
 The sync lane and feature/fix lane remain separately reviewable.
 
-H-079 candidate qualification state (2026-09-20):
-- upstream pin `b7d7d2929a10e0658a98a7a03f4531093e1480ed` merged into integration lane (`a13929fb35`);
-- ancestry verified: pin is a true ancestor of HEAD;
+H-079 baseline state (2026-09-20):
+- upstream pin `c1488ac947c9bc33fd65ec464548dc9d8edd6122` merged into `main` (`24a8501934374e47a23b51f21183fb9c4edd3a76`); the earlier H-079 candidate pin `b7d7d2929a10e0658a98a7a03f4531093e1480ed` (integration lane `a13929fb35`) was superseded by it;
+- ancestry verified: the pin is the merge base of `main` and `upstream/main`;
+- **baseline not qualified at exact head**: `d0ade123c0060503abb1a297cd00c602c18b44e6` is red on `Workstation CI` (the `BrowserRoutingPolicy` ladder regression); the fix is unmerged and unqualified pending exact-head CI;
 - `FPS-RUN-001` (`SEAM-RUN-BATCH`) closed: single tool batch admission in `agent/turn_tool_round.py`;
 - `FPS-BROWSER-001` (`SEAM-BROWSER-ROUTE`) closed: authoritative browser dispatch via `browser_extension_router` -> `BrowserControlBroker` -> `WorkstationBrowserController`;
 - `FPS-BROWSER-LEGACY` retained as non-authoritative compatibility adapter;
