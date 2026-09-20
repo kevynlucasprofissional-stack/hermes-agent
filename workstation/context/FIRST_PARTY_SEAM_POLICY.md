@@ -1,5 +1,21 @@
 # H-078A — Minimum Necessary First-Party Seams
 
+## H-079 operating refinement — classification is not closure
+
+The seam audit answers “is every direct seam understood/classified?” It does **not** answer
+“have all seams marked REMOVE actually been removed?”
+
+Every upstream-first baseline cycle must therefore:
+- refresh observed direct imports/references;
+- verify the real authority path;
+- mark REMOVE debt open until the legacy authoritative path is gone;
+- re-evaluate UPSTREAM_ABSTRACT/PRESERVE_FIRST_PARTY against the newly pinned upstream;
+- require exact-head parity evidence before changing status.
+
+This prevents a green seam inventory from masking an incomplete authority switch such as
+the current Browser path.
+
+
 ## H-078B policy refinement — semantic granularity and causal equivalence
 
 A file-level seam disposition is only an audit envelope. The implementation unit is the
