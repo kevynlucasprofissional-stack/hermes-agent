@@ -6,10 +6,33 @@ workstation:
 
 browser:
   runtime: electron-chromium
+  fallback_runtime: lightpanda
+  runtime_selection_policy:
+    - condition: "task.type == 'headless_scan' or task.requires_low_power"
+      runtime: lightpanda
+    - condition: "task.requires_extension and extension_available"
+      runtime: electron-chromium
+    - condition: "task.requires_debugging"
+      runtime: electron-chromium
+      debug_enabled: true
+    - default: electron-chromium
   routing:
     enabled: true
     internal_only_when_disabled: true
     fail_closed_after_binding: true
+    decision_tree:
+      - if: "task.is_bound"
+        then: "use_current_runtime"
+      - else_if: "routing.enabled and task.requires_extension and extension_available"
+        then: "extension_router"
+      - else_if: "routing.enabled"
+        then: "legacy_backend"
+      - else: "internal_chromium"
+    reevaluate_on:
+      - "navigation_change"
+      - "permission_change"
+      - "task_state_change"
+      - "runtime_availability_change"
   profile:
     # Windows default is resolved by Desktop main process to:
     # %LOCALAPPDATA%\HermesWorkstation\Browser\User Data
@@ -18,6 +41,22 @@ browser:
   background:
     enabled: true
     detached_frame_rate: 6
+    power_efficiency_mode: true
+    context_profiles:
+      development:
+        detached_frame_rate: 12
+        cache_max_mb: 1024
+        screenshot_quality: "high"
+      production:
+        detached_frame_rate: 3
+        cache_max_mb: 256
+        screenshot_quality: "medium"
+      battery_saver:
+        detached_frame_rate: 2
+        cache_max_mb: 128
+        screenshot_quality: "low"
+        suspend_on_hidden: true
+        throttle_js: true
   maintenance:
     cache_max_mb: 512
     interval_minutes: 30
@@ -26,8 +65,11 @@ browser:
       - localStorage
       - indexedDB
       - serviceWorkers
-  future_runtimes:
-    lightpanda: false
+      - serviceWorkers
+
+future_runtimes:
+  lightpanda: true
+  # Future runtimes can be added here as they become available
 
 tasks:
   create_kanban_for_multistep: true

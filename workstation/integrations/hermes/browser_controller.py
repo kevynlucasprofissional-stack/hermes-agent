@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any, Callable, Dict, Optional
+from pathlib import Path
 
 from gateway.browser_control_broker import (
     BROWSER_CONTROL_CAPABILITIES,
@@ -18,6 +19,7 @@ from tools.browser_workstation import (
     workstation_route_is_bound,
     workstation_routing_enabled,
 )
+from workstation.runtime import EvidenceStateStore, RuntimeEventBus, RuntimeEvent, ExecutionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +75,17 @@ class WorkstationBrowserController:
     def __init__(self, broker: Optional[BrowserControlBroker] = None):
         self.broker = broker
         self.scope: Optional[ControllerScope] = None
+        # Initialize EvidenceStateStore and RuntimeEventBus for browser lifecycle events
+        self._evidence_store = EvidenceStateStore(Path("workstation_browser_evidence.json"))
+        self._event_bus = RuntimeEventBus()
         register_workstation_browser_capabilities()
+
+    def _get_session_id(self) -> str:
+        """Get the session ID from the controller scope or return a default."""
+        if self.scope and self.scope.session_id:
+            return self.scope.session_id
+        # Fallback to a default session ID for browser controller operations
+        return "browser-controller-session"
 
     def attach_to_broker(
         self,
@@ -129,6 +141,172 @@ class WorkstationBrowserController:
             self.broker.complete(cmd_id, scope=self.scope, ok=True, result=res_obj)
         except Exception as exc:
             self.broker.complete(cmd_id, scope=self.scope, ok=False, result={"error": str(exc)})
+
+    def create(self, task_id: str) -> Dict[str, Any]:
+        """Create a new BrowserTask with one task-owned live page at most."""
+        from tools.browser_workstation import workstation_routed_browser_handler
+        result = workstation_routed_browser_handler(
+            "browser_create",
+            {"task_id": task_id},
+            fallback=lambda: {"error": "workstation controller unavailable"},
+            task_id=task_id,
+        )
+
+        # Parse the result
+        parsed_result = json.loads(result) if isinstance(result, str) else result
+
+        # Publish browser created event
+        from workstation.runtime import RuntimeEvent
+        self._event_bus.publish(RuntimeEvent(
+            type="browser.created",
+            task_id=task_id,
+            session_id=self._get_session_id(),
+            payload=parsed_result
+        ))
+
+        # Update evidence state store - create initial state
+        from workstation.runtime import EvidenceState
+        state = EvidenceState(task_id=task_id, session_id=self._get_session_id())
+        state.add_evidence("browser_controller", "created", ttl_seconds=3600)
+        self._evidence_store.upsert(state)
+
+        return parsed_result
+
+    def show(self, task_id: str, host: str, bounds: Dict[str, Any]) -> Dict[str, Any]:
+        """Expose the task's existing page and park a previously visible BrowserTask when necessary."""
+        from tools.browser_workstation import workstation_routed_browser_handler
+        result = workstation_routed_browser_handler(
+            "browser_show",
+            {"task_id": task_id, "host": host, "bounds": bounds},
+            fallback=lambda: {"error": "workstation controller unavailable"},
+            task_id=task_id,
+        )
+
+        # Parse the result
+        parsed_result = json.loads(result) if isinstance(result, str) else result
+
+        # Publish browser shown event
+        from workstation.runtime import RuntimeEvent
+        self._event_bus.publish(RuntimeEvent(
+            type="browser.shown",
+            task_id=task_id,
+            session_id=self._get_session_id(),
+            payload={
+                "host": host,
+                "bounds": bounds,
+                "result": parsed_result
+            }
+        ))
+
+        # Update evidence state store
+        from workstation.runtime import EvidenceState
+        state = self._evidence_store.get(task_id)
+        if state is None:
+            state = EvidenceState(task_id=task_id, session_id=self._get_session_id())
+        state.add_evidence("browser_controller", "shown", ttl_seconds=3600)
+        state.add_evidence("browser_controller", "host", host, ttl_seconds=3600)
+        state.add_evidence("browser_controller", "bounds", bounds, ttl_seconds=3600)
+        self._evidence_store.upsert(state)
+
+        return parsed_result
+
+    def hide(self, task_id: str) -> Dict[str, Any]:
+        """Remove the page from the visible host but keep page/task alive."""
+        from tools.browser_workstation import workstation_routed_browser_handler
+        result = workstation_routed_browser_handler(
+            "browser_hide",
+            {"task_id": task_id},
+            fallback=lambda: {"error": "workstation controller unavailable"},
+            task_id=task_id,
+        )
+
+        # Parse the result
+        parsed_result = json.loads(result) if isinstance(result, str) else result
+
+        # Publish browser hidden event
+        from workstation.runtime import RuntimeEvent
+        self._event_bus.publish(RuntimeEvent(
+            type="browser.hidden",
+            task_id=task_id,
+            session_id=self._get_session_id(),
+            payload=parsed_result
+        ))
+
+        # Update evidence state store
+        from workstation.runtime import EvidenceState
+        state = self._evidence_store.get(task_id)
+        if state is None:
+            state = EvidenceState(task_id=task_id, session_id=self._get_session_id())
+        state.add_evidence("browser_controller", "hidden", ttl_seconds=3600)
+        self._evidence_store.upsert(state)
+
+        return parsed_result
+
+    def park(self, task_id: str) -> Dict[str, Any]:
+        """Keep the page alive in the background parking strategy and keep page/task state."""
+        from tools.browser_workstation import workstation_routed_browser_handler
+        result = workstation_routed_browser_handler(
+            "browser_park",
+            {"task_id": task_id},
+            fallback=lambda: {"error": "workstation controller unavailable"},
+            task_id=task_id,
+        )
+
+        # Parse the result
+        parsed_result = json.loads(result) if isinstance(result, str) else result
+
+        # Publish browser parked event
+        from workstation.runtime import RuntimeEvent
+        self._event_bus.publish(RuntimeEvent(
+            type="browser.parked",
+            task_id=task_id,
+            session_id=self._get_session_id(),
+            payload=parsed_result
+        ))
+
+        # Update evidence state store
+        from workstation.runtime import EvidenceState
+        state = self._evidence_store.get(task_id)
+        if state is None:
+            state = EvidenceState(task_id=task_id, session_id=self._get_session_id())
+        state.add_evidence("browser_controller", "parked", ttl_seconds=3600)
+        self._evidence_store.upsert(state)
+
+        return parsed_result
+
+    def destroy(self, task_id: str) -> Dict[str, Any]:
+        """Explicit terminal operation: close/remove the owned live page and remove BrowserTask metadata."""
+        from tools.browser_workstation import workstation_routed_browser_handler
+        result = workstation_routed_browser_handler(
+            "browser_destroy",
+            {"task_id": task_id},
+            fallback=lambda: {"error": "workstation controller unavailable"},
+            task_id=task_id,
+        )
+
+        # Parse the result
+        parsed_result = json.loads(result) if isinstance(result, str) else result
+
+        # Publish browser destroyed event
+        from workstation.runtime import RuntimeEvent
+        self._event_bus.publish(RuntimeEvent(
+            type="browser.destroyed",
+            task_id=task_id,
+            session_id=self._get_session_id(),
+            payload=parsed_result
+        ))
+
+        # Update evidence state store
+        from workstation.runtime import EvidenceState
+        state = self._evidence_store.get(task_id)
+        if state is None:
+            state = EvidenceState(task_id=task_id, session_id=self._get_session_id())
+        state.add_evidence("browser_controller", "destroyed", ttl_seconds=3600)
+        # Mark as terminated
+        state.status = ExecutionStatus.TERMINATED
+        self._evidence_store.upsert(state)
+
+        return parsed_result
 
 
 _CONTROLLERS: Dict[tuple[str, str, str], WorkstationBrowserController] = {}
