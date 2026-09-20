@@ -13,6 +13,7 @@ from agent.compression_admission import register_compression_bypass_provider
 from agent.conversation_projection import register_conversation_projection_provider
 from workstation.continuation import durable_compaction, project_for_provider
 from workstation.integrations.hermes.browser_controller import (
+    ensure_workstation_browser_controller,
     register_workstation_browser_capabilities,
 )
 from workstation.integrations.hermes.completion_admission import (
@@ -69,6 +70,8 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
         register_raw_post_tool_observer(workstation_raw_post_tool_observer)
         register_completion_admission_provider(workstation_completion_admission)
         register_workstation_browser_capabilities()
+        from tools.browser_extension_router import register_browser_controller_provider
+        register_browser_controller_provider(ensure_workstation_browser_controller)
         register_compression_bypass_provider(durable_compaction)
         register_conversation_projection_provider(project_for_provider)
         register_task_completion_admission_provider(workstation_task_completion_admission)

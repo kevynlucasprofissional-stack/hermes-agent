@@ -196,6 +196,12 @@ def workstation_routing_enabled() -> bool:
     return bool(_browser_config().get("routing_enabled", False))
 
 
+def workstation_route_is_bound(task_id: Optional[str], session_id: Optional[str]) -> bool:
+    """Whether canonical or process-local state binds this request to Workstation."""
+    key = _task_key(task_id, session_id)
+    return _is_bound(key) or _canonical_browser_task_binding(task_id, session_id) == "bound"
+
+
 def _workstation_home() -> Path:
     override = os.getenv("HERMES_WORKSTATION_HOME", "").strip()
     if override:
@@ -744,10 +750,6 @@ def workstation_routed_browser_handler(
     # Once selected, the internal browser is authoritative for this call.
     # Dispatch failures propagate and never trigger a second browser lane.
     return _dispatch(
-        action,
-        args,
-        task_id=task_id,
-        session_id=session_id,
-        kanban_card_id=kanban_card_id,
-        run_id=run_id,
+        action, args, task_id=task_id, session_id=session_id,
+        kanban_card_id=kanban_card_id, run_id=run_id,
     )

@@ -26,8 +26,8 @@ class FakeBroker:
         self.calls.append(("select", scope, action))
         return self.selected
 
-    def dispatch(self, scope, *, action, arguments, tool_call_id=""):
-        self.calls.append(("dispatch", scope, action, arguments, tool_call_id))
+    def dispatch(self, scope, *, action, arguments, tool_call_id="", context=None):
+        self.calls.append(("dispatch", scope, action, arguments, tool_call_id, context))
         if self.error:
             raise self.error
         return self.result
@@ -206,6 +206,12 @@ def test_selected_controller_receives_immutable_arguments_and_context():
             "browser_navigate",
             {"url": "https://example.test"},
             "tool-call-fixture",
+            {
+                "task_id": "task-fixture",
+                "session_id": "session-fixture",
+                "run_id": None,
+                "principal_id": "principal-fixture",
+            },
         ),
     ]
 

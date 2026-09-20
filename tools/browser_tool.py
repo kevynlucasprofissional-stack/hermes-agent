@@ -1364,20 +1364,6 @@ def _fallback_call(fn_name: str, arg_defaults: Dict[str, Any], extra_kw: tuple =
     return call
 
 
-def _workstation_or_legacy(action: str, args: dict, kw: dict, fallback):
-    """Prefer the embedded Hermes Browser; preserve legacy fallback for unbound tasks."""
-    from tools.browser_workstation import workstation_routed_browser_handler
-    return workstation_routed_browser_handler(
-        action,
-        args,
-        fallback=fallback,
-        task_id=kw.get("task_id"),
-        session_id=kw.get("session_id"),
-        kanban_card_id=kw.get("kanban_card_id") or kw.get("card_id"),
-        run_id=kw.get("run_id"),
-    )
-
-
 def browser_read_http(
     url: str,
     method: str = "GET",
@@ -1434,7 +1420,10 @@ def browser_read_http(
 
     args = {"url": raw_url, "method": method, "headers": headers or {}}
     kw = {"task_id": task_id, "session_id": session_id, **kwargs}
-    res = _workstation_or_legacy("browser_read_http", args, kw, fallback=_fallback)
+    res = routed_browser_handler(
+        "browser_read_http", args, fallback=_fallback, task_id=task_id,
+        session_id=session_id, run_id=kwargs.get("run_id"),
+    )
     if isinstance(res, str) and len(res) > 16384:
         try:
             data = json.loads(res)
@@ -1482,8 +1471,11 @@ def _routed_check_fn(name: str):
 
 def _routed_handler(name: str, fallback):
     def handler(args, **kw):
-        return routed_browser_handler(name, args, fallback=lambda: fallback(args, kw),
-                                      task_id=kw.get("task_id"), session_id=kw.get("session_id"))
+        return routed_browser_handler(
+            name, args, fallback=lambda: fallback(args, kw),
+            task_id=kw.get("task_id"), session_id=kw.get("session_id"),
+            run_id=kw.get("run_id"),
+        )
     return handler
 
 

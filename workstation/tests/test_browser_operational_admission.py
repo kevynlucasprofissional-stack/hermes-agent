@@ -160,8 +160,10 @@ def test_browser_read_http_blocks_authority_headers_and_fails_closed_without_run
     assert "Forbidden browser authority header" in blocked["error"]
 
     monkeypatch.setattr("tools.url_safety.is_safe_url", lambda _url: True)
-    monkeypatch.setattr(browser_module, "_workstation_or_legacy",
-                        lambda _action, _args, _kw, fallback: fallback())
+    monkeypatch.setattr(
+        browser_module, "routed_browser_handler",
+        lambda _action, _args, *, fallback, **_context: fallback(),
+    )
     unavailable = json.loads(browser_module.browser_read_http(url="https://example.com/api"))
     assert unavailable["success"] is False
     assert unavailable["status"] == 503
@@ -179,8 +181,10 @@ def test_browser_read_http_large_payload_persists_complete_artifact(monkeypatch,
         "url": "https://example.com/api", "content_type": "text/plain",
         "text": complete, "json": None,
     })
-    monkeypatch.setattr(browser_module, "_workstation_or_legacy",
-                        lambda _action, _args, _kw, fallback: native_result)
+    monkeypatch.setattr(
+        browser_module, "routed_browser_handler",
+        lambda _action, _args, *, fallback, **_context: native_result,
+    )
 
     projected = json.loads(browser_module.browser_read_http(url="https://example.com/api", task_id="large-read"))
     assert len(projected["text"]) < 5000

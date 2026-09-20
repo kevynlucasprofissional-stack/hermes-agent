@@ -13,14 +13,28 @@ import logging
 from typing import Any
 
 from tools.registry import registry
-from workstation.contracts import ExecutionEventKind, RiskLevel
-from workstation.extensions import ChromeExtensionManager
-from workstation.journal import ExecutionJournal
-from workstation.policy import ActionScope, PolicyDecision, ScopedPolicyEngine
-
-
 _TOOLSET = "desktop_ui"
 _log = logging.getLogger(__name__)
+# Lazy injection seams: keep normal Hermes imports Workstation-free while
+# preserving narrow tests/external adapters that replace these constructors.
+ChromeExtensionManager = None
+ExecutionJournal = None
+
+
+def _workstation_types():
+    from workstation.contracts import ExecutionEventKind, RiskLevel
+    from workstation.extensions import ChromeExtensionManager as manager_type
+    from workstation.journal import ExecutionJournal as journal_type
+    from workstation.policy import ActionScope, PolicyDecision, ScopedPolicyEngine
+    return (ExecutionEventKind, RiskLevel, manager_type, journal_type,
+            ActionScope, PolicyDecision, ScopedPolicyEngine)
+
+
+def _manager():
+    if ChromeExtensionManager is not None:
+        return ChromeExtensionManager()
+    manager_type = _workstation_types()[2]
+    return manager_type()
 
 
 def _desktop_session() -> bool:
@@ -33,8 +47,11 @@ def _desktop_session() -> bool:
         return False
 
 
-def _journal(task_id: str | None, session_id: str | None) -> ExecutionJournal:
-    return ExecutionJournal(str(task_id or session_id or "workstation-extension"), str(session_id or ""))
+def _journal(task_id: str | None, session_id: str | None):
+    journal_type = ExecutionJournal
+    if journal_type is None:
+        journal_type = _workstation_types()[3]
+    return journal_type(str(task_id or session_id or "workstation-extension"), str(session_id or ""))
 
 
 def _approval(reason: str, rule_key: str) -> tuple[bool, str]:
@@ -45,9 +62,15 @@ def _approval(reason: str, rule_key: str) -> tuple[bool, str]:
 
 
 def _controller(action: str, args: dict[str, Any], *, task_id: str | None, session_id: str | None) -> dict[str, Any]:
-    from tools.browser_workstation import _dispatch
+    from tools.browser_extension_router import routed_browser_handler
 
-    response = _dispatch(action, args, task_id=task_id, session_id=session_id)
+    response = routed_browser_handler(
+        action, args,
+        fallback=lambda: (_ for _ in ()).throw(
+            RuntimeError("Workstation Browser controller is unavailable")
+        ),
+        task_id=task_id, session_id=session_id,
+    )
     return json.loads(response) if isinstance(response, str) else response
 
 
@@ -58,8 +81,10 @@ def _error(message: str, *, code: str) -> str:
 def _install(args: dict[str, Any], *, task_id: str | None, session_id: str | None) -> str:
     if not _desktop_session():
         return _error("Chrome extensions are available only to a Hermes Desktop session.", code="desktop_session_required")
+    (ExecutionEventKind, RiskLevel, _manager_type, _journal_type,
+     ActionScope, PolicyDecision, ScopedPolicyEngine) = _workstation_types()
     identifier = str(args.get("extension") or "").strip()
-    manager = ChromeExtensionManager()
+    manager = _manager()
     journal = _journal(task_id, session_id)
     try:
         extension_id = manager.extract_extension_id(identifier)
@@ -127,7 +152,7 @@ def _install(args: dict[str, Any], *, task_id: str | None, session_id: str | Non
 def _list(args: dict[str, Any], *, task_id: str | None, session_id: str | None) -> str:
     if not _desktop_session():
         return _error("Chrome extensions are available only to a Hermes Desktop session.", code="desktop_session_required")
-    manager = ChromeExtensionManager()
+    manager = _manager()
     extensions = []
     for extension in manager.list_installed_extensions():
         try:
@@ -141,7 +166,9 @@ def _list(args: dict[str, Any], *, task_id: str | None, session_id: str | None) 
 def _uninstall(args: dict[str, Any], *, task_id: str | None, session_id: str | None) -> str:
     if not _desktop_session():
         return _error("Chrome extensions are available only to a Hermes Desktop session.", code="desktop_session_required")
-    manager = ChromeExtensionManager()
+    (ExecutionEventKind, _RiskLevel, _manager_type, _journal_type,
+     ActionScope, PolicyDecision, ScopedPolicyEngine) = _workstation_types()
+    manager = _manager()
     journal = _journal(task_id, session_id)
     try:
         extension_id = manager.extract_extension_id(str(args.get("extension") or ""))
@@ -162,7 +189,8 @@ def _uninstall(args: dict[str, Any], *, task_id: str | None, session_id: str | N
 def _open_options(args: dict[str, Any], *, task_id: str | None, session_id: str | None) -> str:
     if not _desktop_session():
         return _error("Chrome extensions are available only to a Hermes Desktop session.", code="desktop_session_required")
-    manager = ChromeExtensionManager()
+    ExecutionEventKind = _workstation_types()[0]
+    manager = _manager()
     try:
         extension_id = manager.extract_extension_id(str(args.get("extension") or ""))
         url = manager.get_options_url(extension_id)

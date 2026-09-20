@@ -24,6 +24,24 @@ import logging
 from typing import Any, Callable, Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+_CONTROLLER_PROVIDERS: list[Callable[..., Optional[Dict[str, str]]]] = []
+
+
+def register_browser_controller_provider(provider: Callable[..., Optional[Dict[str, str]]]) -> None:
+    """Register a product-edge controller provider behind the generic broker."""
+    if provider not in _CONTROLLER_PROVIDERS:
+        _CONTROLLER_PROVIDERS.append(provider)
+
+
+def _prepare_controller(action: str, identity: Dict[str, Optional[str]]) -> Dict[str, Optional[str]]:
+    prepared = dict(identity)
+    for provider in tuple(_CONTROLLER_PROVIDERS):
+        supplied = provider(action=action, **prepared)
+        if supplied:
+            for key in ("session_id", "task_id", "principal_id", "transport_family", "run_id"):
+                if supplied.get(key):
+                    prepared[key] = supplied[key]
+    return prepared
 
 
 def _bound_identity() -> Tuple[Optional[str], Optional[str], Optional[str]]:
@@ -67,6 +85,7 @@ def route_browser_tool(
     action: str, args: Dict[str, Any], *, fallback: Callable[[], Any], broker: Any, enabled: bool,
     session_id: Optional[str] = None, task_id: Optional[str] = None, principal_id: Optional[str] = None,
     transport_family: Optional[str] = None, tool_call_id: Optional[str] = "",
+    run_id: Optional[str] = None,
 ) -> Any:
     """Route one browser action through the extension-control broker.
 
@@ -75,17 +94,29 @@ def route_browser_tool(
     called exactly once when the feature is off or no server-bound identity
     exists; once a controller is selected its result/exception is final.
     """
-    if not enabled or not str(principal_id or "").strip() or not str(transport_family or "").strip():
+    if not enabled:
         return fallback()
 
-    identity = dict(session_id=session_id, task_id=task_id, principal_id=principal_id, transport_family=transport_family)
-    scope = broker.scope_for_session(**identity)
+    identity = _prepare_controller(action, dict(
+        session_id=session_id, task_id=task_id, principal_id=principal_id,
+        transport_family=transport_family, run_id=run_id,
+    ))
+    session_id = identity.get("session_id")
+    task_id = identity.get("task_id")
+    principal_id = identity.get("principal_id")
+    transport_family = identity.get("transport_family")
+    run_id = identity.get("run_id")
+    if not str(principal_id or "").strip() or not str(transport_family or "").strip():
+        return fallback()
+
+    lane_identity = dict(session_id=session_id, task_id=task_id, principal_id=principal_id, transport_family=transport_family)
+    scope = broker.scope_for_session(**lane_identity)
     if scope is None:
         # A stamped identity only becomes authoritative once a controller has
         # registered for the lane; unregistered lanes keep the legacy backend,
         # registered-but-offline lanes fail closed.
         lane_bound = getattr(broker, "lane_registered", None)
-        if callable(lane_bound) and not lane_bound(**identity):
+        if callable(lane_bound) and not lane_bound(**lane_identity):
             return fallback()
         raise _controller_unavailable(f"bound browser controller unavailable for {action}")
 
@@ -95,7 +126,11 @@ def route_browser_tool(
     # Controller is authoritative: never retry the legacy backend. Registry
     # handlers must return a string; keep string results byte-identical and
     # serialize decoded JSON values at this boundary.
-    result = broker.dispatch(scope, action=action, arguments=args, tool_call_id=tool_call_id)
+    result = broker.dispatch(
+        scope, action=action, arguments=args, tool_call_id=tool_call_id,
+        context={"task_id": task_id, "session_id": session_id, "run_id": run_id,
+                 "principal_id": principal_id},
+    )
     return result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
 
 
@@ -113,6 +148,7 @@ def routed_browser_handler(
     action: str, args: Dict[str, Any], *, fallback: Callable[[], Any], task_id: Optional[str] = None,
     session_id: Optional[str] = None, principal_id: Optional[str] = None,
     transport_family: Optional[str] = None, tool_call_id: Optional[str] = None,
+    run_id: Optional[str] = None,
 ) -> Any:
     """Lazy registry-handler route wrapper for ``browser_*`` tools.
     Feature off (or gateway unimportable) ⇒ the legacy handler runs unchanged."""
@@ -121,7 +157,7 @@ def routed_browser_handler(
     except Exception as exc:  # pragma: no cover - defensive, gateway always present
         logger.debug("browser extension router unavailable (%s); using legacy backend", exc)
         return fallback()
-    if not browser_control_enabled():
+    if not browser_control_enabled() and not _CONTROLLER_PROVIDERS:
         return fallback()
 
     try:
@@ -134,4 +170,5 @@ def routed_browser_handler(
         session_id=session_id or env_session, task_id=task_id, principal_id=principal_id or env_principal,
         transport_family=transport_family or env_transport,
         tool_call_id=current_tool_call_id() if tool_call_id is None else tool_call_id,
+        run_id=run_id,
     )

@@ -352,6 +352,7 @@ class BrowserControlBroker:
 
     def dispatch(
         self, scope: ControllerScope, *, action: str, arguments: Optional[dict] = None, tool_call_id: Optional[str] = None,
+        context: Optional[dict] = None,
     ) -> Any:
         """Send one controller command and block for completion; raises ControllerUnavailable/Cancelled/Timeout/
         Rejected. Artifact actions also need an attached store and an approved ``artifact_id`` (only the id travels)."""
@@ -366,6 +367,9 @@ class BrowserControlBroker:
             "command_id": command_id, "action": action, "arguments": arguments, "controller_id": scope.controller_id,
             "browser_profile_id": scope.browser_profile_id, "tool_call_id": tool_call_id,
         }}
+        for key in ("task_id", "session_id", "run_id", "principal_id"):
+            if context and context.get(key) is not None:
+                frame["params"][key] = context[key]
         pending = _PendingCommand(scope=controller.scope, command_id=command_id, tool_call_id=tool_call_id)
         with controller.send_lock:
             with self._lock:
