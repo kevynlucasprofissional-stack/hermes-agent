@@ -103,6 +103,37 @@ function Ensure-WorkstationVenv {
   }
 }
 
+function Test-WorkstationVenvPip {
+  & $VenvPython -m pip --version *> $null
+  return $LASTEXITCODE -eq 0
+}
+
+function Install-HermesEditable {
+  # uv-managed virtual environments intentionally may not contain pip. Prefer
+  # uv so a healthy existing .venv is reusable without installing pip into it.
+  if (Get-Command uv -ErrorAction SilentlyContinue) {
+    Write-Host "Installing Hermes into .venv with uv..." -ForegroundColor Cyan
+    Invoke-NativeChecked -Command "uv" -Arguments @(
+      "pip", "install", "--python", $VenvPython, "-e", "."
+    )
+    return
+  }
+
+  if (-not (Test-WorkstationVenvPip)) {
+    Write-Host "pip is missing from the existing .venv; bootstrapping with ensurepip..." -ForegroundColor Yellow
+    & $VenvPython -m ensurepip --upgrade
+    if ($LASTEXITCODE -ne 0 -or -not (Test-WorkstationVenvPip)) {
+      throw "Workstation .venv has no pip, uv is unavailable, and ensurepip could not bootstrap pip. Install uv or repair this Python installation, then retry."
+    }
+  }
+
+  Write-Host "Installing Hermes into .venv with pip..." -ForegroundColor Cyan
+  & $VenvPython -m pip install -e "."
+  if ($LASTEXITCODE -ne 0) {
+    throw "Hermes Python installation failed with exit code ${LASTEXITCODE}."
+  }
+}
+
 function Get-CheckoutStatus {
   if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return $null }
   $inside = (& git -C $Root rev-parse --is-inside-work-tree 2>$null | Select-Object -Last 1)
@@ -189,9 +220,7 @@ if (-not $SkipDependencies) {
   Ensure-WorkstationVenv
   Push-Location $Root
   try {
-    Write-Host "Installing Hermes into .venv (editable mode)..." -ForegroundColor Cyan
-    & $VenvPython -m pip install -e "."
-    if ($LASTEXITCODE -ne 0) { throw "Hermes Python installation failed with exit code ${LASTEXITCODE}." }
+    Install-HermesEditable
 
     Write-Host "Installing Node workspaces from package-lock.json..." -ForegroundColor Cyan
     Invoke-NativeChecked -Command "npm" -Arguments @("ci")

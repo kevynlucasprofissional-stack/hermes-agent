@@ -650,7 +650,12 @@ test('darwin staging ships the Swift helper executable and the rewritten windows
       }
     })
 
-    assert.deepEqual(chmodCalls, [{ filePath: join(destRoot, 'main'), mode: 0o755 }])
+    // Windows cannot model POSIX executable bits. Keep the portable staging
+    // assertions below active there, and assert chmod only on POSIX hosts.
+    assert.deepEqual(
+      chmodCalls,
+      process.platform === 'win32' ? [] : [{ filePath: join(destRoot, 'main'), mode: 0o755 }]
+    )
     if (process.platform !== 'win32') {
       assert.equal(fs.statSync(join(destRoot, 'main')).mode & 0o777, 0o755)
     }
