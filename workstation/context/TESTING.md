@@ -16,12 +16,13 @@ Before H-079.2 can close, one exact candidate head must prove all of the followi
 4. H-077 guardrail proves both directions:
    - ACK/`{"ok": true}` without `actual_delta=True` does not reset verified progress;
    - trusted observed `actual_delta=True` may reset it.
-5. Full Workstation suite and durable core seam regression suite pass.
-6. Desktop typecheck/build/UI/platform tests pass with platform-correct fixtures.
-7. H004/H013/browser authority and single-mutation-executor invariants remain green.
-8. Workstation Browser Windows is green, not merely explained.
-9. General CI, Nix, Docker and all required exact-head checks are green.
-10. Final upstream drift is classified before promotion.
+5. Real Anthropic construction contract passes without network I/O: keep provider-routing unit mocks, but separately exercise the installed optional SDK through real `build_anthropic_client` construction.
+6. Full Workstation suite and durable core seam regression suite pass.
+7. Desktop typecheck/build/UI/platform tests pass with platform-correct fixtures.
+8. H004/H013/browser authority and single-mutation-executor invariants remain green.
+9. Workstation Browser Windows is green, not merely explained.
+10. General CI, Nix, Docker and all required exact-head checks are green.
+11. Final upstream drift is classified before promotion.
 
 Historical receipts from `9e8127e...` or `964c133...` are regression evidence only; they do not qualify a later H-079.2 head.
 
