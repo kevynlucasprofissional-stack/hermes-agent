@@ -1581,6 +1581,28 @@ def _main_model_pin() -> Tuple[Optional[str], Optional[str]]:
     return (provider.lower() if provider else None), model
 
 
+def _resolve_default_model_snapshot() -> Optional[str]:
+    """Resolve the same default model the cron ticker will use at fire time."""
+    try:
+        from hermes_cli.config_effective import load_user_config_effective
+
+        cfg_path = get_hermes_home() / "config.yaml"
+        if not cfg_path.exists():
+            return None
+        cfg = load_user_config_effective(cfg_path)
+        cron_cfg = cfg.get("cron") or {}
+        if isinstance(cron_cfg, dict):
+            cron_model = cron_cfg.get("model")
+            if isinstance(cron_model, str) and cron_model.strip():
+                return cron_model.strip()
+        model_cfg = cfg.get("model") or {}
+        if isinstance(model_cfg, dict):
+            model_cfg = model_cfg.get("default") or model_cfg.get("model")
+        return model_cfg.strip() or None if isinstance(model_cfg, str) else None
+    except Exception:
+        return None
+
+
 def _normalize_job_optional_text(
     value: Any, *, strip_trailing_slash: bool = False
 ) -> Optional[str]:
@@ -1656,6 +1678,44 @@ _UPDATE_FIELD_NORMALIZERS: Dict[str, Callable[[Any], Any]] = {
     "monitor_url": _normalize_job_optional_text,
     "reasoning_effort": _normalize_reasoning_effort,
 }
+
+
+def _compute_provider_model_snapshots(
+    *, provider: Any, model: Any, base_url: Any, no_agent: Any,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Snapshot unpinned inference axes so later global swaps do not silently retarget jobs."""
+    normalized_provider = _normalize_job_optional_text(provider)
+    normalized_model = _normalize_job_optional_text(model)
+    normalized_base_url = _normalize_base_url(base_url)
+    if bool(no_agent):
+        return None, None
+
+    provider_snapshot: Optional[str] = None
+    model_snapshot: Optional[str] = None
+    if normalized_provider is None:
+        with contextlib.suppress(Exception):
+            from hermes_cli.runtime_provider import resolve_runtime_provider
+
+            runtime_kwargs = {"requested": None}
+            if normalized_base_url:
+                runtime_kwargs["explicit_base_url"] = normalized_base_url
+            snap = resolve_runtime_provider(**runtime_kwargs)
+            provider_snapshot = str(snap.get("provider") or "").strip().lower() or None
+    if normalized_model is None:
+        with contextlib.suppress(Exception):
+            model_snapshot = _resolve_default_model_snapshot() or None
+    return provider_snapshot, model_snapshot
+
+
+def _normalized_inference_axes(
+    job: Dict[str, Any],
+) -> Tuple[Optional[str], Optional[str], Optional[str], bool]:
+    return (
+        _normalize_job_optional_text(job.get("provider")),
+        _normalize_job_optional_text(job.get("model")),
+        _normalize_base_url(job.get("base_url")),
+        bool(job.get("no_agent")),
+    )
 
 
 def _validate_job_mode_invariants(
@@ -1797,6 +1857,8 @@ def create_job(
     name = name or label_source[:50].strip()
     if pinned and not f["model"]:
         f["provider"], f["model"] = _main_model_pin()
+    provider_snapshot, model_snapshot = _compute_provider_model_snapshots(
+        provider=f["provider"], model=f["model"], base_url=f["base_url"], no_agent=f["no_agent"])
     next_run_at = _next_run_or_reject_past_oneshot(parsed_schedule, name, schedule, "")
 
     job = {
@@ -1807,6 +1869,8 @@ def create_job(
         "skill": normalized_skills[0] if normalized_skills else None,
         "model": f["model"],
         "provider": f["provider"],
+        "provider_snapshot": provider_snapshot,
+        "model_snapshot": model_snapshot,
         "base_url": f["base_url"],
         "script": f["script"],
         "no_agent": f["no_agent"],
@@ -2026,8 +2090,12 @@ def update_job(job_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]
         raise ValueError(f"Cron job field(s) cannot be updated: {', '.join(sorted(bad_fields))}")
 
     def apply(jobs, i, job):
+        inference_update_requested = bool(
+            {"provider", "model", "base_url", "no_agent", "pinned"}.intersection(updates)
+        )
         _rederive_repeat_for_schedule_change(job, updates)
         _normalize_job_updates(job, updates)
+        previous_inference_axes = _normalized_inference_axes(job)
         _apply_pin_update(job, updates)
         updated = _apply_skill_fields({**job, **updates})
         _apply_model_policy(updated)
@@ -2041,6 +2109,10 @@ def update_job(job_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]
                 _normalize_job_optional_text(updated.get("script")))
         if any(k in updates for k in _PAYLOAD_FIELDS) and job_payload_is_empty(updated):
             raise ValueError(EMPTY_PAYLOAD_ERROR)
+        inference_fields_changed = (
+            inference_update_requested
+            and _normalized_inference_axes(updated) != previous_inference_axes
+        )
         if "schedule" in updates:
             _apply_schedule_update(updated, updates, job_id)
             # next_run_at now follows the new schedule; a stale quota_hold_until would only shield
