@@ -22,6 +22,7 @@ Blocking truth:
 - dogfood install still fails when an existing `.venv` has no pip;
 - the self-healing installer fix `90dbc446...`, negative H-077 test `a0efd05a...`, and pipless fixture `120165eb...` are not ancestors of main;
 - Windows Browser gate is not green even though most product/browser gates passed; remaining failures are cross-platform test mismatches and must be made platform-correct;
+- Anthropic provider-routing coverage remains unit-level at the exact routing seam: CI installs the real optional SDK, but `test_anthropic_messages_profile_resolves_to_messages_adapter` still mocks `build_anthropic_client`; H-079.2 requires one real no-network builder/adapter contract;
 - general CI/Nix evidence must be taken from the exact final candidate, not inherited from historical heads.
 
 Classification:
