@@ -84,8 +84,8 @@ function Invoke-HermesPython {
 
 function Ensure-WorkstationVenv {
   if (Test-Path $VenvPython) {
-    & $VenvPython -c "import sys; assert (3, 11) <= sys.version_info[:2] < (3, 14); print(sys.version.split()[0])" | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $probe = & $VenvPython -c "import sys; assert (3, 11) <= sys.version_info[:2] < (3, 14); print('HERMES_VENV_OK')" 2>$null | Select-Object -Last 1
+    if ($LASTEXITCODE -ne 0 -or $probe -ne "HERMES_VENV_OK") {
       throw "Existing Workstation venv is invalid or unsupported: $VenvRoot. Remove .venv and rerun install.cmd."
     }
     Write-Host "Using existing isolated Python environment: $VenvRoot" -ForegroundColor Green
