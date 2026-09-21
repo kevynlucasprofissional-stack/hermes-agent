@@ -15,13 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
-import {
-  $previewTabs,
-  $sessionPreviewTabs,
-  activeSessionKey,
-  closeRightRail,
-  openWorkstationBrowserPreview
-} from '@/store/preview'
+import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
 
 import { useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
@@ -135,30 +129,18 @@ export function BrowserView() {
   useLayoutEffect(() => {
     // When viewing Browser Hub (/browser), the full-screen browser is active.
     // The Right Rail must automatically close so it doesn't duplicate the browser.
-    const activeKey = activeSessionKey()
     const stashedTabs = $previewTabs.get()
     const stashedActiveId = $rightRailActiveTabId.get()
 
     if (stashedTabs.length > 0) {
-      if (activeKey) {
-        const map = { ...$sessionPreviewTabs.get(), [activeKey]: stashedTabs }
-        $sessionPreviewTabs.set(map)
-      }
-
       closeRightRail()
     }
 
     return () => {
       // When leaving Browser Hub to return to Chat, restore the Right Rail if it was previously open
-      const restoreKey = activeSessionKey()
-
-      if (restoreKey) {
-        const saved = $sessionPreviewTabs.get()[restoreKey] ?? stashedTabs
-
-        if (saved && saved.length > 0) {
-          $previewTabs.set(saved)
-          selectRightRailTab(stashedActiveId || saved[0].id)
-        }
+      if (stashedTabs.length > 0) {
+        $previewTabs.set(stashedTabs)
+        selectRightRailTab(stashedActiveId || stashedTabs[0].id)
       }
     }
   }, [])
