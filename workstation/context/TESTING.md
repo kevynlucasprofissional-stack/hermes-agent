@@ -1,6 +1,6 @@
 # Workstation Testing
 
-## H-079.2 exact-head dogfood and platform qualification gate — BLOCKING
+## H-079.2 exact-head dogfood and platform qualification gate — LOCAL GREEN / CI BLOCKING
 
 Before H-079.2 can close, one exact candidate head must prove all of the following:
 
@@ -25,6 +25,8 @@ Before H-079.2 can close, one exact candidate head must prove all of the followi
 11. Final upstream drift is classified before promotion.
 
 Historical receipts from `9e8127e...` or `964c133...` are regression evidence only; they do not qualify a later H-079.2 head.
+
+2026-09-21 local candidate receipts: strict seam audit 18/18; core integration check PASS; installer A–F PASS; full Workstation 742 passed / 0 failed / 2 skipped; durable core seams 331 passed; UI 8,592 passed; Electron platform 2,453 passed; typecheck/build PASS; H004 VALIDATED; H013 3/3 with accepted sustained evidence; Work100 30 PASS; production npm audit 0 vulnerabilities. These do not substitute for the required exact-final-head Actions.
 
 
 ## H-079 upstream-first baseline qualification gate — PRIMARY

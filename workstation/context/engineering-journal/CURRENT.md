@@ -2,7 +2,7 @@
 
 ## H-079.2 — Promotion-gap audit after one-click dogfood failure (2026-09-20)
 
-**Status:** REPRODUCED / CORRECTIVE CYCLE REQUIRED.
+**Status:** SUPERSEDED BY 2026-09-21 CANDIDATE / EXACT-HEAD CI PENDING.
 
 A real one-click Windows dogfood run falsified the assumption that the current `main` contained the pipless-venv installer repair. The run reused `C:\Github\hermes-agent\.venv`, then failed at `python -m pip install -e .` with `No module named pip`.
 
@@ -21,7 +21,7 @@ cross-platform mismatch explained != release gate green
 core exact-head green != installer/product release qualified
 ```
 
-Next experiment is H-079.2 Stage A: fetch a fresh upstream pin, true-merge it from current main, reclassify seams, and only then re-adopt the installer/H-077 regression fixes and repair platform-specific test semantics.
+2026-09-21 execution completed Stage A against upstream `118984d7a02f...`, then re-adopted the target fixes. The installer matrix additionally falsified the old interpreter probe: a non-Python executable named `python.exe` could return zero and reach `uv`; the probe now requires a Python-emitted marker and fails explicitly. Local qualification is green; exact-head Actions and final drift remain the closing experiment.
 
 
 > **Identifier warning.** `H-046`…`H-051` and `H-054` are each used by **two different series** in

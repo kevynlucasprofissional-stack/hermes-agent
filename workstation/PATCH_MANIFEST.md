@@ -2,6 +2,8 @@
 
 ## HW-031 — H-079.2 dogfood/bootstrap patch lane
 
+Implemented on the H-079.2 candidate after upstream merge: `a9d47e797a...` (installer, H-077, Anthropic, Windows portability), `605b0fcdd4...` (Cron pin/drift reconciliation), `c6465f5b48...` (Desktop upstream regression closure), and `cf12da8...` (invalid existing-venv rejection). Exact-head CI and promotion remain pending.
+
 Target semantic patches after a fresh upstream Stage A merge:
 - `workstation/install.ps1`: support existing supported venvs without pip; prefer `uv pip --python`, otherwise bootstrap via `ensurepip` and verify;
 - `.github/workflows/workstation-browser-windows.yml`: retain a real pipless-existing-venv regression fixture;

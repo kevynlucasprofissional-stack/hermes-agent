@@ -2,6 +2,8 @@
 
 ## H-079.2 active baseline refresh requirement
 
+**2026-09-21 execution update:** supersedes the stale snapshot below. Selected pin `118984d7a02f8a8baec11255002cbbab7c202e06` was merged through `3d1c1875297529072b6e8b58cc1c2492d912e920` (parents `2ce363292c...`, `118984d7a0...`). Candidate is zero commits behind that pin. Final drift against live `upstream/main` remains mandatory immediately before promotion.
+
 Current `main@964c13361e...` is not upstream-fresh. The latest upstream pin actually ancestral to main is `c1488ac947...`; PR #40's `8d153b26...` merge lives on an integration branch only. Latest observed upstream during this audit is `641f7c8104...`, with downstream 547 ahead / 622 behind and merge-base at `c1488ac947...`.
 
 Therefore the next code-changing cycle MUST execute H-079 Stage A again from current main. Fetch upstream at execution time, freeze one exact new pin, true-merge it into a dedicated integration branch, reconcile seams, and qualify before applying downstream target fixes.

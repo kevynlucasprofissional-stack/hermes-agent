@@ -1,6 +1,6 @@
 # Workstation roadmap
 
-## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — ACTIVE / BLOCKING
+## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING
 
 Canonical:
 [context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
@@ -22,7 +22,7 @@ fresh upstream pin -> true-history merge -> seam reconciliation
 -> final drift classification -> PR -> main
 ```
 
-**Do not start a new downstream feature before H-079.2 closes.** Do not merge the old integration branch wholesale; use its commits as semantic source material after a fresh upstream merge.
+The fresh `118984d7a02f...` pin is now a true ancestor through merge commit `3d1c18752975...`. Installer A–F behavior, H-077, Anthropic construction, full Workstation, Desktop, H004, sustained H013 and Work100 are locally green. Promotion and new downstream feature work remain blocked until the exact final PR head has all required GitHub checks green and the final upstream drift check is classified.
 
 
 ## H-079 — Upstream-First Change Gate / Qualified Baseline Discipline (2026-09-20) — PRIMARY POLICY / ACTIVE

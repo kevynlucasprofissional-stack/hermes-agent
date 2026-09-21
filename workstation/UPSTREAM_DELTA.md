@@ -2,6 +2,8 @@
 
 ## HW-031 — H-079.2 promotion-gap and dogfood closure (2026-09-20)
 
+**2026-09-21 implemented state:** the prior gap description below is superseded for the candidate. The current baseline carries true ancestry to `118984d7a02f...`; installer, H-077 and Anthropic contracts were semantically re-adopted; upstream-overlap conflicts in Cron/config/Kanban were resolved against their current owners. The strict registry remains 18 classified seams, with no unclassified or budget regressions.
+
 Current downstream truth differs from the prior H-079 narrative in three important ways:
 - upstream refresh `8d153b26...` is not ancestral to `main`; the live pin remains `c1488ac947...`;
 - the pipless-venv installer repair and its CI fixture exist off-main;

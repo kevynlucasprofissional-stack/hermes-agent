@@ -1,6 +1,6 @@
 # Current State
 
-## 2026-09-20 H-079.2 Upstream Re-adoption + Dogfood Closure — ACTIVE / NOT RELEASE-QUALIFIED
+## 2026-09-21 H-079.2 Upstream Re-adoption + Dogfood Closure — LOCAL GREEN / EXACT-HEAD CI PENDING
 
 Canonical: [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
 
@@ -18,20 +18,21 @@ Exact-head positive evidence on current main:
 - core integration dry-run: PASS;
 - Docker: PASS.
 
-Blocking truth:
-- dogfood install still fails when an existing `.venv` has no pip;
-- the self-healing installer fix `90dbc446...`, negative H-077 test `a0efd05a...`, and pipless fixture `120165eb...` are not ancestors of main;
-- Windows Browser gate is not green even though most product/browser gates passed; remaining failures are cross-platform test mismatches and must be made platform-correct;
-- Anthropic provider-routing coverage remains unit-level at the exact routing seam: CI installs the real optional SDK, but `test_anthropic_messages_profile_resolves_to_messages_adapter` still mocks `build_anthropic_client`; H-079.2 requires one real no-network builder/adapter contract;
-- general CI/Nix evidence must be taken from the exact final candidate, not inherited from historical heads.
+Current candidate truth:
+- true upstream merge `3d1c18752975...` adopts pin `118984d7a02f...` with behind-selected-pin = 0;
+- pipless install prefers `uv`, falls back through verified `ensurepip`, and rejects invalid existing interpreters before installation;
+- H-077 negative/positive delta and real no-network Anthropic SDK construction contracts pass;
+- full Workstation is 742 passed / 0 failed / 2 skipped; Desktop UI is 8,592 passed and Electron platform is 2,453 passed;
+- H004 is VALIDATED; sustained H013 is 3/3 with accepted 16-task/120-second/8-turn evidence; Work100 is 30 PASS;
+- exact-final-head GitHub Actions and final upstream drift still gate promotion.
 
 Classification:
 ```text
 CORE WORKSTATION: QUALIFIED AT EXACT HEAD
-UPSTREAM FRESHNESS: NOT QUALIFIED
-DOGFOOD INSTALLER: NOT QUALIFIED
-WINDOWS RELEASE GATE: NOT GREEN
-H-079.2: OPEN
+UPSTREAM FRESHNESS: SELECTED PIN ADOPTED / FINAL DRIFT PENDING
+DOGFOOD INSTALLER: LOCAL MATRIX PASS
+WINDOWS RELEASE GATE: LOCAL PLATFORM PASS / CI PENDING
+H-079.2: PROMOTION PENDING
 NEW FEATURE WORK: BLOCKED UNTIL H-079.2 CLOSURE
 ```
 

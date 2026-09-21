@@ -2,6 +2,8 @@
 
 ## H-079.2 — Promotion topology is part of correctness — 2026-09-20
 
+2026-09-21 result: the topology rule held. The installer and verification fixes were applied only after a true upstream merge, and qualification found two integration-only defects that focused tests missed: runtime-to-stored preview identity promotion and invalid-venv probe acceptance. Fresh ancestry plus product gates materially improved the candidate rather than merely updating history.
+
 The one-click installer failure exposed a systems lesson beyond the installer itself: **a correct commit on an integration branch is not product truth until its ancestry reaches the promoted baseline**.
 
 New intelligence:

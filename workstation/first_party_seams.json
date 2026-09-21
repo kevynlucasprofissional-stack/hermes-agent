@@ -614,24 +614,24 @@
     "current_corrective_document": "workstation/context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md"
   },
   "current_baseline": {
-    "observed_at": "2026-09-20",
+    "observed_at": "2026-09-21",
     "downstream_main": "964c13361e95a49e680deb2b16479d5f85c63011",
-    "adopted_upstream_pin": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
-    "latest_upstream_observed": "641f7c810449d9af5c21b0a5ee33b29b192b4117",
+    "adopted_upstream_pin": "118984d7a02f8a8baec11255002cbbab7c202e06",
+    "latest_upstream_observed": "118984d7a02f8a8baec11255002cbbab7c202e06",
     "ahead_of_latest_upstream": 547,
-    "behind_latest_upstream": 622,
+    "behind_latest_upstream": 0,
     "merge_base": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
-    "upstream_merge_commit": "24a8501934374e47a23b51f21183fb9c4edd3a76",
-    "qualification_status": "CORE_EXACT_HEAD_GREEN_H0792_OPEN",
-    "workstation_ci": "PASS_AT_EXACT_HEAD",
-    "workstation_ci_run": "https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/35542676602",
-    "workstation_contract_tests": "743 passed",
-    "durable_core_seam_regressions": "327 passed",
+    "upstream_merge_commit": "3d1c1875297529072b6e8b58cc1c2492d912e920",
+    "qualification_status": "LOCAL_GREEN_EXACT_HEAD_CI_PENDING",
+    "workstation_ci": "PENDING_FINAL_PR_HEAD",
+    "workstation_ci_run": null,
+    "workstation_contract_tests": "742 passed, 2 skipped",
+    "durable_core_seam_regressions": "331 passed",
     "core_patch_dry_run": "PASS",
     "release_qualification": "NOT_QUALIFIED",
-    "upstream_freshness": "STALE_REQUIRES_NEW_STAGE_A",
-    "dogfood_installer": "FAIL_PIPLESS_EXISTING_VENV",
-    "windows_release_gate": "RED_CROSS_PLATFORM_TEST_MISMATCH",
+    "upstream_freshness": "SELECTED_PIN_ADOPTED_FINAL_DRIFT_PENDING",
+    "dogfood_installer": "LOCAL_MATRIX_PASS",
+    "windows_release_gate": "LOCAL_PASS_CI_PENDING",
     "browser_convergence": "UNMEASURED",
     "qualification_scope": "Core Workstation evidence applies only to downstream_main at the cited exact-head run. It does not qualify upstream freshness, dogfood bootstrap, Windows release, or future heads.",
     "drift_provenance": "Observed compare of downstream main 964c13361e95a49e680deb2b16479d5f85c63011 against upstream main 641f7c810449d9af5c21b0a5ee33b29b192b4117: 547 downstream-only, 622 upstream-only, merge-base c1488ac947c9bc33fd65ec464548dc9d8edd6122.",
@@ -643,6 +643,6 @@
       "h077_negative_regression": "a0efd05a9424b2f770a437fa3f5083876ae13547",
       "pipless_ci_fixture": "120165eb1c7e7b38ffdbeeca5256aaf2a8dafde1"
     },
-    "note": "Off-main commits are semantic source material only. H-079.2 requires a fresh upstream pin before re-adoption."
+    "note": "Historical off-main commits were used only as semantic source material after the fresh true merge. Exact-head CI and final drift still gate promotion."
   }
 }

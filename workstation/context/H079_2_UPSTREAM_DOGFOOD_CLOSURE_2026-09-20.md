@@ -1,7 +1,7 @@
 # H-079.2 — Upstream Re-adoption + Dogfood Installer Closure
 
 Date established: 2026-09-20  
-Status: **ACTIVE CORRECTIVE CYCLE — BLOCKS NEW DOWNSTREAM FEATURE WORK**  
+Status: **LOCAL QUALIFICATION GREEN — EXACT-HEAD CI AND FINAL DRIFT BLOCK PROMOTION**  
 Parent policy: H-079 Upstream-First Change Gate  
 Discovery baseline: `main@964c13361e95a49e680deb2b16479d5f85c63011`
 
@@ -165,3 +165,7 @@ Do not disable the Windows workflow or globally skip Desktop platform tests. Pla
 H-079.2 closes only when one exact candidate head simultaneously has: fresh upstream pin as ancestor; behind selected pin = 0; current seam audit; pipless dogfood regression green; positive and negative H-077 delta tests green; full Workstation green; Desktop/Browser gates green; Windows Browser green; general CI/Nix/Docker/required checks green; final upstream drift classified; and canonical docs/registry synchronized.
 
 Anything less is **NOT READY FOR MAIN / NOT READY FOR NEW FEATURE WORK**.
+
+## 2026-09-21 candidate result
+
+The selected upstream pin is `118984d7a02f8a8baec11255002cbbab7c202e06`, adopted by true merge `3d1c1875297529072b6e8b58cc1c2492d912e920`. Local installer A–F, H-077, Anthropic SDK, Workstation, durable seams, Desktop, H004, sustained H013, Work100 and production dependency audit gates are green. The candidate remains not ready for main until exact-head GitHub Actions are green and the final live upstream drift check is classified.
