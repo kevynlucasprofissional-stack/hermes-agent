@@ -97,6 +97,14 @@ The evaluated Windows workflow has strong positive product evidence: install, de
 
 The workflow still ended red because POSIX/macOS-specific tests were executed on Windows, including macOS media/TCC expectations, `/bin/sh`-based managed updater tests, and POSIX `lib/pythonX.Y/site-packages` expectations. This supports a cross-platform test-mismatch diagnosis, but it does not make the exact Windows release gate green.
 
+## Anthropic integration closure
+
+The Workstation CI correctly installs `--extra anthropic`, but the routing contract test `test_anthropic_messages_profile_resolves_to_messages_adapter` still mocks `agent.anthropic_adapter.build_anthropic_client`. This is acceptable as a unit test of provider routing, but it is not by itself an integration proof that the installed SDK can be constructed through the real adapter path.
+
+H-079.2 should preserve the unit test and add at least one no-network integration contract that uses the installed Anthropic SDK and the real `build_anthropic_client` construction path with a dummy credential, asserting the resulting adapter/client type and configuration without issuing an API request.
+
+Do not convert Anthropic into a core dependency; keep it an optional extra and install that extra only in the CI lanes that exercise it.
+
 ## Current qualification interpretation
 
 ```text
