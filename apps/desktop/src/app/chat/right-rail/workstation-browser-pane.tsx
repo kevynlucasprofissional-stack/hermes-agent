@@ -339,7 +339,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               aria-label="Pop out to Browser Hub"
               onClick={onPopOut}
               size="icon-xs"
-              title="Pop out to Browser Hub"
               variant="ghost"
             >
               <Codicon name="link-external" size="0.75rem" />

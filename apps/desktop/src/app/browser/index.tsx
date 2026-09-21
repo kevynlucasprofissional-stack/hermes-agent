@@ -550,7 +550,7 @@ export function BrowserView() {
               Take Control
             </Button>
           )}
-          <Button onClick={transferToChat} size="sm" title="Transfer Viewport to Chat Right Rail" variant="ghost">
+          <Button aria-label="Transfer Viewport to Chat Right Rail" onClick={transferToChat} size="sm" variant="ghost">
             <Codicon name="comment-discussion" />
             Move to Chat
           </Button>
@@ -558,7 +558,7 @@ export function BrowserView() {
             <Button
               onClick={() => setShowDownloads(prev => !prev)}
               size="sm"
-              title="Toggle Downloads Panel"
+              aria-label="Toggle Downloads Panel"
               variant={showDownloads ? 'secondary' : 'ghost'}
             >
               <Codicon name="cloud-download" />

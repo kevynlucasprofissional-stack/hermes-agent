@@ -603,9 +603,28 @@ export function syncSessionPreviewTabs(nextSessionKey: string | null) {
   }
 }
 
+function promoteRuntimePreviewTabs(storedSessionId: string) {
+  const runtimeSessionId = $activeSessionId.get()
+  if (!runtimeSessionId || currentActiveSessionKey !== runtimeSessionId) {
+    syncSessionPreviewTabs(storedSessionId)
+    return
+  }
+
+  const map = { ...$sessionPreviewTabs.get() }
+  const current = $previewTabs.get()
+  if (current.length) map[storedSessionId] = [...current]
+  else delete map[storedSessionId]
+  delete map[runtimeSessionId]
+  $sessionPreviewTabs.set(map)
+  currentActiveSessionKey = storedSessionId
+}
+
 if (typeof window !== 'undefined') {
   currentActiveSessionKey = activeSessionKey()
-  $selectedStoredSessionId.listen(id => syncSessionPreviewTabs(id || $activeSessionId.get() || null))
+  $selectedStoredSessionId.listen(id => {
+    if (id) promoteRuntimePreviewTabs(id)
+    else syncSessionPreviewTabs($activeSessionId.get() || null)
+  })
   $activeSessionId.listen(id => syncSessionPreviewTabs($selectedStoredSessionId.get() || id || null))
   $previewTabs.listen(tabs => {
     if (isSyncingSessionTabs) return
