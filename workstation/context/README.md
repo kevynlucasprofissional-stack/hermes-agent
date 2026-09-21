@@ -11,6 +11,10 @@ Before changing Workstation code, read these documents in order:
 > [UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md)
 > before target implementation. Upstream baseline refresh, seam reconciliation and baseline
 > qualification happen before the requested downstream change.
+> **Current blocking corrective lane:**
+> [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md)
+> records the off-main upstream/installer/test promotion gap. Read it before any new code-changing lane; new feature work is blocked until this closure is qualified.
+
 
 2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
    - Required migration direction: [`UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md`](UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md) — **H-078 / H-078B** adapt-to-upstream while extracting seams, unidirectional Workstation supervision, shadow-before-retirement and Runtime Independence sequencing.
