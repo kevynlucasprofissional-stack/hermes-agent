@@ -1,5 +1,9 @@
 # H-079 Baseline Qualification & Seam Closure Report
 
+> **H-079.2 correction / supersession notice (2026-09-20):** this report is historical evidence for the c1488 H-079 candidate, not current baseline truth. The later audit found that the `8d153b26...` refresh and the pipless-installer/H-077 negative-regression commits remained on an integration branch and never became ancestors of `main`. Current canonical corrective state is [workstation/context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](workstation/context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
+>
+> The section below that described changing ToolGuardrail progress reset from `AND` to `OR` as H-077-safe is superseded. Current code restored the evidence-conservative `AND`/explicit-`actual_delta=True` semantics. A dedicated negative test proving `{"ok": true}` without `actual_delta=True` is not external progress exists off-main and must be re-adopted in H-079.2.
+
 > **Status**: STAGE A REOPENED & REQUALIFIED / STAGE B RE-VERIFIED / GITHUB ACTIONS CI GATES FIXED  
 > **Integration Branch**: `integration/upstream-20260920-b7d7d292-h079`  
 > **Starting Downstream Main SHA**: `6dd02b9e3f026e4ed8f6cfe36d75cb770002dd2a`  
