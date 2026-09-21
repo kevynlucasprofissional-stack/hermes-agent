@@ -1,5 +1,9 @@
 # Workstation Known Issues
 
+## KI-019 — Anthropic routing contract lacks a real SDK construction proof [OPEN — H-079.2]
+
+Workstation CI correctly installs `--extra anthropic`, but the provider-routing test still mocks `build_anthropic_client`. Keep that unit test, and add a no-network integration contract that exercises the installed SDK through the real builder path with dummy credentials. Anthropic remains an optional extra, not a new core dependency.
+
 ## KI-018 — Windows release gate mixes POSIX/macOS fixtures into Windows execution [OPEN — H-079.2]
 
 The Workstation Browser Windows workflow passes the major product/browser path but remains red because several tests assert POSIX/macOS behavior while running on Windows. Observed examples include macOS media/TCC exclusions, `/bin/sh` managed-update paths, and POSIX `lib/pythonX.Y/site-packages` layout.
