@@ -1,5 +1,18 @@
 # Workstation Known Issues
 
+## KI-018 — Windows release gate mixes POSIX/macOS fixtures into Windows execution [OPEN — H-079.2]
+
+The Workstation Browser Windows workflow passes the major product/browser path but remains red because several tests assert POSIX/macOS behavior while running on Windows. Observed examples include macOS media/TCC exclusions, `/bin/sh` managed-update paths, and POSIX `lib/pythonX.Y/site-packages` layout.
+
+Required action: make the tests platform-correct or conditionally scoped without hiding portable regressions. The release gate must become genuinely green.
+
+## KI-017 — One-click dogfood fails on an existing supported venv without pip [OPEN — H-079.2]
+
+Reproduced on Windows: `workstation/install.ps1` accepts an existing supported `.venv` and later unconditionally runs `python -m pip install -e .`. uv-managed/pipless venvs therefore fail with `No module named pip`.
+
+A semantic fix and a real `--without-pip` regression fixture exist on the old integration branch (`90dbc446...`, `120165eb...`) but are not ancestors of current main. Re-adopt them only after the fresh H-079.2 upstream merge.
+
+
 > **Identifier warning.** `KI-007`…`KI-010` are used by **two numbering scopes** in this file: the
 > file-level registry and the self-contained "Canonical Work Loop Reliability Gaps" section at the
 > end, which restarts its own numbering. `KI-012` is duplicated even within the file-level scope.
