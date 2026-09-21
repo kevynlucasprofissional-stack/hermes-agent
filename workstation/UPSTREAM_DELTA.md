@@ -1,5 +1,17 @@
 # Hermes Workstation upstream delta
 
+## HW-031 — H-079.2 promotion-gap and dogfood closure (2026-09-20)
+
+Current downstream truth differs from the prior H-079 narrative in three important ways:
+- upstream refresh `8d153b26...` is not ancestral to `main`; the live pin remains `c1488ac947...`;
+- the pipless-venv installer repair and its CI fixture exist off-main;
+- the explicit negative H-077 ACK-without-delta regression exists off-main.
+
+Current observed upstream drift from `main@964c133...` is 622 upstream-only commits with merge-base `c1488ac947...`. H-079.2 must adopt a fresh pin before reapplying these target fixes.
+
+This delta is not a request to preserve historical file locations. Resolve against current upstream owners and preserve only the behavior contracts.
+
+
 ## HW-030 — Upstream-first qualified baseline discipline (2026-09-20)
 
 Decision D-030 makes upstream freshness an admission condition for downstream code work.
