@@ -1,5 +1,29 @@
 # Workstation roadmap
 
+## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — ACTIVE / BLOCKING
+
+Canonical:
+[context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
+
+The previous H-079 lane produced a healthy core baseline, but a repository audit plus real one-click dogfood run exposed a promotion gap:
+- current `main@964c13361e...` has exact-head Workstation CI green: **743 passed**, **327 core seam regressions passed**, canary and core-patch dry-run green;
+- the attempted upstream refresh to `8d153b26...` landed only in `integration/upstream-20260920-8d153b26-h0791`, so the latest upstream pin actually ancestral to `main` remains `c1488ac947...`;
+- current observed upstream is `641f7c8104...`; `main` is 547 ahead / 622 behind with merge-base `c1488ac947...`;
+- `workstation/install.ps1` still fails on an existing supported `.venv` without pip (`No module named pip`);
+- the semantic installer fix, pipless regression fixture, and negative H-077 ACK-without-delta test exist only on the abandoned integration branch;
+- Windows product evidence is broad, but the workflow remains red because POSIX/macOS tests are executed under Windows; this must be corrected rather than waived as release-qualified.
+
+Required order:
+```text
+fresh upstream pin -> true-history merge -> seam reconciliation
+-> re-adopt pipless installer + H-077 negative regression
+-> platform-correct Windows qualification -> full exact-head gates
+-> final drift classification -> PR -> main
+```
+
+**Do not start a new downstream feature before H-079.2 closes.** Do not merge the old integration branch wholesale; use its commits as semantic source material after a fresh upstream merge.
+
+
 ## H-079 — Upstream-First Change Gate / Qualified Baseline Discipline (2026-09-20) — PRIMARY POLICY / ACTIVE
 
 Canonical:
