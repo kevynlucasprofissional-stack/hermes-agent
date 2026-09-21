@@ -1,5 +1,31 @@
 # Workstation Testing
 
+## H-079.2 exact-head dogfood and platform qualification gate — BLOCKING
+
+Before H-079.2 can close, one exact candidate head must prove all of the following:
+
+1. Fresh upstream pin is an ancestor and candidate is 0 behind that selected pin.
+2. Strict seam audit and core integration dry-run pass.
+3. Real installer matrix passes:
+   - no venv;
+   - existing venv with pip;
+   - existing pipless venv with uv;
+   - existing pipless venv without uv via `ensurepip`;
+   - broken/unsupported venv explicit failure;
+   - checkout remains clean.
+4. H-077 guardrail proves both directions:
+   - ACK/`{"ok": true}` without `actual_delta=True` does not reset verified progress;
+   - trusted observed `actual_delta=True` may reset it.
+5. Full Workstation suite and durable core seam regression suite pass.
+6. Desktop typecheck/build/UI/platform tests pass with platform-correct fixtures.
+7. H004/H013/browser authority and single-mutation-executor invariants remain green.
+8. Workstation Browser Windows is green, not merely explained.
+9. General CI, Nix, Docker and all required exact-head checks are green.
+10. Final upstream drift is classified before promotion.
+
+Historical receipts from `9e8127e...` or `964c133...` are regression evidence only; they do not qualify a later H-079.2 head.
+
+
 ## H-079 upstream-first baseline qualification gate — PRIMARY
 
 No downstream target change may claim a valid test baseline until the upstream-first gate
