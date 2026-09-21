@@ -12,6 +12,7 @@ The previous H-079 lane produced a healthy core baseline, but a repository audit
 - `workstation/install.ps1` still fails on an existing supported `.venv` without pip (`No module named pip`);
 - the semantic installer fix, pipless regression fixture, and negative H-077 ACK-without-delta test exist only on the abandoned integration branch;
 - Windows product evidence is broad, but the workflow remains red because POSIX/macOS tests are executed under Windows; this must be corrected rather than waived as release-qualified.
+- Anthropic integration proof remains partial: CI installs the optional extra, but the provider-routing test still mocks `build_anthropic_client`; retain the unit test and add one real no-network SDK construction contract.
 
 Required order:
 ```text
