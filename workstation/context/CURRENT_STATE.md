@@ -1,5 +1,41 @@
 # Current State
 
+## 2026-09-20 H-079.2 Upstream Re-adoption + Dogfood Closure — ACTIVE / NOT RELEASE-QUALIFIED
+
+Canonical: [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
+
+Exact observed state:
+- downstream `main`: `964c13361e95a49e680deb2b16479d5f85c63011`;
+- latest upstream observed: `641f7c810449d9af5c21b0a5ee33b29b192b4117`;
+- compare: 547 downstream-only / 622 upstream-only commits; merge-base `c1488ac947...`;
+- latest upstream pin actually ancestral to `main`: `c1488ac947...`;
+- PR #40's `8d153b26...` merge is valid only on `integration/upstream-20260920-8d153b26-h0791`, not current `main`.
+
+Exact-head positive evidence on current main:
+- Workstation contract suite: **743 passed**;
+- durable core seam regressions: **327 passed**;
+- controlled canary/replay: PASS;
+- core integration dry-run: PASS;
+- Docker: PASS.
+
+Blocking truth:
+- dogfood install still fails when an existing `.venv` has no pip;
+- the self-healing installer fix `90dbc446...`, negative H-077 test `a0efd05a...`, and pipless fixture `120165eb...` are not ancestors of main;
+- Windows Browser gate is not green even though most product/browser gates passed; remaining failures are cross-platform test mismatches and must be made platform-correct;
+- Anthropic provider-routing coverage remains unit-level at the exact routing seam: CI installs the real optional SDK, but `test_anthropic_messages_profile_resolves_to_messages_adapter` still mocks `build_anthropic_client`; H-079.2 requires one real no-network builder/adapter contract;
+- general CI/Nix evidence must be taken from the exact final candidate, not inherited from historical heads.
+
+Classification:
+```text
+CORE WORKSTATION: QUALIFIED AT EXACT HEAD
+UPSTREAM FRESHNESS: NOT QUALIFIED
+DOGFOOD INSTALLER: NOT QUALIFIED
+WINDOWS RELEASE GATE: NOT GREEN
+H-079.2: OPEN
+NEW FEATURE WORK: BLOCKED UNTIL H-079.2 CLOSURE
+```
+
+
 ## 2026-09-20 H-079 Upstream-First Change Gate — PRIMARY OPERATING POLICY
 
 Before any new downstream runtime adjustment or implementation, execute

@@ -1,5 +1,29 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-079.2 — Promotion-gap audit after one-click dogfood failure (2026-09-20)
+
+**Status:** REPRODUCED / CORRECTIVE CYCLE REQUIRED.
+
+A real one-click Windows dogfood run falsified the assumption that the current `main` contained the pipless-venv installer repair. The run reused `C:\Github\hermes-agent\.venv`, then failed at `python -m pip install -e .` with `No module named pip`.
+
+Repository audit established the promotion gap:
+1. PR #40 merged upstream `8d153b26...` into an integration branch rather than `main`.
+2. The installer repair (`90dbc446...`), H-077 negative test (`a0efd05a...`), and pipless fixture (`120165eb...`) descended from that branch and never became ancestors of main.
+3. Current `main@964c133...` remains based on upstream pin `c1488ac947...`, while observed upstream has advanced to `641f7c8104...` (547 ahead / 622 behind downstream, merge-base at the old pin).
+4. Core Workstation evidence remains strong at current main: 743 Workstation tests, 327 core seam regressions, canary and integration dry-run green.
+5. Windows product/browser gates largely pass; the remaining red result is driven by POSIX/macOS test assumptions executed on a Windows runner. That diagnosis is evidence, not permission to call the release gate green.
+
+Engineering interpretation:
+```text
+fix exists on another branch != fix shipped
+valid integration merge != upstream pin ancestral to main
+cross-platform mismatch explained != release gate green
+core exact-head green != installer/product release qualified
+```
+
+Next experiment is H-079.2 Stage A: fetch a fresh upstream pin, true-merge it from current main, reclassify seams, and only then re-adopt the installer/H-077 regression fixes and repair platform-specific test semantics.
+
+
 > **Identifier warning.** `H-046`…`H-051` and `H-054` are each used by **two different series** in
 > this file, and `H-053` collides across documents. Resolve an identifier through
 > [`../ID_DISAMBIGUATION.md`](../ID_DISAMBIGUATION.md) before citing it. New hypotheses take

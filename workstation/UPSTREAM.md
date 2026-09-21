@@ -1,5 +1,14 @@
 # Upstream strategy
 
+## H-079.2 active baseline refresh requirement
+
+Current `main@964c13361e...` is not upstream-fresh. The latest upstream pin actually ancestral to main is `c1488ac947...`; PR #40's `8d153b26...` merge lives on an integration branch only. Latest observed upstream during this audit is `641f7c8104...`, with downstream 547 ahead / 622 behind and merge-base at `c1488ac947...`.
+
+Therefore the next code-changing cycle MUST execute H-079 Stage A again from current main. Fetch upstream at execution time, freeze one exact new pin, true-merge it into a dedicated integration branch, reconcile seams, and qualify before applying downstream target fixes.
+
+Do not merge `integration/upstream-20260920-8d153b26-h0791` wholesale into main after this amount of upstream movement. Reuse its installer/H-077 work semantically on the new pinned structure.
+
+
 ## Primary sync model — H-079 upstream-first change gate
 
 Canonical:
