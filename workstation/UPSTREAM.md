@@ -1,5 +1,23 @@
 # Upstream strategy
 
+## 2026-09-22 H-080 / H-079.3 continuation note
+
+The failed direct operational-resolution commit `471e9b529f745c89a3b18caad865e762f09dfab3` has been reverted and is not active on shared main.
+
+A later Claude Code continuation reportedly created local branch `integration/upstream-20260922-71a2fe39-h0793`, pinned upstream at `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, and produced true upstream merge `a8dfcd21f5c641d01a5989e223a987687018db7f`. The branch was not found on GitHub, so this is **local recoverable state**, not a promoted baseline.
+
+Latest upstream observed while recording the handoff: `ec21bd7674e78907ccacca846efad198e5cfdbbc`.
+
+H-079 continuation rule:
+- if the local branch and merge are present and coherent, keep the frozen `71a2fe399...` pin for this feature cycle;
+- do not discard uncommitted feature work merely because upstream advanced;
+- classify the later upstream tip at the final drift check;
+- reopen baseline synchronization only if the local lane cannot be recovered or a proven relevant upstream overlap invalidates it.
+
+The target upstream intervention is a **generic pre-reasoning operational-resolution boundary**. Workstation-specific routing/execution remains behind the first-party adapter/provider rather than direct imports in generic `agent/conversation_loop.py`.
+
+
+
 ## H-079.2 active baseline refresh requirement
 
 **2026-09-21 execution update:** supersedes the stale snapshot below. Selected pin `118984d7a02f8a8baec11255002cbbab7c202e06` was merged through `3d1c1875297529072b6e8b58cc1c2492d912e920` (parents `2ce363292c...`, `118984d7a0...`). Candidate is zero commits behind that pin. Final drift against live `upstream/main` remains mandatory immediately before promotion.
