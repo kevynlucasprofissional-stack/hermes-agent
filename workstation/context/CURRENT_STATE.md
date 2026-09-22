@@ -1,5 +1,36 @@
 # Current State
 
+## 2026-09-22 H-080 Operational Resolution Continuation — SHARED MAIN DOCUMENTED / FEATURE LOCAL WIP NOT PROMOTED
+
+Exact shared-repository truth:
+- documentation head at this entry: `60215e86b475d705a1aa70b51dc87da54a43697b`;
+- rejected feature attempt: `471e9b529f745c89a3b18caad865e762f09dfab3`;
+- that feature code was reverted before this documentation lane and is inactive;
+- subsequent Claude Code work exists only as reported local state, not as a GitHub branch;
+- reported local branch: `integration/upstream-20260922-71a2fe39-h0793`;
+- reported frozen local upstream pin: `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`;
+- reported local true upstream merge: `a8dfcd21f5c641d01a5989e223a987687018db7f`;
+- latest upstream observed while preparing the handoff: `ec21bd7674e78907ccacca846efad198e5cfdbbc`.
+
+Classification:
+```text
+MAIN PRODUCT CODE: PRE-ATTEMPT BASELINE (REJECTED FEATURE REVERTED)
+H-079.3 LOCAL BASELINE: LOCAL-ONLY / NOT PROMOTED
+PRE-REASONING GENERIC BOUNDARY: LOCAL WIP / FOCUSED TESTS REPORTED GREEN / REAL-TURN E2E OPEN
+WORKSTATION OPERATIONAL PROVIDER: LOCAL WIP / PROVIDER TESTS REPORTED GREEN / END-TO-END OPEN
+BROWSER DOMAIN OWNERSHIP MOVE: LOCAL WIP / FOCUSED TESTS REPORTED GREEN / NOT LANDED
+EXPERIENCE FEEDBACK LOOP: OPEN
+UPSTREAM INTERVENTION REGISTRY: NOT YET CREATED
+LAYA: DEFERRED; SHADOW/SYSTEM-1 ONLY AFTER DETERMINISTIC PATH
+FEATURE PROMOTION: BLOCKED
+```
+
+Reported local test evidence (not exact-final-head CI): 17 generic boundary passed, 10 provider passed, 144 owner/router tests passed, 31 Browser focused passed, 50 boundary+compression passed, and a Stage-A Workstation baseline of 744 passed / 2 skipped.
+
+Next executor must inspect/recover the local worktree before editing. Mandatory closure remains a real normal Hermes turn where a known promoted capability executes exactly once with canonical VERIFIED outcome and **zero provider LLM calls**, plus a no-match control where the provider is called normally.
+
+
+
 ## 2026-09-21 H-079.2 Upstream Re-adoption + Dogfood Closure — LOCAL GREEN / EXACT-HEAD CI PENDING
 
 Canonical: [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
