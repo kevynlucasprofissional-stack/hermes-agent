@@ -1,22 +1,33 @@
 # Workstation Known Issues
 
-## KI-020 — Normal-turn Progressive Compilation pre-reasoning closure is not yet promoted [OPEN — LOCAL WIP EXISTS]
+## KI-020 — Normal-turn Progressive Compilation pre-reasoning closure is not yet promoted [OPEN — PUBLISHED BRANCH / QUALIFICATION BLOCKED]
 
-The Capability Runtime, Experience Compiler and routing substrate exist, but shared `main` does not yet prove that a normal Hermes turn can execute a promoted capability before the next provider LLM call.
+Implementation branch:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
 
-A direct attempt (`471e9b529f745c89a3b18caad865e762f09dfab3`) was reverted because it fabricated an invalid intent, used a fake-success dispatcher fallback, could fall through to the LLM after deterministic dispatch, directly coupled generic core to Workstation, and lacked real-turn acceptance tests.
+The generic pre-reasoning boundary and Workstation first-party provider now exist on a published branch and are architecturally preferable to the reverted `471e9b5` implementation. The branch must be repaired and qualified rather than reverted.
 
-A subsequent Claude Code session reportedly implemented a generic `agent/` operational-resolution boundary plus Workstation provider on local branch `integration/upstream-20260922-71a2fe39-h0793`, with focused tests green. That branch was not observed on GitHub and the mandatory real-turn tests were not completed.
+Open blockers:
+- E001 currently proves an already-satisfied goal bypasses the provider, not that a promoted capability actually EXECUTEs and bypasses the provider;
+- the normal-turn verifier-failure test is empty (`pass`);
+- `test_zz_scratch_route_fixture.py` contains useful direct-routing evidence but is not canonical release evidence;
+- `upstream_interventions.json` records incorrect downstream commit provenance and includes downstream-only `workstation/**` changes as upstream interventions;
+- `SEAM-OPERATIONAL-RESOLUTION` is referenced by the intervention registry but absent from `first_party_seams.json`;
+- the full Experience Compiler feedback cycle through compilation/promotion/future normal-turn reuse is not yet proven;
+- the audited branch head had no PR or GitHub Actions/status evidence.
 
 Closure requires all of:
-- known promoted capability via a real normal turn => exact-once dispatch, canonical VERIFIED result, provider calls = 0;
-- no match/insufficient trusted intent => normal provider reasoning;
-- invalid certificate / drift / quarantine / uncertain mutation / verifier failure fail safe;
-- canonical finalization preserved for SATISFIED / EXECUTED / WAIT / HANDOFF;
-- `workstation/upstream_interventions.json` created/backfilled for active upstream interventions;
-- exact-head focused+broad qualification and final upstream drift classification.
+- initial goal false -> promoted capability -> EXECUTE -> physical dispatch exactly once -> canonical VERIFIED/accepted -> COMMITTED -> provider calls = 0;
+- no match/insufficient trusted intent -> normal provider reasoning;
+- ACK + FAILED/INCONCLUSIVE verifier -> no committed success and no blind retry;
+- invalid certificate / non-promoted or quarantined capability / uncertain mutation fail safely;
+- canonical finalization preserved;
+- intervention registry and seam registry consistent and truthful;
+- Experience feedback-loop status either proven CLOSED or explicitly retained OPEN;
+- strict seam audit, Browser/owner regressions, full exact-head qualification, GitHub CI and final upstream drift classification.
 
-
+Canonical audit:
+[engineering-journal/h080-branch-quality-audit-2026-09-22.md](engineering-journal/h080-branch-quality-audit-2026-09-22.md).
 
 ## KI-019 — Anthropic routing contract lacks a real SDK construction proof [CLOSED LOCALLY — CI PENDING]
 
