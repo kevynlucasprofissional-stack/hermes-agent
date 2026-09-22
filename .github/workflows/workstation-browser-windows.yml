@@ -58,6 +58,18 @@ jobs:
           $cleanHome = Join-Path $env:RUNNER_TEMP ("hermes-clean-workstation-home-{0}-{1}" -f $env:GITHUB_RUN_ID, $env:GITHUB_RUN_ATTEMPT)
           "HERMES_WORKSTATION_HOME=$cleanHome" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Clean Workstation home: $cleanHome"
+      - name: Create pipless existing Workstation venv regression fixture
+        shell: pwsh
+        run: |
+          python -m venv --without-pip .venv
+          & .venv\Scripts\python.exe -c "import sys; print(sys.version)"
+          # Invert the negative assertion so the expected "pip absent" case
+          # returns success. This avoids PowerShell 7 treating an expected
+          # native non-zero exit as a failing workflow command.
+          & .venv\Scripts\python.exe -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('pip') is None else 1)"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Regression fixture unexpectedly contains pip."
+          }
       - name: Install Workstation from committed source
         shell: cmd
         run: workstation\install.cmd

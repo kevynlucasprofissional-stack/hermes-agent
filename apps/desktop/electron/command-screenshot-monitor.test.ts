@@ -33,7 +33,7 @@ test('launches the unpacked helper without prompting and delivers only validated
   monitor.start(value => captures.push(value), value => statuses.push(value))
   assert.equal(spawn.mock.calls.length, 1)
   assert.deepEqual(spawn.mock.calls[0], [
-    '/Applications/Hermes.app/Contents/Resources/app.asar.unpacked/dist/native/command-screenshot-monitor',
+    resolveCommandScreenshotMonitorPath('/Applications/Hermes.app/Contents/Resources/app.asar'),
     [], { stdio: ['pipe', 'pipe', 'ignore'], shell: false, detached: false, windowsHide: true },
   ])
   child.stdout.write('{"type":"capture","windowId":2,"width":100,"height":200}\n')
@@ -50,7 +50,10 @@ test('launches the unpacked helper without prompting and delivers only validated
   assert.equal(child.kill.mock.calls[0]?.[0], 'SIGTERM')
   assert.equal(child.stdout.listenerCount('data'), 0)
   assert.deepEqual(statuses.at(-1), { type: 'stopped' })
-  assert.equal(resolveCommandScreenshotMonitorPath('/tmp/dev'), '/tmp/dev/dist/native/command-screenshot-monitor')
+  assert.equal(
+    resolveCommandScreenshotMonitorPath('/tmp/dev'),
+    resolve('/tmp/dev', 'dist/native/command-screenshot-monitor')
+  )
 })
 
 test('bounds startup and termination, preserves permission failures, and isolates restarts', () => {

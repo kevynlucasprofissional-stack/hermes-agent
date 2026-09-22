@@ -1,5 +1,18 @@
 # Upstream strategy
 
+## H-079.2 active baseline refresh requirement
+
+**2026-09-21 execution update:** supersedes the stale snapshot below. Selected pin `118984d7a02f8a8baec11255002cbbab7c202e06` was merged through `3d1c1875297529072b6e8b58cc1c2492d912e920` (parents `2ce363292c...`, `118984d7a0...`). Candidate is zero commits behind that pin. Final drift against live `upstream/main` remains mandatory immediately before promotion.
+
+The pre-PR drift check then found 298 material upstream commits. H-079.2 adopted the new final pin `afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc` through a second true merge `fde9e51...`; the candidate is zero commits behind this newer pin. This second merge supersedes `118984d7...` as the promotion baseline.
+
+Current `main@964c13361e...` is not upstream-fresh. The latest upstream pin actually ancestral to main is `c1488ac947...`; PR #40's `8d153b26...` merge lives on an integration branch only. Latest observed upstream during this audit is `641f7c8104...`, with downstream 547 ahead / 622 behind and merge-base at `c1488ac947...`.
+
+Therefore the next code-changing cycle MUST execute H-079 Stage A again from current main. Fetch upstream at execution time, freeze one exact new pin, true-merge it into a dedicated integration branch, reconcile seams, and qualify before applying downstream target fixes.
+
+Do not merge `integration/upstream-20260920-8d153b26-h0791` wholesale into main after this amount of upstream movement. Reuse its installer/H-077 work semantically on the new pinned structure.
+
+
 ## Primary sync model — H-079 upstream-first change gate
 
 Canonical:
@@ -15,11 +28,21 @@ fetch latest upstream
 -> reconcile seam registry
 -> implement target downstream change
 -> exact-head qualification
--> final upstream drift classification
+-> final upstream drift snapshot/classification for the next cycle
+-> PR merge
+-> local main fast-forward from origin/main
 ```
 
 Do not continuously move the pin during implementation. Do not postpone upstream
 synchronization until after a feature is already built.
+
+## One-pin promotion closure
+
+The SHA selected at the beginning of a cycle is immutable through qualification, PR and merge.
+The final `upstream/main` fetch is evidence only: record its tip and classify its delta for the
+next Stage A cycle. Do **not** perform a second upstream merge into the active candidate merely
+because upstream moved; that turns a bounded promotion into an unbounded chase. Promote the
+qualified PR, then synchronize the local `main` by fast-forwarding from `origin/main`.
 
 H-079 qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
 - adopted pin: `c1488ac947c9bc33fd65ec464548dc9d8edd6122`;
@@ -188,5 +211,4 @@ Relevant dimensions include:
 - UI placement/visibility and background continuity;
 - normal Hermes operation without model compliance.
 
-Migration success is not measured by zero seams. It is measured by **upstream compatibility
-plus a small, deliberate, capability-preserving first-party seam budget**.
+Migration success is not measured by zero seams. It is measured by **upstream compatibility plus a small, deliberate, capability-preserving first-party seam budget**.

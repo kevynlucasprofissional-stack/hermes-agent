@@ -1,5 +1,34 @@
 # Workstation Testing
 
+## H-079.2 exact-head dogfood and platform qualification gate — LOCAL GREEN / CI BLOCKING
+
+Before H-079.2 can close, one exact candidate head must prove all of the following:
+
+1. Fresh upstream pin is an ancestor and candidate is 0 behind that selected pin.
+2. Strict seam audit and core integration dry-run pass.
+3. Real installer matrix passes:
+   - no venv;
+   - existing venv with pip;
+   - existing pipless venv with uv;
+   - existing pipless venv without uv via `ensurepip`;
+   - broken/unsupported venv explicit failure;
+   - checkout remains clean.
+4. H-077 guardrail proves both directions:
+   - ACK/`{"ok": true}` without `actual_delta=True` does not reset verified progress;
+   - trusted observed `actual_delta=True` may reset it.
+5. Real Anthropic construction contract passes without network I/O: keep provider-routing unit mocks, but separately exercise the installed optional SDK through real `build_anthropic_client` construction.
+6. Full Workstation suite and durable core seam regression suite pass.
+7. Desktop typecheck/build/UI/platform tests pass with platform-correct fixtures.
+8. H004/H013/browser authority and single-mutation-executor invariants remain green.
+9. Workstation Browser Windows is green, not merely explained.
+10. General CI, Nix, Docker and all required exact-head checks are green.
+11. Final upstream drift is classified before promotion.
+
+Historical receipts from `9e8127e...` or `964c133...` are regression evidence only; they do not qualify a later H-079.2 head.
+
+2026-09-21 local candidate receipts: strict seam audit 18/18; core integration check PASS; installer A–F PASS; full Workstation 742 passed / 0 failed / 2 skipped; durable core seams 331 passed; UI 8,592 passed; Electron platform 2,453 passed; typecheck/build PASS; H004 VALIDATED; H013 3/3 with accepted sustained evidence; Work100 30 PASS; production npm audit 0 vulnerabilities. These do not substitute for the required exact-final-head Actions.
+
+
 ## H-079 upstream-first baseline qualification gate — PRIMARY
 
 No downstream target change may claim a valid test baseline until the upstream-first gate

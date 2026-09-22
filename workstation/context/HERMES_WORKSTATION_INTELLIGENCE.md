@@ -1,5 +1,30 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-079.2 — Promotion topology is part of correctness — 2026-09-20
+
+2026-09-21 result: the topology rule held. The installer and verification fixes were applied only after a true upstream merge, and qualification found two integration-only defects that focused tests missed: runtime-to-stored preview identity promotion and invalid-venv probe acceptance. Fresh ancestry plus product gates materially improved the candidate rather than merely updating history.
+
+The one-click installer failure exposed a systems lesson beyond the installer itself: **a correct commit on an integration branch is not product truth until its ancestry reaches the promoted baseline**.
+
+New intelligence:
+- branch topology is part of qualification evidence;
+- a PR merged into an integration branch must never be described as `main` adoption unless the resulting merge commit becomes an ancestor of main;
+- real dogfood is an independent oracle for packaging/bootstrap assumptions that core tests may not exercise;
+- a supported venv does not imply a pip-equipped venv; uv-managed environments make that distinction normal;
+- explained cross-platform failures are still failed release gates until test ownership/fixtures are corrected.
+
+Operational invariant added to H-079 reasoning:
+```text
+semantic fix
++ correct branch ancestry
++ exact promoted-head tests
++ real installer/product dogfood
+= shippable evidence
+```
+
+The old integration branch is therefore evidence and semantic source material, not a ready-to-merge baseline.
+
+
 ## H-079 — Upstream freshness becomes an admission condition for downstream change — 2026-09-20
 
 The key systems insight from H-078C is that **upstream drift is part of the input state of

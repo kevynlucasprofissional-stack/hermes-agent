@@ -74,7 +74,11 @@ describe('scanGitRepos', () => {
   })
 })
 
-describe('macOS TCC-protected media exclusions (issue #57611 salvage)', () => {
+// These contracts walk a real POSIX filesystem while simulating Darwin/Linux
+// path policy. Windows coverage for the portable normalization layer lives in
+// the synthetic-path tests below; feeding a Windows temp path to POSIX path
+// semantics is not a valid platform simulation.
+describe.runIf(process.platform !== 'win32')('macOS TCC-protected media exclusions (issue #57611 salvage)', () => {
   it('finds a normal repo but skips root-level media folders on darwin', async () => {
     const root = tempDir()
     const dev = makeRepoAt(root, 'dev', 'proj')

@@ -84,8 +84,8 @@ function Invoke-HermesPython {
 
 function Ensure-WorkstationVenv {
   if (Test-Path $VenvPython) {
-    & $VenvPython -c "import sys; assert (3, 11) <= sys.version_info[:2] < (3, 14); print(sys.version.split()[0])" | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $probe = & $VenvPython -c "import sys; assert (3, 11) <= sys.version_info[:2] < (3, 14); print('HERMES_VENV_OK')" 2>$null | Select-Object -Last 1
+    if ($LASTEXITCODE -ne 0 -or $probe -ne "HERMES_VENV_OK") {
       throw "Existing Workstation venv is invalid or unsupported: $VenvRoot. Remove .venv and rerun install.cmd."
     }
     Write-Host "Using existing isolated Python environment: $VenvRoot" -ForegroundColor Green
@@ -100,6 +100,43 @@ function Ensure-WorkstationVenv {
   Invoke-HermesPython -Arguments @("-m", "venv", $VenvRoot)
   if (-not (Test-Path $VenvPython)) {
     throw "Python venv creation completed without producing $VenvPython"
+  }
+}
+
+function Test-WorkstationVenvPip {
+  # Probe via importlib instead of invoking ``python -m pip``. In PowerShell 7
+  # a missing module's expected non-zero native exit is promoted to a workflow
+  # failure before this predicate can return false.
+  $hasPip = & $VenvPython -c "import importlib.util; print('1' if importlib.util.find_spec('pip') else '0')"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect pip availability in $VenvPython."
+  }
+  return $hasPip.Trim() -eq "1"
+}
+
+function Install-HermesEditable {
+  # uv-managed virtual environments intentionally may not contain pip. Prefer
+  # uv so a healthy existing .venv is reusable without installing pip into it.
+  if (Get-Command uv -ErrorAction SilentlyContinue) {
+    Write-Host "Installing Hermes into .venv with uv..." -ForegroundColor Cyan
+    Invoke-NativeChecked -Command "uv" -Arguments @(
+      "pip", "install", "--python", $VenvPython, "-e", "."
+    )
+    return
+  }
+
+  if (-not (Test-WorkstationVenvPip)) {
+    Write-Host "pip is missing from the existing .venv; bootstrapping with ensurepip..." -ForegroundColor Yellow
+    & $VenvPython -m ensurepip --upgrade
+    if ($LASTEXITCODE -ne 0 -or -not (Test-WorkstationVenvPip)) {
+      throw "Workstation .venv has no pip, uv is unavailable, and ensurepip could not bootstrap pip. Install uv or repair this Python installation, then retry."
+    }
+  }
+
+  Write-Host "Installing Hermes into .venv with pip..." -ForegroundColor Cyan
+  & $VenvPython -m pip install -e "."
+  if ($LASTEXITCODE -ne 0) {
+    throw "Hermes Python installation failed with exit code ${LASTEXITCODE}."
   }
 }
 
@@ -189,9 +226,7 @@ if (-not $SkipDependencies) {
   Ensure-WorkstationVenv
   Push-Location $Root
   try {
-    Write-Host "Installing Hermes into .venv (editable mode)..." -ForegroundColor Cyan
-    & $VenvPython -m pip install -e "."
-    if ($LASTEXITCODE -ne 0) { throw "Hermes Python installation failed with exit code ${LASTEXITCODE}." }
+    Install-HermesEditable
 
     Write-Host "Installing Node workspaces from package-lock.json..." -ForegroundColor Cyan
     Invoke-NativeChecked -Command "npm" -Arguments @("ci")

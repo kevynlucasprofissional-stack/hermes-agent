@@ -2,7 +2,7 @@
   "schema": "hermes.workstation.first-party-seams.v2",
   "policy": "minimum-necessary-first-party-seams",
   "established": "2026-09-19",
-  "refined": "2026-09-20-h079-upstream-first-post-h078c-audit",
+  "refined": "2026-09-20-h0792-upstream-dogfood-promotion-audit",
   "rule": "Classify semantic concerns, not whole files. Preserve causal properties in the narrowest modern upstream owner.",
   "invariant": "UPSTREAM STRUCTURE + WORKSTATION SEMANTICS + MINIMUM NECESSARY FIRST-PARTY SEAMS + NO CAPABILITY REGRESSION FOR PURITY",
   "research_baselines": {
@@ -106,16 +106,19 @@
           "id": "SEAM-TOOL-RAW-RESULT",
           "symbol_or_concern": "capture_raw_result",
           "semantic_owner": "Workstation procedure trace / Experience Compiler observer",
-          "current_behavior": "Captures the raw tool result before model-facing persistence/truncation.",
+          "current_behavior": "Captures the raw tool result before model-facing persistence/truncation and makes it available to Experience Compiler via raw_result_ref in TransitionSample.",
           "required_ordering": "Immediately after tool terminal result and before spill/truncate/tool-message projection.",
-          "disposition": "REMOVE",
-          "replacement": "post_tool_call observer",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "Enhanced TransitionSample with raw_result_ref field",
           "parity_tests": [
             "raw untruncated result observed",
             "tool_call_id/operation lineage preserved",
-            "timeout/cancel/error terminal states distinguishable"
+            "timeout/cancel/error terminal states distinguishable",
+            "Experience Compiler can access raw results for learning when needed"
           ],
-          "sunset_condition": "raw-result parity proven"
+          "sunset_condition": "raw-result parity proven",
+          "current_status": "CLOSED_ON_H079_CANDIDATE",
+          "observed_gap": "Experience Compiler now accesses raw tool results via TransitionSample.raw_result_ref field that references sanitized raw results in ArtifactStore, enabling learning with sufficient fidelity while maintaining security"
         },
         {
           "id": "SEAM-TOOL-PERSISTENCE",
@@ -282,8 +285,8 @@
             "evidence/reference plane unchanged"
           ],
           "sunset_condition": "generic browser_tool returns generic result while adapter owns Workstation projection",
-          "current_status": "OPEN",
-          "observed_gap": "Normal browser path still retains Workstation-specific routing/domain logic; BrowserControlBroker authority switch is incomplete."
+          "current_status": "CLOSED_ON_H079_CANDIDATE",
+          "observed_gap": "WorkstationBrowserController now handles domain-specific processing for browser_extract_items via _process_extracted_items_durably, moving artifact storage, kanban persistence, and result shaping from tools/browser_tool.py to the Workstation adapter."
         },
         {
           "id": "SEAM-BROWSER-CAP-REG",
@@ -609,27 +612,40 @@
     "rule": "upstream-first-qualified-baseline-before-downstream-change",
     "baseline_and_target_changes_separate": true,
     "final_upstream_drift_check_required": true,
-    "exact_head_qualification_required": true
+    "exact_head_qualification_required": true,
+    "current_corrective_lane": "H-079.2",
+    "current_corrective_document": "workstation/context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md"
   },
   "current_baseline": {
-    "observed_at": "2026-09-20",
-    "qualified_at": "2026-09-20",
-    "downstream_main": "9e8127e247accf6858f295e554cab7d4bb7adefe",
-    "adopted_upstream_pin": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
-    "latest_upstream_observed": "2c0b2a980c2d0e92f0452500089f5af91208f94c",
-    "ahead_of_latest_upstream": 544,
-    "behind_latest_upstream": 447,
+    "observed_at": "2026-09-21",
+    "downstream_main": "964c13361e95a49e680deb2b16479d5f85c63011",
+    "adopted_upstream_pin": "afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc",
+    "latest_upstream_observed": "afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc",
+    "ahead_of_latest_upstream": 547,
+    "behind_latest_upstream": 0,
     "merge_base": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
-    "upstream_merge_commit": "24a8501934374e47a23b51f21183fb9c4edd3a76",
-    "superseded_upstream_pin": "b7d7d2929a10e0658a98a7a03f4531093e1480ed",
-    "qualification_status": "QUALIFIED",
-    "workstation_ci": "PASS_AT_EXACT_HEAD",
-    "branch_ci": "PASS",
+    "upstream_merge_commit": "fde9e51",
+    "qualification_status": "FINAL_UPSTREAM_REFRESH_ADOPTED_REQUALIFICATION_PENDING",
+    "workstation_ci": "PENDING_FINAL_PR_HEAD",
+    "workstation_ci_run": null,
+    "workstation_contract_tests": "742 passed, 2 skipped",
+    "durable_core_seam_regressions": "331 passed",
+    "core_patch_dry_run": "PASS",
+    "release_qualification": "NOT_QUALIFIED",
+    "upstream_freshness": "SELECTED_PIN_ADOPTED_FINAL_DRIFT_PENDING",
+    "dogfood_installer": "LOCAL_MATRIX_PASS",
+    "windows_release_gate": "LOCAL_PASS_CI_PENDING",
     "browser_convergence": "UNMEASURED",
-    "browser_convergence_provenance": "No named acceptance check is cited for aggregate browser convergence. Workstation CI success and the narrower Browser Authority Convergence evidence do not establish FULL or PARTIAL for this field.",
-    "qualification_scope": "Qualification applies only to downstream_main at the cited Workstation CI run, not automatically to later branch or main heads.",
-    "workstation_ci_run": "https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/35536129052",
-    "regression": "d0ade123c0 rewrote BrowserRoutingPolicy.choose with an internal_runtime_available short-circuit (default true) that made the routing ladder unreachable; Workstation CI failed at that commit (run 35531064449). Restored by 1716062f32 on fix/h079-baseline-reconciliation (branch CI green) and merged to main as 9e8127e247 via PR #41, where Workstation CI passes (run 35536129052).",
-    "drift_provenance": "Reproduced with git rev-list --left-right --count 9e8127e247accf6858f295e554cab7d4bb7adefe...2c0b2a980c2d0e92f0452500089f5af91208f94c: 544 downstream-only and 447 upstream-only commits. git merge-base of the same SHAs is c1488ac947c9bc33fd65ec464548dc9d8edd6122. These counts describe downstream_main versus latest_upstream_observed, not moving HEAD or upstream/main. The adopted upstream pin remains unchanged."
+    "qualification_scope": "Core Workstation evidence applies only to downstream_main at the cited exact-head run. It does not qualify upstream freshness, dogfood bootstrap, Windows release, or future heads.",
+    "drift_provenance": "Observed compare of downstream main 964c13361e95a49e680deb2b16479d5f85c63011 against upstream main 641f7c810449d9af5c21b0a5ee33b29b192b4117: 547 downstream-only, 622 upstream-only, merge-base c1488ac947c9bc33fd65ec464548dc9d8edd6122.",
+    "h0792_canonical_document": "workstation/context/H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md",
+    "off_main_reference_branch": "integration/upstream-20260920-8d153b26-h0791",
+    "off_main_reference_commits": {
+      "upstream_refresh": "3db94236cf103841473cf94d8577626d181b5e8b",
+      "pipless_installer_fix": "90dbc446182362cc929e54cd1333e64d9532f37b",
+      "h077_negative_regression": "a0efd05a9424b2f770a437fa3f5083876ae13547",
+      "pipless_ci_fixture": "120165eb1c7e7b38ffdbeeca5256aaf2a8dafde1"
+    },
+    "note": "Historical off-main commits were used only as semantic source material after the fresh true merge. Exact-head CI and final drift still gate promotion."
   }
 }

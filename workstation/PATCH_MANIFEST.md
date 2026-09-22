@@ -1,5 +1,18 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-031 — H-079.2 dogfood/bootstrap patch lane
+
+Implemented on the H-079.2 candidate after upstream merge: `a9d47e797a...` (installer, H-077, Anthropic, Windows portability), `605b0fcdd4...` (Cron pin/drift reconciliation), `c6465f5b48...` (Desktop upstream regression closure), and `cf12da8...` (invalid existing-venv rejection). Exact-head CI and promotion remain pending.
+
+Target semantic patches after a fresh upstream Stage A merge:
+- `workstation/install.ps1`: support existing supported venvs without pip; prefer `uv pip --python`, otherwise bootstrap via `ensurepip` and verify;
+- `.github/workflows/workstation-browser-windows.yml`: retain a real pipless-existing-venv regression fixture;
+- `tests/agent/test_tool_guardrails.py`: retain explicit negative proof that `{"ok": true}` without `actual_delta=True` is not external progress;
+- Windows Desktop platform tests: correct POSIX/macOS fixtures/guards rather than weakening the aggregate gate.
+
+Known off-main source commits: `90dbc446...`, `a0efd05a...`, `120165eb...`. Treat them as reference patches, not automatic cherry-picks.
+
+
 ## HW-030 — Pre-change upstream baseline gate
 
 This manifest now has a process-level prerequisite in addition to file-level patch

@@ -27,12 +27,25 @@ refresh upstream
 -> establish a qualified upstream-aligned baseline
 -> reconcile/reclassify affected Workstation seams
 -> only then implement the target downstream change
--> final upstream drift check before promotion
+-> final upstream drift snapshot before promotion
 ```
 
 The synchronization/baseline work and the target implementation must remain independently
 inspectable. Do not hide a feature inside an upstream merge and do not defer upstream drift
 until after the feature is built.
+
+### One-pin promotion closure
+
+Each downstream promotion cycle adopts **one immutable upstream SHA**. Once Stage A has
+merged and qualified that pin, do not start a second upstream merge merely because
+`upstream/main` advanced while the PR was being prepared. The final fetch is an observation:
+record the new tip, compare it with the fixed pin, classify it for the next cycle, and keep
+the candidate reproducible. It does not change the candidate's ancestry or restart
+qualification. Merge the approved PR, then fast-forward local `main` from `origin/main`.
+
+The only exception is a separately documented release hold for a confirmed defect in
+the candidate or a required GitHub check failure. A moving upstream tip alone is never a
+reason to consume the current promotion cycle with another sync.
 
 A coding agent may skip the physical upstream merge only when the pre-change gate proves
 that the selected upstream pin is already contained in the qualified baseline and no newer
@@ -401,6 +414,16 @@ families: `hermes_state.py` (21), `gateway/run.py` (15), `tools/mcp_tool.py` (15
   spawns (`served_profile_child_env`, never `os.environ.copy()`). Fail-closed reads exist only after
   `set_multiplex_active(True)`. Prove live with two homes (A→B→A) under multiplex, not one temp
   `HERMES_HOME`. Advisory lint: `scripts/check_profile_scope_patterns.py`.
+- **Machine facts and resource lookup go through `hermes_platform`.** `hermes_platform.host` is the
+  one answer for OS family, native architecture (`IsWow64Process2` → `platform.machine()`; never
+  `PROCESSOR_ARCHITECTURE` alone, it reads AMD64 under x64-on-ARM64 emulation), CPU identity, and
+  WSL/container/Termux. Facts are cached per process and take **no environment-variable input**, so
+  a hardware recognizer (`host/products.py`) cannot be set from a shell. Distinguish the control
+  host (where this Python runs) from the terminal execution target (SSH/container) and the Desktop
+  client (another machine): `host.*` answers only the first. A new bare `shutil.which` or a
+  hand-written known-path table outside `hermes_platform/` fails
+  `tests/test_managed_runtime_resolution.py` unless allowlisted with a reason; resolvers land in
+  `hermes_platform/resolver/`. Lookup never installs, downloads, or starts anything.
 - **Argparse alias dispatch:** `add_parser("list", aliases=["ls"])` sets `dest` to the literal
   the user typed (`"ls"`). Dispatch must accept both (caught PTY-testing `hermes webhook ls`).
 - **Don't wire in dead code without E2E validation.** Unshipped code was dead for a reason;
@@ -455,7 +478,8 @@ scripts/run_tests.sh -v --tb=long                       # pytest flags pass thro
 ```
 
 - **Flake policy:** a failing FILE is retried once in a fresh subprocess (`--file-retries`;
-  `HERMES_TEST_FILE_RETRIES=0` disables). Pass-on-retry is green but printed under `⚠ FLAKY`
+  `HERMES_TEST_FILE_RETRIES=0` disables); a worker killed by signal or the file timeout is never
+  retried (relaunching a runaway doubles the damage). Pass-on-retry is green but printed under `⚠ FLAKY`
   with both outputs — a bug to fix, not noise. Timing tests must not assume a quiet runner:
   wall-clock bounds ≥ 2s, event-based sync, no `assert not _wait_until(...)` races.
 - **Placement mirrors the source tree.** A test lives in `tests/<top-level source dir>/` (`tests/hermes_cli/`,

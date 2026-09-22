@@ -15,13 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
 import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
-import {
-  $previewTabs,
-  $sessionPreviewTabs,
-  activeSessionKey,
-  closeRightRail,
-  openWorkstationBrowserPreview
-} from '@/store/preview'
+import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
 
 import { useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
@@ -135,30 +129,18 @@ export function BrowserView() {
   useLayoutEffect(() => {
     // When viewing Browser Hub (/browser), the full-screen browser is active.
     // The Right Rail must automatically close so it doesn't duplicate the browser.
-    const activeKey = activeSessionKey()
     const stashedTabs = $previewTabs.get()
     const stashedActiveId = $rightRailActiveTabId.get()
 
     if (stashedTabs.length > 0) {
-      if (activeKey) {
-        const map = { ...$sessionPreviewTabs.get(), [activeKey]: stashedTabs }
-        $sessionPreviewTabs.set(map)
-      }
-
       closeRightRail()
     }
 
     return () => {
       // When leaving Browser Hub to return to Chat, restore the Right Rail if it was previously open
-      const restoreKey = activeSessionKey()
-
-      if (restoreKey) {
-        const saved = $sessionPreviewTabs.get()[restoreKey] ?? stashedTabs
-
-        if (saved && saved.length > 0) {
-          $previewTabs.set(saved)
-          selectRightRailTab(stashedActiveId || saved[0].id)
-        }
+      if (stashedTabs.length > 0) {
+        $previewTabs.set(stashedTabs)
+        selectRightRailTab(stashedActiveId || stashedTabs[0].id)
       }
     }
   }, [])
@@ -550,7 +532,7 @@ export function BrowserView() {
               Take Control
             </Button>
           )}
-          <Button onClick={transferToChat} size="sm" title="Transfer Viewport to Chat Right Rail" variant="ghost">
+          <Button aria-label="Transfer Viewport to Chat Right Rail" onClick={transferToChat} size="sm" variant="ghost">
             <Codicon name="comment-discussion" />
             Move to Chat
           </Button>
@@ -558,7 +540,7 @@ export function BrowserView() {
             <Button
               onClick={() => setShowDownloads(prev => !prev)}
               size="sm"
-              title="Toggle Downloads Panel"
+              aria-label="Toggle Downloads Panel"
               variant={showDownloads ? 'secondary' : 'ghost'}
             >
               <Codicon name="cloud-download" />

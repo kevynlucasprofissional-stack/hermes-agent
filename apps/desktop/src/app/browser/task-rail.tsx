@@ -193,7 +193,6 @@ export function TaskRail({
           aria-label="Expand Task Rail"
           onClick={() => setCollapsed(false)}
           size="icon-xs"
-          title="Expand Task Rail"
           variant="ghost"
         >
           <Codicon name="layout-sidebar-left-off" size="0.75rem" />
@@ -221,7 +220,6 @@ export function TaskRail({
                 className="h-6 px-1.5 text-[10px] text-(--ui-text-tertiary) hover:bg-red-500/10 hover:text-red-300"
                 onClick={() => onClearParked(clearableTaskIds)}
                 size="xs"
-                title="Clear parked idle tasks"
                 variant="ghost"
               >
                 <Codicon name="clear-all" size="0.7rem" />
@@ -232,7 +230,6 @@ export function TaskRail({
             aria-label="Collapse Task Rail"
             onClick={() => setCollapsed(true)}
             size="icon-xs"
-            title="Collapse Task Rail"
             variant="ghost"
           >
             <Codicon name="layout-sidebar-left" size="0.75rem" />
@@ -373,9 +370,9 @@ export function TaskRail({
                         )}
                         {onAuditTask && (
                           <Button
+                            aria-label="Audit Execution Timeline"
                             onClick={() => onAuditTask(task.taskId)}
                             size="xs"
-                            title="Audit Execution Timeline"
                             variant="ghost"
                           >
                             <Codicon name="history" size="0.7rem" />
@@ -384,10 +381,10 @@ export function TaskRail({
                         )}
                         {onDestroyTask && (
                           <Button
+                            aria-label="Close and delete task"
                             className="ml-auto text-red-400 hover:bg-red-500/10 hover:text-red-300"
                             onClick={() => onDestroyTask(task.taskId)}
                             size="xs"
-                            title="Close and delete task"
                             variant="ghost"
                           >
                             <Codicon name="trash" size="0.7rem" />

@@ -101,7 +101,7 @@ export function TaskJournalDrawer({ taskId, onClose, className }: TaskJournalDra
             {taskId}
           </div>
         </div>
-        <Button onClick={onClose} size="icon-xs" title="Close Audit Drawer" variant="ghost">
+        <Button aria-label="Close Audit Drawer" onClick={onClose} size="icon-xs" variant="ghost">
           <Codicon name="close" size="0.75rem" />
         </Button>
       </div>

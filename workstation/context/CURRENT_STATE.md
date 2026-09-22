@@ -1,5 +1,42 @@
 # Current State
 
+## 2026-09-21 H-079.2 Upstream Re-adoption + Dogfood Closure — LOCAL GREEN / EXACT-HEAD CI PENDING
+
+Canonical: [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).
+
+Exact observed state:
+- downstream `main`: `964c13361e95a49e680deb2b16479d5f85c63011`;
+- latest upstream observed: `641f7c810449d9af5c21b0a5ee33b29b192b4117`;
+- compare: 547 downstream-only / 622 upstream-only commits; merge-base `c1488ac947...`;
+- latest upstream pin actually ancestral to `main`: `c1488ac947...`;
+- PR #40's `8d153b26...` merge is valid only on `integration/upstream-20260920-8d153b26-h0791`, not current `main`.
+
+Exact-head positive evidence on current main:
+- Workstation contract suite: **743 passed**;
+- durable core seam regressions: **327 passed**;
+- controlled canary/replay: PASS;
+- core integration dry-run: PASS;
+- Docker: PASS.
+
+Current candidate truth:
+- true upstream merges `3d1c18752975...` and `fde9e51...` adopt final pin `afc3b7c6f397...` with behind-selected-pin = 0;
+- pipless install prefers `uv`, falls back through verified `ensurepip`, and rejects invalid existing interpreters before installation;
+- H-077 negative/positive delta and real no-network Anthropic SDK construction contracts pass;
+- full Workstation is 742 passed / 0 failed / 2 skipped; Desktop UI is 8,592 passed and Electron platform is 2,453 passed;
+- H004 is VALIDATED; sustained H013 is 3/3 with accepted 16-task/120-second/8-turn evidence; Work100 is 30 PASS;
+- exact-final-head GitHub Actions and final upstream drift still gate promotion.
+
+Classification:
+```text
+CORE WORKSTATION: QUALIFIED AT EXACT HEAD
+UPSTREAM FRESHNESS: SELECTED PIN ADOPTED / FINAL DRIFT PENDING
+DOGFOOD INSTALLER: LOCAL MATRIX PASS
+WINDOWS RELEASE GATE: LOCAL PLATFORM PASS / CI PENDING
+H-079.2: PROMOTION PENDING
+NEW FEATURE WORK: BLOCKED UNTIL H-079.2 CLOSURE
+```
+
+
 ## 2026-09-20 H-079 Upstream-First Change Gate — PRIMARY OPERATING POLICY
 
 Before any new downstream runtime adjustment or implementation, execute
@@ -13,12 +50,18 @@ fresh upstream preflight
 -> seam reconciliation
 -> target implementation
 -> exact-head qualification
--> final upstream drift classification
+-> final upstream drift snapshot/classification for the next cycle
+-> PR merge
+-> local main fast-forward from origin/main
 ```
 
 This is stricter than the old periodic-sync model and safer than continuously rebasing a
 feature against moving upstream. Baseline synchronization and target work remain separate
 and independently reviewable.
+
+The pin is immutable for the entire promotion cycle. A final `upstream/main` fetch records a
+new tip and its relevance to the **next** cycle; it does not authorize a second upstream merge
+or invalidate a qualified candidate merely because upstream advanced.
 
 Observed qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
 - `main@9e8127e247...`;

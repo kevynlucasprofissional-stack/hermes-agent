@@ -60,13 +60,15 @@ branch from that qualified baseline
 The exact upstream pin is immutable during Stage A/Stage B. This prevents the target change
 from being built on a moving foundation.
 
-Before final merge, fetch upstream again. If upstream advanced:
+Before final merge, fetch upstream again **only to snapshot and classify drift**. The selected
+pin stays immutable. If upstream advanced, record the observed tip, compare it with the pin,
+and classify the delta for the next cycle. Do not reopen Stage A or perform another upstream
+merge in the active promotion cycle solely because `upstream/main` moved: qualification is for
+the recorded SHA, not a moving branch name.
 
-- classify the new delta;
-- if it touches the target owners, critical shared owners, or any registered Workstation
-  seam, reopen Stage A and resynchronize before promotion;
-- if it is demonstrably non-overlapping, record the no-impact evidence and the next-cycle
-  pin instead of contaminating the active target change with unrelated upstream churn.
+Hold promotion only for a confirmed defect in the candidate itself or a failed required check.
+After the PR is approved and merged, fetch `origin/main` and fast-forward local `main`; the
+newly observed upstream tip is input to the next Stage A cycle.
 
 ## Mandatory pre-change gate
 

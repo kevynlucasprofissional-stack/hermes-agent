@@ -194,7 +194,7 @@ test('getVenvSitePackagesEntries: returns empty on Windows when site-packages do
 })
 
 test('getVenvSitePackagesEntries: reads pyvenv.cfg version on POSIX and resolves lib/pythonX.Y/site-packages', () => {
-  const expected = path.join('/venv', 'lib', 'python3.12', 'site-packages')
+  const expected = path.posix.join('/venv', 'lib', 'python3.12', 'site-packages')
 
   const result = getVenvSitePackagesEntries('/venv', {
     isWindows: false,
