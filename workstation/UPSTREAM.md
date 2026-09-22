@@ -1,5 +1,30 @@
 # Upstream strategy
 
+## 2026-09-22 H-080 / H-079.3 published branch status
+
+The rejected direct operational-resolution commit `471e9b529f745c89a3b18caad865e762f09dfab3` remains reverted and inactive.
+
+The replacement branch is now published:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+
+It retains the frozen H-079.3 upstream pin:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`,
+true-merged by:
+`a8dfcd21f5c641d01a5989e223a987687018db7f`.
+
+The one-pin rule still applies: do not chase a moving upstream head inside this correction lane. Fetch/classify latest upstream immediately before promotion and reopen Stage A only for a proven material overlapping conflict.
+
+The target upstream intervention is now implemented in the correct architectural form:
+- generic pre-reasoning operational-resolution contract under `agent/`;
+- narrow call site in `agent/conversation_loop.py`;
+- Workstation routing/execution behind a first-party provider;
+- Browser Workstation domain projection removed from generic `tools/browser_tool.py`.
+
+Promotion is not yet allowed. The branch must first prove real normal-turn `EXECUTE` with exact-once dispatch, canonical VERIFIED/accepted result, COMMITTED status and zero provider calls; prove verifier failure end to end; reconcile intervention/seam registries; qualify Browser/owners/full suite; and obtain exact-head CI plus final drift classification.
+
+Canonical audit:
+`workstation/context/engineering-journal/h080-branch-quality-audit-2026-09-22.md`.
+
 ## H-079.2 active baseline refresh requirement
 
 **2026-09-21 execution update:** supersedes the stale snapshot below. Selected pin `118984d7a02f8a8baec11255002cbbab7c202e06` was merged through `3d1c1875297529072b6e8b58cc1c2492d912e920` (parents `2ce363292c...`, `118984d7a0...`). Candidate is zero commits behind that pin. Final drift against live `upstream/main` remains mandatory immediately before promotion.

@@ -1,5 +1,34 @@
 # Workstation Known Issues
 
+## KI-020 — Normal-turn Progressive Compilation pre-reasoning closure is not yet promoted [OPEN — PUBLISHED BRANCH / QUALIFICATION BLOCKED]
+
+Implementation branch:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+
+The generic pre-reasoning boundary and Workstation first-party provider now exist on a published branch and are architecturally preferable to the reverted `471e9b5` implementation. The branch must be repaired and qualified rather than reverted.
+
+Open blockers:
+- E001 currently proves an already-satisfied goal bypasses the provider, not that a promoted capability actually EXECUTEs and bypasses the provider;
+- the normal-turn verifier-failure test is empty (`pass`);
+- `test_zz_scratch_route_fixture.py` contains useful direct-routing evidence but is not canonical release evidence;
+- `upstream_interventions.json` records incorrect downstream commit provenance and includes downstream-only `workstation/**` changes as upstream interventions;
+- `SEAM-OPERATIONAL-RESOLUTION` is referenced by the intervention registry but absent from `first_party_seams.json`;
+- the full Experience Compiler feedback cycle through compilation/promotion/future normal-turn reuse is not yet proven;
+- the audited branch head had no PR or GitHub Actions/status evidence.
+
+Closure requires all of:
+- initial goal false -> promoted capability -> EXECUTE -> physical dispatch exactly once -> canonical VERIFIED/accepted -> COMMITTED -> provider calls = 0;
+- no match/insufficient trusted intent -> normal provider reasoning;
+- ACK + FAILED/INCONCLUSIVE verifier -> no committed success and no blind retry;
+- invalid certificate / non-promoted or quarantined capability / uncertain mutation fail safely;
+- canonical finalization preserved;
+- intervention registry and seam registry consistent and truthful;
+- Experience feedback-loop status either proven CLOSED or explicitly retained OPEN;
+- strict seam audit, Browser/owner regressions, full exact-head qualification, GitHub CI and final upstream drift classification.
+
+Canonical audit:
+[engineering-journal/h080-branch-quality-audit-2026-09-22.md](engineering-journal/h080-branch-quality-audit-2026-09-22.md).
+
 ## KI-019 — Anthropic routing contract lacks a real SDK construction proof [CLOSED LOCALLY — CI PENDING]
 
 Workstation CI correctly installs `--extra anthropic`, but the provider-routing test still mocks `build_anthropic_client`. Keep that unit test, and add a no-network integration contract that exercises the installed SDK through the real builder path with dummy credentials. Anthropic remains an optional extra, not a new core dependency.

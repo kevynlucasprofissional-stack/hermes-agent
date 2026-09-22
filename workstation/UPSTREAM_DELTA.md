@@ -1,5 +1,45 @@
 # Hermes Workstation upstream delta
 
+## HW-032 — Generic pre-reasoning boundary implemented on published branch; promotion proof remains open (2026-09-22)
+
+The rejected direct implementation `471e9b5` remains reverted.
+
+Its replacement now exists on published branch:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`,
+built on frozen upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` via true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`.
+
+Implemented upstream-owned surfaces:
+- `agent/conversation_loop.py`: narrow phase call between preflight and provider;
+- `agent/operational_resolution.py`: generic provider registry/outcome contract;
+- `agent/turn_operational_resolution.py`: canonical turn-phase adapter;
+- `tools/browser_tool.py`: Workstation-specific extract-items projection removed.
+
+Implemented downstream surfaces:
+- Workstation operational-resolution provider;
+- Workstation Browser result projection;
+- uncertain-mutation runtime-state plumbing;
+- normal-turn and provider tests;
+- intervention registry.
+
+Architecture accepted:
+```text
+generic pre-provider lifecycle
+-> registered first-party Workstation provider
+-> established durable intent
+-> existing Workstation control plane
+```
+
+Promotion remains blocked because:
+1. the current no-LLM E2E can terminate as `SATISFIED` before capability execution;
+2. verifier-failure E2E is an empty `pass`;
+3. scratch direct-route fixture must become canonical evidence or be removed;
+4. intervention registry provenance/scope is incorrect;
+5. `SEAM-OPERATIONAL-RESOLUTION` is referenced but not registered;
+6. Experience compile/promote/future-reuse cycle is not yet end-to-end proven;
+7. audited head had no PR/CI status.
+
+The branch should be corrected in place. Do not resurrect the reverted direct-coupling design.
+
 ## HW-031 — H-079.2 promotion-gap and dogfood closure (2026-09-20)
 
 **2026-09-21 implemented state:** the prior gap description below is superseded for the candidate. The current baseline carries true ancestry to `118984d7a02f...`; installer, H-077 and Anthropic contracts were semantically re-adopted; upstream-overlap conflicts in Cron/config/Kanban were resolved against their current owners. The strict registry remains 18 classified seams, with no unclassified or budget regressions.

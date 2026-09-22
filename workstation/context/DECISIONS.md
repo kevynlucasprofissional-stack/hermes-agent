@@ -1,7 +1,7 @@
 # Architectural Decisions
 
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-030`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-031`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
@@ -806,3 +806,19 @@ prove running. Canonical execution lineage and Task Cockpit are projections over
 Kanban, WorkPlans, BrowserTask refs and journal, with no new task store. Routine
 execution stop remains distinct from accepted task completion. Implementation
 boundaries are documented in [Canonical Work Loop](CANONICAL_WORK_LOOP.md).
+
+## D-031 — Pre-reasoning operational resolution is a generic harness boundary
+
+Before a provider LLM call, Hermes may consult registered operational-resolution providers. The generic `agent/` owner defines only the lifecycle contract; Workstation-specific intent/routing/execution lives behind the first-party Hermes adapter.
+
+Rules:
+- only an already-established, typed and trusted `OperationIntent` may enter deterministic routing; raw user prose is not an intent contract;
+- inability to prove applicability returns `CONTINUE_REASONING`;
+- deterministic execution uses the existing `CapabilityRouter`, certificate/authority checks, `CertifiedDispatcher`, `OperationalKernel` and canonical verifier;
+- after an effect may have been dispatched, exceptions never silently fall through into an equivalent LLM-driven mutation; uncertainty/reconciliation semantics apply;
+- a canonically verified EXECUTE/COMPOSE result does not call the LLM again for the same step;
+- terminal operational outcomes rejoin the canonical turn-finalization lifecycle;
+- no fake-success or placeholder dispatcher is permitted;
+- Laya or any future System-1 classifier may propose candidates but cannot grant authority, issue certificates, verify effects or promote capabilities.
+
+This decision is informed by the rejection/revert of `471e9b529f745c89a3b18caad865e762f09dfab3` and supersedes that implementation pattern, not the broader H-078B generic-adapter architecture.

@@ -1,5 +1,69 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-080 branch audit — the boundary design is accepted; proof quality now dominates the lane — 2026-09-22
+
+The published implementation at `integration/upstream-20260922-71a2fe39-h0793@9c217af...` validates the architectural correction that followed the rejected `471e9b5` attempt.
+
+Accepted architecture:
+```text
+generic Hermes turn owner
+-> generic operational-resolution lifecycle
+-> first-party Workstation provider
+-> established durable OperationIntent
+-> CapabilityRouter
+-> certificate
+-> CertifiedDispatcher
+-> OperationalKernel
+-> canonical verifier
+-> canonical finalizer
+```
+
+This preserves the H-078B rule that generic Hermes core does not import Workstation implementation directly while still allowing the Hermes runtime itself to prefer deterministic operational competence before spending another reasoning round.
+
+The audit also establishes a new methodological rule:
+
+> **A test named after a capability path is not evidence that the capability path executed.**
+
+The current E001-style test registers a promoted capability but starts from a semantic state where the goal is already true. Because `CapabilityRouter` checks goal satisfaction before candidate search, the capability can be entirely irrelevant to the passing result. Promotion evidence must therefore assert causal path markers, not only end-state outcomes.
+
+For deterministic reuse, the minimum causal proof is:
+```text
+goal false at admission
+-> ExecutableDecision
+-> valid RoutingCertificate
+-> physical dispatcher count = 1
+-> canonical verifier = VERIFIED
+-> accepted = true
+-> dispatch record = COMMITTED
+-> provider calls = 0
+```
+
+A second rule is strengthened:
+
+> **ACK-without-verification must be tested through the real turn path, not delegated to a nearby unit test.**
+
+The current end-to-end verifier-failure case is a `pass`; therefore the branch has not yet demonstrated that a successful physical ACK followed by FAILED/INCONCLUSIVE verification cannot become COMMITTED success or a blind LLM retry.
+
+Registry intelligence:
+- `upstream_interventions.json` must describe interventions in upstream-owned code, not all downstream architecture changes;
+- provenance must name the commit that actually introduced the intervention, not the upstream baseline merge;
+- seam IDs referenced from intervention records must exist in `first_party_seams.json`;
+- closure is behavioral, not file-presence based.
+
+Experience intelligence:
+the new pre-reasoning boundary is only the **reuse admission half** of Progressive Compilation. End-to-end closure still requires:
+```text
+novel verified execution
+-> TransitionSample
+-> corpus
+-> causal compilation
+-> controlled replay
+-> promotion
+-> later normal-turn reuse with zero provider calls
+```
+
+Until that cycle is demonstrated, describe Progressive Operational Compilation as a validated substrate plus a promising pre-reasoning reuse boundary, not as fully closed.
+
 ## H-079.2 — Promotion topology is part of correctness — 2026-09-20
 
 2026-09-21 result: the topology rule held. The installer and verification fixes were applied only after a true upstream merge, and qualification found two integration-only defects that focused tests missed: runtime-to-stored preview identity promotion and invalid-venv probe acceptance. Fresh ancestry plus product gates materially improved the candidate rather than merely updating history.

@@ -1,5 +1,55 @@
 # Current State
 
+## 2026-09-22 H-080 Published Implementation Audit — FEATURE BRANCH REAL / PROMOTION BLOCKED
+
+Canonical audit:
+`workstation/context/engineering-journal/h080-branch-quality-audit-2026-09-22.md`.
+
+Repository truth:
+- shared main at audit start: `bdd25751088427b83482331aa74a82d24d789cf4`;
+- implementation branch: `integration/upstream-20260922-71a2fe39-h0793`;
+- audited branch head: `9c217afbc84e89acb32f83043f800ad6df9eb55d`;
+- frozen upstream pin: `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`;
+- true upstream merge: `a8dfcd21f5c641d01a5989e223a987687018db7f`;
+- rejected attempt `471e9b5` remains reverted/inactive;
+- branch is published on GitHub, but at audit time had no open PR and no GitHub Actions/status evidence on its head.
+
+Classification:
+```text
+GENERIC PRE-REASONING BOUNDARY: IMPLEMENTED / DIRECTION ACCEPTED
+DIRECT GENERIC->WORKSTATION COUPLING: AVOIDED
+ESTABLISHED TYPED INTENT: IMPLEMENTED
+RAW-PROSE INTENT SYNTHESIS: ABSENT
+UNCERTAIN-MUTATION ROUTER INPUT: IMPLEMENTED
+BROWSER DOMAIN PROJECTION OWNERSHIP: IMPROVED / ACCEPTED
+NORMAL-TURN SATISFIED BYPASS: PROVEN IN TEST
+NORMAL-TURN EXECUTE BYPASS: NOT YET PROVEN
+VERIFIER-FAILURE E2E: MISSING (TEST IS PASS)
+EXPERIENCE FEEDBACK LOOP: OPEN
+SEAM-OPERATIONAL-RESOLUTION: REFERENCED BUT NOT REGISTERED
+UPSTREAM INTERVENTION REGISTRY: PRESENT BUT PROVENANCE/SCOPE INCORRECT
+EXACT-HEAD CI: ABSENT AT AUDITED HEAD
+PROMOTION: BLOCKED
+```
+
+Critical correction:
+`test_known_promoted_capability_bypasses_llm` currently begins with a semantic state that already satisfies its goal. That test proves `SATISFIED -> provider calls 0`, not `promoted capability EXECUTE -> exact-once dispatch -> VERIFIED/accepted -> COMMITTED -> provider calls 0`.
+
+Required release proof remains:
+```text
+initial goal false
+-> normal Hermes turn
+-> promoted capability selected
+-> EXECUTE
+-> physical dispatch exactly once
+-> canonical VERIFIED + accepted
+-> COMMITTED
+-> canonical finalizer
+-> provider calls = 0
+```
+
+The branch should be repaired and qualified, not reverted or redesigned from scratch.
+
 ## 2026-09-21 H-079.2 Upstream Re-adoption + Dogfood Closure — LOCAL GREEN / EXACT-HEAD CI PENDING
 
 Canonical: [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md).

@@ -1,5 +1,54 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-22 published-branch audit — reuse boundary implemented; EXECUTE proof and Experience closure still open
+
+The deterministic Capability Runtime and Experience Compiler substrate remain implemented. A materially improved pre-reasoning integration now exists on published branch:
+
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+
+Accepted shape:
+```text
+normal Hermes turn
+-> generic operational-resolution boundary
+-> Workstation provider
+-> established durable OperationIntent
+-> CapabilityRouter
+-> certificate / dispatcher / kernel
+-> canonical verifier
+-> canonical finalizer
+```
+
+However, the current headline E2E starts from a semantic state that already satisfies its goal, so it proves `SATISFIED -> provider calls 0`, not deterministic capability execution.
+
+Required normal-turn reuse proof:
+```text
+goal initially false
+-> promoted capability selected
+-> routing_decision = EXECUTE
+-> physical dispatch exactly once
+-> canonical verification = VERIFIED
+-> accepted = true
+-> dispatch record = COMMITTED
+-> provider LLM calls = 0
+```
+
+The verifier-failure path must also be proven end to end: physical ACK followed by FAILED/INCONCLUSIVE verification must not become committed success and must not trigger a blind duplicate mutation through the LLM.
+
+The broader Experience closure remains:
+```text
+novel verified execution
+-> TransitionSample
+-> ExperienceCorpus
+-> candidate compilation
+-> controlled replay / causal validation
+-> promotion
+-> future equivalent normal turn
+-> promoted capability EXECUTE
+-> provider calls = 0
+```
+
+Until these causal proofs exist on the exact promoted head, describe Progressive Operational Compilation as **validated substrate + implemented pre-reasoning boundary, with deterministic EXECUTE reuse and full Experience feedback closure still open**.
+
 Date established: 2026-09-18
 
 Status: **IMPLEMENTED & VALIDATED** (2026-09-18)
