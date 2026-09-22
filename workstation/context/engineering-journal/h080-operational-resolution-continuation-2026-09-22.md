@@ -1,5 +1,12 @@
 # H-080 — Operational Resolution Continuation Handoff
 
+> **SUPERSEDED BY PUBLISHED-BRANCH AUDIT.** The branch was subsequently published at
+> `integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+> Use [h080-branch-quality-audit-2026-09-22.md](h080-branch-quality-audit-2026-09-22.md)
+> for current promotion blockers and correction order. This document remains historical evidence
+> of the recovery phase.
+
+
 Date: 2026-09-22
 
 Status: **PARTIAL / LOCAL WIP RECOVERY REQUIRED / NOT PROMOTED**
