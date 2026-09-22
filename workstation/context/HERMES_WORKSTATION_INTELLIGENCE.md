@@ -1,5 +1,56 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## H-080 — Pre-reasoning authority is generic at the harness boundary and deterministic after admission — 2026-09-22
+
+The rejected `471e9b529f745c89a3b18caad865e762f09dfab3` attempt and the subsequent local continuation sharpen Progressive Compilation.
+
+The failed attempt proved a negative rule: merely inserting "try capabilities before LLM" into `conversation_loop.py` is not sufficient. It fabricated an invalid `OperationIntent`, used raw conversation text as typed semantic intent/state, allowed a fake-success dispatch fallback, and treated EXECUTE/COMPOSE as hints even though `TaskCompiler._execute_route()` may already have dispatched effects. Repairing only the constructor would therefore expose a potential double-execution path.
+
+Correct causal decomposition:
+```text
+generic Hermes owner: provider call is about to happen
+        |
+        v
+generic operational-resolution boundary
+        |
+        v
+Workstation first-party provider
+        |
+        +-- no established typed intent / insufficient state --> CONTINUE_REASONING
+        |
+        +-- established typed intent
+                |
+                v
+        TaskCompiler / CapabilityRouter
+                |
+                v
+        certificate + authority + validity
+                |
+                v
+        CertifiedDispatcher / OperationalKernel
+                |
+                v
+        canonical verification
+                |
+                v
+        canonical turn finalization
+```
+
+New invariants:
+- text is not an `OperationIntent`; use a persisted/established typed intent or reason first;
+- after canonically verified deterministic execution, the same step does not fall through to an LLM;
+- errors before dispatch may degrade to reasoning, but once an effect may have dispatched, uncertainty/reconciliation must fail closed rather than silently retry;
+- terminal operational outcomes must rejoin normal finalization, not bypass completion admission, persistence, transcript, metrics or callbacks;
+- a pre-reasoning provider must not require `durable_execution_active()` if that context is only true during already-compiled execution;
+- durable-store-owned connections remain store-owned; transient providers do not close them;
+- Browser routing authority remains generic broker/controller ownership while Workstation-specific result projection belongs to Workstation.
+
+The later Claude Code session reportedly implemented this shape on local-only branch `integration/upstream-20260922-71a2fe39-h0793` with focused tests green, but the mandatory normal-turn zero-provider-call proof, full Experience feedback closure, intervention registry, exact-head qualification and publication remain open.
+
+Laya remains a future System-1 candidate proposer only. It cannot grant authority, issue routing certificates, verify effects, promote capabilities or override deterministic admission.
+
+
+
 ## H-079.2 — Promotion topology is part of correctness — 2026-09-20
 
 2026-09-21 result: the topology rule held. The installer and verification fixes were applied only after a true upstream merge, and qualification found two integration-only defects that focused tests missed: runtime-to-stored preview identity promotion and invalid-venv probe acceptance. Fresh ancestry plus product gates materially improved the candidate rather than merely updating history.
