@@ -49,8 +49,6 @@ novel verified execution
 
 Until these causal proofs exist on the exact promoted head, describe Progressive Operational Compilation as **validated substrate + implemented pre-reasoning boundary, with deterministic EXECUTE reuse and full Experience feedback closure still open**.
 
-Date established:
-
 Date established: 2026-09-18
 
 Status: **IMPLEMENTED & VALIDATED** (2026-09-18)
