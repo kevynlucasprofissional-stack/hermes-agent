@@ -208,7 +208,13 @@ function persistTabs() {
 // would resurrect the bucket the rename just deleted.
 let viewKey = 'default'
 
-export const $previewTabs = atom<PreviewTab[]>([])
+// Hydrate the initial scope during module construction. `session-states.ts`
+// immediately pushes the focused scope, but the common default -> default
+// path is intentionally a no-op in `setPreviewScope`; starting from an empty
+// atom therefore hid persisted tabs until the user switched profiles. For a
+// Workstation Browser tab that also meant the rail never mounted after a cold
+// Desktop restart, so no native BrowserTask could attach to the viewport.
+export const $previewTabs = atom<PreviewTab[]>(tabsByProfile[viewKey] ?? [])
 
 $previewTabs.subscribe(tabs => {
   // `subscribe` hands a readonly view; the bucket is a mutable store of its own.

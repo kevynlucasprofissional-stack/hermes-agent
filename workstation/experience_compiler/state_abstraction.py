@@ -62,6 +62,7 @@ def sample_from_trace(trace, *, before=None, after=None, verification=None, prov
     if outcome == 'executed_unverified':
         outcome = 'uncertain'
     args = normalized(trace.get('arguments', {}))
+    raw_result_ref = trace.get('after_state_ref')  # Reference to the stored raw result
     return TransitionSample(state_before=before, state_after=after,
         operation=Operation(trace.get('tool', ''), trace.get('route', ''),
             normalized(trace.get('semantic_anchor') or {}),
@@ -75,4 +76,5 @@ def sample_from_trace(trace, *, before=None, after=None, verification=None, prov
         provenance=provenance or Provenance(task_id=trace.get('task_id'), run_id=trace.get('run_id'),
             operation_id=trace.get('operation_id'), runtime=trace.get('runtime', trace.get('route', '')),
             authority_origin=AuthorityOrigin.ENVIRONMENT, trust_class='runtime_observation'),
-        metrics=Metrics(trace.get('duration_ms'), trace.get('provider_usage') or {}))
+        metrics=Metrics(trace.get('duration_ms'), trace.get('provider_usage') or {}),
+        raw_result_ref=raw_result_ref)

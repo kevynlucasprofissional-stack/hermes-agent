@@ -168,4 +168,4 @@ Anything less is **NOT READY FOR MAIN / NOT READY FOR NEW FEATURE WORK**.
 
 ## 2026-09-21 candidate result
 
-The selected upstream pin is `118984d7a02f8a8baec11255002cbbab7c202e06`, adopted by true merge `3d1c1875297529072b6e8b58cc1c2492d912e920`. Local installer A–F, H-077, Anthropic SDK, Workstation, durable seams, Desktop, H004, sustained H013, Work100 and production dependency audit gates are green. The candidate remains not ready for main until exact-head GitHub Actions are green and the final live upstream drift check is classified.
+The initial pin `118984d7a02f...` was adopted by true merge `3d1c18752975...`. A pre-PR check then found 298 material commits and triggered a second true merge, `fde9e51...`, adopting final pin `afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc`. Local installer A–F, H-077, Anthropic SDK, Workstation, durable seams, Desktop, H004, sustained H013, Work100 and production dependency audit gates were green before the final refresh and must be rerun where affected. The candidate remains not ready for main until post-refresh qualification, exact-head GitHub Actions and the final live drift check are green.

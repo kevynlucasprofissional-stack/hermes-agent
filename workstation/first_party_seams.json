@@ -106,16 +106,19 @@
           "id": "SEAM-TOOL-RAW-RESULT",
           "symbol_or_concern": "capture_raw_result",
           "semantic_owner": "Workstation procedure trace / Experience Compiler observer",
-          "current_behavior": "Captures the raw tool result before model-facing persistence/truncation.",
+          "current_behavior": "Captures the raw tool result before model-facing persistence/truncation and makes it available to Experience Compiler via raw_result_ref in TransitionSample.",
           "required_ordering": "Immediately after tool terminal result and before spill/truncate/tool-message projection.",
-          "disposition": "REMOVE",
-          "replacement": "post_tool_call observer",
+          "disposition": "PRESERVE_FIRST_PARTY",
+          "replacement": "Enhanced TransitionSample with raw_result_ref field",
           "parity_tests": [
             "raw untruncated result observed",
             "tool_call_id/operation lineage preserved",
-            "timeout/cancel/error terminal states distinguishable"
+            "timeout/cancel/error terminal states distinguishable",
+            "Experience Compiler can access raw results for learning when needed"
           ],
-          "sunset_condition": "raw-result parity proven"
+          "sunset_condition": "raw-result parity proven",
+          "current_status": "CLOSED_ON_H079_CANDIDATE",
+          "observed_gap": "Experience Compiler now accesses raw tool results via TransitionSample.raw_result_ref field that references sanitized raw results in ArtifactStore, enabling learning with sufficient fidelity while maintaining security"
         },
         {
           "id": "SEAM-TOOL-PERSISTENCE",
@@ -282,8 +285,8 @@
             "evidence/reference plane unchanged"
           ],
           "sunset_condition": "generic browser_tool returns generic result while adapter owns Workstation projection",
-          "current_status": "OPEN",
-          "observed_gap": "Normal browser path still retains Workstation-specific routing/domain logic; BrowserControlBroker authority switch is incomplete."
+          "current_status": "CLOSED_ON_H079_CANDIDATE",
+          "observed_gap": "WorkstationBrowserController now handles domain-specific processing for browser_extract_items via _process_extracted_items_durably, moving artifact storage, kanban persistence, and result shaping from tools/browser_tool.py to the Workstation adapter."
         },
         {
           "id": "SEAM-BROWSER-CAP-REG",
@@ -616,13 +619,13 @@
   "current_baseline": {
     "observed_at": "2026-09-21",
     "downstream_main": "964c13361e95a49e680deb2b16479d5f85c63011",
-    "adopted_upstream_pin": "118984d7a02f8a8baec11255002cbbab7c202e06",
-    "latest_upstream_observed": "118984d7a02f8a8baec11255002cbbab7c202e06",
+    "adopted_upstream_pin": "afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc",
+    "latest_upstream_observed": "afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc",
     "ahead_of_latest_upstream": 547,
     "behind_latest_upstream": 0,
     "merge_base": "c1488ac947c9bc33fd65ec464548dc9d8edd6122",
-    "upstream_merge_commit": "3d1c1875297529072b6e8b58cc1c2492d912e920",
-    "qualification_status": "LOCAL_GREEN_EXACT_HEAD_CI_PENDING",
+    "upstream_merge_commit": "fde9e51",
+    "qualification_status": "FINAL_UPSTREAM_REFRESH_ADOPTED_REQUALIFICATION_PENDING",
     "workstation_ci": "PENDING_FINAL_PR_HEAD",
     "workstation_ci_run": null,
     "workstation_contract_tests": "742 passed, 2 skipped",

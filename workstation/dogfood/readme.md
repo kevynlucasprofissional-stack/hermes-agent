@@ -1,0 +1,2 @@
+A pasta C:\Github\hermes-agent\workstation\dogfood será onde eu anotarei manualmente pontos de melhoria e notas de experiência utilizando o Hermes Work.
+Cada nota será uma run diferente do Hermes Work, o título das notas serão o dia e a hora em que fiz a run e tomei as notas.

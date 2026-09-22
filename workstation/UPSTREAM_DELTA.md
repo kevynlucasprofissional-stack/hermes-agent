@@ -4,6 +4,8 @@
 
 **2026-09-21 implemented state:** the prior gap description below is superseded for the candidate. The current baseline carries true ancestry to `118984d7a02f...`; installer, H-077 and Anthropic contracts were semantically re-adopted; upstream-overlap conflicts in Cron/config/Kanban were resolved against their current owners. The strict registry remains 18 classified seams, with no unclassified or budget regressions.
 
+Pre-PR drift was material and triggered a second adoption. Final selected pin is `afc3b7c6f397...`, merged by `fde9e51...`. The Cron editor retained downstream follow/pin policy atop upstream's opaque provider/model encoding; preview persistence adopted upstream's profile-scoped owner and removed the now-duplicate session-scoped store.
+
 Current downstream truth differs from the prior H-079 narrative in three important ways:
 - upstream refresh `8d153b26...` is not ancestral to `main`; the live pin remains `c1488ac947...`;
 - the pipless-venv installer repair and its CI fixture exist off-main;

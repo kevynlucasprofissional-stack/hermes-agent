@@ -5,7 +5,8 @@ Status: local qualification green; exact-final-head GitHub Actions and final ups
 ## Baseline and ancestry
 
 - Starting downstream main: `964c13361e95a49e680deb2b16479d5f85c63011`
-- Observed and selected upstream pin: `118984d7a02f8a8baec11255002cbbab7c202e06`
+- Initially selected upstream pin: `118984d7a02f8a8baec11255002cbbab7c202e06`
+- Final selected upstream pin after material drift: `afc3b7c6f397c6d21fd2c129ca17b18b544dd8dc`
 - Merge-base before: `c1488ac947c9bc33fd65ec464548dc9d8edd6122`
 - Ahead/behind before: 547 / 484
 - Integration branch: `integration/upstream-20260920-118984d7-h0792`
@@ -14,6 +15,7 @@ Status: local qualification green; exact-final-head GitHub Actions and final ups
 - Conflicts: `cron/jobs.py`, `hermes_cli/config.py`, `tests/plugins/test_kanban_dashboard_plugin.py`
 - Resolution: preserve upstream model pins and current generic owners while retaining Workstation drift snapshots/config helpers; accept current upstream Kanban behavior.
 - Ancestry proof: selected pin is ancestor of merge/candidate; behind selected pin is 0.
+- Final upstream refresh merge: `fde9e51...` (second parent `afc3b7c6f3...`); conflicts in Cron editor and preview store were resolved by preserving model-policy semantics while adopting upstream opaque model choices and the upstream canonical profile-scoped preview owner.
 
 ## Seams and target fixes
 
@@ -42,7 +44,7 @@ Status: local qualification green; exact-final-head GitHub Actions and final ups
 
 ## Windows and Desktop closure
 
-Root causes included POSIX-only real-filesystem/shell fixtures running on Windows, host-path assumptions, locale-sensitive copy, native-title policy, runtime-to-stored preview identity promotion, and a 5-second real-Git payload timeout below observed Windows cost. Fixtures were scoped by capability/platform while portable behavior remained asserted; preview identity now migrates state at the canonical store owner.
+Root causes included POSIX-only real-filesystem/shell fixtures running on Windows, host-path assumptions, locale-sensitive copy, native-title policy, and a 5-second real-Git payload timeout below observed Windows cost. Fixtures were scoped by capability/platform while portable behavior remained asserted. The final upstream refresh replaced the downstream session-tab persistence seam with upstream's canonical profile-scoped preview owner.
 
 - Full Workstation: 81 files, 742 passed, 0 failed, 2 skipped.
 - Durable core seam regressions: 331 passed, 0 failed.
@@ -58,7 +60,7 @@ Root causes included POSIX-only real-filesystem/shell fixtures running on Window
 ## Promotion evidence
 
 - GitHub Actions URLs: pending push/PR exact head.
-- Final upstream drift: pending immediately before merge.
+- Final upstream drift: a 298-commit material delta was detected and adopted through `fde9e51...`; a fresh check is still required immediately before promotion.
 - PR #43 canonical documentation: incorporated by authored cherry-picks; this report and the canonical H-079.2 document are the single candidate truth.
 
 `READY_FOR_MAIN: NO` — exact-final-head required checks and final upstream drift are not yet complete.

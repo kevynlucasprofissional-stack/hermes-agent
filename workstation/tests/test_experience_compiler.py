@@ -84,6 +84,7 @@ def test_browser_abstraction_ignores_incidental_and_page_prose():
 
 
 def test_filesystem_abstraction_and_transition_capture(tmp_path):
+    from workstation.experience_compiler.models import TransitionSample
     from workstation.experience_compiler.state_abstraction import filesystem_state, sample_from_trace
     path = tmp_path / 'result.txt'
     before = filesystem_state(path)
@@ -94,9 +95,11 @@ def test_filesystem_abstraction_and_transition_capture(tmp_path):
     sample = sample_from_trace({'tool': 'write_file', 'route': 'filesystem',
         'arguments': {'path': str(path), 'content': 'hello', 'token': 'secret', 'tab_id': 7},
         'outcome': 'verified_success', 'task_id': 'task', 'run_id': 'run',
-        'effect': 'state_mutation'}, before=before, after=after)
+        'effect': 'state_mutation', 'after_state_ref': 'artifact://raw-result'}, before=before, after=after)
     assert sample.delta.changed['exists'] == [False, True]
     assert sample.provenance.run_id == 'run'
+    assert sample.raw_result_ref == 'artifact://raw-result'
+    assert TransitionSample.from_dict(sample.to_dict()).raw_result_ref == 'artifact://raw-result'
     assert 'secret' not in sample.to_json() and 'tab_id' not in sample.to_json()
 
 

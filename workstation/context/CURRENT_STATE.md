@@ -19,7 +19,7 @@ Exact-head positive evidence on current main:
 - Docker: PASS.
 
 Current candidate truth:
-- true upstream merge `3d1c18752975...` adopts pin `118984d7a02f...` with behind-selected-pin = 0;
+- true upstream merges `3d1c18752975...` and `fde9e51...` adopt final pin `afc3b7c6f397...` with behind-selected-pin = 0;
 - pipless install prefers `uv`, falls back through verified `ensurepip`, and rejects invalid existing interpreters before installation;
 - H-077 negative/positive delta and real no-network Anthropic SDK construction contracts pass;
 - full Workstation is 742 passed / 0 failed / 2 skipped; Desktop UI is 8,592 passed and Electron platform is 2,453 passed;

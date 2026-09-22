@@ -19,6 +19,7 @@ from tools.browser_workstation import (
     workstation_route_is_bound,
     workstation_routing_enabled,
 )
+from tools.browser_tool import _process_extracted_items_durably
 from workstation.runtime import EvidenceStateStore, RuntimeEventBus, RuntimeEvent, ExecutionStatus
 
 logger = logging.getLogger(__name__)
@@ -134,10 +135,18 @@ class WorkstationBrowserController:
                 session_id=session_id,
                 run_id=run_id,
             )
+
+            # Process the result based on action type for Workstation-specific domain logic
+            processed_result = self._process_browser_action_result(action, raw_result, args, {
+                "task_id": task_id,
+                "session_id": session_id,
+                "run_id": run_id
+            })
+
             try:
-                res_obj = json.loads(raw_result) if isinstance(raw_result, str) else raw_result
+                res_obj = json.loads(processed_result) if isinstance(processed_result, str) else processed_result
             except Exception:
-                res_obj = raw_result
+                res_obj = processed_result
             self.broker.complete(cmd_id, scope=self.scope, ok=True, result=res_obj)
         except Exception as exc:
             self.broker.complete(cmd_id, scope=self.scope, ok=False, result={"error": str(exc)})
@@ -307,6 +316,19 @@ class WorkstationBrowserController:
         self._evidence_store.upsert(state)
 
         return parsed_result
+
+    def _process_browser_action_result(self, action: str, raw_result: Any, args: dict, kw: dict) -> str:
+        """Process browser action results with Workstation-specific domain logic.
+
+        This moves Workstation-specific seam processing from the generic browser tool
+        to the WorkstationBrowserController to close seams like SEAM-BROWSER-DOMAIN.
+        """
+        if action == "browser_extract_items":
+            return _process_extracted_items_durably(raw_result, args, kw)
+        # For other actions, return the raw result unchanged
+        if isinstance(raw_result, str):
+            return raw_result
+        return json.dumps(raw_result, ensure_ascii=False)
 
 
 _CONTROLLERS: Dict[tuple[str, str, str], WorkstationBrowserController] = {}
