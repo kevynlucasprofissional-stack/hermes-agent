@@ -63,16 +63,11 @@ jobs:
         run: |
           python -m venv --without-pip .venv
           & .venv\Scripts\python.exe -c "import sys; print(sys.version)"
-          # PowerShell 7 can promote the expected non-zero native exit to an
-          # error under the runner's strict native-command policy. Disable that
-          # promotion only for this negative assertion; pip's absence is the
-          # fixture's assertion and the exit code remains authoritative.
-          $previousNativeErrorPreference = $PSNativeCommandUseErrorActionPreference
-          $PSNativeCommandUseErrorActionPreference = $false
-          & .venv\Scripts\python.exe -m pip --version *> $null
-          $pipExitCode = $LASTEXITCODE
-          $PSNativeCommandUseErrorActionPreference = $previousNativeErrorPreference
-          if ($pipExitCode -eq 0) {
+          # Invert the negative assertion so the expected "pip absent" case
+          # returns success. This avoids PowerShell 7 treating an expected
+          # native non-zero exit as a failing workflow command.
+          & .venv\Scripts\python.exe -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('pip') is None else 1)"
+          if ($LASTEXITCODE -ne 0) {
             throw "Regression fixture unexpectedly contains pip."
           }
       - name: Install Workstation from committed source
