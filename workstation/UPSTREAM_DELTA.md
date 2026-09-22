@@ -1,5 +1,31 @@
 # Hermes Workstation upstream delta
 
+## HW-032 — Rejected direct pre-LLM coupling and target generic operational-resolution boundary (2026-09-22)
+
+Direct implementation `471e9b529f745c89a3b18caad865e762f09dfab3` in `agent/conversation_loop.py` was reverted. The rejection is architectural evidence:
+- generic Hermes core directly imported Workstation implementation;
+- it fabricated an invalid `OperationIntent` from user text instead of consuming an established typed intent;
+- it supplied a placeholder dispatcher capable of synthetic SUCCESS;
+- `TaskCompiler._execute_route()` can already execute certified capabilities, but the wrapper continued to the LLM after EXECUTE/COMPOSE, creating a potential duplicate-effect path;
+- terminal returns bypassed proof of the canonical turn-finalization lifecycle;
+- no mandatory real-turn bypass/fallback tests or intervention registry accompanied the upstream change.
+
+Target replacement:
+```text
+generic agent operational-resolution registry/phase
+-> registered Workstation first-party provider
+-> established typed OperationIntent only
+-> TaskCompiler / CapabilityRouter / CertifiedDispatcher / OperationalKernel
+-> canonical verification
+-> canonical turn finalization
+```
+
+A subsequent Claude Code session reportedly implemented this shape locally on `integration/upstream-20260922-71a2fe39-h0793` after freezing upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` and creating true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`. That branch was not observed on GitHub and remains WIP/evidence until recovered, qualified and promoted.
+
+Latest upstream observed at handoff: `ec21bd7674e78907ccacca846efad198e5cfdbbc`. If the frozen local lane is recoverable, this later tip is final-drift input for the cycle, not a command to continuously rebase.
+
+
+
 ## HW-031 — H-079.2 promotion-gap and dogfood closure (2026-09-20)
 
 **2026-09-21 implemented state:** the prior gap description below is superseded for the candidate. The current baseline carries true ancestry to `118984d7a02f...`; installer, H-077 and Anthropic contracts were semantically re-adopted; upstream-overlap conflicts in Cron/config/Kanban were resolved against their current owners. The strict registry remains 18 classified seams, with no unclassified or budget regressions.
