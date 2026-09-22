@@ -28,11 +28,21 @@ fetch latest upstream
 -> reconcile seam registry
 -> implement target downstream change
 -> exact-head qualification
--> final upstream drift classification
+-> final upstream drift snapshot/classification for the next cycle
+-> PR merge
+-> local main fast-forward from origin/main
 ```
 
 Do not continuously move the pin during implementation. Do not postpone upstream
 synchronization until after a feature is already built.
+
+## One-pin promotion closure
+
+The SHA selected at the beginning of a cycle is immutable through qualification, PR and merge.
+The final `upstream/main` fetch is evidence only: record its tip and classify its delta for the
+next Stage A cycle. Do **not** perform a second upstream merge into the active candidate merely
+because upstream moved; that turns a bounded promotion into an unbounded chase. Promote the
+qualified PR, then synchronize the local `main` by fast-forwarding from `origin/main`.
 
 H-079 qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
 - adopted pin: `c1488ac947c9bc33fd65ec464548dc9d8edd6122`;

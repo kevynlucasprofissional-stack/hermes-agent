@@ -11,6 +11,9 @@ Before changing Workstation code, read these documents in order:
 > [UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md)
 > before target implementation. Upstream baseline refresh, seam reconciliation and baseline
 > qualification happen before the requested downstream change.
+> **One-pin closure:** the selected upstream SHA remains fixed through PR and promotion. The
+> final upstream fetch classifies drift for the next cycle; it does not trigger another merge
+> into the active candidate merely because `upstream/main` moved.
 > **Current blocking corrective lane:**
 > [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md)
 > records the off-main upstream/installer/test promotion gap. Read it before any new code-changing lane; new feature work is blocked until this closure is qualified.

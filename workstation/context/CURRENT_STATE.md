@@ -50,12 +50,18 @@ fresh upstream preflight
 -> seam reconciliation
 -> target implementation
 -> exact-head qualification
--> final upstream drift classification
+-> final upstream drift snapshot/classification for the next cycle
+-> PR merge
+-> local main fast-forward from origin/main
 ```
 
 This is stricter than the old periodic-sync model and safer than continuously rebasing a
 feature against moving upstream. Baseline synchronization and target work remain separate
 and independently reviewable.
+
+The pin is immutable for the entire promotion cycle. A final `upstream/main` fetch records a
+new tip and its relevance to the **next** cycle; it does not authorize a second upstream merge
+or invalidate a qualified candidate merely because upstream advanced.
 
 Observed qualified baseline snapshot (2026-09-20; qualification applies only to the recorded SHA):
 - `main@9e8127e247...`;

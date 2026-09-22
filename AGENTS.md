@@ -27,12 +27,25 @@ refresh upstream
 -> establish a qualified upstream-aligned baseline
 -> reconcile/reclassify affected Workstation seams
 -> only then implement the target downstream change
--> final upstream drift check before promotion
+-> final upstream drift snapshot before promotion
 ```
 
 The synchronization/baseline work and the target implementation must remain independently
 inspectable. Do not hide a feature inside an upstream merge and do not defer upstream drift
 until after the feature is built.
+
+### One-pin promotion closure
+
+Each downstream promotion cycle adopts **one immutable upstream SHA**. Once Stage A has
+merged and qualified that pin, do not start a second upstream merge merely because
+`upstream/main` advanced while the PR was being prepared. The final fetch is an observation:
+record the new tip, compare it with the fixed pin, classify it for the next cycle, and keep
+the candidate reproducible. It does not change the candidate's ancestry or restart
+qualification. Merge the approved PR, then fast-forward local `main` from `origin/main`.
+
+The only exception is a separately documented release hold for a confirmed defect in
+the candidate or a required GitHub check failure. A moving upstream tip alone is never a
+reason to consume the current promotion cycle with another sync.
 
 A coding agent may skip the physical upstream merge only when the pre-change gate proves
 that the selected upstream pin is already contained in the qualified baseline and no newer
