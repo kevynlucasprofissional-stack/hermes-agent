@@ -988,7 +988,13 @@ class TaskCompiler:
         from workstation.control_plane.router import CapabilityRouter
         router = getattr(self, "router", None) or CapabilityRouter(registry, composition_engine=CompositionEngine(registry))
 
-        decision = router.route(intent, semantic_state, authority)
+        # Runtime truth the caller already observed — outstanding uncertainty,
+        # baseline state — is offered to the router rather than decided here. The
+        # router owns reconciliation gating; a caller that observes nothing passes
+        # nothing and routing behaves exactly as before.
+        runtime_state = request.get("runtime_state")
+        decision = router.route(intent, semantic_state, authority,
+                                runtime_state=runtime_state if isinstance(runtime_state, dict) else None)
         try:
             self.metrics_collector.on_routing_decision(decision)
         except Exception:

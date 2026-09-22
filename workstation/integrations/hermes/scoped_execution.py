@@ -12,16 +12,16 @@ from workstation.task_compiler import (
 )
 
 
-@contextmanager
-def workstation_scoped_execution(
-    agent: Any,
-    effective_task_id: str,
-    messages: Optional[list] = None,
-):
-    """Workstation scoped execution manager.
-    
-    Binds deterministic durable dispatch, operational references, and execution context.
-    On exit, attaches operational references to the last tool message.
+def workstation_durable_dispatch(agent: Any):
+    """Build the deterministic durable dispatcher bound to one agent's session scope.
+
+    This is the only way an operational capability may reach a real primitive:
+    it runs the primitive through the agent's own tool executor, so approval,
+    guardrails, interruption, route policy and raw-result capture all behave
+    exactly as they do for a model-issued call. Callers that need to execute
+    outside a model turn (the turn-boundary operational resolver) enter
+    :func:`workstation_scoped_execution` around the call so the execution
+    context — constraints, references, mutation evidence — is established too.
     """
     def _durable_dispatch(name: str, args: dict, task_id: str, call_id: str):
         if getattr(agent, "_interrupt_requested", False) or getattr(agent, "_tool_guardrail_halt_decision", None):
@@ -60,6 +60,22 @@ def workstation_scoped_execution(
         if not results:
             raise RuntimeError("Scoped dispatcher produced no tool result")
         return take_raw_result(call_id, results[-1]["content"])
+
+    return _durable_dispatch
+
+
+@contextmanager
+def workstation_scoped_execution(
+    agent: Any,
+    effective_task_id: str,
+    messages: Optional[list] = None,
+):
+    """Workstation scoped execution manager.
+
+    Binds deterministic durable dispatch, operational references, and execution context.
+    On exit, attaches operational references to the last tool message.
+    """
+    _durable_dispatch = workstation_durable_dispatch(agent)
 
     root_id = getattr(agent, "_conversation_root_id", lambda: None)()
     session_id = root_id or getattr(agent, "session_id", "") or ""

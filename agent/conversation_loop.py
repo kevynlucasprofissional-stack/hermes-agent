@@ -50,6 +50,7 @@ from agent.turn_iteration_prep import (
     prepare_iteration,
 )
 from agent.turn_loop_errors import handle_outer_loop_error
+from agent.turn_operational_resolution import resolve_operational_step_phase
 from agent.turn_preflight_gate import run_preflight_gate
 from agent.turn_request_assembly import assemble_api_request
 from agent.turn_response_check import check_api_response
@@ -1567,6 +1568,14 @@ def _run_conversation_turn(
             break
         if _pg.action == "continue":
             continue
+
+        # Operational resolution boundary: ask registered operational providers whether this
+        # step can be advanced without spending a reasoning round on the provider. A terminal
+        # answer breaks the loop with a user-facing reply, so post-loop finalization,
+        # trajectory and completion admission still run unchanged.
+        if _run_phase(resolve_operational_step_phase, agent, s).action == "break":
+            break
+
         _run_phase(announce_api_call, agent, s)
 
         s.api_start_time, s.retry_count, s.max_retries = time.time(), 0, agent._api_max_retries

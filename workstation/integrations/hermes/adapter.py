@@ -4,6 +4,7 @@ import logging
 from typing import Any, Optional
 
 from agent.completion_admission import register_completion_admission_provider
+from agent.operational_resolution import register_operational_resolution_provider
 from agent.post_tool import register_raw_post_tool_observer
 from agent.pre_dispatch import register_pre_authorized_dispatch_hook
 from agent.tool_batch_admission import register_tool_batch_admission_provider
@@ -18,6 +19,9 @@ from workstation.integrations.hermes.browser_controller import (
 )
 from workstation.integrations.hermes.completion_admission import (
     workstation_completion_admission,
+)
+from workstation.integrations.hermes.operational_resolution import (
+    workstation_operational_resolution,
 )
 from workstation.integrations.hermes.scoped_execution import (
     workstation_scoped_execution,
@@ -57,6 +61,7 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
     8. Compression bypass (durable continuation compaction)
     9. Conversation wire projection (project_for_provider)
     10. Task completion admission (kanban completion verification)
+    11. Operational resolution (answer a pre-reasoning step from durable work)
     """
     global _installed
     if _installed:
@@ -78,6 +83,7 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
         register_compression_bypass_provider(durable_compaction)
         register_conversation_projection_provider(project_for_provider)
         register_task_completion_admission_provider(workstation_task_completion_admission)
+        register_operational_resolution_provider(workstation_operational_resolution)
 
         from agent.execution_persistence import (
             ExecutionPersistenceDisposition,
