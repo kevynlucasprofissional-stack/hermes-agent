@@ -538,9 +538,9 @@ export function BrowserView() {
           </Button>
           {state.downloads && state.downloads.length > 0 && (
             <Button
+              aria-label="Toggle Downloads Panel"
               onClick={() => setShowDownloads(prev => !prev)}
               size="sm"
-              aria-label="Toggle Downloads Panel"
               variant={showDownloads ? 'secondary' : 'ghost'}
             >
               <Codicon name="cloud-download" />

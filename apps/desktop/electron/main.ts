@@ -15168,6 +15168,7 @@ function createWindow() {
   })
 
   const appIcon = icon
+
   if (appIcon && typeof (mainWindow as any).setIcon === 'function') {
     mainWindow.setIcon(appIcon)
   }

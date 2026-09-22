@@ -1298,6 +1298,7 @@ export class WorkstationBrowserRuntime {
     this.ensureBrowserSessionStateRestored()
 
     const eligible = new Set(eligibleTaskIds.filter(taskId => typeof taskId === 'string' && taskId.trim()))
+
     const parked = this.taskLifecycle()
       .listTasks()
       .filter(
@@ -1607,6 +1608,7 @@ export class WorkstationBrowserRuntime {
               !extra.view.webContents.navigationHistory.canGoForward()
             ) {
               this.discardEntry(extra)
+
               break
             }
           }
@@ -2258,19 +2260,20 @@ export class WorkstationBrowserRuntime {
     switch (action) {
       case 'browser_snapshot':
         return this.snapshotForEntry(entry, Boolean(args.full))
-
       case 'browser_click': {
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
         const clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
         await delay(220)
 
         const snap = await this.snapshotForEntry(entry, false)
+
         return {
           ...snap,
           target: clickResult?.target,
           semantic_effect: 'click'
         }
       }
+
       case 'browser_type': {
         const clear = args.clear !== undefined ? Boolean(args.clear) : !args.append
         const append = Boolean(args.append)
@@ -2281,6 +2284,7 @@ export class WorkstationBrowserRuntime {
 
         const snap = await this.snapshotForEntry(entry, false)
         const semanticEffect = mode === 'plain_text_paste' ? 'paste_text' : (args.mode === 'insert_text' ? 'insert_text' : 'type')
+
         return {
           ...snap,
           target: typeResult?.target,
@@ -2717,18 +2721,23 @@ export class WorkstationBrowserRuntime {
 
         if (isSkeletonOrLoading) {
           readiness = 'transient'
+
           for (let wait = 0; wait < 4; wait++) {
             await delay(250)
+
             const reInv = (await wc.executeJavaScript(
               inventoryScript(full ? FULL_TEXT_CHARS : COMPACT_TEXT_CHARS, full ? FULL_ELEMENTS : COMPACT_ELEMENTS),
               true
             )) as PageInventory
+
             if (reInv.elements.length > 0) {
               inv = reInv
               readiness = 'stable'
+
               break
             }
           }
+
           if (inv.elements.length === 0) {
             readiness = 'ambiguous'
             readinessReason = 'empty_interactive_dom_timeout'
@@ -2817,6 +2826,7 @@ export class WorkstationBrowserRuntime {
     const wc = entry.view.webContents
     const point = await this.resolvePoint(entry, ref, true, anchor)
     await this.cdpClick(wc, point.x, point.y)
+
     return { target: point.target }
   }
 
@@ -2924,9 +2934,11 @@ export class WorkstationBrowserRuntime {
         error?: string
         count?: number
       }
+
       if (!res?.success) {
         throw new Error(res?.error || 'paste_failed')
       }
+
       return {
         target: point.target,
         chars_inserted: text.length,
@@ -3030,6 +3042,7 @@ export class WorkstationBrowserRuntime {
     args: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
     const rawUrl = String(args.url ?? '').trim()
+
     if (!rawUrl) {
       throw workstationControllerFault('INVALID_ARGUMENT', 'url_required')
     }
@@ -3037,6 +3050,7 @@ export class WorkstationBrowserRuntime {
     const currentUrl = entry.view.webContents.getURL()
     const relativeTarget = !/^[a-z][a-z0-9+.-]*:/i.test(rawUrl) && !rawUrl.startsWith('//')
     let parsed: URL
+
     try {
       parsed = new URL(rawUrl, currentUrl)
     } catch {
@@ -3048,11 +3062,13 @@ export class WorkstationBrowserRuntime {
     }
 
     const currentOrigin = new URL(currentUrl).origin
+
     if (parsed.origin !== currentOrigin) {
       throw workstationControllerFault('FORBIDDEN_DESTINATION', 'cross-origin browser readback denied')
     }
 
     const method = String(args.method ?? 'GET').toUpperCase()
+
     if (method !== 'GET' && method !== 'HEAD') {
       throw workstationControllerFault('INVALID_ARGUMENT', 'only GET and HEAD methods allowed')
     }
@@ -3063,6 +3079,7 @@ export class WorkstationBrowserRuntime {
 
     // Destination safety checks: block localhost, private networks
     const host = parsed.hostname.toLowerCase()
+
     if (!relativeTarget && (
       host === 'localhost' ||
       host === '127.0.0.1' ||
@@ -3075,9 +3092,11 @@ export class WorkstationBrowserRuntime {
 
     // RFC1918 IPv4 checks
     const ipv4Match = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(host)
+
     if (ipv4Match && !relativeTarget) {
       const b0 = Number(ipv4Match[1])
       const b1 = Number(ipv4Match[2])
+
       if (
         b0 === 10 ||
         (b0 === 172 && b1 >= 16 && b1 <= 31) ||
@@ -3090,11 +3109,14 @@ export class WorkstationBrowserRuntime {
 
     const wc = entry.view.webContents
     const headers = (args.headers && typeof args.headers === 'object') ? args.headers as Record<string, unknown> : {}
+
     const forbiddenHeader = Object.keys(headers).find(name => {
       const lower = name.toLowerCase()
+
       return ['authorization', 'cookie', 'proxy-authorization', 'host', 'origin', 'referer'].includes(lower)
         || lower.startsWith('sec-') || lower.startsWith('x-forwarded-')
     })
+
     if (forbiddenHeader) {
       throw workstationControllerFault('INVALID_ARGUMENT', `forbidden request header: ${forbiddenHeader}`)
     }
@@ -3155,6 +3177,7 @@ export class WorkstationBrowserRuntime {
     }
 
     const hardMaxChars = 2_000_000
+
     if ((res.text?.length ?? 0) > hardMaxChars) {
       throw workstationControllerFault('PAYLOAD_TOO_LARGE', `browser readback exceeds ${hardMaxChars} characters`)
     }
@@ -3246,9 +3269,11 @@ export class WorkstationBrowserRuntime {
       typeof args.limit === 'number' && Number.isFinite(args.limit) ? Math.min(100, Math.max(1, args.limit)) : 20
 
     let result: Record<string, unknown>
+
     if (args.mode === 'inspect') {
-      if (!selector) throw new Error('inspection_requires_selector')
+      if (!selector) {throw new Error('inspection_requires_selector')}
       const attributes = args.attributes ?? []
+
       if (
         !Array.isArray(attributes) ||
         attributes.length > 16 ||
@@ -3256,6 +3281,7 @@ export class WorkstationBrowserRuntime {
       ) {
         throw new Error('invalid_inspection_attributes')
       }
+
       // Isolated world prevents page-defined JS hooks from replacing DOM readers.
       result = (await wc.executeJavaScriptInIsolatedWorld(999, [
         {
