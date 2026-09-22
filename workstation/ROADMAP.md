@@ -1,5 +1,57 @@
 # Workstation roadmap
 
+## H-080 — Native Pre-Reasoning Operational Resolution / Progressive Compilation Closure (2026-09-22) — MAIN CLEAN / LOCAL WIP RECOVERABLE / PROMOTION BLOCKED
+
+Canonical handoff: [context/engineering-journal/h080-operational-resolution-continuation-2026-09-22.md](context/engineering-journal/h080-operational-resolution-continuation-2026-09-22.md).
+
+Shared repository truth:
+- the rejected direct attempt `471e9b529f745c89a3b18caad865e762f09dfab3` is reverted and inactive;
+- shared `main` was restored to the pre-attempt tree before this documentation lane;
+- a subsequent Claude Code session reportedly created local-only branch `integration/upstream-20260922-71a2fe39-h0793`, froze upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, and created true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`;
+- that local branch was not observed on GitHub and must be recovered from the developer checkout before it can be treated as shared truth;
+- latest upstream observed at handoff was `ec21bd7674e78907ccacca846efad198e5cfdbbc`; do not chase it inside a recoverable frozen feature lane.
+
+Reported local WIP already implemented and focused-tested:
+- generic `agent/` operational-resolution boundary and turn phase;
+- Workstation first-party operational-resolution provider using established typed intent rather than prose synthesis;
+- canonical outstanding-dispatch-checkpoint uncertainty consolidation;
+- Browser domain projection moving from a private helper in generic `browser_tool.py` to Workstation ownership;
+- focused evidence: 17 generic-boundary, 10 provider, 144 owner/router, 31 Browser and 50 boundary+compression tests green; Stage-A Workstation baseline 744 passed / 2 skipped.
+
+**Do not redo this work blindly.** First inspect the local branch/worktree and preserve coherent changes.
+
+Mandatory closure order:
+1. recover/reproduce local WIP;
+2. real-turn RED/GREEN proof: promoted verified capability => exact-once execution, canonical VERIFIED result, provider calls = 0;
+3. no-match control => normal reasoning, provider calls >= 1;
+4. invalid certificate / drift / quarantine / uncertain mutation / failed verifier negative cases;
+5. canonical finalizer/completion/persistence proof for SATISFIED / EXECUTED / WAIT / HANDOFF;
+6. close Experience feedback loop through promotion and future normal-turn reuse;
+7. finish Browser authority/domain ownership and no-dual-mutation proof;
+8. create/backfill `workstation/upstream_interventions.json`;
+9. metrics, seams, broad qualification, final drift classification, push/PR.
+
+Target authority chain:
+```text
+trusted established OperationIntent
+-> generic pre-reasoning boundary
+-> Workstation provider
+-> CapabilityRouter
+-> certificate
+-> CertifiedDispatcher
+-> OperationalKernel
+-> canonical verifier
+-> canonical finalizer
+
+no trustworthy intent OR no proof
+-> CONTINUE_REASONING
+-> normal Hermes provider
+```
+
+Laya is deferred to optional System-1/shadow proposal only after the deterministic path is proven. It has no authority to execute, verify, promote or grant authority.
+
+
+
 ## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING
 
 Canonical:
