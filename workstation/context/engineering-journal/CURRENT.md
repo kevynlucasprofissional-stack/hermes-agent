@@ -1,71 +1,93 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-080 — Native pre-reasoning operational resolution continuation (2026-09-22)
+## H-080 — Published branch audit and correction lane (2026-09-22)
 
-**Status:** PARTIAL / LOCAL WIP EXISTS / REAL-TURN ACCEPTANCE OPEN / NOT PROMOTED.
+**Status:** ARCHITECTURE ACCEPTED / IMPLEMENTATION PARTIAL / PROMOTION BLOCKED.
 
-Canonical handoff: [h080-operational-resolution-continuation-2026-09-22.md](h080-operational-resolution-continuation-2026-09-22.md).
+Canonical audit:
+[h080-branch-quality-audit-2026-09-22.md](h080-branch-quality-audit-2026-09-22.md).
 
-### Trigger
+The implementation is now published at:
 
-Commit `471e9b529f745c89a3b18caad865e762f09dfab3` attempted to place operational resolution before the LLM but was rejected and reverted. It was not a near-complete implementation: it constructed an invalid `OperationIntent`, substituted raw prose for typed intent/state, supplied a placeholder-success dispatcher, could allow EXECUTE/COMPOSE to dispatch and then continue into the LLM, directly imported Workstation into generic turn ownership, bypassed proof of canonical finalization, and shipped without the mandatory normal-turn tests.
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
 
-### Materially changed input
+This supersedes the earlier statement that the second implementation existed only locally.
 
-A second Claude Code session started from the restored baseline and reportedly:
-- froze upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`;
-- created local branch `integration/upstream-20260922-71a2fe39-h0793`;
-- committed true upstream merge `a8dfcd21f5c641d01a5989e223a987687018db7f`;
-- implemented generic operational-resolution registry/phase under `agent/`;
-- implemented a Workstation first-party provider consuming established typed intent;
-- consolidated outstanding-dispatch-checkpoint uncertainty;
-- moved Browser extract-items domain projection toward Workstation ownership.
+### What the audit accepts
 
-The branch was not observed on GitHub. **Do not repeat this implementation until the developer checkout is inspected.**
+- `agent/operational_resolution.py` + `agent/turn_operational_resolution.py` form a generic pre-provider lifecycle boundary.
+- `agent/conversation_loop.py` has a narrow integration call and no direct Workstation import.
+- Workstation semantics live in `workstation/integrations/hermes/operational_resolution.py`.
+- Durable established intent replaces synthetic intent-from-prose.
+- The existing CapabilityRouter / certificate / dispatcher / kernel / verifier chain remains authoritative.
+- Browser extract-items projection moved into `workstation/browser_projection.py`.
+- Uncertain mutation state is surfaced to routing rather than silently retried.
 
-### Evidence reported by the local session
+### What the audit falsifies
 
-```text
-generic operational boundary: 17 passed
-Workstation operational provider: 10 passed
-existing-owner uncertainty/router selection: 144 passed
-Browser focused selection: 31 passed
-boundary + compression selection: 50 passed
-Stage-A Workstation baseline: 744 passed / 2 skipped
-```
+**E001 is not yet the advertised EXECUTE proof.**
+The current test names a promoted capability but starts with `record.state = written` while the goal is also `record.state == written`. The router can terminate as `SATISFIED` before capability search. Therefore the existing test proves no-LLM for already-satisfied state, not no-LLM after deterministic capability execution.
 
-These counts are transcript evidence, not exact-final-head CI evidence.
+**Verifier failure is not tested end to end.**
+`test_verifier_failure_no_commit` currently contains `pass`.
 
-### Refuted approaches
+**The scratch route fixture is not release evidence.**
+It proves useful direct `TaskCompiler._execute_route` behavior, but bypasses the normal turn and must be absorbed or renamed into permanent semantic coverage.
 
-- derive a synthetic `OperationIntent` from raw user prose merely to save an LLM call;
-- use a fake-success dispatch fallback when no real scoped dispatcher exists;
-- dispatch a certified capability and still ask the LLM to execute the same step;
-- directly couple generic `conversation_loop.py` to Workstation when a generic provider boundary can express the lifecycle;
-- require `durable_execution_active()` during pre-reasoning discovery when that flag only exists during compiled execution;
-- close a store-owned durable DB connection from a transient provider.
+**Registry truth is inconsistent.**
+`upstream_interventions.json` attributes feature changes to `a8dfcd21...`, the upstream merge baseline. It also includes downstream-only `workstation/**` changes as upstream interventions. Both need correction.
 
-### Next discriminating experiments
+**Seam truth is incomplete.**
+`SEAM-OPERATIONAL-RESOLUTION` is referenced but absent from `first_party_seams.json`.
 
-**H-080-E001 — Known capability bypass**
-- Hypothesis: a persisted/established `OperationIntent` with a promoted capability can traverse a normal Hermes turn, execute exactly once, verify canonically, preserve finalization, and make zero provider calls.
-- Support: provider fake count 0, capability dispatch count 1, VERIFIED/accepted result and canonical finalizer evidence.
-- Refute: any provider call, duplicate dispatch, missing finalization, synthetic verification or exception-swallowed fallthrough.
+**Experience closure remains open.**
+The new boundary proves a reuse path can exist, but not the entire novel-execution -> compile -> promotion -> future normal-turn reuse loop.
 
-**H-080-E002 — No-match fallback**
-- Hypothesis: absence of a trustworthy/applicable capability returns to ordinary reasoning without changing normal behavior.
-- Support: provider fake count >= 1 and normal turn completion.
-- Refute: fabricated intent, terminal shortcut or silent no-op.
+### Required discriminating experiments
 
-**H-080-E003 — Negative authority/evidence cases**
-- Invalid certificate, quarantined/drifted capability, outstanding uncertain mutation and failed/inconclusive verifier must produce zero unsafe dispatch/commit and explicit reconciliation/reasoning/handoff.
+**H-080-E001R — real promoted capability execution**
+- initial semantic state does NOT satisfy the goal;
+- normal `AIAgent.run_conversation` path;
+- `routing_decision == EXECUTE`;
+- physical dispatch count exactly 1;
+- canonical verification `VERIFIED`;
+- `accepted == true`;
+- dispatch record `COMMITTED`;
+- provider call count 0;
+- canonical finalization/persistence executed.
 
-**H-080-E004 — Browser ownership**
-- Workstation-owned result projection plus broker/controller routing authority must preserve bound-lane fail-closed, never-bound fallback when allowed, no dual mutation, persistent BrowserTask identity and extract-items persistence parity.
+**H-080-E003V — ACK but verifier fails/inconclusive**
+- physical handler ACKs;
+- verifier returns FAILED or INCONCLUSIVE;
+- no COMMITTED-success claim;
+- no terminal EXECUTED-success;
+- no blind provider retry of the mutation.
 
-Do not begin Laya production routing until E001-E004 and the Experience feedback loop are green.
+**H-080-E005 — Experience feedback closure**
+- verified novel execution enters TransitionSample/corpus;
+- candidate is compiled;
+- controlled replay/causal validation runs;
+- promotion policy admits only after evidence;
+- future equivalent normal turn reuses the promoted capability with provider calls 0.
 
+### Promotion sequence
 
+1. reconcile current main documentation/state into the feature branch;
+2. fix E001R;
+3. implement E003V;
+4. absorb/remove scratch fixture;
+5. repair intervention registry;
+6. add/qualify operational-resolution seam;
+7. close or explicitly leave OPEN Experience feedback-loop closure;
+8. complete truthful metrics mapping;
+9. Browser/owner regressions;
+10. strict seam audit;
+11. canonical full Workstation suite + upstream-owner tests;
+12. exact-head GitHub CI;
+13. final upstream drift classification;
+14. PR.
+
+Do not merge while E001R or E003V is missing.
 
 ## H-079.2 — Promotion-gap audit after one-click dogfood failure (2026-09-20)
 
