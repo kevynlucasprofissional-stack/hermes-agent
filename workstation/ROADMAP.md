@@ -1,56 +1,81 @@
 # Workstation roadmap
 
-## H-080 — Native Pre-Reasoning Operational Resolution / Progressive Compilation Closure (2026-09-22) — MAIN CLEAN / LOCAL WIP RECOVERABLE / PROMOTION BLOCKED
+## H-080 — Native Pre-Reasoning Operational Resolution / Progressive Compilation Closure (2026-09-22) — BRANCH PUBLISHED / ARCHITECTURE ACCEPTED / PROMOTION BLOCKED
 
-Canonical handoff: [context/engineering-journal/h080-operational-resolution-continuation-2026-09-22.md](context/engineering-journal/h080-operational-resolution-continuation-2026-09-22.md).
+Canonical quality audit:
+[context/engineering-journal/h080-branch-quality-audit-2026-09-22.md](context/engineering-journal/h080-branch-quality-audit-2026-09-22.md).
 
-Shared repository truth:
-- the rejected direct attempt `471e9b529f745c89a3b18caad865e762f09dfab3` is reverted and inactive;
-- shared `main` was restored to the pre-attempt tree before this documentation lane;
-- a subsequent Claude Code session reportedly created local-only branch `integration/upstream-20260922-71a2fe39-h0793`, froze upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, and created true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`;
-- that local branch was not observed on GitHub and must be recovered from the developer checkout before it can be treated as shared truth;
-- latest upstream observed at handoff was `ec21bd7674e78907ccacca846efad198e5cfdbbc`; do not chase it inside a recoverable frozen feature lane.
+Audited implementation branch:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
 
-Reported local WIP already implemented and focused-tested:
-- generic `agent/` operational-resolution boundary and turn phase;
-- Workstation first-party operational-resolution provider using established typed intent rather than prose synthesis;
-- canonical outstanding-dispatch-checkpoint uncertainty consolidation;
-- Browser domain projection moving from a private helper in generic `browser_tool.py` to Workstation ownership;
-- focused evidence: 17 generic-boundary, 10 provider, 144 owner/router, 31 Browser and 50 boundary+compression tests green; Stage-A Workstation baseline 744 passed / 2 skipped.
+Frozen upstream pin:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, true-merged by
+`a8dfcd21f5c641d01a5989e223a987687018db7f`.
 
-**Do not redo this work blindly.** First inspect the local branch/worktree and preserve coherent changes.
+The implementation direction is accepted:
+- generic pre-reasoning boundary lives under `agent/`;
+- generic `conversation_loop.py` remains free of direct Workstation imports;
+- Workstation integrates through `workstation/integrations/hermes/operational_resolution.py`;
+- raw prose is not converted into executable `OperationIntent`;
+- `TaskCompiler` / `CapabilityRouter` / certified dispatch / canonical verification remain the execution authority chain;
+- uncertain mutations block another deterministic dispatch lane;
+- Browser extract-items domain projection moved from generic `tools/browser_tool.py` to `workstation/browser_projection.py`.
 
-Mandatory closure order:
-1. recover/reproduce local WIP;
-2. real-turn RED/GREEN proof: promoted verified capability => exact-once execution, canonical VERIFIED result, provider calls = 0;
-3. no-match control => normal reasoning, provider calls >= 1;
-4. invalid certificate / drift / quarantine / uncertain mutation / failed verifier negative cases;
-5. canonical finalizer/completion/persistence proof for SATISFIED / EXECUTED / WAIT / HANDOFF;
-6. close Experience feedback loop through promotion and future normal-turn reuse;
-7. finish Browser authority/domain ownership and no-dual-mutation proof;
-8. create/backfill `workstation/upstream_interventions.json`;
-9. metrics, seams, broad qualification, final drift classification, push/PR.
+Do **not** revert or redesign this lane from scratch. Repair and qualify it.
 
-Target authority chain:
+Promotion blockers:
+
+1. **E001 false-positive** — `test_known_promoted_capability_bypasses_llm` currently starts from a semantic state that already satisfies the goal, so it proves `SATISFIED -> 0 LLM`, not `promoted capability EXECUTE -> 0 LLM`.
+2. **Verifier-failure E2E is empty** — `test_verifier_failure_no_commit` currently ends in `pass`.
+3. **Scratch fixture remains** — useful direct-routing proof lives in `test_zz_scratch_route_fixture.py`; absorb/rename it as permanent semantic evidence.
+4. **Intervention provenance is wrong** — `upstream_interventions.json` points feature entries at baseline merge `a8dfcd21...` instead of the feature/final semantic commits, and misclassifies several `workstation/**` files as upstream interventions.
+5. **Seam registry mismatch** — intervention records reference `SEAM-OPERATIONAL-RESOLUTION`, but `first_party_seams.json` does not define that concern.
+6. **Experience feedback loop remains open** — no end-to-end proof yet of verified novel execution -> TransitionSample -> corpus -> compile/replay/promote -> future normal-turn reuse with zero LLM.
+7. **Promotion evidence absent** — audited head had no PR/Actions/status evidence.
+
+Mandatory correction order:
+
+```text
+reconcile current main docs/state into feature branch
+-> fix E001 to require EXECUTE + exact-once physical dispatch
+   + VERIFIED/accepted + COMMITTED + provider calls = 0
+-> implement real verifier-failure E2E
+-> absorb/remove scratch fixture
+-> correct upstream_interventions provenance/scope
+-> add SEAM-OPERATIONAL-RESOLUTION
+-> close or explicitly keep OPEN Experience feedback-loop closure
+-> finish truthful operational metrics
+-> Browser + owner regressions
+-> strict seam audit
+-> full exact-head qualification + GitHub CI
+-> final upstream drift classification
+-> PR / promotion
+```
+
+Target proof:
+
 ```text
 trusted established OperationIntent
 -> generic pre-reasoning boundary
 -> Workstation provider
 -> CapabilityRouter
--> certificate
+-> valid certificate
 -> CertifiedDispatcher
 -> OperationalKernel
--> canonical verifier
--> canonical finalizer
+-> physical effect exactly once
+-> canonical VERIFIED + accepted
+-> COMMITTED
+-> canonical turn finalizer
+-> provider LLM calls = 0
 
-no trustworthy intent OR no proof
+no trustworthy intent / no proven capability
 -> CONTINUE_REASONING
 -> normal Hermes provider
 ```
 
-Laya is deferred to optional System-1/shadow proposal only after the deterministic path is proven. It has no authority to execute, verify, promote or grant authority.
+Laya remains deferred to optional System-1/shadow proposal. It has no execution, verification, promotion or authority-granting power.
 
-
+**Promotion rule:** H-080 remains OPEN while any of the seven blockers above remains unresolved.
 
 ## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING
 
