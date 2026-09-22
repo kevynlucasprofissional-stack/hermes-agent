@@ -104,8 +104,14 @@ function Ensure-WorkstationVenv {
 }
 
 function Test-WorkstationVenvPip {
-  & $VenvPython -m pip --version *> $null
-  return $LASTEXITCODE -eq 0
+  # Probe via importlib instead of invoking ``python -m pip``. In PowerShell 7
+  # a missing module's expected non-zero native exit is promoted to a workflow
+  # failure before this predicate can return false.
+  $hasPip = & $VenvPython -c "import importlib.util; print('1' if importlib.util.find_spec('pip') else '0')"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect pip availability in $VenvPython."
+  }
+  return $hasPip.Trim() -eq "1"
 }
 
 function Install-HermesEditable {
