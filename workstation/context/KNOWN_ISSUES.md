@@ -1,5 +1,23 @@
 # Workstation Known Issues
 
+## KI-020 — Normal-turn Progressive Compilation pre-reasoning closure is not yet promoted [OPEN — LOCAL WIP EXISTS]
+
+The Capability Runtime, Experience Compiler and routing substrate exist, but shared `main` does not yet prove that a normal Hermes turn can execute a promoted capability before the next provider LLM call.
+
+A direct attempt (`471e9b529f745c89a3b18caad865e762f09dfab3`) was reverted because it fabricated an invalid intent, used a fake-success dispatcher fallback, could fall through to the LLM after deterministic dispatch, directly coupled generic core to Workstation, and lacked real-turn acceptance tests.
+
+A subsequent Claude Code session reportedly implemented a generic `agent/` operational-resolution boundary plus Workstation provider on local branch `integration/upstream-20260922-71a2fe39-h0793`, with focused tests green. That branch was not observed on GitHub and the mandatory real-turn tests were not completed.
+
+Closure requires all of:
+- known promoted capability via a real normal turn => exact-once dispatch, canonical VERIFIED result, provider calls = 0;
+- no match/insufficient trusted intent => normal provider reasoning;
+- invalid certificate / drift / quarantine / uncertain mutation / verifier failure fail safe;
+- canonical finalization preserved for SATISFIED / EXECUTED / WAIT / HANDOFF;
+- `workstation/upstream_interventions.json` created/backfilled for active upstream interventions;
+- exact-head focused+broad qualification and final upstream drift classification.
+
+
+
 ## KI-019 — Anthropic routing contract lacks a real SDK construction proof [CLOSED LOCALLY — CI PENDING]
 
 Workstation CI correctly installs `--extra anthropic`, but the provider-routing test still mocks `build_anthropic_client`. Keep that unit test, and add a no-network integration contract that exercises the installed SDK through the real builder path with dummy credentials. Anthropic remains an optional extra, not a new core dependency.
