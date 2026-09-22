@@ -1,22 +1,29 @@
 # Upstream strategy
 
-## 2026-09-22 H-080 / H-079.3 continuation note
+## 2026-09-22 H-080 / H-079.3 published branch status
 
-The failed direct operational-resolution commit `471e9b529f745c89a3b18caad865e762f09dfab3` has been reverted and is not active on shared main.
+The rejected direct operational-resolution commit `471e9b529f745c89a3b18caad865e762f09dfab3` remains reverted and inactive.
 
-A later Claude Code continuation reportedly created local branch `integration/upstream-20260922-71a2fe39-h0793`, pinned upstream at `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, and produced true upstream merge `a8dfcd21f5c641d01a5989e223a987687018db7f`. The branch was not found on GitHub, so this is **local recoverable state**, not a promoted baseline.
+The replacement branch is now published:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
 
-Latest upstream observed while recording the handoff: `ec21bd7674e78907ccacca846efad198e5cfdbbc`.
+It retains the frozen H-079.3 upstream pin:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`,
+true-merged by:
+`a8dfcd21f5c641d01a5989e223a987687018db7f`.
 
-H-079 continuation rule:
-- if the local branch and merge are present and coherent, keep the frozen `71a2fe399...` pin for this feature cycle;
-- do not discard uncommitted feature work merely because upstream advanced;
-- classify the later upstream tip at the final drift check;
-- reopen baseline synchronization only if the local lane cannot be recovered or a proven relevant upstream overlap invalidates it.
+The one-pin rule still applies: do not chase a moving upstream head inside this correction lane. Fetch/classify latest upstream immediately before promotion and reopen Stage A only for a proven material overlapping conflict.
 
-The target upstream intervention is a **generic pre-reasoning operational-resolution boundary**. Workstation-specific routing/execution remains behind the first-party adapter/provider rather than direct imports in generic `agent/conversation_loop.py`.
+The target upstream intervention is now implemented in the correct architectural form:
+- generic pre-reasoning operational-resolution contract under `agent/`;
+- narrow call site in `agent/conversation_loop.py`;
+- Workstation routing/execution behind a first-party provider;
+- Browser Workstation domain projection removed from generic `tools/browser_tool.py`.
 
+Promotion is not yet allowed. The branch must first prove real normal-turn `EXECUTE` with exact-once dispatch, canonical VERIFIED/accepted result, COMMITTED status and zero provider calls; prove verifier failure end to end; reconcile intervention/seam registries; qualify Browser/owners/full suite; and obtain exact-head CI plus final drift classification.
 
+Canonical audit:
+`workstation/context/engineering-journal/h080-branch-quality-audit-2026-09-22.md`.
 
 ## H-079.2 active baseline refresh requirement
 
