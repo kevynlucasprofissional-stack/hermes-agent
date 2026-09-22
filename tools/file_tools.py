@@ -493,7 +493,8 @@ def _read_extracted_document(path: str, _resolved, offset: int, limit: int, task
     return json.dumps(result_dict, ensure_ascii=False)
 
 
-def _dedup_stub_or_block(task_data: dict, dedup_key: tuple, path: str) -> str:
+def _dedup_stub_or_block(task_data: dict, dedup_key: tuple, path: str, *, task_id: str | None = None,
+                          resolved_str: str | None = None, offset: int = 1, limit: int = DEFAULT_READ_LIMIT) -> str:
     """Return the "unchanged" stub for a repeated identical read, escalating to a
     hard BLOCK after 2 stubs so weak tool-followers don't loop forever."""
     with _read_tracker_lock:
@@ -517,13 +518,20 @@ def _dedup_stub_or_block(task_data: dict, dedup_key: tuple, path: str) -> str:
             # escalates to `repeated_exact_failure_block` over calls that never failed.
             **{GUARDRAIL_REFUSAL_KEY: True})
 
-    return json.dumps({
+    result_dict = {
         "status": "unchanged",
         "message": _READ_DEDUP_STATUS_MESSAGE,
         "path": path,
         "dedup": True,
+        "cache_hit": True,
         "content_returned": False,
-    }, ensure_ascii=False)
+    }
+    if task_id is not None and resolved_str is not None:
+        for projection in _FILE_READ_PROJECTIONS:
+            projected = projection(task_id, resolved_str, offset, limit, result_dict)
+            if projected is not None:
+                return projected
+    return json.dumps(result_dict, ensure_ascii=False)
 
 
 def _record_successful_read(task_data: dict, task_id: str, path: str, resolved_str: str,
@@ -557,7 +565,9 @@ def _record_successful_read(task_data: dict, task_id: str, path: str, resolved_s
             pass
         baselines = task_data["full_write_baselines"]
         if stable and version is not None and count < 4:
-            task_data["dedup"][dedup_key] = version_before
+            # Keep the complete stable snapshot, including the digest. Metadata
+            # alone is not an identity: a same-size rewrite can restore mtimes.
+            task_data["dedup"][dedup_key] = version
             # A narrower view does not undo knowledge of these same bytes. Do
             # not revive a baseline after a partial read of a different version.
             complete = baselines.get(resolved_str) == version
@@ -693,10 +703,24 @@ def read_file_tool(path: str, offset: int = 1, limit: int = DEFAULT_READ_LIMIT, 
         # Same rule as skill_view: the review fork shares the parent's task_id and its
         # read-before-write guard needs a real read, which the stub path never records (#95976).
         file_ops = _get_file_ops(task_id)
-        version_before = _file_metadata(resolved_str) if _file_ops_uses_host_paths(file_ops) else None
-        if (cached_version is not None and not is_background_review()
-                and version_before == cached_version and content_served_in_generation):
-            return _dedup_stub_or_block(task_data, dedup_key, path)
+        # Metadata is a read-only host observation. It remains valid even when
+        # the selected task backend receives the original path spelling.
+        version_before = _file_metadata(resolved_str)
+        if cached_version is not None and not is_background_review() and content_served_in_generation:
+            version_matches = _file_version(resolved_str) == cached_version
+            # A task-scoped file-operations backend can legitimately decline
+            # host metadata for a host path. Preserve the same safe unchanged
+            # check used before the backend split instead of disabling dedup.
+            if version_before is None:
+                try:
+                    version_matches = os.path.getmtime(resolved_str) == cached_version
+                except OSError:
+                    version_matches = False
+            if version_matches:
+                return _dedup_stub_or_block(
+                    task_data, dedup_key, path, task_id=task_id, resolved_str=resolved_str,
+                    offset=offset, limit=limit,
+                )
 
         result = file_ops.read_file(resolved_str if _file_ops_uses_host_paths(file_ops) else path, offset, limit)
         result_dict = result.to_dict()

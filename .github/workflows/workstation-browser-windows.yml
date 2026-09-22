@@ -63,8 +63,17 @@ jobs:
         run: |
           python -m venv --without-pip .venv
           & .venv\Scripts\python.exe -c "import sys; print(sys.version)"
-          & .venv\Scripts\python.exe -m pip --version *> $null
-          if ($LASTEXITCODE -eq 0) {
+          # PowerShell 7 can turn the expected non-zero native exit into a
+          # terminating error under the runner's strict native-command policy.
+          # Capture it explicitly: absence of pip is the fixture's assertion.
+          $pipExitCode = 0
+          try {
+            & .venv\Scripts\python.exe -m pip --version *> $null
+            $pipExitCode = $LASTEXITCODE
+          } catch {
+            $pipExitCode = $LASTEXITCODE
+          }
+          if ($pipExitCode -eq 0) {
             throw "Regression fixture unexpectedly contains pip."
           }
       - name: Install Workstation from committed source
