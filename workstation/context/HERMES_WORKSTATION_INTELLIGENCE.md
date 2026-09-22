@@ -1,55 +1,68 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## H-080 — Pre-reasoning authority is generic at the harness boundary and deterministic after admission — 2026-09-22
+## H-080 branch audit — the boundary design is accepted; proof quality now dominates the lane — 2026-09-22
 
-The rejected `471e9b529f745c89a3b18caad865e762f09dfab3` attempt and the subsequent local continuation sharpen Progressive Compilation.
+The published implementation at `integration/upstream-20260922-71a2fe39-h0793@9c217af...` validates the architectural correction that followed the rejected `471e9b5` attempt.
 
-The failed attempt proved a negative rule: merely inserting "try capabilities before LLM" into `conversation_loop.py` is not sufficient. It fabricated an invalid `OperationIntent`, used raw conversation text as typed semantic intent/state, allowed a fake-success dispatch fallback, and treated EXECUTE/COMPOSE as hints even though `TaskCompiler._execute_route()` may already have dispatched effects. Repairing only the constructor would therefore expose a potential double-execution path.
-
-Correct causal decomposition:
+Accepted architecture:
 ```text
-generic Hermes owner: provider call is about to happen
-        |
-        v
-generic operational-resolution boundary
-        |
-        v
-Workstation first-party provider
-        |
-        +-- no established typed intent / insufficient state --> CONTINUE_REASONING
-        |
-        +-- established typed intent
-                |
-                v
-        TaskCompiler / CapabilityRouter
-                |
-                v
-        certificate + authority + validity
-                |
-                v
-        CertifiedDispatcher / OperationalKernel
-                |
-                v
-        canonical verification
-                |
-                v
-        canonical turn finalization
+generic Hermes turn owner
+-> generic operational-resolution lifecycle
+-> first-party Workstation provider
+-> established durable OperationIntent
+-> CapabilityRouter
+-> certificate
+-> CertifiedDispatcher
+-> OperationalKernel
+-> canonical verifier
+-> canonical finalizer
 ```
 
-New invariants:
-- text is not an `OperationIntent`; use a persisted/established typed intent or reason first;
-- after canonically verified deterministic execution, the same step does not fall through to an LLM;
-- errors before dispatch may degrade to reasoning, but once an effect may have dispatched, uncertainty/reconciliation must fail closed rather than silently retry;
-- terminal operational outcomes must rejoin normal finalization, not bypass completion admission, persistence, transcript, metrics or callbacks;
-- a pre-reasoning provider must not require `durable_execution_active()` if that context is only true during already-compiled execution;
-- durable-store-owned connections remain store-owned; transient providers do not close them;
-- Browser routing authority remains generic broker/controller ownership while Workstation-specific result projection belongs to Workstation.
+This preserves the H-078B rule that generic Hermes core does not import Workstation implementation directly while still allowing the Hermes runtime itself to prefer deterministic operational competence before spending another reasoning round.
 
-The later Claude Code session reportedly implemented this shape on local-only branch `integration/upstream-20260922-71a2fe39-h0793` with focused tests green, but the mandatory normal-turn zero-provider-call proof, full Experience feedback closure, intervention registry, exact-head qualification and publication remain open.
+The audit also establishes a new methodological rule:
 
-Laya remains a future System-1 candidate proposer only. It cannot grant authority, issue routing certificates, verify effects, promote capabilities or override deterministic admission.
+> **A test named after a capability path is not evidence that the capability path executed.**
 
+The current E001-style test registers a promoted capability but starts from a semantic state where the goal is already true. Because `CapabilityRouter` checks goal satisfaction before candidate search, the capability can be entirely irrelevant to the passing result. Promotion evidence must therefore assert causal path markers, not only end-state outcomes.
 
+For deterministic reuse, the minimum causal proof is:
+```text
+goal false at admission
+-> ExecutableDecision
+-> valid RoutingCertificate
+-> physical dispatcher count = 1
+-> canonical verifier = VERIFIED
+-> accepted = true
+-> dispatch record = COMMITTED
+-> provider calls = 0
+```
+
+A second rule is strengthened:
+
+> **ACK-without-verification must be tested through the real turn path, not delegated to a nearby unit test.**
+
+The current end-to-end verifier-failure case is a `pass`; therefore the branch has not yet demonstrated that a successful physical ACK followed by FAILED/INCONCLUSIVE verification cannot become COMMITTED success or a blind LLM retry.
+
+Registry intelligence:
+- `upstream_interventions.json` must describe interventions in upstream-owned code, not all downstream architecture changes;
+- provenance must name the commit that actually introduced the intervention, not the upstream baseline merge;
+- seam IDs referenced from intervention records must exist in `first_party_seams.json`;
+- closure is behavioral, not file-presence based.
+
+Experience intelligence:
+the new pre-reasoning boundary is only the **reuse admission half** of Progressive Compilation. End-to-end closure still requires:
+```text
+novel verified execution
+-> TransitionSample
+-> corpus
+-> causal compilation
+-> controlled replay
+-> promotion
+-> later normal-turn reuse with zero provider calls
+```
+
+Until that cycle is demonstrated, describe Progressive Operational Compilation as a validated substrate plus a promising pre-reasoning reuse boundary, not as fully closed.
 
 ## H-079.2 — Promotion topology is part of correctness — 2026-09-20
 
