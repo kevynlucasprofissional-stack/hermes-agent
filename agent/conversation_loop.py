@@ -59,6 +59,10 @@ from hermes_logging import set_session_context
 from tools.skill_provenance import set_current_write_origin
 from utils import base_url_host_matches
 
+# Workstation imports for operational resolution
+from workstation.task_compiler import TaskCompiler
+from workstation.control_plane.intent import OperationIntent
+
 logger = logging.getLogger(__name__)
 
 # Must mirror _STALE_TOOL_CALL_MARKER_RE in hermes_state.py; kept local so importing
@@ -1567,6 +1571,12 @@ def _run_conversation_turn(
             break
         if _pg.action == "continue":
             continue
+
+        # Operational resolution: attempt to satisfy work using known capabilities before LLM call
+        _op_resolution_result = _attempt_operational_resolution(agent, s)
+        if _op_resolution_result is not None:
+            return _op_resolution_result
+
         _run_phase(announce_api_call, agent, s)
 
         s.api_start_time, s.retry_count, s.max_retries = time.time(), 0, agent._api_max_retries
@@ -1703,6 +1713,138 @@ def _close_durable_failed_turn(agent, result: Any) -> None:
         agent._flush_messages_to_session_db(messages)
     except Exception:
         logger.debug("failed-turn boundary not written", exc_info=True)
+
+
+def _attempt_operational_resolution(agent: Any, s: _LoopState) -> Optional[Dict[str, Any]]:
+    """Attempt to resolve work using known capabilities before LLM invocation.
+
+    Returns a result dict if operational resolution succeeds (work can be satisfied,
+    executed, composed, or requires wait/human), None if reasoning is required.
+    """
+    try:
+        # Check if we have sufficient context to form an OperationIntent
+        # We need at least a user message and some conversation context
+        if not s.user_message or not s.messages:
+            return None
+
+        # Import Workstation components
+        from workstation.control_plane.intent import OperationIntent
+        from workstation.task_compiler import TaskCompiler
+
+        # Create a basic operation intent from the current turn
+        # This is a simplified version - in practice this would be more sophisticated
+        # and derived from the user's request and conversation context
+        intent_id = f"op_{hash(str(s.user_message)) % 10000}"
+
+        # Create a minimal intent - in a full implementation, this would extract
+        # semantic goals and slots from the user message
+        intent = OperationIntent(
+            id=intent_id,
+            goal=None,  # Would be derived from user message in full implementation
+            slots={},   # Would contain extracted entities
+            annotations=[]
+        )
+
+        # Create minimal semantic state from conversation
+        semantic_state = {}
+        if s.user_message:
+            semantic_state["current_user_request"] = str(s.user_message)
+        if s.messages and len(s.messages) > 1:
+            # Include recent conversation history
+            recent_msgs = s.messages[-3:] if len(s.messages) >= 3 else s.messages
+            semantic_state["recent_conversation"] = [
+                {"role": msg.get("role"), "content": str(msg.get("content", ""))[:100]}
+                for msg in recent_msgs
+                if isinstance(msg, dict)
+            ]
+
+        # Create a minimal request for the TaskCompiler
+        # This mirrors what would be passed to _execute_route
+        request = {
+            "operation_intent": intent,
+            "semantic_state": semantic_state
+        }
+
+        # Use TaskCompiler's _execute_route method which already implements
+        # the full operational resolution logic including routing and execution
+        compiler = TaskCompiler()
+
+        # We need to provide a dispatch function - use the agent's tool dispatcher if available
+        dispatch_fn = getattr(agent, '_dispatch_tool', None)
+        if dispatch_fn is None:
+            # Fallback: create a simple dispatch that logs but doesn't actually execute
+            # This allows routing decisions to be made without actual tool execution
+            def dispatch_fn(*args, **kwargs):
+                from agent.conversation_loop import logger
+                logger.debug(f"Operational resolution dispatch called with: {args}, {kwargs}")
+                # Return a minimal successful result for read operations
+                # In a real implementation, this would connect to the agent's actual tool system
+                return {"status": "SUCCESS", "result": "operational_resolution_placeholder"}
+
+        # Attempt operational resolution
+        result = compiler._execute_route(
+            request,
+            task_id=str(s.effective_task_id or "unknown"),
+            session_id=str(getattr(agent, "session_id", "unknown")),
+            dispatch=dispatch_fn,
+            progress=None,  # Simplified
+            provider_usage=None,  # Simplified
+            event_bus=None,  # Simplified
+            canonical_task_id=None  # Simplified
+        )
+
+        # Check the result to see if operational resolution gives us a definitive answer
+        # that avoids LLM reasoning
+        if isinstance(result, dict):
+            # Check for routing decisions that indicate we can avoid LLM
+            routing_decision = result.get("routing_decision")
+
+            # If the goal is already satisfied, we're done
+            if routing_decision == "SATISFIED":
+                return {
+                    **result,
+                    "completed": True,
+                    "skip_llm_call": True
+                }
+
+            # If we can execute or compose without reasoning, we should execute
+            # Note: In a full implementation, we would return the execution result
+            # For now, we'll indicate that operational resolution found a path
+            # but continue with normal processing to avoid complexity
+            if routing_decision in ("EXECUTE", "COMPOSE"):
+                from agent.conversation_loop import logger
+                logger.info(f"Operational resolution found {routing_decision} path, continuing with LLM for execution")
+                # Continue with normal LLM flow but note that we have an executable option
+                return None
+
+            # If we need to wait or get human input, we can return that directly
+            if routing_decision == "WAIT":
+                return {
+                    **result,
+                    "completed": False,  # Don't complete turn, just wait
+                    "skip_llm_call": True
+                }
+
+            if routing_decision == "ASK_HUMAN":
+                return {
+                    **result,
+                    "completed": False,  # Don't complete turn, need human
+                    "skip_llm_call": True
+                }
+
+            # If reasoning is required, fall through to normal LLM processing
+            if routing_decision == "WAKE_LLM" or routing_decision is None:
+                return None
+
+        # If we didn't get a clear routing decision, fall through to LLM
+        return None
+
+    except Exception as e:
+        # If operational resolution fails for any reason, fall back to LLM reasoning
+        # Don't let operational resolution errors break the turn
+        from agent.conversation_loop import logger
+        logger.debug(f"Operational resolution failed, falling back to LLM: {e}")
+        return None
 
 
 __all__ = ["run_conversation"]
