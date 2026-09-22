@@ -99,6 +99,8 @@ promoted capability -> EXECUTE -> physical dispatch exactly once
 
 Required repair:
 - initial semantic state must not satisfy the goal;
+- the E001 fixture must expose a real admitted primitive: the current test patches `model_tools.get_tool_definitions` to `[]` and sets `agent.valid_tool_names = set()`, which is compatible with the current SATISFIED short-circuit but not with proving a real `workstation_durable_dispatch` path;
+- prefer a semantically correct, harmless primitive/route pair (for example a temp-filesystem mutation if the real tool catalog admits it) rather than using `native_browser` merely as a stand-in for `write_file`;
 - prove `routing_decision == EXECUTE`;
 - prove physical dispatcher count == 1;
 - prove canonical verification `VERIFIED` and `accepted == true`;
