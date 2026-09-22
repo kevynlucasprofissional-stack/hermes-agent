@@ -222,3 +222,25 @@ Unknown usage must remain unknown/None; never invent zero.
 Do not merge H-080 while any of B1-B7 remains unresolved.
 
 The implementation direction is accepted; the remaining work is qualification, proof, registry truth and Experience-loop closure — not another architectural restart.
+
+## Existing owners to reuse for the remaining closure
+
+Do not create parallel implementations for the remaining Experience/metrics work.
+
+Experience capture/compilation owners already present:
+- `workstation/experience_compiler/corpus.py::ExperienceCorpus.capture`
+- `ExperienceCorpus.accept_run`
+- `ExperienceCorpus.traces`
+- `workstation/experience_compiler/compiler.py::ExperienceCompiler.mine`
+- `ExperienceCompiler.compile`
+- `ExperienceCompiler.validate_verifier`
+- `ExperienceCompiler.promote`
+- `workstation/experience_compiler/causal.py::controlled_replay`
+- `SafeEnvironment`
+- `ExperiencePromotionPolicy`
+- `OperationalCapabilityRegistry`
+
+Current compiler metrics already expose candidate/promotion/dedupe/replay/drift data and intentionally leave `capability_coverage`, `operational_novelty_rate`, and `llm_calls_per_verified_outcome` unknown when there is no denominator. `workstation/control_plane/metrics.py` already owns ORA/VOLC concepts, including truthful `llm_calls_per_outcome`. Extend/derive from these owners rather than creating a second metrics subsystem.
+
+Raw-result lineage note:
+`procedure_trace.py` stores the sanitized raw terminal payload in ArtifactStore and uses that artifact as the semantic state's `artifact_ref`; `sample_from_trace()` currently exposes the same artifact as `raw_result_ref`. Do not split this into a second persistence owner merely for naming purity. If changing it, first prove that raw payload and semantic-state lineage require distinct artifacts; otherwise preserve the existing ArtifactStore reference and improve naming/tests only as needed.
