@@ -1,28 +1,55 @@
 # Progressive Operational Compilation — Capability Runtime
 
-## 2026-09-22 status correction — substrate validated; normal-turn pre-reasoning reuse still open
+## 2026-09-22 published-branch audit — reuse boundary implemented; EXECUTE proof and Experience closure still open
 
-The deterministic Capability Runtime and Experience Compiler substrate remain implemented, but the stronger product claim — **a normal Hermes turn can reuse a promoted capability before the next provider LLM call** — is not yet promoted to shared `main`.
+The deterministic Capability Runtime and Experience Compiler substrate remain implemented. A materially improved pre-reasoning integration now exists on published branch:
 
-A first direct attempt (`471e9b529f745c89a3b18caad865e762f09dfab3`) was reverted. A second local-only implementation reportedly introduced the correct generic-boundary / Workstation-provider shape and focused tests, but it has not yet passed the mandatory real-turn proofs or been published.
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
 
-The missing closure contract is:
+Accepted shape:
 ```text
-known established intent + promoted capability
--> normal Hermes turn
--> certified deterministic execution exactly once
--> canonical VERIFIED outcome
--> provider LLM calls = 0
-
-no applicable/provable capability
--> normal Hermes turn
--> CONTINUE_REASONING
--> provider LLM calls >= 1
+normal Hermes turn
+-> generic operational-resolution boundary
+-> Workstation provider
+-> established durable OperationIntent
+-> CapabilityRouter
+-> certificate / dispatcher / kernel
+-> canonical verifier
+-> canonical finalizer
 ```
 
-Until both sides are proven on the real turn path, describe Progressive Operational Compilation as a validated deterministic substrate with **normal-turn pre-reasoning integration pending**, not as end-to-end closed.
+However, the current headline E2E starts from a semantic state that already satisfies its goal, so it proves `SATISFIED -> provider calls 0`, not deterministic capability execution.
 
+Required normal-turn reuse proof:
+```text
+goal initially false
+-> promoted capability selected
+-> routing_decision = EXECUTE
+-> physical dispatch exactly once
+-> canonical verification = VERIFIED
+-> accepted = true
+-> dispatch record = COMMITTED
+-> provider LLM calls = 0
+```
 
+The verifier-failure path must also be proven end to end: physical ACK followed by FAILED/INCONCLUSIVE verification must not become committed success and must not trigger a blind duplicate mutation through the LLM.
+
+The broader Experience closure remains:
+```text
+novel verified execution
+-> TransitionSample
+-> ExperienceCorpus
+-> candidate compilation
+-> controlled replay / causal validation
+-> promotion
+-> future equivalent normal turn
+-> promoted capability EXECUTE
+-> provider calls = 0
+```
+
+Until these causal proofs exist on the exact promoted head, describe Progressive Operational Compilation as **validated substrate + implemented pre-reasoning boundary, with deterministic EXECUTE reuse and full Experience feedback closure still open**.
+
+Date established:
 
 Date established: 2026-09-18
 
