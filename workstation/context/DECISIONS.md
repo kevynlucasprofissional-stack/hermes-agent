@@ -1,7 +1,7 @@
 # Architectural Decisions
 
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-030`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-031`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
