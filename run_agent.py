@@ -121,6 +121,7 @@ from model_tools import get_toolset_for_tool
 from tools.terminal_tool_lifecycle import cleanup_vm, get_active_env
 from tools.interrupt import set_interrupt as _set_interrupt
 from tools.browser_tool_lifecycle import cleanup_browser
+from tools.connectors.turn import agent_connection_surface, scoped_connection_surface
 
 from agent.memory_provider import is_trivial_prompt
 from agent.client_lifecycle import ClientLifecycleMixin
@@ -288,6 +289,7 @@ class AIAgent(
         checkpoint_max_total_size_mb: int = 500, checkpoint_max_file_size_mb: int = 10,
         pass_session_id: bool = False, requested_provider: str = None,
         capabilities: Dict[str, bool] | None = None, cwd: str | None = None,
+        side_agent: bool = False,
     ):
         """Forwarder — see ``agent.agent_init.init_agent`` (same keyword parameters, minus ``tool_delay``)."""
         init_kwargs = {k: v for k, v in locals().items() if k not in ("self", "tool_delay")}
@@ -1341,7 +1343,7 @@ class AIAgent(
         args = (assistant_message, messages, effective_task_id, api_call_count)
         self._executing_tools = True  # allow _vprint during tool execution even with stream consumers
         from agent.scoped_execution import scoped_execution
-        with scoped_execution(self, effective_task_id, messages):
+        with scoped_execution(self, effective_task_id, messages), scoped_connection_surface(agent_connection_surface(self)):
             try:
                 if len(tool_calls) <= 1:
                     self._execute_tool_calls_sequential(*args)
