@@ -1,30 +1,44 @@
 # Hermes Workstation upstream delta
 
-## HW-032 — Rejected direct pre-LLM coupling and target generic operational-resolution boundary (2026-09-22)
+## HW-032 — Generic pre-reasoning boundary implemented on published branch; promotion proof remains open (2026-09-22)
 
-Direct implementation `471e9b529f745c89a3b18caad865e762f09dfab3` in `agent/conversation_loop.py` was reverted. The rejection is architectural evidence:
-- generic Hermes core directly imported Workstation implementation;
-- it fabricated an invalid `OperationIntent` from user text instead of consuming an established typed intent;
-- it supplied a placeholder dispatcher capable of synthetic SUCCESS;
-- `TaskCompiler._execute_route()` can already execute certified capabilities, but the wrapper continued to the LLM after EXECUTE/COMPOSE, creating a potential duplicate-effect path;
-- terminal returns bypassed proof of the canonical turn-finalization lifecycle;
-- no mandatory real-turn bypass/fallback tests or intervention registry accompanied the upstream change.
+The rejected direct implementation `471e9b5` remains reverted.
 
-Target replacement:
+Its replacement now exists on published branch:
+`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`,
+built on frozen upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` via true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`.
+
+Implemented upstream-owned surfaces:
+- `agent/conversation_loop.py`: narrow phase call between preflight and provider;
+- `agent/operational_resolution.py`: generic provider registry/outcome contract;
+- `agent/turn_operational_resolution.py`: canonical turn-phase adapter;
+- `tools/browser_tool.py`: Workstation-specific extract-items projection removed.
+
+Implemented downstream surfaces:
+- Workstation operational-resolution provider;
+- Workstation Browser result projection;
+- uncertain-mutation runtime-state plumbing;
+- normal-turn and provider tests;
+- intervention registry.
+
+Architecture accepted:
 ```text
-generic agent operational-resolution registry/phase
--> registered Workstation first-party provider
--> established typed OperationIntent only
--> TaskCompiler / CapabilityRouter / CertifiedDispatcher / OperationalKernel
--> canonical verification
--> canonical turn finalization
+generic pre-provider lifecycle
+-> registered first-party Workstation provider
+-> established durable intent
+-> existing Workstation control plane
 ```
 
-A subsequent Claude Code session reportedly implemented this shape locally on `integration/upstream-20260922-71a2fe39-h0793` after freezing upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` and creating true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`. That branch was not observed on GitHub and remains WIP/evidence until recovered, qualified and promoted.
+Promotion remains blocked because:
+1. the current no-LLM E2E can terminate as `SATISFIED` before capability execution;
+2. verifier-failure E2E is an empty `pass`;
+3. scratch direct-route fixture must become canonical evidence or be removed;
+4. intervention registry provenance/scope is incorrect;
+5. `SEAM-OPERATIONAL-RESOLUTION` is referenced but not registered;
+6. Experience compile/promote/future-reuse cycle is not yet end-to-end proven;
+7. audited head had no PR/CI status.
 
-Latest upstream observed at handoff: `ec21bd7674e78907ccacca846efad198e5cfdbbc`. If the frozen local lane is recoverable, this later tip is final-drift input for the cycle, not a command to continuously rebase.
-
-
+The branch should be corrected in place. Do not resurrect the reverted direct-coupling design.
 
 ## HW-031 — H-079.2 promotion-gap and dogfood closure (2026-09-20)
 
