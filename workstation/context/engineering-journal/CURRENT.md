@@ -1,5 +1,72 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080 — Native pre-reasoning operational resolution continuation (2026-09-22)
+
+**Status:** PARTIAL / LOCAL WIP EXISTS / REAL-TURN ACCEPTANCE OPEN / NOT PROMOTED.
+
+Canonical handoff: [h080-operational-resolution-continuation-2026-09-22.md](h080-operational-resolution-continuation-2026-09-22.md).
+
+### Trigger
+
+Commit `471e9b529f745c89a3b18caad865e762f09dfab3` attempted to place operational resolution before the LLM but was rejected and reverted. It was not a near-complete implementation: it constructed an invalid `OperationIntent`, substituted raw prose for typed intent/state, supplied a placeholder-success dispatcher, could allow EXECUTE/COMPOSE to dispatch and then continue into the LLM, directly imported Workstation into generic turn ownership, bypassed proof of canonical finalization, and shipped without the mandatory normal-turn tests.
+
+### Materially changed input
+
+A second Claude Code session started from the restored baseline and reportedly:
+- froze upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`;
+- created local branch `integration/upstream-20260922-71a2fe39-h0793`;
+- committed true upstream merge `a8dfcd21f5c641d01a5989e223a987687018db7f`;
+- implemented generic operational-resolution registry/phase under `agent/`;
+- implemented a Workstation first-party provider consuming established typed intent;
+- consolidated outstanding-dispatch-checkpoint uncertainty;
+- moved Browser extract-items domain projection toward Workstation ownership.
+
+The branch was not observed on GitHub. **Do not repeat this implementation until the developer checkout is inspected.**
+
+### Evidence reported by the local session
+
+```text
+generic operational boundary: 17 passed
+Workstation operational provider: 10 passed
+existing-owner uncertainty/router selection: 144 passed
+Browser focused selection: 31 passed
+boundary + compression selection: 50 passed
+Stage-A Workstation baseline: 744 passed / 2 skipped
+```
+
+These counts are transcript evidence, not exact-final-head CI evidence.
+
+### Refuted approaches
+
+- derive a synthetic `OperationIntent` from raw user prose merely to save an LLM call;
+- use a fake-success dispatch fallback when no real scoped dispatcher exists;
+- dispatch a certified capability and still ask the LLM to execute the same step;
+- directly couple generic `conversation_loop.py` to Workstation when a generic provider boundary can express the lifecycle;
+- require `durable_execution_active()` during pre-reasoning discovery when that flag only exists during compiled execution;
+- close a store-owned durable DB connection from a transient provider.
+
+### Next discriminating experiments
+
+**H-080-E001 — Known capability bypass**
+- Hypothesis: a persisted/established `OperationIntent` with a promoted capability can traverse a normal Hermes turn, execute exactly once, verify canonically, preserve finalization, and make zero provider calls.
+- Support: provider fake count 0, capability dispatch count 1, VERIFIED/accepted result and canonical finalizer evidence.
+- Refute: any provider call, duplicate dispatch, missing finalization, synthetic verification or exception-swallowed fallthrough.
+
+**H-080-E002 — No-match fallback**
+- Hypothesis: absence of a trustworthy/applicable capability returns to ordinary reasoning without changing normal behavior.
+- Support: provider fake count >= 1 and normal turn completion.
+- Refute: fabricated intent, terminal shortcut or silent no-op.
+
+**H-080-E003 — Negative authority/evidence cases**
+- Invalid certificate, quarantined/drifted capability, outstanding uncertain mutation and failed/inconclusive verifier must produce zero unsafe dispatch/commit and explicit reconciliation/reasoning/handoff.
+
+**H-080-E004 — Browser ownership**
+- Workstation-owned result projection plus broker/controller routing authority must preserve bound-lane fail-closed, never-bound fallback when allowed, no dual mutation, persistent BrowserTask identity and extract-items persistence parity.
+
+Do not begin Laya production routing until E001-E004 and the Experience feedback loop are green.
+
+
+
 ## H-079.2 — Promotion-gap audit after one-click dogfood failure (2026-09-20)
 
 **Status:** SUPERSEDED BY 2026-09-21 CANDIDATE / EXACT-HEAD CI PENDING.
