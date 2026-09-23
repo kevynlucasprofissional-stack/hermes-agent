@@ -83,6 +83,8 @@ Promotion-grade readback currently verifies strict run binding but does not requ
 
 Required correction: receipt identity must be an enforced verifier precondition.
 
+A second ordering defect exists in the compiled reuse path: `OperationalKernel.execute_capability()` currently calculates its canonical `operation_id` only after implementation steps and postconditions. Native learned mutation therefore can cross physical I/O before the kernel's expected operation identity exists. Move operation-id establishment before step dispatch and propagate it into the Browser mutation so certificate/dispatcher/kernel/owner/verifier can refer to one instance.
+
 ### Finding D — restart/idempotency remains process-local
 
 The coordinator uses a `threading.Lock()`, which does not survive process restart and is not a durable lifecycle checkpoint.
