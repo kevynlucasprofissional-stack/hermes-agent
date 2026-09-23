@@ -86,6 +86,8 @@ Required correction:
 
 Promotion-grade readback must therefore accept an expected operation identity (or equivalent typed expectation) and fail closed on any receipt mismatch. The receipt must become proof, not decorative metadata.
 
+The compiled reuse path has an additional identity-ordering gap: `OperationalKernel.execute_capability()` currently derives its `operation_id` after implementation steps have already executed. For native learned mutation, the certified/expected operation ID must be established before the first physical I/O and propagated into the browser step; otherwise Electron may persist one operation ID while post-effect verification attributes the state to another.
+
 ### Restart/idempotency requirement
 
 `threading.Lock()` protects only one process. It is not durable lifecycle ownership.
