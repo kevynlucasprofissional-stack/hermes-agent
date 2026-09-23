@@ -18,10 +18,10 @@ H-081    optional System-1/Laya shadow acceleration
 ```
 
 Current classification:
-- **H-080B.1:** locally proven for the bounded native-browser vertical; branch/base reconciliation and product qualification remain.
-- **H-080B.2:** OPEN. The test explicitly invokes `validate_verifier()`, `controlled_replay()` and `promote()`; normal product runtime does not yet own this sequence.
-- **H-080B.3:** OPEN. Hermetic controller proof is not yet a real Electron/packaged BrowserSessionState proof.
-- **H-081 / Laya:** DEFERRED until H-080B.2/.3 work without it.
+- **H-080B.1:** CLOSED / LOCALLY PROVEN. Native browser verified admission, owner causal receipts with monotonic task revisions, operation_id/call_key split, strict run binding, and semantic trace slice admission (1 mutation + N read-only observations).
+- **H-080B.2:** CLOSED / LOCALLY PROVEN. `ExperienceValidationPromotionCoordinator` productizes candidate discovery, eligibility checks, verifier validation with isolated negative controls, controlled replay in `SafeEnvironment`, and promotion under `ExperiencePromotionPolicy`.
+- **H-080B.3:** OPEN. Packaged/native Electron dogfood and multi-session durability validation.
+- **H-081 / Laya:** DEFERRED until H-080B.3 works without it.
 
 ### Mandatory implementation order
 

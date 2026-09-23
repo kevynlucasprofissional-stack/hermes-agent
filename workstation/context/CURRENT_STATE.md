@@ -1,6 +1,42 @@
 # Current State
 
-## 2026-09-23 latest H-080 qualification snapshot — PRODUCT GATES RED / OPERATION IDENTITY GAP CONFIRMED
+## 2026-09-23 H-080B product lifecycle closure & causal browser evidence — HARDENED & LOCALLY VALIDATED
+
+Status: **H-080B.1 & H-080B.2 CLOSED / BROWSER CAUSALITY HARDENED / TRACE SLICE ADMITTED / LIFECYCLE COORDINATOR IMPLEMENTED**
+
+Key achievements in this cycle:
+1. **Pre-I/O Operation Identity & Electron Browser Owner Receipts:**
+   - Established unique `operation_id` pre-I/O in Python `tools/browser_workstation.py::_dispatch()`, cleanly separated from structural `call_key`.
+   - Propagated `operation_id` and `call_key` into Electron `BrowserControlRequest`.
+   - In `apps/desktop/electron/workstation-browser-runtime.ts` and `workstation-browser-task.ts`, recorded `BrowserOwnerReceipt` (`operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, `revision`, `action`, `safeUrl`, `executedAt`) on mutating actions and persisted with monotonic `task.revision`.
+   - Persisted receipts in `BrowserSessionStateSnapshot.receipts`.
+   - Returned `{ ...snapshot, operation_id, call_key, receipt }` from controller.
+2. **Strict Learnable Run Binding:**
+   - Enforced strict non-null `run_id` matching in `read_native_browser_session_state`.
+   - Validated that `task.get("runId") == str(run_id)` and any attached `lastReceipt` run binding matches without drift.
+   - Returned `revision` and `last_receipt` in the session state readback.
+3. **Semantic Trace Slice Admission:**
+   - In `workstation/kanban.py` (`_verified_native_navigation`), replaced rigid `len(trace) == 1` with semantic slice admission:
+     - Exactly 1 bounded `browser_navigate` mutation with `executed_unverified` outcome.
+     - Optional read-only observations (`browser_snapshot`, `browser_vision`, `browser_get_images`, `browser_read_http`, `browser_extract_items`).
+     - Fails closed on any second mutation or failed step.
+4. **Product Experience Validation/Promotion Coordinator (H-080B.2):**
+   - Implemented `workstation/experience_compiler/lifecycle.py` (`ExperienceValidationPromotionCoordinator`).
+   - Orchestrates: candidate discovery -> eligibility checks -> verifier validation (`validate_verifier` with held-out positive receipt and isolated discriminative negative control) -> controlled causal replay in `SafeEnvironment` -> promotion under `ExperiencePromotionPolicy`.
+   - Idempotent and fail-closed: negative controls run strictly against isolated/simulated state without modifying live user browser tabs.
+5. **Validation & Test Coverage:**
+   - Expanded `workstation/tests/test_h080b_native_browser_experience_loop.py` to 13 passed tests covering:
+     - End-to-end adaptive turn capture.
+     - Multi-run compilation.
+     - Multi-step trace slice admission with read-only observations.
+     - Rejection of second mutations and failed steps.
+     - Strict run binding & receipt verification.
+     - `ExperienceValidationPromotionCoordinator` lifecycle.
+     - Provider Zero execution (0 LLM calls, EXECUTE route, COMMITTED dispatch).
+   - Zero unclassified seams verified with `python workstation/scripts/audit_hermes_seams.py`.
+   - Complete TypeScript typecheck pass: `npm run typecheck --workspace apps/desktop`.
+
+## 2026-09-23 previous H-080 qualification snapshot — PRODUCT GATES RED / OPERATION IDENTITY GAP CONFIRMED
 
 Latest observed GitHub qualification after the H-080B lifecycle audit:
 - PR #45 H-080A head advanced through a dogfood-note update and whitespace cleanup; Workstation CI is green.
