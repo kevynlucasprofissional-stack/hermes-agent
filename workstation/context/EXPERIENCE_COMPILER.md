@@ -1,5 +1,91 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-09-23 candidate generation is not product promotion closure
+
+The native-browser H-080B vertical validates the existing compiler architecture, but exposes the next owner boundary.
+
+`ExperienceCompiler.mine()/compile()` correctly turns verified semantic experience into a candidate `OperationalCapability`. It must **not** become responsible for silently promoting every candidate it discovers. Candidate compilation and promotion admission remain different causal stages.
+
+Current vertical proof:
+```text
+verified runs
+-> mine/compile candidate
+-> fixture calls validate_verifier()
+-> fixture runs controlled_replay()
+-> fixture calls promote()
+-> future normal turn reuses promoted capability
+```
+
+Required product closure:
+```text
+verified runs
+-> mine/compile candidate
+-> Workstation product lifecycle schedules/adjudicates validation
+-> domain-owner verifier validation
+-> isolated negative control / counterexample sensitivity
+-> controlled causal replay
+-> ExperiencePromotionPolicy
+-> registry promotion OR candidate remains unpromoted
+```
+
+### What the compiler continues to own
+
+- segmentation and causal/operational slicing;
+- action-model inference;
+- anti-unification / parameterization;
+- semantic and compatibility fingerprints;
+- candidate verifier contract proposal;
+- deduplication;
+- conservative formal contract derivation;
+- candidate metadata/provenance.
+
+### What a validation/promotion coordinator may own
+
+- deciding whether a candidate is eligible to enter validation now;
+- invoking existing verifier-validation and controlled-replay owners;
+- collecting receipts and counterexamples;
+- invoking the unchanged promotion policy;
+- recording lifecycle evidence and leaving failed/unavailable candidates unpromoted.
+
+It must not invent evidence, authority, certificates or a second capability type.
+
+### Browser-specific admission refinement
+
+The first vertical intentionally bounded adaptive completion to `len(trace) == 1`. That is an experimental constraint, not the semantic definition of a reusable Browser transition.
+
+Target rule:
+```text
+exactly one relevant browser mutation
++ bounded read-only observations before/after
++ all observations owned/lineaged
++ no second mutation
++ no unresolved uncertain effect
+```
+
+The compiler should consume the causal operational slice and ignore irrelevant read-only observation noise when the semantic/effect graph proves it safe.
+
+### Browser verifier provenance target
+
+Promotion-grade Browser Experience should prefer an Electron-owner receipt/revision binding:
+- operation_id;
+- task_id;
+- exact non-null run_id;
+- browserTaskId;
+- tabId;
+- resulting state revision;
+- persisted safe post-effect state.
+
+The persisted readback and receipt are evidence; recurrence never upgrades their authority.
+
+### H-080B status language
+
+- H-080B.1: bounded verified Experience -> candidate is locally proven.
+- H-080B.2: automatic product validation/replay/promotion is open.
+- H-080B.3: real Electron/package/dogfood qualification is open.
+
+Do not describe the full Experience Compiler feedback loop as product-closed until H-080B.2/.3 are demonstrated on the normal runtime path.
+
+
 ## 2026-09-23 native-browser Experience admission proof
 
 `6d8806b868` connects a normal adaptive browser trace to Electron's persisted BrowserSessionState through canonical completion. The original `uncertain` transition is immutable; `ExperienceCorpus.accept_run()` accepts a separate verified revision only when the owner readback links the same task/run/operation, original transition and raw result. Its strength 2 describes browser-local persisted state. Two distinct accepted runs compile `experience_bcc0974be58c73cf04a0b436@1.0.0`; owner positive/wrong-host validation, controlled replay, and the unchanged `ExperiencePromotionPolicy` promote it. A later typed-intent normal turn reuses it with one native dispatch and provider 0. This is local hermetic evidence pending branch CI and packaged/native qualification.
