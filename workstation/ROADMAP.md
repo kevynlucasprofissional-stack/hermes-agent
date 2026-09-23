@@ -1384,15 +1384,15 @@ The LAN, Tailscale, external-extension, memory/perception/drift and Lightpanda M
 14. Windows clean-install + native BrowserTask/host-composition E2E — **Completed** (`START-HERMES-WORKSTATION.bat`, `install.ps1`, `doctor.ps1`).
 
 ## V1.1 — Completed & Hardened
- 
+
 - Tailscale integration (`workstation/lan/controller.py` - `detect_tailscale`).
 - optional external Hermes Browser Extension compatibility mode (`workstation/routing.py`).
 - richer cache/resource maintenance (`apps/desktop/electron/workstation-browser-runtime.ts` - `cleanupCache`).
 - download/upload UX (`apps/desktop/electron/workstation-browser-runtime.ts` - `downloads` tracking and interactive Hub drawer).
 - richer multi-task scheduling/ownership policies on top of the one-task/one-live-page invariant (`workstation/scheduler.py` - `MultiTaskScheduler`), hardened with lease timeouts, heartbeats, and orphan task reaping (H-106).
- 
+
 ## V2 — Completed & Hardened
- 
+
 - procedural web memory (`discover -> run -> explore -> learn`) (`workstation/memory.py` - `ProceduralMemory`), hardened with multi-facet fallback anchors (testid -> role -> text -> selector) and concurrent disk merge (H-101).
 - provenance-aware compact perception engine inspired by Lattice (`workstation/perception.py` - `PerceptionEngine`), hardened with hidden/invisible node filtering (H-102) and tiered smart budgeting that guarantees CTA and form preservation under token limits (H-103).
 - drift diagnosis and governed adaptation (`workstation/drift.py` - `DriftGovernor`), hardened with blocking cookie/modal overlay detection (`DISMISS_OVERLAY`) (H-104) and strict financial/destructive action boundaries in `workstation/safety.py`.
