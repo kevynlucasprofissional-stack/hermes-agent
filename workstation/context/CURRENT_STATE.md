@@ -1,5 +1,41 @@
 # Current State
 
+## 2026-09-23 H-080B Real-Use Audit — CAPTURE ACTIVE / COMPILE-TO-REUSE OPEN / PR #45 CI RED
+
+Canonical:
+`workstation/context/engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md`.
+
+PR truth at audit start:
+```text
+PR #45: OPEN / mergeable
+reported implementation head: 68392e4b1678671b158fb6584a76a8da8964b2c3
+H-080A causal implementation: materially complete
+H-080A exact-head qualification: RED / NOT CLOSED
+H-080B: OPEN
+Laya: DEFERRED
+```
+
+Current CI evidence:
+- Workstation CI: one contract-suite failure from stale `MockRouterWait.route` signature vs `runtime_state`;
+- Workstation Browser Windows: focused browser/runtime checks green, aggregate red from platform/release gates including POSIX assumptions on Windows, release smoke timeout and packaged backend-start timeout;
+- these failures must be fixed or causally scoped before promotion; “pre-existing” is not equivalent to green.
+
+Real-use product evidence:
+- native Browser works with persistent Electron Chromium and can return strong semantic/readiness evidence in one operation;
+- simple browser intent can still waste reasoning on competing BrowserClaw routes;
+- goal-complete navigation can still trigger redundant vision/model verification;
+- Experience transition capture runs in production;
+- observed real samples remain uncertain/inconclusive and therefore do not reach admissible Experience mining/promotion;
+- no real product-use H-080B capture -> promoted capability -> future provider-0 proof exists yet.
+
+Immediate next lane:
+```text
+qualify PR #45
+-> one safe native-browser H-080B vertical E2E
+-> goal-aligned evidence sufficiency
+-> only then Laya shadow candidate retrieval
+```
+
 ## 2026-09-22 H-080 Production-Path Audit — H-080A OPEN / H-080B OPEN
 
 Canonical current audit:
