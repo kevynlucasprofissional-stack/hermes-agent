@@ -2,7 +2,11 @@
 
 Date established: 2026-09-23
 
-Status: **ARCHITECTURE ACCEPTED / IMPLEMENTATION PLANNED AFTER H-080B.2 HARDENING / BEFORE SIGNIFICANT H-080B.3 + H-081 EXPANSION**
+Status: **PHASE 1/2 IMPLEMENTED ON STACKED CANDIDATE / H-080B.3 REAL ELECTRON PROOF OPEN / PHASE 3+ DEFERRED**
+
+`workstation/telemetry/` owns the event model, privacy, fail-open sinks,
+bounded SQLite retention, queries and ORA/VOLC projection. Canonical owners
+emit only after their facts exist; deleting the projection changes no truth.
 
 ## Purpose
 

@@ -1,5 +1,13 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-09-23 — Operational Telemetry Phase 1/2 implemented
+
+Telemetry now observes canonical owners without becoming one. Versioned events
+are sanitized, bounded and stored only in a rebuildable local SQLite projection.
+The first measurable funnel covers accepted Experience through empirical
+validation, controlled replay, promotion and deterministic verified reuse.
+No dashboard, network exporter or Laya behavior is part of this phase.
+
 ## 2026-09-23 — Operational Telemetry Plane: de provar arquitetura para medir produto
 
 O Hermes Work chegou a uma mudança de fase: já temos várias propriedades arquiteturais comprovadas, mas agora precisamos medir continuamente se essas propriedades estão produzindo o resultado de produto que queremos.

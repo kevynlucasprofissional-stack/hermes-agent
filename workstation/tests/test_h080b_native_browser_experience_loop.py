@@ -930,7 +930,7 @@ def test_promotion_lifecycle_restart_and_idempotency(local_state):
     assert res4.action == "promoted"
 
 
-def test_product_owned_completion_mines_and_promotes_candidate(local_state, monkeypatch):
+def test_product_owned_completion_mines_and_promotes_candidate(local_state, monkeypatch, tmp_path):
     """Normal product completion automatically coordinates candidate validation and promotion without manual call."""
     from copy import deepcopy
     from dataclasses import replace
@@ -947,6 +947,11 @@ def test_product_owned_completion_mines_and_promotes_candidate(local_state, monk
     from workstation.operational_capabilities import OperationalCapabilityRegistry
     from workstation.operational_kernel import OperationalKernel
     from tools.browser_extension_router import routed_browser_handler
+    from workstation.telemetry import TelemetryEventType, set_telemetry_sink
+    from workstation.telemetry.sqlite_sink import SQLiteTelemetrySink, TelemetryQuery
+
+    telemetry_path = tmp_path / "h080b-product-telemetry.sqlite"
+    set_telemetry_sink(SQLiteTelemetrySink(telemetry_path))
 
     calls = _fake_physical_controller(local_state, monkeypatch)
 
@@ -1066,3 +1071,18 @@ def test_product_owned_completion_mines_and_promotes_candidate(local_state, monk
     assert len(promoted_caps) >= 1, "Normal product completion must automatically own promotion"
     promoted = promoted_caps[0]
     assert promoted.learning_metadata["promotion_lifecycle"]["state"] == "PROMOTED"
+    events = TelemetryQuery(telemetry_path).events(capability_id=promoted.id)
+    event_types = [event.event_type for event in events]
+    for required in (
+        TelemetryEventType.CAPABILITY_CANDIDATE_CREATED,
+        TelemetryEventType.VERIFIER_VALIDATION_COMPLETED,
+        TelemetryEventType.CONTROLLED_REPLAY_COMPLETED,
+        TelemetryEventType.CAPABILITY_PROMOTED,
+    ):
+        assert required in event_types
+    assert event_types.index(TelemetryEventType.CAPABILITY_CANDIDATE_CREATED) < event_types.index(
+        TelemetryEventType.VERIFIER_VALIDATION_COMPLETED
+    ) < event_types.index(TelemetryEventType.CONTROLLED_REPLAY_COMPLETED) < event_types.index(
+        TelemetryEventType.CAPABILITY_PROMOTED
+    )
+    set_telemetry_sink(None)

@@ -405,7 +405,15 @@ class OperationalCapabilityRegistry:
         if not cap:
             raise CapabilityNotFoundError(f"Capability '{capability_id}' not found")
         cap.lifecycle = CapabilityLifecycle.PROMOTED
-        return self.register(cap)
+        promoted = self.register(cap)
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.CAPABILITY_PROMOTED,
+                   source_owner="workstation.capability_registry",
+                   capability_id=cap.id, capability_version=cap.version,
+                   route=cap.route, status="PROMOTED",
+                   dedupe_key=f"promotion:{cap.id}:{cap.version}",
+                   payload={"family_id": cap.family_id})
+        return promoted
 
     def record_drift(self, capability_id: str, reason: str, *, quarantine: bool = True, version: str | None = None) -> OperationalCapability:
         cap = self.get(capability_id, version)
@@ -417,7 +425,15 @@ class OperationalCapabilityRegistry:
             cap.lifecycle = CapabilityLifecycle.VALIDATED
         evidence = {"timestamp": _utc_now(), "drift_reason": reason, "status": "quarantined" if quarantine else "failed"}
         cap.validation_evidence.append(evidence)
-        return self.register(cap)
+        recorded = self.register(cap)
+        if quarantine:
+            from workstation.telemetry import TelemetryEventType, emit_event
+            emit_event(TelemetryEventType.CAPABILITY_QUARANTINED,
+                       source_owner="workstation.capability_registry",
+                       capability_id=cap.id, capability_version=cap.version,
+                       route=cap.route, status="quarantined", reason_code=reason,
+                       payload={"family_id": cap.family_id})
+        return recorded
 
     def retire(self, capability_id: str, reason: str = "") -> OperationalCapability:
         cap = self.get(capability_id)

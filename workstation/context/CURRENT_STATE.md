@@ -1,5 +1,12 @@
 # Current State
 
+## 2026-09-23 Operational Telemetry Phase 1/2 candidate
+
+Telemetry is local-first, rebuildable, non-authoritative and fail-open. Focused
+evidence: 123 owner regressions passed, the real H-080B funnel passed, and the
+strict seam audit found zero unclassified seams or budget regressions. Full
+exact-head CI and H-080B.3 Electron proof remain required.
+
 ## 2026-09-23 H-080B.2 causal closure green — ready for H-080B.3 proof
 
 Status: **H-080A ARCHITECTURE ACCEPTED / H-080B.1 & H-080B.2 CLOSED & EMPIRICALLY VERIFIED / H-080B.3 OPEN / LAYA DEFERRED**
