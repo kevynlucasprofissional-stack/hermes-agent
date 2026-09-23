@@ -1,5 +1,49 @@
 # CURRENT — Workstation Engineering Journal
 
+## Operational Telemetry Plane — 2026-09-23
+
+Canonical detailed record:
+[operational-telemetry-plane-2026-09-23.md](operational-telemetry-plane-2026-09-23.md).
+
+Canonical architecture:
+[../OPERATIONAL_TELEMETRY.md](../OPERATIONAL_TELEMETRY.md).
+
+Decision:
+the next observability layer is a **non-authoritative rebuildable projection** over existing product owners.
+
+Existing `workstation/control_plane/metrics.py` already supplies ORA, VOLC, failure-attribution and ShadowRouter semantics. The missing layer is durable event capture correlated by canonical task/run/operation lineage.
+
+Sequencing:
+
+```text
+finish H-080B.2 causal hardening
+-> Telemetry Phase 1 event backbone
+-> H-080B Experience funnel instrumentation
+-> H-080B.3 real Electron proof emitting telemetry
+-> ORA/VOLC metric projection
+-> ShadowRouter / oververification analytics
+-> dashboards
+-> Laya SHADOW
+```
+
+Telemetry never authorizes, verifies, promotes, blocks, retries or mutates. Product execution must continue if telemetry fails.
+
+Priority measurement targets:
+- verified outcome rate;
+- ORA ratio;
+- LLM calls per verified outcome;
+- provider-zero verified rate;
+- deterministic reuse success / false-reuse;
+- uncertain mutation;
+- Experience funnel;
+- runs/time-to-competence;
+- drift/quarantine;
+- avoidable reasoning;
+- post-goal work/oververification.
+
+Privacy default is structural telemetry only; no prompt/response/DOM/form/credential/file-content duplication.
+
+
 ## H-080B post-implementation deep audit — 2026-09-23
 
 Audited implementation head:
