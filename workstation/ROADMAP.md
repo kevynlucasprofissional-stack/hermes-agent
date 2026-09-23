@@ -39,10 +39,13 @@ Do not redesign or revert this lane.
 3. **Causal evidence is not asserted directly.**
    E001 must directly prove `EXECUTE`, non-empty certificate, `VERIFIED`, `accepted == true`, `COMMITTED`, physical exact-once and provider calls 0. E003V must directly prove FAILED/INCONCLUSIVE verification cannot become COMMITTED success.
 
-4. **Scratch fixture remains.**
+4. **Verification success is still pre-seeded in E001.**
+   The fixture writes trusted `verification_evidence` into the objective before execution, including `read_after_write=True` and covered predicates. `OperationalKernel` consumes supplied evidence directly, so the release proof must remove it and obtain evidence from a real post-effect observer/readback.
+
+5. **Scratch fixture remains.**
    `test_zz_scratch_route_fixture.py` must be absorbed or renamed/restructured as permanent semantic coverage.
 
-5. **Runtime metrics remain coarser than the report claims.**
+6. **Runtime metrics remain coarser than the report claims.**
    Generic counters expose attempts/hits/misses/errors, not a canonical `EXECUTED+VERIFIED` counter. Derive/wire truthful operational metrics through existing resolution + ORA/VOLC owners; unknown denominators remain `None`.
 
 6. **Exact-head remote qualification is absent.**
