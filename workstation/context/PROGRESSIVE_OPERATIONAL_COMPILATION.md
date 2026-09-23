@@ -1,5 +1,21 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 self-improvement dogfood target — compile research operations, not conclusions
+
+Once H-080A/H-080B and the exploration stack are qualified, the external-reference code-to-code audit becomes a major Progressive Operational Compilation workload.
+
+The compilation target is **repeated operational research work** (pin ref, find symbol, read bounded range, run/inspect test, persist evidence, resume), not the semantic conclusion `project X is better`. Conclusions remain adaptive/inferential and must be backed by durable evidence.
+
+Success criteria for this workload:
+- repeated repo-navigation procedures bypass unnecessary provider calls only when applicability is proven;
+- native Browser/Explorer reads stay bounded and resumable;
+- full artifacts are persisted by reference while the LLM receives compact projections;
+- drift/ref changes invalidate stale compiled routes;
+- provider token/cost reductions are measured per verified finding when available;
+- no reduction in provenance, falsification coverage or external-oracle quality is accepted as an efficiency win.
+
+Canonical protocol: [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
+
 ## 2026-09-22 production-path audit — H-080A control plane works, production authority/dispatch proof still open
 
 The deterministic Capability Runtime and Experience Compiler substrate remain implemented. The pre-reasoning integration on `integration/upstream-20260922-71a2fe39-h0793` has improved beyond the first published-branch audit:
