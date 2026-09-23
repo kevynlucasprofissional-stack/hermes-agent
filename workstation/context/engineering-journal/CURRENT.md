@@ -1,5 +1,36 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080B product lifecycle closure audit — 2026-09-23
+
+Canonical detailed record:
+[h080b-product-lifecycle-closure-2026-09-23.md](h080b-product-lifecycle-closure-2026-09-23.md).
+
+The Codex H-080B vertical is accepted as a strong hermetic causal proof, but its meaning is narrowed: it proves the existing pieces can form the loop; it does not prove that normal product runtime automatically owns verifier validation, controlled replay and promotion.
+
+Current Git truth at this entry:
+- PR #45: open at `c23fe2233450b47d6d90ec9785376327e533bdef`; Workstation CI green; Windows workflow still in progress.
+- PR #46: draft at `769002547428fa882ca1e5248387821482c70cd9`; still based on `72cfa4b389...`.
+- PR #46 vs current PR #45: diverged, 2 ahead / 1 behind, merge-base `72cfa4b389...`.
+
+Canonical decomposition:
+```text
+H-080B.1 verified Experience admission -> candidate        LOCALLY PROVEN
+H-080B.2 automatic validation/replay/promotion lifecycle  OPEN
+H-080B.3 real Electron/package/dogfood qualification      OPEN
+H-081    Laya/System-1 shadow                              DEFERRED
+```
+
+Next implementation is constrained to:
+1. reconcile PR #46 onto the promoted/current H-080A baseline;
+2. add owner-issued Browser operation receipt/state revision + strict learnable run binding;
+3. replace literal single-trace cardinality with one mutation + bounded read-only observations;
+4. productize candidate validation/replay/promotion through a small coordinator over existing owners;
+5. prove the vertical with real Electron against an isolated local server;
+6. dogfood full automatic promotion and future provider-0 reuse.
+
+No new executable ontology, database, authority plane, generated-script executor or Laya production routing is authorized in this lane.
+
+
 ## H-080B first native-browser vertical — 2026-09-23
 
 Implementation: `workstation/h080b-native-browser-experience-loop@6d8806b868`, based on P0 `72cfa4b389`, frozen upstream `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`. H-080B hermetic proof: normal Run A native route/accepted Experience; two compatible accepted run IDs; candidate `experience_bcc0974be58c73cf04a0b436@1.0.0`, semantic fingerprint `4bc13bdf68ea16aa4bb43d811045c7749a10e4e0c80f2c587849eb8597e6c141`, compatibility fingerprint `bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2`; validated browser-local readback verifier; positive replay and wrong-host negative control; promotion admitted; future normal Run C EXECUTE, nonempty certificate, exactly one native physical action, VERIFIED/accepted/COMMITTED, provider 0. Focused regression 122 passed; strict seam audit passed with 14 classified and no budget growth. P0 PR #45 exact-head contracts 779 passed but Windows aggregate red; branch CI/native packaged qualification pending. Laya DEFERRED.
