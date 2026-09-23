@@ -1,5 +1,134 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-09-23 — Deep audit pós-coordinator: verdade causal acima de fechamento nominal
+
+A implementação mais recente confirma que a arquitetura geral do Hermes Work está saudável, mas também mostra um princípio que passa a ser canônico:
+
+> **Criar um componente de lifecycle e provar que ele funciona numa fixture não significa que o produto já possui esse lifecycle. E um receipt chamado "validation" não é evidência se o próprio coordinator decidiu sozinho que ele passou.**
+
+### O que deve ser preservado
+
+Não reabrir nesta lane:
+- `OperationIntent -> CapabilityRouter -> RoutingCertificate -> CertifiedDispatcher -> OperationalKernel`;
+- `OperationalCapability` como ontologia executável aprendida única;
+- `ExperiencePromotionPolicy` conservadora;
+- separação entre similaridade, autoridade, execução e verificação;
+- semantic trace slicing com uma mutação relevante + observações read-only;
+- provider-zero reuse depois de promoção real.
+
+Esses são fundamentos bons. O próximo trabalho é **hardening e wiring**, não redesign.
+
+### A falha mais importante: auto-certificação do verifier
+
+O novo `ExperienceValidationPromotionCoordinator` tem um default path que constrói artefatos positivo/negativo e retorna receipts com `passed=True`.
+
+Isso não demonstra sensibilidade do verifier. Demonstra apenas que o coordinator escreveu um boolean.
+
+A regra canônica passa a ser:
+
+```text
+validation receipt
+!=
+artifact describing what should have happened
+
+validation receipt
+=
+result of an actual verifier/owner-controlled validation observation
+```
+
+Positive validation deve vir de `VerificationEvidence` real avaliada por `evaluate_verification()` ou driver equivalente do owner.
+
+Negative control deve ser realmente discriminado em ambiente isolado, ou vir de counterexample histórico admissível.
+
+Sem isso:
+
+`held_as_candidate / verifier_receipts_unavailable`
+
+é o resultado correto.
+
+### O coordinator existe, mas ainda não é o lifecycle do produto
+
+Hoje o runtime normal ainda encerra aproximadamente em:
+
+```text
+accept_run
+-> mine
+-> candidate
+-> "causal validation required"
+```
+
+O coordinator não é chamado pelo fluxo normal.
+
+Logo:
+
+```text
+coordinator implemented
+!=
+product lifecycle owned
+```
+
+H-080B.2 fecha somente quando o caminho normal entrega candidates ao lifecycle e esse lifecycle persiste seu progresso através dos owners já existentes.
+
+### Owner receipt: emitir não basta; é preciso provar identidade
+
+O Electron agora produz `BrowserOwnerReceipt` com operation/task/run/tab/revision/action/URL. Isso é um avanço real.
+
+Mas promotion-grade verification deve comparar explicitamente o receipt observado com a operação esperada.
+
+A obrigação é:
+
+```text
+receipt.operationId   == expected_operation_id
+receipt.taskId        == canonical task
+receipt.runId         == canonical run
+receipt.browserTaskId == canonical BrowserTask
+receipt.tabId         == observed owned tab
+receipt.revision      == BrowserTask revision
+receipt.action        == browser_navigate
+receipt.safeUrl       == sanitized expected target
+```
+
+Se qualquer binding divergir, a transição não é causalmente provada.
+
+Nunca copiar o `operation_id` esperado do trace para o artifact final e chamar isso de prova.
+
+### Restart safety é propriedade persistente
+
+`threading.Lock()` é útil para concorrência local, mas não fecha restart/idempotency.
+
+O lifecycle deve recuperar seu estado usando:
+- OperationalCapabilityRegistry;
+- ArtifactStore;
+- ExecutionJournal;
+- receipts/checkpoints versionados.
+
+Não criar outro banco.
+
+### Dívida aceitável
+
+Não bloquear H-080B por:
+- whitelist ainda explícita de read-only browser tools;
+- argumento `policy` pouco aproveitado pelo coordinator;
+- catch amplo em candidate discovery com logging;
+- duplicação temporária entre `BrowserTask.lastReceipt` e projection top-level de receipts;
+- limpeza estética de APIs.
+
+Esses itens só viram prioridade quando produzirem um bug real ou quando outra lane exigir generalização.
+
+### Novo status mental
+
+```text
+H-080B.1 = prova local útil; enforcement causal do receipt ainda endurece promoção
+H-080B.2 = coordinator existe; wiring + validação empírica + restart ownership ainda abertos
+H-080B.3 = próximo grande milestone depois da correção curta
+H-081    = Laya SHADOW somente após B.2/B.3
+```
+
+A disciplina agora é:
+
+> **Corrigir o que ameaça a verdade causal e a autonomia real do lifecycle; aceitar imperfeições que não mudam essas propriedades; depois avançar.**
+
+
 ## 2026-09-23 — A prova mostrou a máquina; agora falta o lifecycle do produto
 
 A principal descoberta após auditar o trabalho do Codex é uma distinção arquitetural que passa a ser canônica:
