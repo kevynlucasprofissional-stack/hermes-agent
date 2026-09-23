@@ -1066,5 +1066,3 @@ def test_product_owned_completion_mines_and_promotes_candidate(local_state, monk
     assert len(promoted_caps) >= 1, "Normal product completion must automatically own promotion"
     promoted = promoted_caps[0]
     assert promoted.learning_metadata["promotion_lifecycle"]["state"] == "PROMOTED"
-
-

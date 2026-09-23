@@ -506,8 +506,20 @@ def test_cross_backend_composite(clean_workstation, tmp_path):
     res = kernel.execute_capability("cap_browser_search", {}, dispatch=mock_dispatch)
     assert res["success"]
     assert len(dispatched_browser_calls) == 2
-    assert dispatched_browser_calls[0] == ("browser_navigate", {"url": "https://search.example.com"})
-    assert dispatched_browser_calls[1] == ("browser_type", {"ref": "@e1", "text": "Hermes Autonomous", "clear": True})
+    operation_id = dispatched_browser_calls[0][1]["operation_id"]
+    assert operation_id.startswith("op_cap_browser_search_")
+    assert dispatched_browser_calls[0] == (
+        "browser_navigate",
+        {"url": "https://search.example.com", "operation_id": operation_id},
+    )
+    assert dispatched_browser_calls[1] == (
+        "browser_type",
+        {
+            "ref": "@e1",
+            "text": "Hermes Autonomous",
+            "clear": True,
+        },
+    )
 
 
 def test_zero_llm_calls_replay(clean_workstation, tmp_path):
