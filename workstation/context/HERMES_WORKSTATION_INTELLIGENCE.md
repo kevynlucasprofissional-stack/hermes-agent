@@ -1,5 +1,158 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-09-23 — A prova mostrou a máquina; agora falta o lifecycle do produto
+
+A principal descoberta após auditar o trabalho do Codex é uma distinção arquitetural que passa a ser canônica:
+
+> **Conseguir conectar os componentes num teste causal completo não é o mesmo que o produto possuir automaticamente esse lifecycle.**
+
+O vertical de `6d8806b868...` demonstrou que a arquitetura existente consegue fechar:
+
+```text
+LLM resolve novidade
+-> efeito nativo
+-> evidência verificável
+-> Experience
+-> compilação
+-> validação causal
+-> promoção
+-> capacidade operacional
+-> reuso determinístico
+-> provider 0
+```
+
+Isso valida a tese profunda do Hermes Work. Porém, no runtime normal, o caminho ainda para aproximadamente em:
+
+```text
+ExperienceCorpus.accept_run(...)
+-> ExperienceCompiler.mine()
+-> candidate
+-> "causal validation required"
+```
+
+A fixture de H-080B é quem chama explicitamente `validate_verifier()`, `controlled_replay()` e `promote()`. Portanto o próximo problema não é inventar outro compiler; é **dar ownership de produto à passagem candidate -> validated -> promoted**.
+
+### Modelo mental consolidado
+
+```text
+LLM / System 2            = intérprete exploratório para competência desconhecida
+Experience Compiler       = compilador que transforma experiência verificada em hipótese operacional
+OperationalCapability     = programa operacional compilado
+CapabilityRouter          = prova/binding de aplicabilidade
+RoutingCertificate        = autorização derivada das provas
+CertifiedDispatcher       = fronteira certificada de efeito
+OperationalKernel         = runtime determinístico
+Verifier                  = oráculo operacional de correção
+ArtifactStore + Journal   = evidência, lineage e depuração
+Laya / System 1 futuro    = índice semântico rápido que diz onde olhar
+```
+
+A regra continua:
+
+> **Similaridade pode recuperar/rankear/shortlistar; nunca autoriza execução.**
+
+### Novo owner necessário: coordenação, não nova ontologia
+
+Pode existir um pequeno **Experience Validation/Promotion Coordinator**, mas apenas para orquestrar owners que já existem:
+
+```text
+candidate
+-> eligibility
+-> owner-safe validation
+-> verifier sensitivity / negative control
+-> controlled replay / causal validation
+-> ExperiencePromotionPolicy
+-> promote OR remain candidate
+```
+
+Ele não vira:
+- banco novo;
+- novo registry;
+- novo tipo executável;
+- nova autoridade;
+- novo verifier;
+- substituto do ExperienceCompiler;
+- substituto do CapabilityRouter.
+
+`OperationalCapability` continua sendo a única ontologia executável aprendida.
+
+### O Browser precisa provar causalidade mais forte
+
+O `browser-session.json` já é uma boa fonte de estado pós-efeito, mas promoção de experiência deve preferir uma relação causal emitida pelo próprio owner do efeito.
+
+Target desejado:
+
+```text
+Electron recebe operation_id
+-> executa a ação
+-> atualiza/persiste BrowserTask + tab
+-> emite/persiste receipt/revision:
+   operation_id
+   task_id
+   run_id
+   browserTaskId
+   tabId
+   resulting_state_revision
+   post-effect safe state
+-> Python verifica o receipt
+```
+
+Assim a evidência deixa de ser apenas "o estado correto apareceu temporalmente depois" e passa a ser "o owner declara qual operação produziu qual revisão".
+
+Para capital de aprendizado:
+- `run_id` deve existir e coincidir exatamente;
+- task/run/operation/tab precisam formar lineage não ambígua;
+- o verifier só pode provar predicados que seu owner realmente observa;
+- host/path/live local não implica login nem mutação de servidor externo.
+
+### A unidade semântica não é `len(trace) == 1`
+
+A restrição atual foi boa para isolar o primeiro experimento, mas é frágil como abstração de produto. Conversas reais mostraram navegação correta seguida de observações redundantes, como vision/readback adicional.
+
+A regra de produto deve ser:
+
+```text
+exatamente uma mutação relevante
++ N observações read-only admissíveis
++ zero segunda mutação
++ zero efeito incerto não reconciliado
+```
+
+O Experience Compiler deve aprender a partir do slice operacional/causal, não rejeitar uma experiência só porque o Reasoner observou o estado depois.
+
+### H-080B agora tem três fechamentos diferentes
+
+```text
+H-080B.1  Experience verificada consegue virar candidate
+H-080B.2  produto valida/replay/promove sem fixture manual
+H-080B.3  Electron/packaged/dogfood prova o ciclo no produto real
+```
+
+O Codex praticamente fechou a prova local de H-080B.1 e demonstrou em teste que H-080B.2 é arquiteturalmente possível. Isso não autoriza declarar H-080B end-to-end fechado.
+
+### Laya continua depois do determinismo comprovado
+
+Laya entra somente depois que H-080B.2/.3 funcionarem sem ele.
+
+Primeira função futura:
+```text
+contexto/intent
+-> candidate shortlist + reasoning-likely-needed
+```
+
+Primeira modalidade:
+`SHADOW`.
+
+Labels devem vir de decisões e outcomes canônicos — nunca de "o LLM disse X".
+
+Princípio:
+
+> **Laya diz onde olhar. Hermes Work prova se é aplicável, autorizado e verdadeiro.**
+
+Canonical journal:
+[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
+
 ## 2026-09-23 — Primeiro loop causal de experiência nativa (prova local)
 
 Em `6d8806b868`, a navegação adaptativa usa o BrowserTask/tab persistido pelo Electron como pós-efeito local verificável. O raw result conserva sua observação original `uncertain`; a revisão `VERIFIED_SUCCESS` aponta para um artifact de readback com task/run/operation, observador `workstation.browser_session_state`, source `browser_local_persistence`, trust `trusted_runtime`, força 2 e relação causal com o raw result. Dois runs compatíveis alimentam o compiler sem relaxar thresholds; um replay positivo e um host errado validam o verifier. A capability promovida é reutilizada em um turno normal com intent tipado já estabelecido e provider 0. O objetivo é host/path e BrowserTask live, sem alegação de autenticação ou mutação externa. Laya continua deferred.
