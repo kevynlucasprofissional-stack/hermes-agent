@@ -1,45 +1,22 @@
 # Workstation Known Issues
 
-## KI-023 — Browser owner receipt is emitted but not yet enforced as causal proof [OPEN — BLOCKER FOR PROMOTION-GRADE BROWSER LEARNING]
+## KI-023 — Browser owner receipt enforced as causal proof [RESOLVED IN H-080B.2]
 
-The current H-080B branch now transports `operation_id` and `call_key` into Electron and persists a `BrowserOwnerReceipt` with task/run/BrowserTask/tab/revision/action/safe URL metadata. Strict non-null `run_id` binding is also present.
+Resolved in H-080B.2:
+- Canonical `operation_id` established in `OperationalKernel.execute_capability` before physical I/O;
+- Propagated into native browser dispatch (`_dispatch` and `workstation_routed_browser_handler`);
+- `read_native_browser_session_state` enforces `expected_operation_id` and `require_owner_receipt=True`, verifying `operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, `revision`, `action`, `safeUrl`, and temporal ordering (`executedAt <= savedAt`);
+- `workstation/procedure_trace.py` detects caller/owner divergence, setting `operation_id_conflict=True`, `outcome="identity_conflict"`, `replayable=False`, and excluding it from candidate learning;
+- Tested via 9-case falsification matrix in `test_owner_receipt_strict_falsification_matrix` and `test_procedure_trace_operation_id_conflict_rejected_from_learning`.
 
-The remaining problem is enforcement.
+## KI-022 — Product-owned validation lifecycle and empirical verifier receipts [RESOLVED IN H-080B.2]
 
-`read_native_browser_session_state()` currently verifies the caller/task run binding but does not require the latest owner receipt to match the expected:
-- operation ID;
-- task ID;
-- BrowserTask ID;
-- owned tab ID;
-- BrowserTask revision;
-- action;
-- sanitized target URL.
-
-`_verified_native_navigation()` then projects the trace `operation_id` into verifier evidence after the readback instead of proving that the Electron receipt carries that same operation identity.
-
-This leaves a causal aliasing failure mode:
-
-```text
-trace operation A
-+ Browser state/lastReceipt produced by operation B
-+ target state happens to match
--> Python projects evidence as operation A
-```
-
-The compiled learned-capability path also currently derives `operation_id` in `OperationalKernel.execute_capability()` after implementation steps execute. That ordering must be inverted for mutable learned Browser execution: establish the operation identity before dispatch and propagate it into the Browser step.
-
-Required closure:
-- establish the certified/expected operation ID before the first physical I/O in OperationalKernel;
-- propagate that same ID into the native Browser dispatch;
-- promotion-grade Browser readback accepts the expected operation identity;
-- receipt fields are validated against canonical task/run/BrowserTask/tab/revision/action/URL;
-- mismatch/stale/missing receipt fails closed;
-- tests falsify wrong operation ID, wrong task, wrong run, wrong tab, wrong revision, wrong action and wrong URL;
-- ordinary non-learning Browser continuity may remain more permissive where appropriate.
-
-This is a narrow hardening of an otherwise useful owner-receipt design. Do not replace the Browser ownership architecture.
-
-## KI-022 — Coordinator exists, but H-080B.2 is not product-owned and its default verifier validation self-certifies [OPEN — BLOCKER]
+Resolved in H-080B.2:
+- Removed verifier self-certification (`_build_positive_validation_receipt` / `_build_isolated_negative_control` returning fake `passed=True`);
+- Added `ValidationEnvironmentProvider` for product/test seam injection requiring real `VerificationEvidence` evaluated through `evaluate_verification()`; candidates without empirical receipts fail closed as `held_as_candidate / verifier_receipts_unavailable`;
+- Wired `ExperienceValidationPromotionCoordinator` directly into normal product runtime in `workstation/kanban.py::complete_task_with_report` after `compiler.mine()`;
+- Persisted restart-safe lifecycle progression into `candidate.learning_metadata["promotion_lifecycle"]` (`CANDIDATE`, `VALIDATION_PENDING`, `VERIFIER_VALIDATED`, `REPLAY_VALIDATED`, `PROMOTED`);
+- Empirically verified via `test_product_owned_completion_mines_and_promotes_candidate` (promotion without manual coordinator call) and `test_promotion_lifecycle_restart_and_idempotency`.
 
 `workstation/experience_compiler/lifecycle.py` adds `ExperienceValidationPromotionCoordinator`, and the fixture proves that the coordinator can invoke validation, controlled replay and promotion. This is useful orchestration and should be kept.
 

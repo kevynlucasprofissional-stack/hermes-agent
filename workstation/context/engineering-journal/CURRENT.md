@@ -1,5 +1,32 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080B.2 Causal Closure and Product Wiring Verified — 2026-09-23
+
+Status: **H-080A ACCEPTED / H-080B.1 & H-080B.2 CLOSED & EMPIRICALLY VERIFIED / H-080B.3 READY / LAYA DEFERRED**
+
+All blockers A through H have been causally resolved and verified:
+1. **Pre-I/O Canonical Operation Identity (Blockers A & E):**
+   - Established before mutating steps in `OperationalKernel.execute_capability`.
+   - Pop-isolated from semantic `args`/`call_key` in `tools/browser_workstation.py`.
+2. **Conflict Detection (Blocker B):**
+   - Divergence between caller `_current_operation_id` and owner `lastReceipt.operationId` flagged in `workstation/procedure_trace.py` (`operation_id_conflict=True`, `outcome="identity_conflict"`, `replayable=False`).
+3. **Owner Receipt Strict Enforcement (Blockers C & D, KI-023):**
+   - `read_native_browser_session_state` checks `expected_operation_id` and `require_owner_receipt=True`, verifying `operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, monotonic integer `revision`, action `"browser_navigate"`, URL equivalence, and `executedAt <= savedAt`.
+   - Verified across a 9-permutation falsification matrix.
+4. **Elimination of Self-Certified Verification (Blocker F, KI-022):**
+   - Fake `passed=True` generator removed from `lifecycle.py`.
+   - Added `ValidationEnvironmentProvider` for product/test DI. If empirical verifier evidence is missing, candidate fails closed (`held_as_candidate / verifier_receipts_unavailable`).
+5. **Product Wiring & Idempotent Restart Safety (Blockers G & H, KI-022):**
+   - `ExperienceValidationPromotionCoordinator` wired into normal product runtime in `workstation/kanban.py::complete_task_with_report` after `compiler.mine()`.
+   - Multi-process restart safety persisted into `candidate.learning_metadata["promotion_lifecycle"]` (`CANDIDATE`, `VALIDATION_PENDING`, `VERIFIER_VALIDATED`, `REPLAY_VALIDATED`, `PROMOTED`).
+   - Verified via `test_product_owned_completion_mines_and_promotes_candidate` and `test_promotion_lifecycle_restart_and_idempotency`.
+
+Test summary:
+- `workstation/tests/test_h080b_native_browser_experience_loop.py`: 25 passed.
+- Related suites: 91 passed.
+- Seam audit: 14 classified direct core seams, 0 unclassified, 0 budget regressions.
+- apps/desktop: clean typecheck (code 0).
+
 ## Operational Telemetry Plane — 2026-09-23
 
 Canonical detailed record:
@@ -42,7 +69,6 @@ Priority measurement targets:
 - post-goal work/oververification.
 
 Privacy default is structural telemetry only; no prompt/response/DOM/form/credential/file-content duplication.
-
 
 ## H-080B post-implementation deep audit — 2026-09-23
 

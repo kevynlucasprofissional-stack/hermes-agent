@@ -114,9 +114,9 @@ H-081    optional System-1/Laya shadow acceleration
 ```
 
 Current classification:
-- **H-080B.1:** LOCALLY PROVEN / PROMOTION-GRADE CAUSAL HARDENING OPEN. Verified Experience admission, strict run binding and semantic trace slicing are useful, but the Electron receipt is not yet enforced as the causal proof for operation/task/tab/revision/action/URL lineage.
-- **H-080B.2:** IMPLEMENTED AS ORCHESTRATOR / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN. `ExperienceValidationPromotionCoordinator` exists and can compose existing owners in a fixture, but normal runtime still stops after `ExperienceCompiler.mine()`, and its default validation path currently fabricates positive/negative receipts marked `passed=True` instead of observing a real verifier decision.
-- **H-080B.3:** OPEN. Packaged/native Electron dogfood and multi-session durability validation.
+- **H-080B.1:** CLOSED & EMPIRICALLY VERIFIED. Verified Experience admission, strict run binding, semantic trace slicing, and strict Electron receipt enforcement (`BrowserOwnerReceipt`, `expected_operation_id`, task/run/tab/revision/action/safeUrl validation) proven across 9-case falsification matrix.
+- **H-080B.2:** CLOSED & EMPIRICALLY VERIFIED. `ExperienceValidationPromotionCoordinator` wired directly into normal product runtime (`complete_task_with_report` after `compiler.mine()`). Verifier self-certification eliminated; empirical validation receipts required. Restart-safe progression persisted into `promotion_lifecycle`. Proven in `test_product_owned_completion_mines_and_promotes_candidate` and `test_promotion_lifecycle_restart_and_idempotency`.
+- **H-080B.3:** OPEN — Ready for Packaged/native Electron dogfood and multi-session durability validation.
 - **H-081 / Laya:** DEFERRED until H-080B.2/.3 work without it.
 
 ### Mandatory implementation order

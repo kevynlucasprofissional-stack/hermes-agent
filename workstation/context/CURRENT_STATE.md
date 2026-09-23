@@ -1,5 +1,30 @@
 # Current State
 
+## 2026-09-23 H-080B.2 causal closure green — ready for H-080B.3 proof
+
+Status: **H-080A ARCHITECTURE ACCEPTED / H-080B.1 & H-080B.2 CLOSED & EMPIRICALLY VERIFIED / H-080B.3 OPEN / LAYA DEFERRED**
+
+Closure accomplishments:
+1. **Canonical Operation Identity & Receipt Enforcement (Blockers A-E, KI-023):**
+   - Canonical `operation_id` established in `OperationalKernel.execute_capability` before mutating steps.
+   - Decoupled from `call_key` (semantic only) in `tools/browser_workstation.py`.
+   - Strictly enforced in `read_native_browser_session_state`: `expected_operation_id` and `require_owner_receipt=True`, verifying `operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, `revision`, `action`, `safeUrl`, and temporal ordering (`executedAt <= savedAt`).
+   - Conflict detection in `procedure_trace.py` flags divergence between caller and owner receipts (`operation_id_conflict=True`, `outcome="identity_conflict"`, `replayable=False`).
+   - Rigorously proven in `test_owner_receipt_strict_falsification_matrix` (9/9 cases).
+2. **Empirical Verifier Evidence & Self-Certification Removal (Blocker F, KI-022):**
+   - Elimination of synthetic `passed=True` validation generators.
+   - Validation requires empirical verification receipts evaluated through `evaluate_verification()` via `ValidationEnvironmentProvider` or fails closed as `held_as_candidate / verifier_receipts_unavailable`.
+3. **Product-Owned Lifecycle & Restart Idempotency (Blockers G-H, KI-022):**
+   - Wired `ExperienceValidationPromotionCoordinator` into normal completion in `workstation/kanban.py::complete_task_with_report` after `compiler.mine()`.
+   - Persisted progression states in `candidate.learning_metadata["promotion_lifecycle"]` (`CANDIDATE`, `VALIDATION_PENDING`, `VERIFIER_VALIDATED`, `REPLAY_VALIDATED`, `PROMOTED`).
+   - Empirically proven via `test_product_owned_completion_mines_and_promotes_candidate` without calling `process_candidate` directly.
+
+Suite status:
+- `workstation/tests/test_h080b_native_browser_experience_loop.py`: 25 passed.
+- Related suites (`test_experience_compiler.py`, `test_browser_workstation_route.py`, `test_learned_capability_routing.py`, `test_e2e_operational_resolution.py`, etc.): 91 passed.
+- Seam audit: 0 unclassified seams, 0 budget regressions.
+- apps/desktop: typecheck clean (code 0).
+
 ## 2026-09-23 Operational Telemetry Plane — ARCHITECTURE ACCEPTED / IMPLEMENTATION QUEUED AFTER H-080B.2
 
 Canonical:
@@ -69,7 +94,6 @@ close H-080B.2 causal blockers
 ```
 
 This sequencing is intentional: telemetry must not delay current causal correctness, but H-080B.3 should not become a large new product phase without inspectable empirical data.
-
 
 ## 2026-09-23 H-080B post-implementation deep audit — H-080B.2 REOPENED / NARROW CORRECTION REQUIRED
 
