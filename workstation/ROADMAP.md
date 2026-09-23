@@ -29,7 +29,8 @@ P1  close one native-browser H-080B vertical loop
     -> second compatible verified run where promotion requires diversity
     -> controlled replay/verifier validation
     -> promotion
-    -> future normal turn EXECUTE/VERIFIED/COMMITTED
+    -> future normal turn with established typed OperationIntent
+    -> EXECUTE/VERIFIED/COMMITTED
     -> provider calls = 0
 
 P2  remove observed real-use waste
@@ -48,7 +49,7 @@ DEFER
 Do not create a new `LearnedScript` / `BrowserSkill` authority plane.
 `OperationalCapability` remains the executable object. If browser-specific IR is eventually required, it lives inside `OperationalCapability.implementation` and executes through the existing certified native-browser control path.
 
-Laya remains post-H-080B: shadow/shortlist only, with CapabilityRouter retaining proof authority.
+Laya remains post-H-080B: shadow/shortlist only, with CapabilityRouter retaining proof authority. Fresh natural-language paraphrase -> typed OperationIntent recognition is deliberately outside the first H-080B closure; do not add an ad-hoc prose classifier to fake this layer.
 
 ## H-080 — Progressive Operational Compilation — H-080A PRODUCTION-PATH QUALIFICATION / H-080B EXPERIENCE LOOP OPEN (2026-09-22)
 
