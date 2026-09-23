@@ -8,6 +8,7 @@ import logging
 import threading
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from workstation.artifacts import ArtifactStore
@@ -49,6 +50,28 @@ class CoordinatorCycleResult:
     admitted: bool
     reasons: Tuple[str, ...]
     capability: Optional[OperationalCapability] = None
+
+
+@dataclass
+class ValidationEnvironmentProvider:
+    """Optional product or test seam providing safe evaluation and replay contexts."""
+    verifier_evaluator: Optional[Callable[[OperationalCapability, VerificationContract, str, str], Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]]] = None
+    replay_runner_factory: Optional[Callable[[OperationalCapability, SafeEnvironment], Callable[[list, float], dict]]] = None
+    safe_env_factory: Optional[Callable[[OperationalCapability], SafeEnvironment]] = None
+
+
+_ACTIVE_VALIDATION_PROVIDER: Optional[ValidationEnvironmentProvider] = None
+
+
+def register_validation_environment_provider(provider: Optional[ValidationEnvironmentProvider]) -> None:
+    """Register an active validation environment provider for product-owned lifecycle."""
+    global _ACTIVE_VALIDATION_PROVIDER
+    _ACTIVE_VALIDATION_PROVIDER = provider
+
+
+def get_validation_environment_provider() -> Optional[ValidationEnvironmentProvider]:
+    """Retrieve the currently active validation environment provider if any."""
+    return _ACTIVE_VALIDATION_PROVIDER
 
 
 class ExperienceValidationPromotionCoordinator:
@@ -94,13 +117,16 @@ class ExperienceValidationPromotionCoordinator:
         safe_env: Optional[SafeEnvironment] = None,
         task_id: Optional[str] = None,
         run_id: Optional[str] = None,
+        journal: Optional[Any] = None,
     ) -> CoordinatorCycleResult:
         """Execute one complete validation-replay-promotion cycle for a candidate.
 
-        Idempotent and fail-closed:
+        Idempotent, restart-safe and fail-closed:
         - If already promoted, returns immediately.
+        - Persists progression checkpoints into candidate.learning_metadata["promotion_lifecycle"].
         - Negative control never runs against user's live browser state; uses isolated/simulated state.
-        - Fails closed if verifier or replay fails.
+        - Never auto-certifies verification receipts without real owner or counterexample evaluation.
+        - Fails closed if verifier or replay fails or if verification receipts are unavailable.
         """
         with self._lock:
             if isinstance(candidate_or_id, str):
@@ -115,7 +141,17 @@ class ExperienceValidationPromotionCoordinator:
             else:
                 candidate = candidate_or_id
 
-            if candidate.lifecycle == CapabilityLifecycle.PROMOTED:
+            m = candidate.learning_metadata = candidate.learning_metadata or {}
+            lifecycle_info = m.setdefault("promotion_lifecycle", {
+                "version": "h080b2-v1",
+                "state": "CANDIDATE",
+                "validation_evidence_refs": [],
+                "replay_evidence_refs": [],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            })
+
+            if candidate.lifecycle == CapabilityLifecycle.PROMOTED or lifecycle_info.get("state") == "PROMOTED":
+                lifecycle_info["state"] = "PROMOTED"
                 return CoordinatorCycleResult(
                     candidate_id=candidate.id,
                     action="promoted",
@@ -124,43 +160,49 @@ class ExperienceValidationPromotionCoordinator:
                     capability=candidate,
                 )
 
-            # 1. Eligibility check
-            m = candidate.learning_metadata or {}
+            current_stage = lifecycle_info.get("state", "CANDIDATE")
             run_ids = set(m.get("run_ids", []))
-            if len(run_ids) < 2 or not m.get("parameterization_quality") or not m.get("provenance_complete"):
-                return CoordinatorCycleResult(
-                    candidate_id=candidate.id,
-                    action="held_as_candidate",
-                    admitted=False,
-                    reasons=("eligibility_criteria_unmet",),
-                    capability=candidate,
-                )
 
-            if candidate.drift_state != "healthy":
-                return CoordinatorCycleResult(
-                    candidate_id=candidate.id,
-                    action="held_as_candidate",
-                    admitted=False,
-                    reasons=(f"drift_state_{candidate.drift_state}",),
-                    capability=candidate,
-                )
-
-            # 2. Derive/verify formal contract
-            if candidate.formal_contract is None:
-                fc = derive_formal_contract(candidate)
-                if fc is not None:
-                    candidate.formal_contract = fc
-                    candidate.family_id = f"{fc.operation_family}:{fc.target_family}"
-                else:
+            # 1. Eligibility check & Formal Contract
+            if current_stage == "CANDIDATE":
+                if len(run_ids) < 2 or not m.get("parameterization_quality") or not m.get("provenance_complete"):
                     return CoordinatorCycleResult(
                         candidate_id=candidate.id,
                         action="held_as_candidate",
                         admitted=False,
-                        reasons=("formal_contract_underivable",),
+                        reasons=("eligibility_criteria_unmet",),
                         capability=candidate,
                     )
 
-            # 3. Verifier contract validation (sensitivity: positive replay + discriminative negative control)
+                if candidate.drift_state != "healthy":
+                    return CoordinatorCycleResult(
+                        candidate_id=candidate.id,
+                        action="held_as_candidate",
+                        admitted=False,
+                        reasons=(f"drift_state_{candidate.drift_state}",),
+                        capability=candidate,
+                    )
+
+                if candidate.formal_contract is None:
+                    fc = derive_formal_contract(candidate)
+                    if fc is not None:
+                        candidate.formal_contract = fc
+                        candidate.family_id = f"{fc.operation_family}:{fc.target_family}"
+                    else:
+                        return CoordinatorCycleResult(
+                            candidate_id=candidate.id,
+                            action="held_as_candidate",
+                            admitted=False,
+                            reasons=("formal_contract_underivable",),
+                            capability=candidate,
+                        )
+
+                current_stage = "VALIDATION_PENDING"
+                lifecycle_info["state"] = "VALIDATION_PENDING"
+                lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
+                self.registry.register(candidate)
+
+            # 2. Verifier contract validation (sensitivity: positive replay + discriminative negative control)
             contract: VerificationContract
             if contract_factory:
                 contract = contract_factory(candidate)
@@ -177,44 +219,30 @@ class ExperienceValidationPromotionCoordinator:
                     transition_claim=True,
                 )
 
-            verifier_validated = False
-            if candidate.verifier_contract:
-                v_contract = VerificationContract.from_dict(candidate.verifier_contract)
-                if v_contract.lifecycle == VerificationLifecycle.VALIDATED:
-                    sensitive, _ = validate_verifier_sensitivity(list(v_contract.validation_receipts))
-                    if sensitive:
-                        verifier_validated = True
-
-            if not verifier_validated:
+            if current_stage not in ("VERIFIER_VALIDATED", "REPLAY_VALIDATED", "PROMOTED"):
                 validation_receipts: List[Dict[str, Any]] = []
                 if receipts:
                     validation_receipts = receipts
                 else:
+                    provider = get_validation_environment_provider()
                     candidate_task_id = task_id or (list(run_ids)[0] if run_ids else "task-coord")
                     candidate_run_id = run_id or (list(run_ids)[0] if run_ids else "run-coord")
 
-                    neg_receipt: Optional[Dict[str, Any]] = None
-                    if negative_control_generator:
-                        neg_receipt = negative_control_generator(candidate, contract)
-                    else:
-                        neg_receipt = self._build_isolated_negative_control(candidate, contract, candidate_task_id, candidate_run_id)
+                    if provider and provider.verifier_evaluator:
+                        pos, neg = provider.verifier_evaluator(candidate, contract, candidate_task_id, candidate_run_id)
+                        if pos and neg:
+                            validation_receipts = [pos, neg]
+                    elif negative_control_generator:
+                        neg = negative_control_generator(candidate, contract)
+                        if neg:
+                            # A custom negative generator was supplied, but without positive empirical verification
+                            # we cannot self-certify positive passed=True.
+                            pass
 
-                    pos_receipt = self._build_positive_validation_receipt(candidate, contract, candidate_task_id, candidate_run_id)
-
-                    if pos_receipt and neg_receipt:
-                        validation_receipts = [pos_receipt, neg_receipt]
-
-                if validation_receipts:
-                    candidate, v_reasons = self.compiler.validate_verifier(candidate, contract, validation_receipts)
-                    if v_reasons:
-                        return CoordinatorCycleResult(
-                            candidate_id=candidate.id,
-                            action="validation_failed",
-                            admitted=False,
-                            reasons=tuple(v_reasons),
-                            capability=candidate,
-                        )
-                else:
+                if not validation_receipts:
+                    lifecycle_info["state"] = "VALIDATION_PENDING"
+                    lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
+                    self.registry.register(candidate)
                     return CoordinatorCycleResult(
                         candidate_id=candidate.id,
                         action="held_as_candidate",
@@ -223,9 +251,43 @@ class ExperienceValidationPromotionCoordinator:
                         capability=candidate,
                     )
 
-            # 4. Controlled causal replay in SafeEnvironment
-            if candidate.causal_grade < CausalGrade.REPLAY_VALIDATED:
-                if not replay_runner:
+                candidate, v_reasons = self.compiler.validate_verifier(candidate, contract, validation_receipts)
+                if v_reasons:
+                    lifecycle_info["state"] = "VALIDATION_FAILED"
+                    lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
+                    self.registry.register(candidate)
+                    return CoordinatorCycleResult(
+                        candidate_id=candidate.id,
+                        action="validation_failed",
+                        admitted=False,
+                        reasons=tuple(v_reasons),
+                        capability=candidate,
+                    )
+
+                current_stage = "VERIFIER_VALIDATED"
+                lifecycle_info["state"] = "VERIFIER_VALIDATED"
+                lifecycle_info["validation_evidence_refs"] = [
+                    r.get("evidence_ref") for r in validation_receipts if isinstance(r, dict) and r.get("evidence_ref")
+                ]
+                lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
+                self.registry.register(candidate)
+                if journal:
+                    from workstation.contracts import ExecutionEventKind
+                    journal.record(ExecutionEventKind.ACTION, 'candidate verifier validated',
+                                   metadata={'capability_id': candidate.id})
+
+            # 3. Controlled causal replay in SafeEnvironment
+            if current_stage not in ("REPLAY_VALIDATED", "PROMOTED") and candidate.causal_grade < CausalGrade.REPLAY_VALIDATED:
+                effective_runner = replay_runner
+                provider = get_validation_environment_provider()
+                env = safe_env or (provider.safe_env_factory(candidate) if provider and provider.safe_env_factory else SafeEnvironment("test_fixture", f"isolated-{candidate.id}", lambda *_args: True))
+                if effective_runner is None and provider and provider.replay_runner_factory:
+                    effective_runner = provider.replay_runner_factory
+
+                if not effective_runner:
+                    lifecycle_info["state"] = "VERIFIER_VALIDATED"
+                    lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
+                    self.registry.register(candidate)
                     return CoordinatorCycleResult(
                         candidate_id=candidate.id,
                         action="held_as_candidate",
@@ -234,10 +296,19 @@ class ExperienceValidationPromotionCoordinator:
                         capability=candidate,
                     )
 
-                env = safe_env or SafeEnvironment("test_fixture", f"isolated-{candidate.id}", lambda *_args: True)
-                runner = replay_runner(candidate, env)
+                runner = effective_runner(candidate, env)
                 candidate = controlled_replay(candidate, env, runner)
+                m = candidate.learning_metadata = candidate.learning_metadata or {}
+                lifecycle_info = m.setdefault("promotion_lifecycle", {
+                    "version": "h080b2-v1",
+                    "state": current_stage,
+                    "validation_evidence_refs": [],
+                    "replay_evidence_refs": [],
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                })
                 if candidate.causal_grade < CausalGrade.REPLAY_VALIDATED:
+                    lifecycle_info["state"] = "REPLAY_FAILED"
+                    lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
                     self.registry.register(candidate)
                     return CoordinatorCycleResult(
                         candidate_id=candidate.id,
@@ -247,10 +318,37 @@ class ExperienceValidationPromotionCoordinator:
                         capability=candidate,
                     )
 
-            # 5. Evaluate promotion under ExperiencePromotionPolicy
+                current_stage = "REPLAY_VALIDATED"
+                lifecycle_info["state"] = "REPLAY_VALIDATED"
+                lifecycle_info["replay_evidence_refs"] = [
+                    e.get("artifact_ref") for e in (candidate.validation_evidence or [])
+                    if isinstance(e, dict) and e.get("artifact_ref")
+                ]
+                lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
+                self.registry.register(candidate)
+                if journal:
+                    from workstation.contracts import ExecutionEventKind
+                    journal.record(ExecutionEventKind.ACTION, 'candidate controlled replay validated',
+                                   metadata={'capability_id': candidate.id})
+
+            # 4. Evaluate promotion under ExperiencePromotionPolicy
+            m = candidate.learning_metadata = candidate.learning_metadata or {}
+            lifecycle_info = m.setdefault("promotion_lifecycle", {
+                "version": "h080b2-v1",
+                "state": current_stage,
+                "validation_evidence_refs": [],
+                "replay_evidence_refs": [],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            })
+            lifecycle_info["state"] = "PROMOTED"
+            lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
             admission = self.compiler.promote(candidate)
             if admission.admitted:
-                promoted = self.registry.get(candidate.id)
+                promoted = self.registry.get(candidate.id) or candidate
+                if journal:
+                    from workstation.contracts import ExecutionEventKind
+                    journal.record(ExecutionEventKind.ACTION, 'candidate promoted under ExperiencePromotionPolicy',
+                                   metadata={'capability_id': candidate.id})
                 return CoordinatorCycleResult(
                     candidate_id=candidate.id,
                     action="promoted",
@@ -259,6 +357,8 @@ class ExperienceValidationPromotionCoordinator:
                     capability=promoted,
                 )
             else:
+                lifecycle_info["state"] = "PROMOTION_REJECTED"
+                lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
                 self.registry.register(candidate)
                 return CoordinatorCycleResult(
                     candidate_id=candidate.id,
@@ -274,8 +374,12 @@ class ExperienceValidationPromotionCoordinator:
         contract: VerificationContract,
         task_id: str,
         run_id: str,
-    ) -> Dict[str, Any]:
-        """Create an isolated negative control receipt without touching user browser."""
+        *,
+        passed: Optional[bool] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Record an isolated negative control description. Does not self-certify pass decision."""
+        if passed is None:
+            return None
         op_id = f"op_neg_ctrl_{digest({'id': candidate.id, 'task': task_id})[:8]}"
         wrong_ref = self.artifacts.store(
             task_id,
@@ -292,7 +396,7 @@ class ExperienceValidationPromotionCoordinator:
         return {
             "kind": "negative_control",
             "phase": "validation",
-            "passed": True,  # Verifier discriminates the negative control
+            "passed": bool(passed),
             "evidence_ref": wrong_ref,
         }
 
@@ -302,8 +406,12 @@ class ExperienceValidationPromotionCoordinator:
         contract: VerificationContract,
         task_id: str,
         run_id: str,
+        *,
+        passed: Optional[bool] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Create a positive validation receipt from held-out or newly validated evidence."""
+        """Record a positive validation description. Does not self-certify pass decision."""
+        if passed is None:
+            return None
         op_id = f"op_pos_ctrl_{digest({'id': candidate.id, 'task': task_id})[:8]}"
         ref = self.artifacts.store(
             task_id,
@@ -320,6 +428,6 @@ class ExperienceValidationPromotionCoordinator:
         return {
             "kind": "positive_replay",
             "phase": "validation",
-            "passed": True,
+            "passed": bool(passed),
             "evidence_ref": ref,
         }

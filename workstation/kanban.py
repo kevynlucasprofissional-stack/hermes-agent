@@ -77,30 +77,45 @@ def _verified_native_navigation(artifacts, trace, task_id: str, session_id: str,
     if (expected.scheme, expected.hostname, expected.path or '/') != (
             reported.scheme, reported.hostname, reported.path or '/'):
         raise ValueError("native navigation result drifted from the requested URL")
-    readback = read_native_browser_session_state(task_id, session_id, run_id, expected_url)
-    saved_at = datetime.fromisoformat(readback['saved_at'].replace('Z', '+00:00'))
+    expected_op_id = action.get('operation_id')
+    readback = read_native_browser_session_state(
+        task_id, session_id, run_id, expected_url,
+        expected_operation_id=expected_op_id,
+        require_owner_receipt=True,
+    )
+    last_receipt = readback.get('last_receipt') or {}
+    proven_op_id = last_receipt.get('operationId')
+    if not proven_op_id or proven_op_id != expected_op_id:
+        raise ValueError(f"Browser owner receipt does not match expected operation identity: expected {expected_op_id}, got {proven_op_id}")
+    saved_at_str = readback['saved_at']
+    saved_at = datetime.fromisoformat(saved_at_str.replace('Z', '+00:00'))
     captured_at = datetime.fromisoformat(action['captured_at'].replace('Z', '+00:00'))
     if saved_at.tzinfo is None or captured_at.tzinfo is None or not -5 <= (captured_at - saved_at).total_seconds() <= 120:
         raise ValueError("BrowserSessionState readback is stale or temporally inconsistent")
-    observed_at = datetime.now(timezone.utc).isoformat()
+    observed_at = saved_at_str
     evidence = {
-        **readback, 'operation_id': action['operation_id'],
+        **readback,
+        'operation_id': proven_op_id,
         'observer': 'workstation.browser_session_state',
-        'source_kind': 'browser_local_persistence', 'trust_class': 'trusted_runtime',
+        'source_kind': 'browser_local_persistence',
+        'trust_class': 'trusted_runtime',
         'evidence_strength': int(EvidenceStrength.SEMANTIC_PERSISTED_READBACK),
         'resource_id': f"browser_task:{task_id}:tab:{readback['tab_id']}",
-        'observed_at': observed_at, 'read_after_write': True,
+        'resource_version': str(readback.get('revision', 0)),
+        'observed_at': observed_at,
+        'read_after_write': True,
         'covered_predicates': ['host', 'url', 'page_family', 'recovery_state'],
-        'raw_result_ref': action['after_state_ref'], 'transition_ref': action['transition_ref'],
+        'raw_result_ref': action['after_state_ref'],
+        'transition_ref': action['transition_ref'],
     }
     stored = artifacts.store(task_id, 'browser_readback_' + digest(evidence) + '.json',
                              evidence, schema='hermes.browser_local_readback.v1')
     ref = EvidenceRef('browser_local_persistence', stored.ref, sha256=stored.sha256,
-                      task_id=task_id, run_id=run_id, operation_id=action['operation_id'],
+                      task_id=task_id, run_id=run_id, operation_id=proven_op_id,
                       verifier='native_browser_session_state')
     verifier = {'verifier': 'native_browser_session_state', 'passed': True,
                 'evidence_ref': stored.ref, 'task_id': task_id, 'run_id': run_id,
-                'operation_id': action['operation_id'], 'observer': evidence['observer'],
+                'operation_id': proven_op_id, 'observer': evidence['observer'],
                 'source_kind': evidence['source_kind'], 'trust_class': evidence['trust_class'],
                 'evidence_strength': evidence['evidence_strength'],
                 'covered_predicates': evidence['covered_predicates'],
@@ -388,23 +403,53 @@ class WorkstationKanbanBridge:
         )
         from workstation.experience_compiler.corpus import ExperienceCorpus
         from workstation.experience_compiler.compiler import ExperienceCompiler
+        from workstation.experience_compiler.lifecycle import ExperienceValidationPromotionCoordinator
         from workstation.operational_capabilities import OperationalCapabilityRegistry, CapabilityValidationError
         from workstation.artifacts import ArtifactStore
         artifacts = ArtifactStore()
         # Mining is a projection after canonical commit; insufficient state evidence
         # remains observations and cannot affect completion or grant write authority.
         corpus = None
+        learned = []
         try:
             corpus = ExperienceCorpus(artifacts, discover=True)
             corpus.accept_run(journal, outcome)
-            learned = ExperienceCompiler(OperationalCapabilityRegistry(artifacts), corpus).mine()
+            registry = OperationalCapabilityRegistry(artifacts)
+            compiler = ExperienceCompiler(registry, corpus)
+            learned = compiler.mine()
+            coordinator = ExperienceValidationPromotionCoordinator(
+                registry,
+                compiler,
+                artifacts,
+            )
+            for capability in learned:
+                journal.record(
+                    ExecutionEventKind.ACTION,
+                    'experience operational candidate discovered; causal validation required',
+                    metadata={'capability_id': capability.id, 'capability_version': capability.version},
+                )
+                cycle_result = coordinator.process_candidate(
+                    capability,
+                    task_id=task_id,
+                    run_id=str(target_run_id) if target_run_id is not None else None,
+                    journal=journal,
+                )
+                if cycle_result.action == "promoted":
+                    journal.record(
+                        ExecutionEventKind.ACTION,
+                        'experience operational candidate promoted under policy',
+                        metadata={'capability_id': capability.id, 'capability_version': capability.version},
+                    )
+                elif cycle_result.action == "held_as_candidate":
+                    journal.record(
+                        ExecutionEventKind.ACTION,
+                        'experience operational candidate validation pending',
+                        metadata={'capability_id': capability.id, 'reasons': list(cycle_result.reasons)},
+                    )
         except (OSError, ValueError, CapabilityValidationError) as error:
             import logging
             logging.getLogger(__name__).warning('Experience projection failed after accepted completion: %s', type(error).__name__)
             learned = []
-        for capability in learned:
-            journal.record(ExecutionEventKind.ACTION, 'experience operational candidate; causal validation required',
-                metadata={'capability_id': capability.id, 'capability_version': capability.version})
         if report.repeatability_hint and report.procedure_steps and corpus is not None and not corpus.refs:
             from workstation.memory import ProceduralMemory
             from workstation.routines import RoutinePromotionService
