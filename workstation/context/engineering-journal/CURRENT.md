@@ -1,5 +1,13 @@
 # CURRENT — Workstation Engineering Journal
 
+## Operational Telemetry Phase 1/2 candidate — 2026-09-23
+
+Hypothesis: owner facts can be projected without affecting authority. Result:
+implemented model, fail-open/SQLite sinks, privacy/bounds, query/projector,
+provider seam and owner instrumentation. Evidence: telemetry 5/5; focused
+integration 31/31; owners 123/123; real H-080B funnel 1/1; seam audit green.
+Classification: locally green; exact-head CI and H-080B.3 remain open.
+
 ## H-080B.2 Causal Closure and Product Wiring Verified — 2026-09-23
 
 Status: **H-080A ACCEPTED / H-080B.1 & H-080B.2 CLOSED & EMPIRICALLY VERIFIED / H-080B.3 READY / LAYA DEFERRED**

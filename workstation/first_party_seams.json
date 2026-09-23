@@ -624,6 +624,25 @@
           "sunset_condition": "remove Workstation-specific preview routing after UI parity"
         }
       ]
+    },
+    {
+      "id": "FPS-RUNTIME-TELEMETRY-001",
+      "path": "agent/runtime_events.py; agent/turn_api_call.py; agent/auxiliary_client.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic content-free runtime event observer boundary",
+      "rationale": "Provider dispatch is owned by generic Hermes while Workstation locally projects structural telemetry; a generic observer preserves ownership and keeps Workstation imports out of core.",
+      "concerns": [{
+        "id": "SEAM-RUNTIME-TELEMETRY",
+        "symbol_or_concern": "provider_called structural observation",
+        "semantic_owner": "generic runtime observer registry -> workstation/integrations/hermes/telemetry",
+        "current_behavior": "Reports one content-free event per real main or auxiliary provider dispatch without requests, messages, prompts, or responses.",
+        "required_ordering": "At provider dispatch completion/error for main calls and at actual auxiliary dispatch.",
+        "disposition": "UPSTREAM_ABSTRACT",
+        "replacement": "generic runtime_events observer registry",
+        "parity_tests": ["no Workstation import in agent runtime", "provider observation is fail-open", "main and auxiliary provider calls remain distinguishable"],
+        "sunset_condition": "Upstream adopts an equivalent content-free runtime observation boundary"
+      }],
+      "current_direct_imports": 0
     }
   ],
   "operating_policy": {

@@ -1,5 +1,11 @@
 # Workstation roadmap
 
+## 2026-09-23 Operational Telemetry Phase 1/2 implemented
+
+The stacked candidate implements versioned structural events, bounded local
+SQLite, privacy, queries, ORA/VOLC projection and the H-080B lifecycle.
+Dashboard, remote export, Phase 3/4 and Laya remain deferred.
+
 ## 2026-09-23 Operational Telemetry Plane — MEASURE BEFORE BROADENING
 
 Hermes Work now needs durable empirical feedback, not only architecture review and release tests.

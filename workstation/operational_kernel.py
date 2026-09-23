@@ -489,6 +489,14 @@ class OperationalKernel:
         exec_context["task_id"] = task_id
         exec_context["run_id"] = run_id
         exec_context["operation_id"] = operation_id
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.CAPABILITY_EXECUTION_STARTED,
+                   source_owner="workstation.operational_kernel", task_id=task_id,
+                   run_id=run_id, operation_id=operation_id, capability_id=cap.id,
+                   capability_version=cap.version, route=cap.route, status="started",
+                   dedupe_key=f"capability-start:{operation_id}",
+                   payload={"learned": cap.provenance.get('source') == 'experience_compiler',
+                            "composite": cap.route == "composite"})
 
         learned = cap.provenance.get('source') == 'experience_compiler'
         if learned and cap.lifecycle.value != 'promoted' and not exec_context.get('learning_replay'):
@@ -835,6 +843,16 @@ class OperationalKernel:
                 self.ora_metrics.record_verification(verification_result)
             except Exception:
                 pass
+            emit_event(TelemetryEventType.VERIFICATION_COMPLETED,
+                       source_owner="workstation.verification", task_id=task_id,
+                       run_id=run_id, operation_id=operation_id, capability_id=cap.id,
+                       capability_version=cap.version, route=cap.route,
+                       status=verification_result.status.value,
+                       reason_code=verification_result.reason,
+                       evidence_refs=tuple(verification_result.evidence_refs),
+                       dedupe_key=f"verification:{operation_id}:{verification_result.verifier_fingerprint}",
+                       payload={"verifier_fingerprint": verification_result.verifier_fingerprint,
+                                "predicate_coverage_count": len(verification_result.covered_predicates)})
 
             # 5. Record validation evidence & savings
             evidence = {
@@ -916,6 +934,13 @@ class OperationalKernel:
             except Exception:
                 pass
 
+            emit_event(TelemetryEventType.CAPABILITY_EXECUTION_FINISHED,
+                       source_owner="workstation.operational_kernel", task_id=task_id,
+                       run_id=run_id, operation_id=operation_id, capability_id=cap.id,
+                       capability_version=cap.version, route=cap.route,
+                       status="VERIFIED" if verification_result.verified else "ACKNOWLEDGED",
+                       provider_calls=0 if learned else None,
+                       dedupe_key=f"capability-finish:{operation_id}")
             return {
                 # Compatibility boundary: older kernel callers consume success
                 # as a physical execution ACK.  Terminal owners must consume

@@ -326,9 +326,13 @@ def _notify_aux_progress() -> None:
     _tick_hook(_aux_progress, "progress")
 
 
-def _notify_aux_dispatch() -> None:
+def _notify_aux_dispatch(purpose: str | None = None) -> None:
     """Record an actual provider dispatch without claiming response progress."""
     _tick_hook(_aux_dispatch, "dispatch")
+    from agent.runtime_events import notify_runtime_event
+    notify_runtime_event("provider_called", {
+        "purpose": str(purpose or "other_aux"), "status": "dispatched", "auxiliary": True,
+    })
 
 
 def _notify_aux_timing_response() -> None:
@@ -6912,7 +6916,7 @@ def _create_with_progress_once(
     error is surfaced to the normal recovery chains instead.
     """
     kwargs = bypass_chat_sdk_request_transform(kwargs, client)
-    _notify_aux_dispatch()
+    _notify_aux_dispatch(task)
     # Dispatch alone is not forward progress: a 401/retry/fallback dispatch must not
     # reset the compression inactivity fence, or a zero-output attempt runs to the
     # total ceiling instead of idling out (#114938). Progress ticks only for
@@ -6935,7 +6939,7 @@ def _create_with_progress_once(
         # request reproduces the real error for the except-chains.
         logger.debug("Auxiliary %s: streamed request failed (%s); retrying non-streaming",
                      task or "call", exc)
-        _notify_aux_dispatch()
+        _notify_aux_dispatch(task)
         response = client.chat.completions.create(**kwargs)
         _notify_aux_provider_response()
         return response
@@ -7141,7 +7145,7 @@ async def _acreate_with_progress(
     """Async :func:`_create_with_progress`: stream + re-aggregate (ticking the hook per substantive
     chunk) when a progress hook is active or the provider is stream-only; plain create otherwise."""
     kwargs = bypass_chat_sdk_request_transform(kwargs, client)
-    _notify_aux_dispatch()
+    _notify_aux_dispatch(task)
     # Same contract as the sync twin (#114938): dispatch alone is not progress.
     if (not _aux_progress_active() and not force_stream) or _async_client_streams_internally(client):
         response = await client.chat.completions.create(**kwargs)
@@ -7160,7 +7164,7 @@ async def _acreate_with_progress(
             raise
         logger.debug("Auxiliary %s: streamed async request failed (%s); retrying non-streaming",
                      task or "call", exc)
-        _notify_aux_dispatch()
+        _notify_aux_dispatch(task)
         response = await client.chat.completions.create(**kwargs)
         _notify_aux_provider_response()
         return response

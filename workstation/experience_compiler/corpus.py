@@ -103,6 +103,16 @@ class ExperienceCorpus:
         journal.record(__import__('workstation.contracts', fromlist=['ExecutionEventKind']).ExecutionEventKind.ACTION,
             'accepted transition projected; promotion admission remains independent',
             metadata={'transition_ref': ref, 'run_id': outcome.run_id})
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.EXPERIENCE_ACCEPTED,
+                   source_owner="workstation.experience_corpus",
+                   task_id=outcome.task_id, run_id=str(outcome.run_id),
+                   operation_id=revised.provenance.operation_id,
+                   route=revised.operation.canonical_route, status="VERIFIED",
+                   evidence_refs=(ref,),
+                   dedupe_key=f"experience:{outcome.task_id}:{outcome.run_id}:{revised.provenance.operation_id}",
+                   payload={"operation_family": revised.operation.operation_family,
+                            "target_family": revised.operation.target_family})
         return ref
 
     def query(self, **dimensions):

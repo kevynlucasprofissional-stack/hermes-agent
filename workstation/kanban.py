@@ -401,6 +401,14 @@ class WorkstationKanbanBridge:
                       "outcome": outcome.to_dict(), "acceptance_approved": True,
                       "verification_event_ids": metadata["workstation"].get("verification_event_ids", [])},
         )
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.OUTCOME_ACCEPTED,
+                   source_owner="workstation.kanban", session_id=report.session_id,
+                   task_id=task_id, run_id=str(target_run_id) if target_run_id is not None else None,
+                   operation_id=report.operation_id, status=outcome.status.value,
+                   evidence_refs=tuple(report.evidence),
+                   dedupe_key=f"outcome:{task_id}:{target_run_id}",
+                   payload={"verified": outcome.status == OutcomeStatus.VERIFIED_COMPLETED})
         from workstation.experience_compiler.corpus import ExperienceCorpus
         from workstation.experience_compiler.compiler import ExperienceCompiler
         from workstation.experience_compiler.lifecycle import ExperienceValidationPromotionCoordinator

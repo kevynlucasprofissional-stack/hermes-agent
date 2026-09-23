@@ -2,7 +2,11 @@
 
 Date: 2026-09-23
 
-Status: **ARCHITECTURE ACCEPTED / PHASE 1 QUEUED AFTER H-080B.2 CAUSAL HARDENING**
+Status: **PHASE 1/2 IMPLEMENTED AND LOCALLY QUALIFIED / EXACT-HEAD CI OPEN**
+
+Local evidence: telemetry 5/5; focused integration 31/31; affected owners
+123/123; real product-owned H-080B funnel 1/1; strict seam audit zero
+unclassified seams. Dashboard, Phase 3/4 and Laya remain deferred.
 
 Canonical architecture:
 [../OPERATIONAL_TELEMETRY.md](../OPERATIONAL_TELEMETRY.md).

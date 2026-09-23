@@ -1,5 +1,11 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 Phase 1/2 measurement implementation
+
+The compiled path emits non-authoritative events for execution, dispatch ACK,
+canonical verification, accepted outcome and Experience promotion. The minimal
+projector reuses `ORAMetrics` and `VOLCMetrics`; missing values remain `None`.
+
 ## 2026-09-23 Operational Telemetry — measurement contract for progressive compilation
 
 Progressive Operational Compilation is not complete as a product thesis merely because a candidate can be compiled and reused in a fixture. It must become empirically measurable over time.

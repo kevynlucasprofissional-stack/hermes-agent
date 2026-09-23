@@ -117,6 +117,11 @@ class CertifiedDispatcher:
         # Transition to DISPATCHED before executing
         record.status = DispatchStatus.DISPATCHED
         record.dispatched_at = utc_now()
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.MUTATION_DISPATCHED,
+                   source_owner="workstation.certified_dispatcher",
+                   run_id=run_id, operation_id=op_id, capability_id=record.capability_id,
+                   status=record.status.value, dedupe_key=f"dispatch:{op_id}")
 
         # Execute using kernel or dispatch function
         try:
@@ -130,6 +135,10 @@ class CertifiedDispatcher:
 
             record.status = DispatchStatus.ACKNOWLEDGED
             record.acknowledged_at = utc_now()
+            emit_event(TelemetryEventType.MUTATION_ACKNOWLEDGED,
+                       source_owner="workstation.certified_dispatcher",
+                       run_id=run_id, operation_id=op_id, capability_id=record.capability_id,
+                       status=record.status.value, dedupe_key=f"ack:{op_id}")
 
             # Verification phase: cannot advance to COMMITTED without verification
             verification_result: VerificationResult | None = None
@@ -194,6 +203,13 @@ class CertifiedDispatcher:
             record.verifier_status = "verified"
 
             record.status = DispatchStatus.COMMITTED
+            emit_event(TelemetryEventType.VERIFICATION_COMPLETED,
+                       source_owner="workstation.verification", run_id=run_id,
+                       operation_id=op_id, capability_id=record.capability_id,
+                       status=verification_result.status.value,
+                       reason_code=verification_result.reason,
+                       evidence_refs=tuple(verification_result.evidence_refs),
+                       dedupe_key=f"verification:{op_id}:{verification_result.verifier_fingerprint}")
             return {"success": True, "result": result, "verification_result": verification_result.to_dict(), "dispatch_record": record.to_dict()}
         except Exception as exc:
             record.status = DispatchStatus.UNCERTAIN

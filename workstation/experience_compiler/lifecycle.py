@@ -149,6 +149,18 @@ class ExperienceValidationPromotionCoordinator:
                 "replay_evidence_refs": [],
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             })
+            from workstation.telemetry import TelemetryEventType, emit_event
+            lineage = {
+                "family_id": candidate.family_id,
+                "compatibility_fingerprint": candidate.compatibility_fingerprint,
+                "source_run_ids_count": len(set(m.get("run_ids", []))),
+            }
+            emit_event(TelemetryEventType.CAPABILITY_CANDIDATE_CREATED,
+                       source_owner="workstation.experience_lifecycle",
+                       task_id=task_id, run_id=run_id, capability_id=candidate.id,
+                       capability_version=candidate.version, route=candidate.route,
+                       status=lifecycle_info.get("state", "CANDIDATE"),
+                       dedupe_key=f"candidate:{candidate.id}:{candidate.version}", payload=lineage)
 
             if candidate.lifecycle == CapabilityLifecycle.PROMOTED or lifecycle_info.get("state") == "PROMOTED":
                 lifecycle_info["state"] = "PROMOTED"
@@ -271,6 +283,13 @@ class ExperienceValidationPromotionCoordinator:
                 ]
                 lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
                 self.registry.register(candidate)
+                emit_event(TelemetryEventType.VERIFIER_VALIDATION_COMPLETED,
+                           source_owner="workstation.experience_lifecycle",
+                           task_id=task_id, run_id=run_id, capability_id=candidate.id,
+                           capability_version=candidate.version, route=candidate.route,
+                           status="VERIFIED", evidence_refs=tuple(lifecycle_info["validation_evidence_refs"]),
+                           dedupe_key=f"verifier-validation:{candidate.id}:{candidate.version}",
+                           payload=lineage)
                 if journal:
                     from workstation.contracts import ExecutionEventKind
                     journal.record(ExecutionEventKind.ACTION, 'candidate verifier validated',
@@ -326,6 +345,13 @@ class ExperienceValidationPromotionCoordinator:
                 ]
                 lifecycle_info["updated_at"] = datetime.now(timezone.utc).isoformat()
                 self.registry.register(candidate)
+                emit_event(TelemetryEventType.CONTROLLED_REPLAY_COMPLETED,
+                           source_owner="workstation.experience_lifecycle",
+                           task_id=task_id, run_id=run_id, capability_id=candidate.id,
+                           capability_version=candidate.version, route=candidate.route,
+                           status="VERIFIED", evidence_refs=tuple(lifecycle_info["replay_evidence_refs"]),
+                           dedupe_key=f"controlled-replay:{candidate.id}:{candidate.version}",
+                           payload=lineage)
                 if journal:
                     from workstation.contracts import ExecutionEventKind
                     journal.record(ExecutionEventKind.ACTION, 'candidate controlled replay validated',

@@ -122,5 +122,26 @@
     ],
     "reconciliation_notes": "Closes SEAM-BROWSER-DOMAIN by moving projection to Workstation",
     "sunset_condition": "Upstream adopts equivalent projection boundary"
+  },
+  {
+    "id": "UPINT-005", "upstream_path": "agent/runtime_events.py", "symbols_or_region": ["* (new file)"],
+    "intervention_type": "ADD", "introduced_at": "2026-09-23", "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057", "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
+    "reason": "Add a generic content-free observer registry for optional runtime analytics", "previous_behavior": "No generic provider runtime observation boundary", "new_behavior": "Registered observers receive bounded structural provider dispatch metadata and cannot affect execution",
+    "hermes_work_dependencies": ["workstation.integrations.hermes.telemetry"], "fallback": {"mode": "legacy", "behavior": "Empty observer list is a no-op", "conditions": "When Workstation adapter is not installed"},
+    "seam_ids": ["SEAM-RUNTIME-TELEMETRY"], "tests": ["workstation/tests/test_operational_telemetry.py"], "reconciliation_notes": "Generic registry imports no Workstation code", "sunset_condition": "Upstream adopts equivalent runtime event observers"
+  },
+  {
+    "id": "UPINT-006", "upstream_path": "agent/turn_api_call.py", "symbols_or_region": ["perform_api_call"],
+    "intervention_type": "MODIFY", "introduced_at": "2026-09-23", "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057", "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
+    "reason": "Observe main provider dispatch status and duration without content", "previous_behavior": "Provider dispatch had no generic structural observer notification", "new_behavior": "One success/error notification is emitted per actual main provider call",
+    "hermes_work_dependencies": ["workstation.integrations.hermes.telemetry"], "fallback": {"mode": "legacy", "behavior": "Notification is a no-op with no observers", "conditions": "When Workstation adapter is not installed"},
+    "seam_ids": ["SEAM-RUNTIME-TELEMETRY"], "tests": ["workstation/tests/test_operational_telemetry.py"], "reconciliation_notes": "No request or response content crosses the seam", "sunset_condition": "Upstream adopts equivalent runtime event observers"
+  },
+  {
+    "id": "UPINT-007", "upstream_path": "agent/auxiliary_client.py", "symbols_or_region": ["_notify_aux_dispatch"],
+    "intervention_type": "MODIFY", "introduced_at": "2026-09-23", "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057", "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
+    "reason": "Reuse the existing auxiliary dispatch hook to distinguish auxiliary provider use", "previous_behavior": "Auxiliary dispatch hook only notified a thread-local liveness counter", "new_behavior": "The same dispatch point also publishes content-free purpose metadata",
+    "hermes_work_dependencies": ["workstation.integrations.hermes.telemetry"], "fallback": {"mode": "legacy", "behavior": "Notification is a no-op with no observers", "conditions": "When Workstation adapter is not installed"},
+    "seam_ids": ["SEAM-RUNTIME-TELEMETRY"], "tests": ["workstation/tests/test_operational_telemetry.py"], "reconciliation_notes": "Existing dispatch ownership and progress hooks remain unchanged", "sunset_condition": "Upstream adopts equivalent runtime event observers"
   }
 ]
