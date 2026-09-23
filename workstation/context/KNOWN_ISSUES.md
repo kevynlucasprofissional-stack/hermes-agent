@@ -12,15 +12,15 @@ Resolved since the prior audit:
 - `SEAM-OPERATIONAL-RESOLUTION` is registered;
 - Browser ownership/authority remains healthy.
 
-Open H-080A blockers:
-- E001 injects `EXTERNAL_REVERSIBLE` by monkeypatching `TaskCompiler.execute`; production authority propagation is not proven;
-- E001 replaces `workstation_durable_dispatch` with a recorder; actual tool-scope/guardrail/raw-result execution is not proven end to end;
-- E001 does not directly assert every claimed causal marker (`EXECUTE`, certificate, `VERIFIED`, accepted, `COMMITTED`);
-- E003V must directly assert failed/inconclusive verification cannot produce a COMMITTED success record;
-- E001 pre-seeds trusted success `verification_evidence` before execution; release evidence must come from a real post-effect observer/readback and must not manufacture `read_after_write`, trust or coverage;
-- `test_zz_scratch_route_fixture.py` remains and must be absorbed/renamed;
-- verified deterministic metrics are not yet a first-class truthful runtime measure;
-- exact-head PR/CI evidence is absent.
+H-080A blockers closed locally 2026-09-23 (exact-head CI pending):
+- production authority bridge (`effect_authority.py`) supplies a bounded LOCAL_MUTATION ceiling; TaskCompiler monkeypatch removed;
+- E001D proves the real `workstation_durable_dispatch` → `execute_tool_calls_sequential` → real `todo_list` path exactly once;
+- E001F asserts EXECUTE/certificate/VERIFIED/accepted/COMMITTED/provider-0 directly from control-plane results plus real filesystem state;
+- E003VF proves a real content mismatch yields FAILED, no COMMITTED success, no blind retry;
+- no pre-seeded success evidence remains; the kernel's real `fs_read` observer produces post-effect evidence;
+- `test_zz_scratch_route_fixture.py` absorbed into the normal-turn suites and removed;
+- generic counters now distinguish executed/satisfied/wait/handoff; unknown denominators remain `None`;
+- exact-head PR/CI evidence pending.
 
 Closure requires:
 - production trusted ingress supplies a bounded `AuthorityScope` through a real owner; raw prose and `CREATE_WORK` alone never expand effect authority;
