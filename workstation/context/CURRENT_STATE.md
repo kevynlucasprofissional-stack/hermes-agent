@@ -1,54 +1,62 @@
 # Current State
 
-## 2026-09-22 H-080 Published Implementation Audit — FEATURE BRANCH REAL / PROMOTION BLOCKED
+## 2026-09-22 H-080 Production-Path Audit — H-080A OPEN / H-080B OPEN
 
-Canonical audit:
-`workstation/context/engineering-journal/h080-branch-quality-audit-2026-09-22.md`.
+Canonical current audit:
+`workstation/context/engineering-journal/h080-production-path-audit-2026-09-22.md`.
 
-Repository truth:
-- shared main at audit start: `bdd25751088427b83482331aa74a82d24d789cf4`;
+Repository truth at audit:
+- shared main: `df2222caf843479b5315a0aaa8d0a1df32735f01`;
 - implementation branch: `integration/upstream-20260922-71a2fe39-h0793`;
-- audited branch head: `9c217afbc84e89acb32f83043f800ad6df9eb55d`;
+- audited branch head: `89a745d2ee0346c7030134c10b24071ce9e234f1`;
+- branch relation: 24 ahead / 0 behind at the audit snapshot;
 - frozen upstream pin: `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`;
 - true upstream merge: `a8dfcd21f5c641d01a5989e223a987687018db7f`;
-- rejected attempt `471e9b5` remains reverted/inactive;
-- branch is published on GitHub, but at audit time had no open PR and no GitHub Actions/status evidence on its head.
+- latest upstream observed: `d3b25b52ad1318c526bdb259b600eeca3d5f38e6`;
+- 23 upstream commits since the frozen pin; no overlap in H-080 upstream intervention owners at the observed snapshot;
+- no PR/exact-head CI evidence yet.
 
 Classification:
 ```text
-GENERIC PRE-REASONING BOUNDARY: IMPLEMENTED / DIRECTION ACCEPTED
-DIRECT GENERIC->WORKSTATION COUPLING: AVOIDED
-ESTABLISHED TYPED INTENT: IMPLEMENTED
-RAW-PROSE INTENT SYNTHESIS: ABSENT
-UNCERTAIN-MUTATION ROUTER INPUT: IMPLEMENTED
-BROWSER DOMAIN PROJECTION OWNERSHIP: IMPROVED / ACCEPTED
-NORMAL-TURN SATISFIED BYPASS: PROVEN IN TEST
-NORMAL-TURN EXECUTE BYPASS: NOT YET PROVEN
-VERIFIER-FAILURE E2E: MISSING (TEST IS PASS)
-EXPERIENCE FEEDBACK LOOP: OPEN
-SEAM-OPERATIONAL-RESOLUTION: REFERENCED BUT NOT REGISTERED
-UPSTREAM INTERVENTION REGISTRY: PRESENT BUT PROVENANCE/SCOPE INCORRECT
-EXACT-HEAD CI: ABSENT AT AUDITED HEAD
-PROMOTION: BLOCKED
+GENERIC PRE-REASONING BOUNDARY: IMPLEMENTED / ACCEPTED
+GENERIC->WORKSTATION DIRECT COUPLING: ABSENT
+TRUSTED ESTABLISHED INTENT: IMPLEMENTED
+E001 SATISFIED FALSE-POSITIVE: FIXED
+E003V EMPTY TEST: FIXED
+UPSTREAM INTERVENTION REGISTRY: CORRECTED
+SEAM-OPERATIONAL-RESOLUTION: REGISTERED
+BROWSER OWNERSHIP/AUTHORITY: ACCEPTED
+
+PRODUCTION AUTHORITY PROPAGATION: NOT YET PROVEN
+REAL WORKSTATION_DURABLE_DISPATCH E2E: NOT YET PROVEN
+DIRECT EXECUTE/CERTIFICATE/VERIFIED/COMMITTED ASSERTS: INCOMPLETE
+SCRATCH TEST ARTIFACT: STILL PRESENT
+RUNTIME VERIFIED-DETERMINISTIC METRICS: PARTIAL
+H-080A: PROMOTION BLOCKED
+H-080B EXPERIENCE LOOP: OPEN
+EXACT-HEAD CI: ABSENT
 ```
 
-Critical correction:
-`test_known_promoted_capability_bypasses_llm` currently begins with a semantic state that already satisfies its goal. That test proves `SATISFIED -> provider calls 0`, not `promoted capability EXECUTE -> exact-once dispatch -> VERIFIED/accepted -> COMMITTED -> provider calls 0`.
+Critical production-path gap:
+the mutable normal-turn E2E currently succeeds by monkeypatching `TaskCompiler.execute` to inject `EXTERNAL_REVERSIBLE` authority and by replacing `workstation_durable_dispatch` with a recorder. That is a strong control-plane proof, but not yet proof that production trusted ingress naturally grants/narrows the required `AuthorityScope` and reaches the real Hermes tool executor exactly once.
 
-Required release proof remains:
+Required H-080A release proof:
 ```text
-initial goal false
--> normal Hermes turn
--> promoted capability selected
--> EXECUTE
--> physical dispatch exactly once
+trusted authenticated ingress
+-> canonical production AuthorityScope
+-> established OperationIntent
+-> CapabilityRouter
+-> EXECUTE + valid certificate
+-> real workstation_durable_dispatch
+-> actual admitted tool / guardrails / raw-result path
+-> physical effect exactly once
 -> canonical VERIFIED + accepted
--> COMMITTED
+-> dispatch COMMITTED
 -> canonical finalizer
 -> provider calls = 0
 ```
 
-The branch should be repaired and qualified, not reverted or redesigned from scratch.
+H-080B remains separately open for novel execution -> experience capture -> compile/replay/promote -> future normal-turn deterministic reuse.
 
 ## 2026-09-21 H-079.2 Upstream Re-adoption + Dogfood Closure — LOCAL GREEN / EXACT-HEAD CI PENDING
 
