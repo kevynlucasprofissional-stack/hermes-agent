@@ -45,7 +45,9 @@ trusted production ingress
 -> provider calls = 0
 ```
 
-That distinction defines **H-080A**. H-080A closes only after the production authority and durable-dispatch path are proven without replacing those owners in the release E2E.
+A third gap also remains: the current E001 preloads trusted `verification_evidence` before execution. Since the kernel consumes supplied evidence directly, H-080A also requires genuine post-effect readback rather than synthetic pre-seeded success evidence.
+
+That distinction defines **H-080A**. H-080A closes only after production authority, real dispatch parity where applicable, and real post-effect verification are proven without replacing those owners in the release E2E.
 
 The broader Experience closure is **H-080B** and remains open:
 
