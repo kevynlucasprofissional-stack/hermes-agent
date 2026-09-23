@@ -1,5 +1,22 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-09-23 dogfood target — external code-to-code research without context explosion
+
+The external-reference audit is a future **Experience Compiler dogfood target**, not a new compiler feature by itself.
+
+The useful test is whether repeated research operations can become reusable, verified operational capabilities without turning a whole repository into prompt context. Candidate reusable procedures include repository/ref pinning, tree/symbol discovery, bounded file-range extraction, test/fixture localization, provenance capture and repeated evidence-table construction.
+
+Promotion rules remain unchanged:
+- a successful research trace proposes a candidate; it does not prove the candidate generalizes;
+- repo-specific paths/identifiers are parameters or validity constraints, not universal skill knowledge;
+- learned exploration shortcuts must fail closed on ref/schema/layout drift and wake adaptive reasoning;
+- the compiler must preserve source/ref/range provenance so token reduction never erases auditability;
+- token savings are measured only where provider accounting exists.
+
+The audit must also test the compiler against **negative transfer**: a procedure that works on one repo family but degrades evidence quality or misses ownership on another must be narrowed/demoted/quarantined rather than generalized by frequency.
+
+Canonical dogfood protocol: [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
+
 ## H-076 integration — learn transformation and verifier separately (2026-09-19)
 
 H-076 now preserves **how to verify again**: observer/source/extractor, relation and
