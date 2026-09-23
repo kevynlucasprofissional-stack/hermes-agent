@@ -1,5 +1,34 @@
 # Workstation Known Issues
 
+## KI-021 — H-080B production capture does not yet become verified learning capital [OPEN]
+
+Real native-browser product sessions already emit `TransitionSample`/trace artifacts and adaptive-observation journal events, but observed samples remain `uncertain`, `INCONCLUSIVE`, evidence strength 0. The existing conservative gates therefore reject them before real compilation/promotion.
+
+This is **not** a reason to relax `ExperienceCorpus.accept_run`, semantic-verification or cross-run/causal promotion policy.
+
+Required correction:
+- provide truthful post-effect semantic readback for a safe product operation;
+- carry that evidence through canonical acceptance and Experience lineage;
+- prove the first real accepted verified sample;
+- satisfy existing multi-run/replay/verifier promotion gates;
+- prove a future equivalent normal turn routes the promoted learned `OperationalCapability` before the provider and ends VERIFIED/COMMITTED with provider calls 0.
+
+Preferred first vertical domain: native Workstation browser local state (for example, open a known host and verify authoritative Browser controller state).
+
+Canonical:
+[engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+## KI-020 — H-080A production path implementation is proven locally but exact-head CI is red [OPEN — CI]
+
+PR #45 contains the production authority, real dispatcher parity, real post-effect readback and direct causal asserts that the previous KI-020 lacked.
+
+Current remaining issue is qualification truth, not a request to redesign the H-080A control plane:
+- Workstation CI currently has a stale `MockRouterWait.route` test double that does not accept `runtime_state`;
+- Workstation Browser Windows is red in broader platform/release gates (POSIX-on-Windows fixtures, release smoke timeout, packaged backend connection timeout);
+- focused H-080/native-browser evidence is green inside those runs, but aggregate exact-head promotion remains blocked until required gates are green or correctly platform-scoped by policy.
+
+Do not merge merely because the H-080-focused tests pass.
+
 ## KI-020 — H-080 production path is still test-assisted [OPEN — AUTHORITY + DURABLE DISPATCH + EXACT-HEAD CI]
 
 Implementation branch at latest audit:
