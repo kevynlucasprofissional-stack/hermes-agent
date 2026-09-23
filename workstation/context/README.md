@@ -37,11 +37,12 @@ Before changing Workstation code, read these documents in order:
 10. [`CANONICAL_EXECUTION_RELIABILITY_GATE.md`](CANONICAL_EXECUTION_RELIABILITY_GATE.md) — causal reliability invariants that all active lanes must preserve.
 11. [`FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md`](FORENSIC_RELIABILITY_SYNTHESIS_2026-09-17.md) — integrated evidence map across the 2026-09-17 investigations.
 12. [`MAINLINE_CONSOLIDATION.md`](MAINLINE_CONSOLIDATION.md) — pre-1.5 gate result, branch/PR disposition ledger and recurring consolidation rule.
-13. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions, including D-018/D-019/D-020/D-021/D-022/D-023/D-024/D-025/D-026/D-027 for Capability Runtime, Experience Compiler, verified Control Plane, operational-admission closure, hierarchical operational knowledge, run-local in-flight operationalization and typed falsifiable verification.
+13. [`DECISIONS.md`](DECISIONS.md) — settled downstream decisions through D-032; the current lineage covers Capability Runtime, Experience Compiler, verified Control Plane, external validity, upstream-first integration and the rule that external references are an evidence backlog rather than architecture authority.
 14. [`CONSTRAINTS.md`](CONSTRAINTS.md) — non-negotiable security/maintenance boundaries.
 15. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — implemented Workstation runtime architecture and distribution model.
 16. [`../UPSTREAM.md`](../UPSTREAM.md) and [`../UPSTREAM_DELTA.md`](../UPSTREAM_DELTA.md) — upstream base, synchronization model and tracked downstream delta.
-17. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — ownership/use of internal/external components.
+17. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — canonical external-reference intake/triage matrix: projects, benchmarks, reuse posture and code-to-code audit backlog.
+   - Audit protocol: [`REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md`](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md) — readiness-gated self-improvement dogfood, evidence vocabulary, project waves and comparative acceptance.
 18. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Browser Operational Admission / Primitive Closure remains an active corrective P0 after the PR #29 post-merge audit; CP0–CP9 and Experience Compiler EC0–EC8 are implemented baselines.
 19. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
 20. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
