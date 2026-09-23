@@ -37,6 +37,7 @@ def workstation_completion_admission(
         repeatability = state.get("_work_repeatability_hint", False)
 
         if isinstance(turn_result, dict):
+            turn_result["_adaptive_trace"] = [] if truncated else list(trace)
             turn_result["_adaptive_procedure_steps"] = [] if truncated else candidate_steps(trace)
             turn_result["_adaptive_repeatability_hint"] = repeatability
             turn_result["_adaptive_procedure_compatibility"] = trace_compatibility(trace)
@@ -51,6 +52,7 @@ def workstation_completion_admission(
         finally:
             if isinstance(turn_result, dict):
                 for key in (
+                    "_adaptive_trace",
                     "_adaptive_procedure_steps",
                     "_adaptive_repeatability_hint",
                     "_adaptive_procedure_compatibility",

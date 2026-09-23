@@ -223,6 +223,53 @@ def workstation_browser_task_state_path() -> Path:
     return _workstation_home() / "Runtime" / "browser-tasks.json"
 
 
+def read_native_browser_session_state(task_id: str, session_id: str, run_id: str, expected_url: str) -> dict:
+    """Read Electron's persisted, safe BrowserTask projection after a navigation."""
+    path = _workstation_home() / "Runtime" / "browser-session.json"
+    raw_bytes = path.read_bytes()
+    if len(raw_bytes) > 1_000_000:
+        raise ValueError("BrowserSessionState exceeds readback budget")
+    state = json.loads(raw_bytes)
+    if not isinstance(state, dict) or state.get("version") != 1:
+        raise ValueError("BrowserSessionState version is not admissible")
+    tasks = state.get("browserTasks")
+    if not isinstance(tasks, dict) or tasks.get("version") != 1 or not isinstance(tasks.get("tasks"), list):
+        raise ValueError("BrowserTask projection is invalid")
+    matches = [task for task in tasks["tasks"] if isinstance(task, dict) and task.get("taskId") == task_id]
+    if len(matches) != 1:
+        raise ValueError("BrowserTask identity is missing or ambiguous")
+    task = matches[0]
+    if task.get("sessionHost") != session_id or (task.get("runId") and str(task["runId"]) != str(run_id)):
+        raise ValueError("BrowserTask session or run binding drifted")
+    if task.get("status") not in {"visible", "hidden", "parked"}:
+        raise ValueError("BrowserTask status is invalid")
+    tabs = state.get("tabs")
+    if not isinstance(tabs, list):
+        raise ValueError("BrowserSessionState tabs are invalid")
+    owned = [tab for tab in tabs if isinstance(tab, dict) and tab.get("browserTaskId") == task_id]
+    if len(owned) != 1:
+        raise ValueError("BrowserTask tab identity is missing or ambiguous")
+    tab = owned[0]
+    actual = urlsplit(str(tab.get("safeUrl") or ""))
+    expected = urlsplit(expected_url)
+    if (actual.scheme not in {"http", "https"} or actual.username or actual.password
+            or actual.query or actual.fragment or not actual.hostname
+            or (actual.scheme, actual.hostname, actual.path or "/")
+            != (expected.scheme, expected.hostname, expected.path or "/")):
+        raise ValueError("BrowserTask safe URL does not match the navigation goal")
+    if tab.get("recoveryState") != "live" or tab.get("recoveryReason") is not None:
+        raise ValueError("BrowserTask tab is not live")
+    if not isinstance(state.get("savedAt"), str) or not state["savedAt"]:
+        raise ValueError("BrowserSessionState has no persistence timestamp")
+    return {
+        "task_id": task_id, "session_id": session_id, "run_id": str(run_id),
+        "browser_task_id": task_id, "tab_id": tab.get("id"),
+        "url": tab["safeUrl"], "host": actual.hostname,
+        "page_family": actual.path or "/", "recovery_state": tab["recoveryState"],
+        "browser_task_status": task["status"], "saved_at": state["savedAt"],
+    }
+
+
 def _canonical_browser_task_binding(task_id: Optional[str], session_id: Optional[str]) -> str:
     """Return bound/unbound/unknown/conflict from Electron's BrowserTask projection."""
     if not task_id:
