@@ -9,7 +9,7 @@
     "intervention_type": "MODIFY",
     "introduced_at": "2026-09-22",
     "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
+    "downstream_commit_sha": "9c217afbc84e89acb32f83043f800ad6df9eb55d",
     "reason": "Add pre-reasoning operational resolution boundary between preflight gate and provider call",
     "previous_behavior": "Turn loop proceeded directly from preflight to provider call",
     "new_behavior": "Operational resolution providers consulted before provider call; terminal outcomes close turn without reasoning",
@@ -40,7 +40,7 @@
     "intervention_type": "ADD",
     "introduced_at": "2026-09-22",
     "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
+    "downstream_commit_sha": "9c217afbc84e89acb32f83043f800ad6df9eb55d",
     "reason": "Generic operational resolution harness for pre-reasoning step resolution",
     "previous_behavior": "No pre-reasoning resolution mechanism existed",
     "new_behavior": "Provider registry, context, metrics, and resolution function for terminal outcomes",
@@ -70,7 +70,7 @@
     "intervention_type": "ADD",
     "introduced_at": "2026-09-22",
     "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
+    "downstream_commit_sha": "9c217afbc84e89acb32f83043f800ad6df9eb55d",
     "reason": "Turn-loop phase integrating operational resolution boundary",
     "previous_behavior": "No operational resolution phase in turn loop",
     "new_behavior": "resolve_operational_step_phase calls providers, appends terminal response, refunds iteration",
@@ -100,7 +100,7 @@
     "intervention_type": "REMOVE",
     "introduced_at": "2026-09-22",
     "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
+    "downstream_commit_sha": "9c217afbc84e89acb32f83043f800ad6df9eb55d",
     "reason": "Move Workstation-specific browser result projection to Workstation ownership",
     "previous_behavior": "Generic browser_tool contained Workstation domain logic for extract_items",
     "new_behavior": "Projection moved to workstation.browser_projection; controller calls it",
@@ -122,190 +122,5 @@
     ],
     "reconciliation_notes": "Closes SEAM-BROWSER-DOMAIN by moving projection to Workstation",
     "sunset_condition": "Upstream adopts equivalent projection boundary"
-  },
-  {
-    "id": "UPINT-005",
-    "upstream_path": "workstation/control_plane/router.py",
-    "symbols_or_region": [
-      "CapabilityRouter.route uncertain mutation check"
-    ],
-    "intervention_type": "MODIFY",
-    "introduced_at": "2026-09-22",
-    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
-    "reason": "Name uncertain mutations even when target cannot be compared; refuse dispatch on silence",
-    "previous_behavior": "Uncertain mutations with uncomparable targets were not explicitly named",
-    "new_behavior": "All uncertain mutations named; router refuses dispatch on any unresolved mutation",
-    "hermes_work_dependencies": [
-      "workstation.integrations.hermes.operational_resolution"
-    ],
-    "fallback": {
-      "mode": "legacy",
-      "behavior": "Original mutation naming logic",
-      "conditions": "If runtime_state not provided"
-    },
-    "seam_ids": [
-      "SEAM-UNCERTAIN-MUTATION"
-    ],
-    "tests": [
-      "workstation/tests/test_operational_resolution_provider.py::test_an_effect_that_crossed_io_unproved_stops_the_boundary_before_dispatch"
-    ],
-    "reconciliation_notes": "Router owns reconciliation gating; boundary passes runtime_state",
-    "sunset_condition": "Upstream adopts equivalent uncertain mutation handling"
-  },
-  {
-    "id": "UPINT-006",
-    "upstream_path": "workstation/durable_tasks.py",
-    "symbols_or_region": [
-      "outstanding_dispatch_checkpoints",
-      "DurableTaskStore.outstanding_uncertain_mutations"
-    ],
-    "intervention_type": "ADD",
-    "introduced_at": "2026-09-22",
-    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
-    "reason": "Canonical definition of uncertain mutations for reconciliation gating",
-    "previous_behavior": "Uncertain mutation check inline in resume logic only",
-    "new_behavior": "Reusable functions for boundary, router, and resume guard",
-    "hermes_work_dependencies": [
-      "workstation.integrations.hermes.operational_resolution",
-      "workstation.control_plane.router"
-    ],
-    "fallback": {
-      "mode": "legacy",
-      "behavior": "Inline check in resume only",
-      "conditions": "If new functions not called"
-    },
-    "seam_ids": [
-      "SEAM-UNCERTAIN-MUTATION"
-    ],
-    "tests": [
-      "workstation/tests/test_operational_resolution_provider.py::test_an_effect_that_crossed_io_unproved_stops_the_boundary_before_dispatch"
-    ],
-    "reconciliation_notes": "Single source of truth for uncertain mutation detection",
-    "sunset_condition": "Upstream adopts equivalent canonical definition"
-  },
-  {
-    "id": "UPINT-007",
-    "upstream_path": "workstation/integrations/hermes/adapter.py",
-    "symbols_or_region": [
-      "install_workstation_adapter"
-    ],
-    "intervention_type": "MODIFY",
-    "introduced_at": "2026-09-22",
-    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
-    "reason": "Register operational resolution provider in Workstation adapter",
-    "previous_behavior": "Adapter registered 10 providers; operational resolution not included",
-    "new_behavior": "11th provider: operational resolution",
-    "hermes_work_dependencies": [
-      "workstation.integrations.hermes.operational_resolution"
-    ],
-    "fallback": {
-      "mode": "legacy",
-      "behavior": "No operational resolution provider registered",
-      "conditions": "When Workstation adapter not installed"
-    },
-    "seam_ids": [
-      "SEAM-OPERATIONAL-RESOLUTION"
-    ],
-    "tests": [
-      "workstation/tests/test_adapter_bootstrap.py",
-      "workstation/tests/test_e2e_operational_resolution.py"
-    ],
-    "reconciliation_notes": "Standard adapter registration pattern",
-    "sunset_condition": "Upstream adopts operational resolution boundary"
-  },
-  {
-    "id": "UPINT-008",
-    "upstream_path": "workstation/integrations/hermes/browser_controller.py",
-    "symbols_or_region": [
-      "_process_browser_action_result"
-    ],
-    "intervention_type": "MODIFY",
-    "introduced_at": "2026-09-22",
-    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
-    "reason": "Delegate browser_extract_items projection to Workstation module",
-    "previous_behavior": "Controller called private helper in generic browser_tool",
-    "new_behavior": "Controller calls workstation.browser_projection.process_extracted_items_durably",
-    "hermes_work_dependencies": [
-      "workstation.browser_projection"
-    ],
-    "fallback": {
-      "mode": "conditional",
-      "behavior": "Other actions return raw result unchanged",
-      "conditions": "Only browser_extract_items uses projection"
-    },
-    "seam_ids": [
-      "SEAM-BROWSER-DOMAIN"
-    ],
-    "tests": [
-      "workstation/tests/test_browser_controller_domain_processing.py"
-    ],
-    "reconciliation_notes": "Controller owns transport; projection owns domain logic",
-    "sunset_condition": "Upstream adopts equivalent projection boundary"
-  },
-  {
-    "id": "UPINT-009",
-    "upstream_path": "workstation/integrations/hermes/scoped_execution.py",
-    "symbols_or_region": [
-      "workstation_durable_dispatch",
-      "workstation_scoped_execution"
-    ],
-    "intervention_type": "MODIFY",
-    "introduced_at": "2026-09-22",
-    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
-    "reason": "Separate durable dispatch from scoped execution for operational resolution use",
-    "previous_behavior": "Single context manager combined dispatch and execution context",
-    "new_behavior": "workstation_durable_dispatch returns dispatcher; scoped_execution wraps it",
-    "hermes_work_dependencies": [
-      "workstation.integrations.hermes.operational_resolution"
-    ],
-    "fallback": {
-      "mode": "legacy",
-      "behavior": "Scoped execution still works for normal turns",
-      "conditions": "Existing callers unchanged"
-    },
-    "seam_ids": [
-      "SEAM-SCOPED-EXECUTION"
-    ],
-    "tests": [
-      "workstation/tests/test_operational_resolution_provider.py"
-    ],
-    "reconciliation_notes": "Operational resolution needs dispatcher without full turn context",
-    "sunset_condition": "Upstream adopts equivalent separation"
-  },
-  {
-    "id": "UPINT-010",
-    "upstream_path": "workstation/task_compiler.py",
-    "symbols_or_region": [
-      "TaskCompiler._execute_route runtime_state parameter"
-    ],
-    "intervention_type": "MODIFY",
-    "introduced_at": "2026-09-22",
-    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
-    "downstream_commit_sha": "a8dfcd21f5c641d01a5989e223a987687018db7f",
-    "reason": "Pass runtime_state (including uncertain mutations) to router",
-    "previous_behavior": "Router did not receive runtime uncertain mutation state",
-    "new_behavior": "runtime_state passed through to CapabilityRouter.route",
-    "hermes_work_dependencies": [
-      "workstation.control_plane.router",
-      "workstation.integrations.hermes.operational_resolution"
-    ],
-    "fallback": {
-      "mode": "legacy",
-      "behavior": "Router called without runtime_state",
-      "conditions": "If caller does not provide it"
-    },
-    "seam_ids": [
-      "SEAM-UNCERTAIN-MUTATION"
-    ],
-    "tests": [
-      "workstation/tests/test_operational_resolution_provider.py::test_an_effect_that_crossed_io_unproved_stops_the_boundary_before_dispatch"
-    ],
-    "reconciliation_notes": "Router owns reconciliation gating; boundary provides runtime truth",
-    "sunset_condition": "Upstream adopts equivalent runtime state passing"
   }
 ]
