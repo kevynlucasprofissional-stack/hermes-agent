@@ -1,5 +1,52 @@
 # Workstation Known Issues
 
+## KI-023 — Browser learning evidence lacks owner-issued causal receipt and strict learnable run binding [OPEN]
+
+The first H-080B native-browser vertical correlates the adaptive trace with persisted `browser-session.json` state using task/run identity, expected URL and time bounds, then records the trace `operation_id` into verifier evidence. This is strong local readback evidence, but the persisted Browser owner state does not yet prove with an owner-issued receipt which operation produced which state revision.
+
+Promotion-grade target:
+```text
+Electron receives operation_id
+-> executes browser mutation
+-> persists/returns owner receipt:
+   operation_id
+   task_id
+   non-null exact run_id
+   browserTaskId
+   tabId
+   resulting_state_revision
+   safe post-effect state
+-> Experience verifier validates the receipt
+```
+
+Additional hardening:
+- learnable evidence requires non-null exact `run_id`; permissive null run bindings may remain valid for ordinary Browser UX where appropriate;
+- the product rule must not remain `len(trace) == 1`; allow one relevant mutation plus bounded admissible read-only observations, with no second mutation or unresolved uncertainty;
+- Browser-local host/path/live evidence does not prove authentication or remote/server mutation.
+
+Closure evidence must come from a real Electron/native path, preferably against an isolated local server.
+
+## KI-022 — Experience candidate validation/replay/promotion is proven in fixture but not product-owned [OPEN]
+
+H-080B commit `6d8806b868...` proves the existing components can complete:
+candidate -> verifier validation -> negative control -> controlled replay -> policy admission -> promotion -> future provider-0 reuse.
+
+However, the normal product lifecycle still stops after Experience acceptance/mining and candidate creation. The H-080B fixture explicitly calls `validate_verifier()`, `controlled_replay()` and `promote()`.
+
+Required closure:
+- add a small Workstation-owned orchestration lifecycle over the existing compiler/causal/promotion/registry owners;
+- preserve candidate state when validation is unavailable or fails;
+- perform negative controls only in owner-controlled isolated environments or from admissible evidence;
+- persist causal receipts/evidence through ArtifactStore/ExecutionJournal;
+- never create another database, registry, authority plane or executable capability type;
+- prove candidate -> automatic validation/promotion -> future normal-turn provider-0 reuse without test-only lifecycle calls.
+
+This gap defines H-080B.2. Packaged/native proof and dogfood remain H-080B.3.
+
+Canonical:
+[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
+
 ## KI-021 update — first native-browser causal loop proven locally [CI/PRODUCTION QUALIFICATION OPEN]
 
 Commit `6d8806b868` proves a bounded hermetic normal-turn capture, owner persisted readback, canonical verified acceptance, two-run compilation, verifier validation, controlled replay, promotion and typed-intent reuse with no provider call. The old description below records the pre-fix product observation. Open qualification: run the new branch's CI and packaged/native product gate; no live ChatGPT login or fresh prose classifier has been claimed. Laya remains deferred.
