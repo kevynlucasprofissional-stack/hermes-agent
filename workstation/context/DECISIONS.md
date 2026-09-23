@@ -85,7 +85,7 @@ The first implementation of `ExperienceValidationPromotionCoordinator` is retain
    `threading.Lock()` is not a durable lifecycle checkpoint. Use existing `OperationalCapabilityRegistry`, `ArtifactStore` and `ExecutionJournal` to persist attributable validation/replay/promotion progress. Do not create a new database.
 
 5. **Browser owner receipts are promotion-grade proof only when enforced.**
-   Learned Browser transition evidence must validate the owner receipt against expected operation/task/run/BrowserTask/tab/revision/action/safe URL before projecting the trace as VERIFIED_SUCCESS. Receipt presence alone is insufficient.
+   Learned Browser transition evidence must validate the owner receipt against expected operation/task/run/BrowserTask/tab/revision/action/safe URL before projecting the trace as VERIFIED_SUCCESS. Receipt presence alone is insufficient. For compiled learned mutation, the canonical operation ID must be established before implementation-step I/O and propagated into the Browser dispatch; post-effect code may not invent/relabel the operation after the physical action occurred.
 
 6. **Do not reopen accepted architecture.**
    This correction does not authorize replacing `OperationalCapability`, weakening `ExperiencePromotionPolicy`, bypassing `CapabilityRouter`, adding a second browser/runtime, or introducing Laya into authority/verification.
