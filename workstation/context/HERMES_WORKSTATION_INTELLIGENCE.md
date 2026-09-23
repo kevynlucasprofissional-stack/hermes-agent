@@ -51,6 +51,23 @@ A regra continua:
 
 > **Similaridade pode recuperar/rankear/shortlistar; nunca autoriza execução.**
 
+### Descoberta concreta — há duas identidades operacionais potenciais no Browser
+
+No código atual, `tools/browser_workstation.py::_dispatch()` já envia um campo `operation_id`, mas ele é derivado de `call_key(action,args)`. Ao mesmo tempo, `workstation/procedure_trace.py::record_trace()` usa `agent._current_operation_id` ou gera `observation_<uuid>`. O Electron (`BrowserControlRequest`) hoje nem declara/consome o `operation_id` enviado pelo Python.
+
+Portanto, o hardening causal não deve apenas "persistir o operation_id que já existe". Primeiro deve **convergir para uma única identidade de instância operacional**, criada antes do I/O e propagada sem alteração por:
+
+```text
+control plane / tool execution
+-> adaptive trace / provenance
+-> Browser controller payload
+-> Electron effect owner
+-> persisted operation receipt + state revision
+-> verifier evidence
+```
+
+`call_key` pode continuar como fingerprint estrutural/idempotency key, mas não deve ser promovido a identidade causal única porque a mesma ação/argumentos pode ocorrer em runs distintos.
+
 ### Novo owner necessário: coordenação, não nova ontologia
 
 Pode existir um pequeno **Experience Validation/Promotion Coordinator**, mas apenas para orquestrar owners que já existem:
