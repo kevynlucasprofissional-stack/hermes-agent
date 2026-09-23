@@ -1,40 +1,134 @@
 # Current State
 
-## 2026-09-23 H-080B product lifecycle closure & causal browser evidence — HARDENED & LOCALLY VALIDATED
+## 2026-09-23 H-080B post-implementation deep audit — H-080B.2 REOPENED / NARROW CORRECTION REQUIRED
 
-Status: **H-080B.1 & H-080B.2 CLOSED / BROWSER CAUSALITY HARDENED / TRACE SLICE ADMITTED / LIFECYCLE COORDINATOR IMPLEMENTED**
+Status: **H-080A ARCHITECTURE ACCEPTED / H-080B.1 LOCALLY PROVEN WITH CAUSAL HARDENING OPEN / H-080B.2 ORCHESTRATOR IMPLEMENTED BUT PRODUCT CLOSURE OPEN / H-080B.3 OPEN / LAYA DEFERRED**
 
-Key achievements in this cycle:
-1. **Pre-I/O Operation Identity & Electron Browser Owner Receipts:**
-   - Established unique `operation_id` pre-I/O in Python `tools/browser_workstation.py::_dispatch()`, cleanly separated from structural `call_key`.
-   - Propagated `operation_id` and `call_key` into Electron `BrowserControlRequest`.
-   - In `apps/desktop/electron/workstation-browser-runtime.ts` and `workstation-browser-task.ts`, recorded `BrowserOwnerReceipt` (`operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, `revision`, `action`, `safeUrl`, `executedAt`) on mutating actions and persisted with monotonic `task.revision`.
-   - Persisted receipts in `BrowserSessionStateSnapshot.receipts`.
-   - Returned `{ ...snapshot, operation_id, call_key, receipt }` from controller.
-2. **Strict Learnable Run Binding:**
-   - Enforced strict non-null `run_id` matching in `read_native_browser_session_state`.
-   - Validated that `task.get("runId") == str(run_id)` and any attached `lastReceipt` run binding matches without drift.
-   - Returned `revision` and `last_receipt` in the session state readback.
-3. **Semantic Trace Slice Admission:**
-   - In `workstation/kanban.py` (`_verified_native_navigation`), replaced rigid `len(trace) == 1` with semantic slice admission:
-     - Exactly 1 bounded `browser_navigate` mutation with `executed_unverified` outcome.
-     - Optional read-only observations (`browser_snapshot`, `browser_vision`, `browser_get_images`, `browser_read_http`, `browser_extract_items`).
-     - Fails closed on any second mutation or failed step.
-4. **Product Experience Validation/Promotion Coordinator (H-080B.2):**
-   - Implemented `workstation/experience_compiler/lifecycle.py` (`ExperienceValidationPromotionCoordinator`).
-   - Orchestrates: candidate discovery -> eligibility checks -> verifier validation (`validate_verifier` with held-out positive receipt and isolated discriminative negative control) -> controlled causal replay in `SafeEnvironment` -> promotion under `ExperiencePromotionPolicy`.
-   - Idempotent and fail-closed: negative controls run strictly against isolated/simulated state without modifying live user browser tabs.
-5. **Validation & Test Coverage:**
-   - Expanded `workstation/tests/test_h080b_native_browser_experience_loop.py` to 13 passed tests covering:
-     - End-to-end adaptive turn capture.
-     - Multi-run compilation.
-     - Multi-step trace slice admission with read-only observations.
-     - Rejection of second mutations and failed steps.
-     - Strict run binding & receipt verification.
-     - `ExperienceValidationPromotionCoordinator` lifecycle.
-     - Provider Zero execution (0 LLM calls, EXECUTE route, COMMITTED dispatch).
-   - Zero unclassified seams verified with `python workstation/scripts/audit_hermes_seams.py`.
-   - Complete TypeScript typecheck pass: `npm run typecheck --workspace apps/desktop`.
+Audited implementation head:
+`workstation/h080b-native-browser-experience-loop@60d47e8c0426b84b36ea3a5304111f7997bbe8e9`
+
+Base:
+`integration/upstream-20260922-71a2fe39-h0793@72d5e688509078f8f6aaa6ba0b6bdc609cf40ed3`
+
+Observed qualification at the audit:
+- PR #45: Workstation CI green and Workstation Browser Windows green.
+- PR #46: Workstation CI green; Docker green; Workstation Browser Windows still running; Nix queued.
+- PR #46 general `.github/workflows/ci.yaml` run failed before creating any jobs. The workflow file is unchanged from the qualified base, so this is a merge gate to rerun/diagnose, not yet evidence of an H-080B product regression.
+
+### What remains accepted
+
+Do **not** reopen:
+- typed `OperationIntent` -> deterministic `CapabilityRouter` -> `RoutingCertificate` -> `CertifiedDispatcher` -> `OperationalKernel`;
+- `OperationalCapability` as the single learned executable ontology;
+- conservative `ExperiencePromotionPolicy`;
+- semantic trace slicing: one relevant Browser mutation may coexist with bounded read-only observations, while a second mutation or unresolved uncertainty fails closed;
+- provider-zero reuse after a capability has actually passed promotion.
+
+The implementation adds useful machinery that should be preserved:
+- `BrowserOwnerReceipt`, monotonic BrowserTask revision and Python/Electron operation-id transport;
+- strict non-null learnable `run_id` binding;
+- `ExperienceValidationPromotionCoordinator` as an orchestration object;
+- focused tests, typecheck and seam-audit evidence.
+
+### Blocking finding 1 — verifier validation currently self-certifies in the coordinator default path
+
+`workstation/experience_compiler/lifecycle.py` currently falls back to:
+- `_build_positive_validation_receipt()`;
+- `_build_isolated_negative_control()`.
+
+Those helpers persist artifacts and return receipts with `passed=True` without demonstrating that the canonical verifier actually observed and discriminated the positive/negative cases. `validate_verifier_sensitivity()` then consumes those booleans.
+
+This violates the existing invariant:
+
+> expected values or coordinator assertions cannot manufacture verification evidence.
+
+Required correction:
+- production validation receipts must come from real `VerificationEvidence` evaluated through `evaluate_verification()` or an equivalent owner-controlled verifier driver;
+- negative controls must be actually rejected/discriminated in an isolated owner-controlled environment or come from admissible historical evidence;
+- if those receipts are unavailable, return `held_as_candidate / verifier_receipts_unavailable`;
+- never weaken `ExperiencePromotionPolicy` to compensate.
+
+### Blocking finding 2 — H-080B.2 is not wired into the normal product lifecycle
+
+The normal completion path still does approximately:
+
+```text
+ExperienceCorpus.accept_run()
+-> ExperienceCompiler(...).mine()
+-> candidate
+-> journal "experience operational candidate; causal validation required"
+```
+
+No normal runtime caller hands those candidates to `ExperienceValidationPromotionCoordinator`.
+
+Therefore:
+- the coordinator is **implemented and fixture-tested**;
+- it is **not yet product-owned lifecycle**;
+- H-080B.2 must not be marked CLOSED until the normal post-`mine()` path owns validation/replay/promotion.
+
+Required correction:
+- wire candidates into the coordinator from the existing Workstation completion/Experience owner;
+- persist lifecycle evidence/checkpoints through existing `OperationalCapabilityRegistry`, `ArtifactStore` and `ExecutionJournal`;
+- absence of a safe validation environment leaves the candidate pending, not promoted.
+
+### Blocking finding 3 — Browser owner receipt is emitted but not yet enforced as causal proof
+
+`read_native_browser_session_state()` currently enforces exact `run_id` but does not require the current receipt to match the expected:
+- `operationId`;
+- `taskId`;
+- `browserTaskId`;
+- `tabId`;
+- `revision`;
+- `action`;
+- `safeUrl`.
+
+`_verified_native_navigation()` then projects the trace `operation_id` into verifier evidence without first proving that the Electron owner receipt belongs to that same operation.
+
+Promotion-grade readback must therefore accept an expected operation identity (or equivalent typed expectation) and fail closed on any receipt mismatch. The receipt must become proof, not decorative metadata.
+
+### Restart/idempotency requirement
+
+`threading.Lock()` protects only one process. It is not durable lifecycle ownership.
+
+When the coordinator is wired into product runtime, validation/replay/promotion must be restart-safe and logically idempotent using existing persistent owners. Do not create a new database.
+
+Target durable lifecycle semantics:
+
+```text
+CANDIDATE
+-> VALIDATION_PENDING
+-> VERIFIER_VALIDATED
+-> REPLAY_VALIDATED
+-> PROMOTION_ADMITTED
+-> PROMOTED
+```
+
+Exact names may differ; the required property is durable, attributable progress with no duplicate logical promotion or unsafe replay after restart.
+
+### Canonical classification
+
+```text
+H-080A   pre-reasoning deterministic execution             ACCEPTED / DO NOT REDESIGN
+H-080B.1 verified Experience admission -> candidate        LOCALLY PROVEN / CAUSAL RECEIPT HARDENING OPEN
+H-080B.2 automatic validation/replay/promotion lifecycle  ORCHESTRATOR IMPLEMENTED / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN
+H-080B.3 real Electron/package/dogfood qualification      OPEN
+H-081    Laya/System-1                                    DEFERRED
+```
+
+### Required next engineering move
+
+Perform one **bounded corrective H-080B.2 hardening pass**:
+1. enforce owner receipt causal identity end-to-end;
+2. remove self-certified positive/negative validation;
+3. wire the coordinator into the normal post-`mine()` path with durable idempotency/restart semantics;
+4. rerun focused and exact-head gates;
+5. only then proceed to H-080B.3 real packaged Electron/local-server proof.
+
+Do not spend this lane on whitelist elegance, duplicate receipt projection cleanup, broad exception narrowing, coordinator constructor API polish, multi-step Trello learning or Laya.
+
+Canonical detailed journal:
+[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
 
 ## 2026-09-23 previous H-080 qualification snapshot — PRODUCT GATES RED / OPERATION IDENTITY GAP CONFIRMED
 
