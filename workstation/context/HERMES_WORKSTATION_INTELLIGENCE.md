@@ -49,6 +49,12 @@ Therefore release qualification must include a harmless real admitted primitive 
 
 A third intelligence rule follows:
 
+> **Preloaded expected evidence is not post-effect verification.**
+
+The current E001 objective persists `verification_evidence` before execution and marks it as trusted/read-after-write. Because `OperationalKernel` accepts supplied evidence directly, this can produce VERIFIED without a real observer running after the mutation. Release tests must omit pre-seeded success evidence and obtain verification from runtime-owned readback. For the smallest deterministic proof, a filesystem capability can use the kernel's builtin filesystem observer against `tmp_path`; durable-dispatch parity should be tested separately through the real dispatcher if combining both concerns would require artificial production plumbing.
+
+A fourth intelligence rule follows:
+
 > **User-facing completion text is not causal evidence.**
 
 E001/E003V must assert the structured markers already produced by the control plane: routing decision, certificate, canonical verification status/acceptance and dispatch record state. `OperationalResolution.details` may expose these as read-only observability, but they must never become authority inputs.
