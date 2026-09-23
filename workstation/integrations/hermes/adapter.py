@@ -84,6 +84,8 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
         register_conversation_projection_provider(project_for_provider)
         register_task_completion_admission_provider(workstation_task_completion_admission)
         register_operational_resolution_provider(workstation_operational_resolution)
+        from workstation.integrations.hermes.telemetry import install_workstation_telemetry
+        install_workstation_telemetry()
 
         from agent.execution_persistence import (
             ExecutionPersistenceDisposition,

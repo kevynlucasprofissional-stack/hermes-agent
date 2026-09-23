@@ -73,6 +73,7 @@ def perform_api_call(
 ) -> ApiCallVerdict:
     """Issue the request (see ``_should_stream`` for the streaming decision)."""
     response = None
+    dispatch_started = time.monotonic()
 
     def _verdict(action: str) -> ApiCallVerdict:
         return ApiCallVerdict(
@@ -130,13 +131,42 @@ def perform_api_call(
         if _model_request_active is not None:
             _model_request_active.set()
     try:
-        response = run_llm_execution_middleware(
-            api_kwargs, _perform_api_call, original_request=_original_api_kwargs,
-            task_id=effective_task_id, turn_id=turn_id, api_request_id=api_request_id,
-            session_id=agent.session_id or "", platform=agent.platform or "", model=agent.model,
-            provider=agent.provider, base_url=agent.base_url, api_mode=agent.api_mode,
-            api_call_count=api_call_count, middleware_trace=list(_llm_middleware_trace),
-        )
+        try:
+            response = run_llm_execution_middleware(
+                api_kwargs, _perform_api_call, original_request=_original_api_kwargs,
+                task_id=effective_task_id, turn_id=turn_id, api_request_id=api_request_id,
+                session_id=agent.session_id or "", platform=agent.platform or "", model=agent.model,
+                provider=agent.provider, base_url=agent.base_url, api_mode=agent.api_mode,
+                api_call_count=api_call_count, middleware_trace=list(_llm_middleware_trace),
+            )
+        except BaseException:
+            from agent.runtime_events import notify_runtime_event
+            notify_runtime_event("provider_called", {
+                "api_request_id": str(api_request_id), "provider": str(agent.provider or ""),
+                "model": str(agent.model or ""), "purpose": "main", "status": "error",
+                "duration_ms": (time.monotonic() - dispatch_started) * 1000,
+                "session_id": str(agent.session_id or ""), "task_id": str(effective_task_id or ""),
+                "turn_id": str(turn_id or ""),
+            })
+            raise
+        from agent.runtime_events import notify_runtime_event
+        usage = getattr(response, "usage", None)
+        if usage is None and isinstance(response, dict):
+            usage = response.get("usage")
+        usage_value = lambda *names: next((
+            usage.get(name) if isinstance(usage, dict) else getattr(usage, name, None)
+            for name in names
+            if (usage.get(name) if isinstance(usage, dict) else getattr(usage, name, None)) is not None
+        ), None) if usage is not None else None
+        notify_runtime_event("provider_called", {
+            "api_request_id": str(api_request_id), "provider": str(agent.provider or ""),
+            "model": str(agent.model or ""), "purpose": "main", "status": "success",
+            "duration_ms": (time.monotonic() - dispatch_started) * 1000,
+            "session_id": str(agent.session_id or ""), "task_id": str(effective_task_id or ""),
+            "turn_id": str(turn_id or ""),
+            "input_tokens": usage_value("input_tokens", "prompt_tokens"),
+            "output_tokens": usage_value("output_tokens", "completion_tokens"),
+        })
     finally:
         with _bracket:
             if _model_request_active is not None:
