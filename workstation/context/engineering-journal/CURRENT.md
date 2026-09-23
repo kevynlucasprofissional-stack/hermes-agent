@@ -1,5 +1,61 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080B real-use audit — 2026-09-23
+
+Detailed canonical audit:
+[h080b-real-use-experience-loop-audit-2026-09-23.md](h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+New evidence changes the next-work priority:
+- PR #45 implements the important H-080A causal path, but current exact-head CI is red and must be qualified truthfully;
+- real native-browser conversations demonstrate route-selection and over-verification waste;
+- production Experience capture is active, but real samples remain uncertain/inconclusive and have not produced a learned promoted capability;
+- next feature work is one bounded browser-native H-080B capture -> verify -> compile -> validate -> promote -> future provider-0 vertical proof;
+- Laya stays deferred until that causal loop works without it.
+
+## H-080A — Production-path closure qualified locally (2026-09-23)
+
+**Status:** CODE COMPLETE / LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING.
+H-080B (Experience feedback loop) remains OPEN as a separate sub-lane.
+
+Branch: `integration/upstream-20260922-71a2fe39-h0793`. Frozen pin unchanged:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`.
+
+### What closed each audit blocker
+
+- **Authority (A):** new `workstation/integrations/hermes/effect_authority.py`
+  derives a LOCAL_MUTATION ceiling from trusted ingress (envelope +
+  canonical task/session binding). `_dispatch_intent` sets
+  `compiler.trusted_authority` from it. TaskCompiler authority monkeypatch
+  removed from all release E2E. Pinned by
+  `workstation/tests/test_operational_effect_authority.py` (13 tests).
+- **Real dispatch (B):** E001 split into E001F (filesystem verified success
+  through the kernel's real `fs_write` + `fs_read` readback) and E001D
+  (real `workstation_durable_dispatch` → `execute_tool_calls_sequential` →
+  real `todo_list` → real `TodoStore`, exactly once, spies only).
+- **Causal asserts (C):** `OperationalResolution.details` now carries
+  capability id, certificate hash, verification status/accepted and dispatch
+  status; E001F/E003VF assert them directly plus real filesystem state.
+  `TaskCompiler._execute_route` also forwards `observer_args`,
+  `observed_predicates`, `expected_operation_id` (observation config).
+- **Scratch (D):** `test_zz_scratch_route_fixture.py` absorbed and removed.
+- **Pre-seeded evidence (E):** objectives carry only observation
+  configuration; the kernel's real observer produces post-effect evidence.
+- **Metrics:** generic counters distinguish
+  executed/satisfied/wait/handoff/continue_reasoning; unknowns stay `None`.
+
+### Qualification receipts (this head, local)
+
+- focused H-080 (boundary 17 + provider 10 + e2e 10 + authority 13): green;
+- Browser focused (extract/controller/broker/extension-router): green;
+- strict seam audit: 0 unclassified, 0 budget regressions;
+- core integration check: green;
+- todo tool owner tests: green;
+- full `workstation/tests`: 2 pre-existing failures unrelated to this lane
+  (missing optional `anthropic` package; stale `MockRouterWait` signature in
+  the await-telemetry test) — separate lanes, not H-080A regressions.
+
+Remaining before promotion: final upstream drift classification, PR, exact-head CI.
+
 ## H-080 — Production-path audit after E001/E003V repairs (2026-09-22)
 
 **Status:** ARCHITECTURE ACCEPTED / CONTROL-PLANE E2E IMPROVED / PRODUCTION-PATH QUALIFICATION BLOCKED.

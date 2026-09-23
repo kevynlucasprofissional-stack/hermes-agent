@@ -1,5 +1,44 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## Real-use H-080B intelligence — verification capital, not trace volume — 2026-09-23
+
+Canonical evidence:
+[engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+Two real native-browser conversations expose the next systems bottleneck.
+
+**First lesson — route before researching routes.**
+A request to open the Workstation browser first caused BrowserClaw skill/config exploration and only reached the native browser after user clarification. In the Workstation/Desktop context, explicit native-browser intent must bind directly to the native route. Unqualified browser intent may still reason when policy/context is genuinely ambiguous; raw prose never grants authority.
+
+**Second lesson — verification must be goal-aligned.**
+`browser_navigate` already returned native runtime, expected ChatGPT URL/title, semantic elements, no wall and stable readiness. The turn then spent additional browser-vision/model work to determine login state, although login was not part of the requested goal. Once authoritative evidence proves every declared goal predicate, stop. Additional observation is justified only by an unsatisfied predicate, ambiguity, drift, verifier contract or safety requirement.
+
+**Third lesson — Experience capture is alive; learning capital is not.**
+Production sessions are already generating transition/trace artifacts and adaptive-observation journal events. The observed samples remain `uncertain / INCONCLUSIVE / evidence_strength=0`, so `ExperienceCorpus.accept_run()` cannot close a verified segment. More trace volume alone cannot solve H-080B.
+
+The correct optimization target is:
+
+```text
+real effect
+-> truthful post-effect observation
+-> canonical verified completion
+-> accepted Experience sample
+-> compilation / causal validation
+-> promotion
+-> future deterministic reuse
+```
+
+Do not weaken `verified_completed`, uncertainty, causal or cross-run promotion gates. Improve the product path so successful operations can satisfy them.
+
+**Fourth lesson — browser-local state can be a legitimate verified effect.**
+“Open ChatGPT” need not claim an external persisted mutation. It can be modeled as a local Workstation browser-state transition whose postcondition is independently read from the authoritative Browser controller: expected host/URL + BrowserTask ownership + readiness. Authentication or third-party state changes remain separate predicates with stronger verifiers.
+
+**Fifth lesson — executable ontology stays singular.**
+`OperationalCapability` remains the executable learned object. BrowserProcedureIR, if needed, is only an implementation representation. Never bypass the certificate/authority/dispatcher/BrowserControlBroker/WorkstationBrowserController/verifier chain with generated-script eval.
+
+**Sixth lesson — Laya comes after causal closure.**
+First prove H-080B without Laya. Then use Laya in shadow mode to shortlist capability/family candidates. Laya proposes; CapabilityRouter proves; certificate authorizes; verifier decides truth.
+
 ## H-080 production-path audit — control-plane correctness is no longer enough — 2026-09-22
 
 The H-080 implementation now demonstrates a strong architectural/control-plane path, but the latest audit establishes a stricter qualification rule:

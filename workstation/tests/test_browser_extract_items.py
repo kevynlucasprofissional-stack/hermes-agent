@@ -6,7 +6,7 @@ import pytest
 
 from workstation.artifacts import ArtifactStore
 from workstation.durable_tasks import DurableTaskStore
-from tools.browser_tool import _process_extracted_items_durably
+from workstation.browser_projection import process_extracted_items_durably
 
 
 def test_browser_extract_items_durable_processing(tmp_path, monkeypatch):
@@ -33,7 +33,7 @@ def test_browser_extract_items_durable_processing(tmp_path, monkeypatch):
         "items": raw_items,
     }
 
-    result_str = _process_extracted_items_durably(
+    result_str = process_extracted_items_durably(
         raw_result=raw_response,
         args={"limit": 20, "output_artifact": True},
         kw={"task_id": task_id},
@@ -78,7 +78,7 @@ def test_browser_extract_items_small_raw_mode():
         "items": raw_items,
     }
 
-    result_str = _process_extracted_items_durably(
+    result_str = process_extracted_items_durably(
         raw_result=raw_response,
         args={"limit": 5, "output_artifact": False},
         kw={"task_id": "test_small"},

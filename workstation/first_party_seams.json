@@ -60,6 +60,26 @@
             "unrelated live exchange preserved"
           ],
           "sunset_condition": "remove direct seam after shadow projection parity"
+        },
+        {
+          "id": "SEAM-OPERATIONAL-RESOLUTION",
+          "symbol_or_concern": "pre-reasoning operational resolution boundary",
+          "semantic_owner": "generic operational-resolution lifecycle -> workstation/integrations/hermes operational provider",
+          "current_behavior": "Calls registered operational resolution providers after preflight and before provider call; terminal outcomes (SATISFIED/EXECUTED/WAIT/HANDOFF) close the turn without spending a reasoning round.",
+          "required_ordering": "After trusted turn/preflight admission and immediately before provider call.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "generic operational_resolution provider registry + Workstation first-party provider",
+          "parity_tests": [
+            "already satisfied goal bypasses LLM",
+            "promoted capability EXECUTE with exact-once dispatch and VERIFIED verification",
+            "no match/insufficient intent reaches provider",
+            "raw text cannot synthesize executable intent",
+            "invalid/quarantined capability fails safe",
+            "uncertain mutation fails safe",
+            "verifier failure fails safe",
+            "canonical finalization preserved"
+          ],
+          "sunset_condition": "generic boundary call site removed after Workstation provider proves timing parity"
         }
       ],
       "current_direct_imports": 0

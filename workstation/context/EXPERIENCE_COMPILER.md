@@ -1,5 +1,35 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## Native product evidence audit — 2026-09-23
+
+Real Hermes Work browser use confirms an important distinction:
+
+```text
+capture pipeline works in production
+!=
+Experience Compiler has produced a real product capability
+```
+
+Observed native sessions already produce transition/trace artifacts and adaptive-observation events, but the sampled outcomes remain uncertain/inconclusive with insufficient evidence. Consequently the canonical corpus/compiler gates correctly refuse to treat them as reusable knowledge.
+
+The next implementation goal is **not** to make mining permissive. It is to close a verified product path into the existing compiler:
+
+```text
+trusted post-effect observer
+-> canonical verified completion
+-> ExperienceCorpus accepted segment
+-> ExperienceCompiler candidate
+-> controlled replay / verifier validation
+-> existing promotion policy
+```
+
+For Browser, a valid learned effect may describe Workstation-owned browser state rather than an external resource mutation. Example: native BrowserTask reaches `chatgpt.com`, remains owned by the intended task/tab, and the controller reports stable readiness after the effect. This evidence must be typed/trusted honestly and must not be reused to claim login or third-party persistence.
+
+Executable output remains **OperationalCapability**. Do not add a parallel script/skill object. If browser implementation steps later require richer representation, introduce a typed BrowserProcedureIR only inside `OperationalCapability.implementation` and keep execution behind the existing certified Browser path.
+
+The first native-product qualification for this document is now defined by the H-080B vertical E2E in:
+[engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
 ## H-076 integration — learn transformation and verifier separately (2026-09-19)
 
 H-076 now preserves **how to verify again**: observer/source/extractor, relation and

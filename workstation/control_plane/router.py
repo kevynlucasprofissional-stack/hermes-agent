@@ -358,9 +358,13 @@ class CapabilityRouter:
             for um in uncertain_mutations:
                 um_target = um.get("target") or ""
                 if not operation_intent.target or not um_target or um_target == operation_intent.target or operation_intent.target.startswith(um_target):
+                    # Name the effect however the caller identified it. A record whose
+                    # target cannot be compared to the intent is still a reason to
+                    # refuse: reconciliation is never inferred from silence.
+                    named = um_target or um.get("target_identifier") or um.get("operation_id") or "an unproven effect"
                     return ReasoningDecision(
                         requires_reconciliation=True,
-                        reason=f"Outstanding uncertain mutation on {um_target}; reconcile before dispatch",
+                        reason=f"Outstanding uncertain mutation on {named}; reconcile before dispatch",
                     )
 
         # 2. Check if goal is already satisfied in the current observed state

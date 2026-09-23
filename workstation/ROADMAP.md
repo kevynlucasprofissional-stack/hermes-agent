@@ -1,5 +1,56 @@
 # Workstation roadmap
 
+## H-080B — REAL-USE VERTICAL CLOSURE / PR #45 EXACT-HEAD CI RED (2026-09-23)
+
+Canonical new audit:
+[context/engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](context/engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+Current truth:
+- PR #45 carries the materially improved H-080A production path;
+- H-080A core causal proofs are implemented, but exact-head qualification is **not green** at this snapshot;
+- Workstation CI currently exposes a stale router test-double signature (`runtime_state`);
+- Workstation Browser Windows is red in broader platform/release gates even though focused native-browser/browser-foundation checks are green;
+- H-080B remains OPEN;
+- real product use proves Experience capture is active, but no real production experience has yet crossed the verified acceptance gates into a promoted learned capability.
+
+### Immediate priority order
+
+```text
+P0  qualify PR #45 exact head truthfully
+    -> fix/triage current CI reds
+    -> do not redesign H-080A
+
+P1  close one native-browser H-080B vertical loop
+    -> real browser effect
+    -> authoritative post-effect browser readback
+    -> canonical verified completion
+    -> ExperienceCorpus accepted run
+    -> candidate
+    -> second compatible verified run where promotion requires diversity
+    -> controlled replay/verifier validation
+    -> promotion
+    -> future normal turn with established typed OperationIntent
+    -> EXECUTE/VERIFIED/COMMITTED
+    -> provider calls = 0
+
+P2  remove observed real-use waste
+    -> explicit native-browser intent never detours through BrowserClaw skill discovery
+    -> stop after goal-sufficient browser evidence; do not invoke vision for unrelated predicates
+
+DEFER
+    -> Laya production routing
+    -> broad BrowserProcedureIR redesign
+    -> arbitrary generated scripts / Playwright escape hatches
+    -> generalized workflow synthesis beyond the first vertical proof
+```
+
+### H-080B architectural constraint
+
+Do not create a new `LearnedScript` / `BrowserSkill` authority plane.
+`OperationalCapability` remains the executable object. If browser-specific IR is eventually required, it lives inside `OperationalCapability.implementation` and executes through the existing certified native-browser control path.
+
+Laya remains post-H-080B: shadow/shortlist only, with CapabilityRouter retaining proof authority. Fresh natural-language paraphrase -> typed OperationIntent recognition is deliberately outside the first H-080B closure; do not add an ad-hoc prose classifier to fake this layer.
+
 ## H-080 — Progressive Operational Compilation — H-080A PRODUCTION-PATH QUALIFICATION / H-080B EXPERIENCE LOOP OPEN (2026-09-22)
 
 Canonical current audit:
@@ -28,28 +79,48 @@ Delta from the frozen pin is 23 commits with no overlap in the four H-080 upstre
 
 Do not redesign or revert this lane.
 
-### H-080A — remaining promotion blockers
+### H-080A — production-path closure (qualified locally 2026-09-23)
 
-1. **Production authority is still test-injected.**
-   E001 monkeypatches `TaskCompiler.execute` and sets `self.trusted_authority = EXTERNAL_REVERSIBLE`. Production currently resolves authority from `self.trusted_authority -> canonical task.authority_scope -> READ`, while canonical task creation/admission does not currently persist/provide that `AuthorityScope`. The release proof must use the production authority source, not a monkeypatch.
+All code blockers are closed; only exact-head CI remains:
 
-2. **The real Hermes durable dispatcher is still replaced in E001.**
-   The test patches `workstation_durable_dispatch` to a recorder. This proves the control plane reaches a dispatch callback exactly once, but does not prove the real tool-scope / `execute_tool_calls_sequential` / guardrail / raw-result path.
+1. **Production authority bridge implemented.**
+   `workstation/integrations/hermes/effect_authority.py` derives a
+   LOCAL_MUTATION ceiling from trusted ingress (envelope + canonical
+   task/session binding). `_dispatch_intent` sets
+   `compiler.trusted_authority` from it. No TaskCompiler monkeypatch remains
+   in the release E2E. Covered by
+   `workstation/tests/test_operational_effect_authority.py` (13 tests).
 
-3. **Causal evidence is not asserted directly.**
-   E001 must directly prove `EXECUTE`, non-empty certificate, `VERIFIED`, `accepted == true`, `COMMITTED`, physical exact-once and provider calls 0. E003V must directly prove FAILED/INCONCLUSIVE verification cannot become COMMITTED success.
+2. **Real durable dispatcher proven separately (E001D).**
+   `test_durable_dispatcher_parity` drives the real
+   `workstation_durable_dispatch` → `execute_tool_calls_sequential` →
+   real `todo_list` handler → real `TodoStore` (revision +1, exactly one
+   execution, raw-result path exercised). Only spies observe; nothing is
+   replaced.
 
-4. **Verification success is still pre-seeded in E001.**
-   The fixture writes trusted `verification_evidence` into the objective before execution, including `read_after_write=True` and covered predicates. `OperationalKernel` consumes supplied evidence directly, so the release proof must remove it and obtain evidence from a real post-effect observer/readback.
+3. **Causal evidence asserted directly (E001F).**
+   `test_known_promoted_capability_bypasses_llm` proves via TaskCompiler
+   result spy: `EXECUTE`, non-empty certificate, `VERIFIED` + accepted,
+   `COMMITTED`, real tmp filesystem mutation, zero provider calls.
 
-5. **Scratch fixture remains.**
-   `test_zz_scratch_route_fixture.py` must be absorbed or renamed/restructured as permanent semantic coverage.
+4. **No pre-seeded success evidence.**
+   Objectives carry only observation *configuration* (`verification_expected`,
+   `observer_args`, `observed_predicates`, lineage). The kernel's real
+   `fs_read` observer produces evidence post-effect. E003VF proves a real
+   content mismatch yields FAILED, no COMMITTED success, no blind retry.
 
-6. **Runtime metrics remain coarser than the report claims.**
-   Generic counters expose attempts/hits/misses/errors, not a canonical `EXECUTED+VERIFIED` counter. Derive/wire truthful operational metrics through existing resolution + ORA/VOLC owners; unknown denominators remain `None`.
+5. **Scratch fixture absorbed and removed.**
+   `test_zz_scratch_route_fixture.py` deleted; its certified-route proof now
+   lives in the normal-turn E001F/E003VF suites.
 
-7. **Exact-head remote qualification is absent.**
-   No PR/Actions evidence yet qualifies the final candidate head.
+6. **Truthful metrics wired minimally.**
+   Generic counters now distinguish `executed`/`satisfied`/`wait`/`handoff`/
+   `continue_reasoning`; only `executed` (contract: VERIFIED + accepted)
+   counts as deterministic verified resolution. Unknown denominators remain
+   `None` (no invented zeros).
+
+7. **Exact-head remote qualification pending.**
+   Open PR and record GitHub CI evidence on the final head.
 
 ### H-080A mandatory correction order
 

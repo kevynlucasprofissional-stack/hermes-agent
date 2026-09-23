@@ -19,7 +19,7 @@ from tools.browser_workstation import (
     workstation_route_is_bound,
     workstation_routing_enabled,
 )
-from tools.browser_tool import _process_extracted_items_durably
+from workstation.browser_projection import process_extracted_items_durably
 from workstation.runtime import EvidenceStateStore, RuntimeEventBus, RuntimeEvent, ExecutionStatus
 
 logger = logging.getLogger(__name__)
@@ -318,13 +318,14 @@ class WorkstationBrowserController:
         return parsed_result
 
     def _process_browser_action_result(self, action: str, raw_result: Any, args: dict, kw: dict) -> str:
-        """Process browser action results with Workstation-specific domain logic.
+        """Project a controller result through the Workstation domain rules for its action.
 
-        This moves Workstation-specific seam processing from the generic browser tool
-        to the WorkstationBrowserController to close seams like SEAM-BROWSER-DOMAIN.
+        The controller owns transport; the projection itself lives in the
+        Workstation module that owns it (``workstation.browser_projection``), so
+        no generic upstream tool module carries Hermes Work semantics.
         """
         if action == "browser_extract_items":
-            return _process_extracted_items_durably(raw_result, args, kw)
+            return process_extracted_items_durably(raw_result, args, kw)
         # For other actions, return the raw result unchanged
         if isinstance(raw_result, str):
             return raw_result

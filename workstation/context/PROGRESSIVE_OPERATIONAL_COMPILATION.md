@@ -1,5 +1,50 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 real-use audit — H-080A implementation strong; H-080B evidence bridge is the next causal gap
+
+The previous production-path blockers in this document have been materially addressed in PR #45: bounded production authority, real dispatcher parity, real post-effect verifier evidence, structured EXECUTE/certificate/VERIFIED/COMMITTED assertions and provider-0 success/failure behavior now have direct tests.
+
+Do not read the older H-080A audit below as the current implementation state.
+
+Exact-head promotion is nevertheless **not green** at this snapshot because current Workstation/Windows release workflows are red. See:
+[engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+The more important product discovery is H-080B:
+
+```text
+production adaptive capture: ACTIVE
+verified Experience acceptance from observed browser sessions: NOT PROVEN
+real product candidate compilation: NOT PROVEN
+real product learned promotion: NOT PROVEN
+future normal-turn reuse of learned capability: NOT PROVEN
+```
+
+The H-080B fix is not “compile more traces”. The runtime already captures traces. It must turn successful real operations into **truthful verified semantic transitions** that the existing conservative compiler is allowed to learn from.
+
+First target should be a bounded native-browser local-state capability, preserving the existing Browser routing authority. A successful navigation may be verified against Workstation-owned browser state (host/URL, BrowserTask/tab binding, readiness) without pretending that a third-party external resource was persistently mutated.
+
+Canonical H-080B vertical:
+
+```text
+novel normal turn
+-> native Browser effect
+-> authoritative goal-aligned post-effect readback
+-> canonical VERIFIED completion
+-> accepted Experience sample
+-> candidate
+-> independent compatible run(s)
+-> controlled replay + verifier validation
+-> PROMOTED OperationalCapability
+-> future normal turn with an already-established typed OperationIntent
+-> pre-provider Operational Resolution
+-> CapabilityRouter proof
+-> native Browser exact-once execution
+-> VERIFIED / COMMITTED
+-> provider calls = 0
+```
+
+No parallel LearnedScript/BrowserSkill execution plane is allowed. `OperationalCapability` remains the executable abstraction. The first H-080B proof does not need to recognize fresh natural-language paraphrases; it may start from an already-established typed OperationIntent. Laya remains deferred until this loop is proven; then it may shortlist candidates for fresh intent recognition only.
+
 ## 2026-09-22 production-path audit — H-080A control plane works, production authority/dispatch proof still open
 
 The deterministic Capability Runtime and Experience Compiler substrate remain implemented. The pre-reasoning integration on `integration/upstream-20260922-71a2fe39-h0793` has improved beyond the first published-branch audit:

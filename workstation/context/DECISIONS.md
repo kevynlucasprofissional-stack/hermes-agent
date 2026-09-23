@@ -1,7 +1,7 @@
 # Architectural Decisions
 
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-031`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-032`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
@@ -822,3 +822,39 @@ Rules:
 - Laya or any future System-1 classifier may propose candidates but cannot grant authority, issue certificates, verify effects or promote capabilities.
 
 This decision is informed by the rejection/revert of `471e9b529f745c89a3b18caad865e762f09dfab3` and supersedes that implementation pattern, not the broader H-078B generic-adapter architecture.
+
+
+## D-032 — Learned execution remains OperationalCapability; recognition is non-authoritative
+
+**Decision:** Progressive Operational Compilation keeps one executable ontology.
+
+The reusable executable object learned from experience remains `OperationalCapability`.
+Do not introduce a parallel `LearnedScript`, `MicroProcedure`, `BrowserSkill`,
+generated-code authority plane, or second capability registry.
+
+For browser learning:
+- richer deterministic browser steps may be represented by a typed implementation IR
+  only when the existing capability implementation shape is insufficient;
+- any such BrowserProcedureIR is contained inside `OperationalCapability.implementation`;
+- execution remains behind RoutingCertificate / effect authority / CertifiedDispatcher /
+  BrowserControlBroker / WorkstationBrowserController / canonical verification;
+- arbitrary generated JavaScript/TypeScript/Python must not become an execution bypass.
+
+Semantic recognition is distinct from execution proof:
+- a cheap recognizer (including future Laya) may shortlist operation families or candidate capabilities;
+- CapabilityRouter still proves goal/precondition/effect/authority applicability;
+- certificate still authorizes;
+- verifier still decides terminal truth;
+- uncertainty or low-confidence recognition falls back to normal reasoning.
+
+Real-use browser evidence adds one more rule: **verification is goal-aligned**.
+Once authoritative post-effect evidence satisfies all predicates of the declared goal,
+the runtime must not spend extra vision/model rounds merely to prove unrelated state.
+For example, opening a target host and proving native BrowserTask/URL/readiness does not
+implicitly require proving account login.
+
+Canonical evidence:
+[engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+D-032 refines D-017 and D-031; it does not weaken their authority, uncertainty or
+verification contracts.
