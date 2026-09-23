@@ -26,7 +26,11 @@ trace operation A
 -> Python projects evidence as operation A
 ```
 
+The compiled learned-capability path also currently derives `operation_id` in `OperationalKernel.execute_capability()` after implementation steps execute. That ordering must be inverted for mutable learned Browser execution: establish the operation identity before dispatch and propagate it into the Browser step.
+
 Required closure:
+- establish the certified/expected operation ID before the first physical I/O in OperationalKernel;
+- propagate that same ID into the native Browser dispatch;
 - promotion-grade Browser readback accepts the expected operation identity;
 - receipt fields are validated against canonical task/run/BrowserTask/tab/revision/action/URL;
 - mismatch/stale/missing receipt fails closed;
