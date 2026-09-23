@@ -90,6 +90,8 @@ receipt.safeUrl       == sanitized expected target
 
 Se qualquer binding divergir, a transição não é causalmente provada.
 
+No caminho de reuso compilado, `OperationalKernel.execute_capability()` também precisa estabelecer essa identidade **antes** de despachar os steps. Hoje a derivação acontece depois da execução; isso deve ser invertido para que o mesmo ID atravesse kernel -> Browser -> Electron -> receipt -> verifier.
+
 Nunca copiar o `operation_id` esperado do trace para o artifact final e chamar isso de prova.
 
 ### Restart safety é propriedade persistente
