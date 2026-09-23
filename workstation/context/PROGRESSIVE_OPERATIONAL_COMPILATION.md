@@ -1,5 +1,83 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 H-080B product-lifecycle closure semantics
+
+The first native-browser H-080B vertical changes the interpretation of "end-to-end closed."
+
+A fixture can prove that the existing pieces compose causally without proving that the product owns the lifecycle automatically. The canonical distinction is now:
+
+```text
+candidate can be validated/promoted in an integrated test
+!=
+normal product runtime owns candidate validation/promotion
+```
+
+Progressive Operational Compilation therefore has two separate loops:
+
+```text
+ADAPTIVE EXECUTION LOOP
+unknown work
+-> Reasoner
+-> real effect
+-> canonical evidence
+-> verified Experience
+-> candidate OperationalCapability
+
+COMPETENCE ADMISSION LOOP
+candidate
+-> verifier validation
+-> counterfactual/negative sensitivity
+-> controlled replay / causal validation
+-> ExperiencePromotionPolicy
+-> PROMOTED OperationalCapability
+-> future certified deterministic reuse
+```
+
+The second loop is part of the product architecture, not test scaffolding.
+
+### Lifecycle owner
+
+A Workstation-owned coordinator may orchestrate the competence-admission loop, but all truth continues to live in existing owners:
+- ExperienceCompiler;
+- causal replay/SafeEnvironment;
+- VerificationContract and domain-owner observers;
+- ExperiencePromotionPolicy;
+- OperationalCapabilityRegistry;
+- ArtifactStore / ExecutionJournal;
+- CapabilityRouter / certificates / dispatcher / kernel for later execution.
+
+The coordinator has no authority to weaken gates. Failure/unavailability leaves the capability unpromoted.
+
+### Browser evidence rule
+
+For Browser-learned capabilities, the preferred promotion-grade transition proof is owner-issued:
+```text
+operation_id
++ task_id
++ exact non-null run_id
++ BrowserTask/tab identity
++ owner state revision
++ post-effect semantic readback
+```
+
+The owner receipt establishes causation; semantic readback establishes the observed postcondition. Neither authorizes execution by itself.
+
+### Trace rule
+
+The reusable unit is the causal operational slice, not literal trace length. One relevant mutable action may be surrounded by bounded read-only observations. Additional mutation or unresolved uncertainty blocks promotion.
+
+### Milestone decomposition
+
+```text
+H-080B.1 verified Experience admission / candidate
+H-080B.2 product-owned validation/replay/promotion
+H-080B.3 native packaged qualification + dogfood
+H-081    optional System-1 candidate acceleration
+```
+
+Laya remains outside the authority chain. It may later reduce search cost; it cannot decide correctness, authority or promotion.
+
+
 ## 2026-09-23 H-080B bounded native-browser proof
 
 Commit `6d8806b868` closes the first hermetic path from adaptive normal-turn native navigation to owner-persisted post-effect evidence, `verified_completed`, accepted verified transition, two-run compilation, validated verifier, controlled replay, policy admission and a promoted `OperationalCapability`. The future normal turn starts with a durable typed `OperationIntent`, routes through the existing certificate/dispatcher/kernel/broker/browser path and ends `VERIFIED`/accepted/`COMMITTED` after one physical navigation and zero provider calls. The verifier uses BrowserTask local host/path/recovery state and makes no login or external server claim. No Laya classifier or generated script executor was added. Branch CI and production GUI qualification remain open.
