@@ -1,7 +1,7 @@
 # Architectural Decisions
 
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-031`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-032`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
@@ -822,3 +822,24 @@ Rules:
 - Laya or any future System-1 classifier may propose candidates but cannot grant authority, issue certificates, verify effects or promote capabilities.
 
 This decision is informed by the rejection/revert of `471e9b529f745c89a3b18caad865e762f09dfab3` and supersedes that implementation pattern, not the broader H-078B generic-adapter architecture.
+
+## D-032 — External references are an evidence backlog; self-improvement audits are dogfood, not architecture authority
+
+`SOURCE_MATRIX.md` is the canonical registry of external projects, research systems and benchmarks that may teach or falsify Hermes Work. A row records **research priority**, not adoption.
+
+Rules:
+- `SOURCE_MATRIX.md` owns the reference backlog; `ROADMAP.md` owns executable sequencing; `REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md` owns the deep-audit evidence protocol;
+- README/paper/product claims may nominate a reference, but code-level conclusions require a pinned repo/ref and file/symbol/test/receipt evidence;
+- `NV` means not verified and must never be converted into `absent`;
+- external popularity, architecture fashion or benchmark rank cannot override existing Hermes owners/invariants;
+- code copying requires explicit license/header/dependency review; idea/contract adaptation remains distinct from code porting;
+- comparative findings must pass D-025 external-validity discipline and may use an independent oracle when Hermes' own verifier would be circular;
+- the major code-to-code audit is readiness-gated behind H-080A/H-080B, native Browser research stability, a qualified Explorer (or equivalent), durable resume/provenance and measured token/context efficiency;
+- Hermes Work may execute the audit as a self-improvement dogfood workload, but audit findings become proposals, not automatic self-modification;
+- any resulting code change still follows D-030 upstream-first baseline qualification and normal exact-head gates.
+
+This decision does not add a new runtime subsystem. It defines how external knowledge becomes admissible evidence for future architecture work.
+
+Canonical:
+[REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
+
