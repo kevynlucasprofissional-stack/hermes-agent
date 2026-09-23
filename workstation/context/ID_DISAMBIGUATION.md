@@ -142,9 +142,9 @@ the resolved canonical-lineage gap.
 
 ## `DECISIONS.md` ordering
 
-`DECISIONS.md` is read **ascending by decision number** (`D-001` … `D-030`) with a "Reading this
+`DECISIONS.md` is read **ascending by decision number** (`D-001` … `D-032`) with a "Reading this
 file" note at the top. This was repaired on 2026-09-20: `D-028`, `D-029` and `D-030` had been
-prepended above `D-001`. New decisions are **appended**, not prepended.
+prepended above `D-001`. `D-031` and `D-032` were subsequently appended in canonical order. New decisions are **appended**, not prepended.
 
 ## Cross-reference register
 
