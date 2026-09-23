@@ -1,4 +1,4 @@
-import { expect, test } from './test'
+import { allowErrorBanners, expect, test } from './test'
 
 import {
   PACKAGED_BINARY_PATH,
@@ -136,6 +136,7 @@ test('HUD composer remains fully inside the transparent window', async () => {
 })
 
 test('boot progress overlay fades out or shows error state', async () => {
+  allowErrorBanners()
   const page = fixture!.page
   await page.waitForFunction(
     () => {
