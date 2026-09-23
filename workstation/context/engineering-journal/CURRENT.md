@@ -30,6 +30,9 @@ The E001 patches `workstation_durable_dispatch` to `_DispatchRecorder`. This pro
 **Causal claims exceed direct assertions.**
 The runtime already returns routing decision, certificate, verification and dispatch record, but the E2E currently asserts mainly final response text, provider count and dispatch-callback count. Release evidence must assert `EXECUTE`, certificate, `VERIFIED`, `accepted`, `COMMITTED` directly; verifier-failure must directly prove not-COMMITTED.
 
+**Verification evidence is pre-seeded before execution.**
+The E001 objective contains trusted `verification_evidence` with `read_after_write=True` before the mutation runs. `OperationalKernel` consumes supplied evidence directly, so this can certify success without a real post-effect observer. Release evidence must remove that synthetic success evidence and use runtime-owned readback.
+
 **Scratch artifact remains.**
 `test_zz_scratch_route_fixture.py` is still present.
 
