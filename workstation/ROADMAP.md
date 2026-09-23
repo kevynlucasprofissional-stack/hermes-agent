@@ -1,5 +1,82 @@
 # Workstation roadmap
 
+## 2026-09-23 H-080B decomposition after vertical proof — PRODUCT LIFECYCLE CLOSURE
+
+Repository truth at this decision:
+- PR #45 is open at `c23fe2233450b47d6d90ec9785376327e533bdef`; Workstation CI is green while the Windows product workflow is still in progress. H-080A architecture is not to be redesigned while qualification completes.
+- PR #46 is draft at `769002547428fa882ca1e5248387821482c70cd9`, still based on PR #45's older `72cfa4b389...` head. Against current PR #45 it is diverged: 2 commits ahead / 1 behind, merge-base `72cfa4b389...`.
+- Commit `6d8806b868...` proves that the existing components can form a complete hermetic native-browser Experience loop. It does **not** yet prove that the normal product lifecycle automatically validates, replays and promotes a mined candidate.
+
+### Canonical H-080B decomposition
+
+```text
+H-080A   pre-reasoning deterministic execution in production
+H-080B.1 verified Experience admission -> candidate
+H-080B.2 product-owned verifier validation / replay / promotion lifecycle
+H-080B.3 packaged/native Electron proof + real dogfood
+H-081    optional System-1/Laya shadow acceleration
+```
+
+Current classification:
+- **H-080B.1:** locally proven for the bounded native-browser vertical; branch/base reconciliation and product qualification remain.
+- **H-080B.2:** OPEN. The test explicitly invokes `validate_verifier()`, `controlled_replay()` and `promote()`; normal product runtime does not yet own this sequence.
+- **H-080B.3:** OPEN. Hermetic controller proof is not yet a real Electron/packaged BrowserSessionState proof.
+- **H-081 / Laya:** DEFERRED until H-080B.2/.3 work without it.
+
+### Mandatory implementation order
+
+```text
+0. finish PR #45 exact-head qualification; fix only real regressions
+1. reconcile/rebase PR #46 onto the promoted #45/main baseline
+2. strengthen learned Browser evidence before generalizing:
+   - owner-issued post-effect receipt/revision binds operation_id
+   - task_id + non-null exact run_id + BrowserTask/tab identity
+   - resulting state revision/readback
+   - one relevant browser mutation may coexist with N admissible read-only observations
+   - zero additional mutations / zero unresolved uncertainty
+3. productize candidate validation/promotion with a small coordinator over existing owners
+4. run a real Electron + local-server E2E through BrowserTask -> navigation -> persisted state -> Experience acceptance
+5. dogfood: novel run -> second compatible run -> candidate -> automatic validation/promotion -> future equivalent typed intent -> provider 0
+6. only after those gates, start H-081 Laya in SHADOW mode
+```
+
+### Product-lifecycle owner rule
+
+The next implementation may introduce an **Experience Validation/Promotion Coordinator** only as orchestration. It must reuse:
+- `ExperienceCompiler.validate_verifier`;
+- `controlled_replay` / `SafeEnvironment`;
+- `ExperiencePromotionPolicy`;
+- `OperationalCapabilityRegistry`;
+- canonical owner verifiers, ArtifactStore and ExecutionJournal.
+
+It must **not** create a new Experience DB, capability DB, browser DB, verifier DB, authority plane or executable ontology. `OperationalCapability` remains the executable learned object.
+
+Negative controls/interventions must run in an owner-controlled isolated environment or use admissible historical evidence. Never navigate the user's live browser to a deliberately wrong site merely to validate a verifier.
+
+### Browser causality hardening
+
+Persisted Browser state is valid evidence only for the claim it actually proves. Browser-local host/path/live state may verify a local Workstation state transition; it does not prove login or third-party server mutation.
+
+For promotion-grade learned evidence, prefer an Electron-owner receipt/revision that records:
+`operation_id + task_id + run_id + browserTaskId + tabId + resulting state revision`.
+Temporal correlation alone is useful but weaker than an owner-issued causal receipt.
+
+Do not keep the current `len(trace) == 1` constraint as the product abstraction. The semantic rule is: exactly one relevant mutation, any bounded number of admissible read-only observations, no second mutation and no unresolved uncertainty.
+
+### Explicit non-goals for this lane
+
+- no Laya production routing;
+- no new BrowserSkill/LearnedScript authority type;
+- no arbitrary generated code or eval;
+- no parallel Playwright/browser process;
+- no broad multi-step workflow synthesis;
+- no weakening of Experience promotion gates;
+- no merge of PR #46 before its base and exact-head qualification are reconciled.
+
+Canonical detailed journal:
+[context/engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](context/engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
+
 ## 2026-09-23 H-080B first native-browser vertical — LOCAL PROOF COMPLETE / CI PENDING
 
 Branch `workstation/h080b-native-browser-experience-loop`, implementation `6d8806b868` (base `72cfa4b389`). A normal Hermes turn navigates through the native browser and closes a canonical verified run using Electron's persisted `browser-session.json`. Two distinct accepted run IDs compile one learned `OperationalCapability`; owner readback drives positive and wrong-host verifier controls, controlled replay, and existing promotion policy. A later normal turn with a durable typed `OperationIntent` routes `EXECUTE`, dispatches once, returns `VERIFIED`/accepted/`COMMITTED`, and calls the provider zero times. Focused regression: 122 passed; strict seam audit: 14 classified, 0 unclassified, 0 budget growth. This is hermetic proof, not a production ChatGPT or packaged Desktop run. Laya remains deferred.
