@@ -1,5 +1,41 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## External-reference audit becomes a self-improvement dogfood objective — 2026-09-23
+
+The 2026-09-23 research intake establishes a new strategic use for the Workstation: the external benchmark backlog should become a **future self-improvement workload executed by Hermes Work itself**, not a static reading list.
+
+Canonical split:
+- `workstation/SOURCE_MATRIX.md` owns external reference intake/triage;
+- `workstation/ROADMAP.md` owns the executable audit task and readiness ordering;
+- `REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md` owns the code-to-code evidence protocol.
+
+The research also corrected an important temptation: a broad comparison that names many projects is not the same thing as a code audit. The strongest benchmark report explicitly left many cells `NV` rather than treating uncollected evidence as absence. That discipline is now canonical for the reference program.
+
+Strategic sequencing:
+```text
+qualify production-path execution (H-080A)
+-> close experience capture/compile/reuse (H-080B)
+-> harden native Browser long-session exploration
+-> qualify Explorer or equivalent repo-scale exploration owner
+-> prove bounded/token-efficient navigation + durable resume
+-> run external code-to-code audit as major dogfood
+-> convert findings into separately reviewed Hermes changes
+```
+
+Explorer is a readiness requirement, not a current implementation claim. During this documentation pass no dedicated Workstation Explorer owner was identified on `main`; do not mark it qualified until an explicit owner/tests/receipts exist.
+
+The most valuable first comparisons are those that attack the current thesis from both sides:
+- Stagehand: compact browser context, deterministic/model-mediated execution and self-healing;
+- FlowEvo / Trace2Skill / RethinkSkill / Ratchet family / Memorizz: trace/workflow -> reusable knowledge, lifecycle, negative transfer, shadow/demotion and evaluator governance;
+- DeepSeek Harness / OpenHands / DeerFlow / OpenClaw: harness modularity, durability, ownership, long-running work and recovery;
+- external benchmarks/falsifiers: whether Hermes' internal proof actually predicts an independent outcome.
+
+New intelligence invariant:
+
+> **THE SOURCE MATRIX IS A RESEARCH BACKLOG; ONLY CODE/TEST/RECEIPT EVIDENCE MAY TURN A REFERENCE INTO ARCHITECTURAL KNOWLEDGE.**
+
+Token efficiency is part of the dogfood hypothesis, not permission to weaken evidence. The desired win is less repeated context per verified finding, while exact provenance and external validity stay intact.
+
 ## H-080 production-path audit — control-plane correctness is no longer enough — 2026-09-22
 
 The H-080 implementation now demonstrates a strong architectural/control-plane path, but the latest audit establishes a stricter qualification rule:
