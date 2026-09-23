@@ -1,5 +1,19 @@
 # Architectural Falsification / External Validity — H-077
 
+## 2026-09-23 external-reference intake — comparative audit as a falsifier
+
+The new Source Matrix / code-to-code audit program is an extension of H-077's method, not a replacement architecture.
+
+External projects are valuable here for two reasons:
+1. they may contain mechanisms Hermes should learn from;
+2. they provide **countermodels** that can falsify Hermes assumptions (for example different skill lifecycle, evaluator governance, browser recovery, workflow representation or durability boundaries).
+
+The future comparison must therefore record not only `what can we copy?` but `what does this implementation show our current ontology/owner split may be missing or overfitting?`.
+
+Any cross-project superiority claim requires evidence outside Hermes' own internal certificate/metric loop. README statements and benchmark leaderboards may guide discovery, but they are not sufficient proof of a Hermes architecture decision.
+
+Canonical comparative protocol: [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
+
 Date established: 2026-09-19  
 Status: **CORE IMPLEMENTED / QUALIFICATION PARTIAL — H-077.1 CORRECTIVE CLOSURE ACTIVE**  
 Current audited baseline: `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5` (PR #36 merged; post-merge qualification reopened)
