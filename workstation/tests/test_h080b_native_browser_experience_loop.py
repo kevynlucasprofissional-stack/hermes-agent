@@ -488,3 +488,175 @@ def test_real_browser_readback_validates_and_promotes_compiled_capability(local_
     assert routed.get("verification_result", {}).get("status") == "VERIFIED", routed
     assert routed.get("verification_result", {}).get("accepted") is True
     assert routed.get("dispatch_record", {}).get("status") == "COMMITTED"
+
+
+def test_semantic_trace_slice_accepts_navigation_with_read_only_observations(local_state):
+    """1 mutable navigation + N read-only observations must be admitted."""
+    bridge, envelope, task_id, run_id = _task()
+    _persist_browser(local_state, task_id, run_id)
+    agent = SimpleNamespace(session_id=SESSION, _conversation_root_id=lambda: SESSION,
+        _canonical_work_task_id=task_id, _canonical_work_run_id=run_id,
+        _message_envelope=envelope, _work_procedure_trace=[])
+    record_trace(agent, "browser_navigate", {"url": URL}, {
+        "success": True, "runtime": "electron-chromium", "url": URL,
+        "readiness": "stable", "wall_detected": False,
+    })
+    record_trace(agent, "browser_snapshot", {}, {
+        "success": True, "runtime": "electron-chromium", "url": URL,
+        "elements": [],
+    })
+    record_trace(agent, "browser_vision", {}, {
+        "success": True, "runtime": "electron-chromium", "url": URL,
+    })
+    assert len(agent._work_procedure_trace) == 3
+
+    candidate = bridge.finalize_turn_candidate(task_id, SESSION, {
+        "completed": True, "final_response": "Browser aberto com observacoes.",
+        "_adaptive_trace": agent._work_procedure_trace,
+    }, expected_run_id=int(run_id))
+    assert candidate["status"] == "verified_completed", candidate
+    assert candidate["acceptance_approved"] is True
+
+
+def test_semantic_trace_slice_rejects_second_mutation(local_state):
+    """A 2nd mutating operation in trace must fail admission."""
+    bridge, envelope, task_id, run_id = _task()
+    _persist_browser(local_state, task_id, run_id)
+    agent = SimpleNamespace(session_id=SESSION, _conversation_root_id=lambda: SESSION,
+        _canonical_work_task_id=task_id, _canonical_work_run_id=run_id,
+        _message_envelope=envelope, _work_procedure_trace=[])
+    record_trace(agent, "browser_navigate", {"url": URL}, {
+        "success": True, "runtime": "electron-chromium", "url": URL,
+        "readiness": "stable", "wall_detected": False,
+    })
+    record_trace(agent, "browser_navigate", {"url": "https://example.test/second"}, {
+        "success": True, "runtime": "electron-chromium", "url": "https://example.test/second",
+        "readiness": "stable", "wall_detected": False,
+    })
+    candidate = bridge.finalize_turn_candidate(task_id, SESSION, {
+        "completed": True, "final_response": "Duas navegacoes.",
+        "_adaptive_trace": agent._work_procedure_trace,
+    }, expected_run_id=int(run_id))
+    assert candidate["status"] != "verified_completed"
+    assert candidate["acceptance_approved"] is not True
+
+
+def test_strict_run_binding_and_receipt_validation(local_state):
+    """Enforce strict run binding and receipt verification in read_native_browser_session_state."""
+    directory = local_state / "Runtime"
+    directory.mkdir(exist_ok=True)
+    task_id = "task-strict-test"
+    run_id = "run-strict-42"
+    receipt = {
+        "operationId": "op_test_123",
+        "taskId": task_id,
+        "runId": run_id,
+        "browserTaskId": task_id,
+        "tabId": "tab-strict-1",
+        "revision": 2,
+        "action": "browser_navigate",
+        "safeUrl": URL,
+        "executedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    (directory / "browser-session.json").write_text(json.dumps({
+        "version": 1, "savedAt": datetime.now(timezone.utc).isoformat(),
+        "activeTabId": "tab-strict-1",
+        "tabs": [{"id": "tab-strict-1", "browserTaskId": task_id, "safeUrl": URL,
+                  "safeTitle": None, "recoveryPolicy": "browser-task-lazy",
+                  "recoveryState": "live", "recoveryReason": None}],
+        "browserTasks": {"version": 1, "browserTaskCounter": 1, "tasks": [{
+            "taskId": task_id, "sessionHost": SESSION, "runId": run_id,
+            "status": "hidden", "recoveryState": "fresh",
+            "revision": 2, "lastReceipt": receipt,
+        }]},
+    }), encoding="utf-8")
+
+    # Positive readback with receipt
+    readback = bw.read_native_browser_session_state(task_id, SESSION, run_id, URL)
+    assert readback["revision"] == 2
+    assert readback["last_receipt"]["operationId"] == "op_test_123"
+
+    # Missing run_id must raise
+    with pytest.raises(ValueError, match="run binding drifted or run_id is missing"):
+        bw.read_native_browser_session_state(task_id, SESSION, "", URL)
+
+    # Mismatched run_id in caller must raise
+    with pytest.raises(ValueError, match="run binding drifted or run_id is missing"):
+        bw.read_native_browser_session_state(task_id, SESSION, "run-other", URL)
+
+
+def test_experience_validation_promotion_coordinator_lifecycle(local_state, monkeypatch):
+    """Test product-owned ExperienceValidationPromotionCoordinator lifecycle."""
+    from copy import deepcopy
+    from workstation.experience_compiler.lifecycle import ExperienceValidationPromotionCoordinator
+    from workstation.experience_compiler.compiler import ExperienceCompiler
+    from workstation.operational_capabilities import OperationalCapabilityRegistry
+    from workstation.experience_compiler.causal import SafeEnvironment
+    from workstation.control_plane.verification import VerificationStatus
+    from workstation.operational_kernel import OperationalKernel
+    from tools.browser_extension_router import routed_browser_handler
+
+    compiler, registry, cap, run_ids = _compiled_two_run_capability(local_state)
+    assert len(set(run_ids)) == 2
+    assert cap.lifecycle.value == "discovered"
+
+    calls = _fake_physical_controller(local_state, monkeypatch)
+    coordinator = ExperienceValidationPromotionCoordinator(registry, compiler, ArtifactStore())
+
+    # Candidate discovery
+    candidates = coordinator.discover_candidates()
+    assert any(c.id == cap.id for c in candidates)
+
+    # Replay runner in SafeEnvironment
+    def replay_runner_factory(capability, env):
+        def runner(steps, _deadline):
+            bridge, _, replay_task, replay_run = _task()
+            trial = deepcopy(capability)
+            trial.implementation["steps"] = steps
+            operation_id = f"coord-replay-{replay_run}"
+
+            def dispatch(name, args):
+                return routed_browser_handler(name, args,
+                    fallback=lambda: pytest.fail("legacy browser must never execute"),
+                    task_id=replay_task, session_id=SESSION, run_id=replay_run)
+
+            result = OperationalKernel(registry).execute_capability(trial, {}, dispatch=dispatch,
+                context={"learning_replay": True, "task_id": replay_task,
+                    "run_id": replay_run, "session_id": SESSION,
+                    "operation_id": operation_id, "expected_task_id": replay_task,
+                    "expected_run_id": replay_run, "expected_operation_id": operation_id})
+            readback = bw.read_native_browser_session_state(replay_task, SESSION, replay_run, URL)
+            from workstation.experience_compiler.state_abstraction import abstract_state
+            projected = abstract_state("native_browser", readback).semantic_predicates
+            verification = result["verification_result"]
+            return {"passed": verification["status"] == "VERIFIED",
+                "predicates": projected, "evidence_strength": 2,
+                "evidence_refs": verification["evidence_refs"],
+                "verification_result": verification}
+        return runner
+
+    from gateway.session_context import clear_session_vars, set_session_vars
+    tokens = set_session_vars(platform="desktop", source="desktop", session_id=SESSION,
+        browser_control_principal="workstation",
+        browser_control_transport_family="workstation_native")
+    try:
+        cycle_result = coordinator.process_candidate(
+            cap.id,
+            replay_runner=replay_runner_factory,
+            task_id="task-coord-test",
+            run_id="run-coord-test",
+        )
+    finally:
+        clear_session_vars(tokens)
+
+    assert cycle_result.action == "promoted", (cycle_result.reasons, getattr(cycle_result.capability, "validation_evidence", None))
+    assert cycle_result.admitted is True
+    promoted = registry.get(cap.id)
+    assert promoted.lifecycle.value == "promoted"
+    assert len(calls) >= 1
+
+    # Idempotent re-run returns promoted immediately
+    idempotent_result = coordinator.process_candidate(cap.id)
+    assert idempotent_result.action == "promoted"
+    assert idempotent_result.admitted is True
+
