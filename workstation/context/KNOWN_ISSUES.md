@@ -384,7 +384,7 @@ hard-coding a browser exemption, making arbitrary browser JS read-only, disablin
 canary, allowing blind retry, weakening TaskRun/browser leases, adding a second
 memory or authority store, or globally bypassing work_execute.
 
-**Canonical design:** 
+**Canonical design:**
 [ADAPTIVE_EXECUTION_COMPILATION.md](ADAPTIVE_EXECUTION_COMPILATION.md).
 
 ## KI-012 — Upstream-derived ownership/resync/Kanban/recovery gaps [RESOLVED IN WORK P0 HARNESS — 2026-09-18]
