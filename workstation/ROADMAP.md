@@ -29,7 +29,10 @@ Current classification:
 0. finish PR #45 exact-head qualification; fix only real regressions
 1. reconcile/rebase PR #46 onto the promoted #45/main baseline
 2. strengthen learned Browser evidence before generalizing:
-   - owner-issued post-effect receipt/revision binds operation_id
+   - converge on one unique per-execution operation_id created before physical I/O
+   - propagate that same instance ID through trace/provenance -> controller payload -> Electron owner -> receipt -> verifier
+   - do NOT promote call_key(action,args) into the causal instance ID; it may remain a structural/idempotency fingerprint
+   - owner-issued post-effect receipt/revision binds the canonical operation_id
    - task_id + non-null exact run_id + BrowserTask/tab identity
    - resulting state revision/readback
    - one relevant browser mutation may coexist with N admissible read-only observations
@@ -57,7 +60,9 @@ Negative controls/interventions must run in an owner-controlled isolated environ
 
 Persisted Browser state is valid evidence only for the claim it actually proves. Browser-local host/path/live state may verify a local Workstation state transition; it does not prove login or third-party server mutation.
 
-For promotion-grade learned evidence, prefer an Electron-owner receipt/revision that records:
+For promotion-grade learned evidence, first converge the current operation identities. Today `tools/browser_workstation.py::_dispatch()` sends `call_key(action,args)` as `operation_id`, while adaptive trace provenance can use `agent._current_operation_id` or `observation_<uuid>`; Electron currently ignores the field. The causal instance ID must be unique per execution, established before I/O and propagated unchanged.
+
+Then prefer an Electron-owner receipt/revision that records:
 `operation_id + task_id + run_id + browserTaskId + tabId + resulting state revision`.
 Temporal correlation alone is useful but weaker than an owner-issued causal receipt.
 
