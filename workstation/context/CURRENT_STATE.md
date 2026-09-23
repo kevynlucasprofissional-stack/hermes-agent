@@ -1,5 +1,61 @@
 # Current State
 
+## 2026-09-23 H-080B product lifecycle closure — VERTICAL PROOF != PRODUCT AUTOMATION
+
+Observed repository state:
+- PR #45: open at `c23fe2233450b47d6d90ec9785376327e533bdef`; Workstation CI success; Windows product workflow still running at this snapshot.
+- PR #46: draft at `769002547428fa882ca1e5248387821482c70cd9`; base remains PR #45's older `72cfa4b389...` head.
+- Current relation PR #46 vs PR #45 head: diverged, 2 commits ahead / 1 behind, merge-base `72cfa4b389...`.
+
+The native-browser H-080B test proves a complete **hermetic composition** of existing components:
+```text
+normal adaptive turn
+-> Browser native effect
+-> persisted owner readback
+-> verified Experience revision
+-> two-run compilation
+-> verifier validation + negative control
+-> controlled replay
+-> ExperiencePromotionPolicy admission
+-> promoted OperationalCapability
+-> later typed-intent normal turn
+-> EXECUTE / VERIFIED / COMMITTED
+-> provider calls = 0
+```
+
+But production ownership is still incomplete. In the test, the validation/promotion half is explicitly orchestrated by the fixture via `validate_verifier()`, `controlled_replay()` and `promote()`. Therefore:
+
+```text
+CAPTURE                                      production: YES
+VERIFIED EXPERIENCE ADMISSION               bounded native vertical: YES
+CANDIDATE COMPILATION                        YES
+AUTOMATIC PRODUCT VALIDATE/REPLAY/PROMOTE    NO
+FUTURE PROVIDER-0 REUSE AFTER PROMOTION      YES
+REAL PACKAGED ELECTRON END-TO-END            NO
+```
+
+Canonical split:
+- **H-080B.1 — Verified Experience Admission:** locally demonstrated for the bounded native-browser vertical.
+- **H-080B.2 — Product Validation/Replay/Promotion Lifecycle:** OPEN.
+- **H-080B.3 — Native/Packaged Product Qualification + Dogfood:** OPEN.
+- **H-081 — System-1/Laya:** DEFERRED; shadow only after H-080B.2/.3.
+
+Immediate engineering order:
+1. finish PR #45 exact-head qualification without redesign;
+2. reconcile PR #46 onto the promoted PR #45/main baseline;
+3. make Browser learning evidence owner-causal: operation receipt/revision, exact non-null run binding, task/tab lineage;
+4. replace the product-level `len(trace) == 1` assumption with one relevant mutation + bounded read-only observations + no second mutation/uncertainty;
+5. add a small Experience Validation/Promotion Coordinator over existing owners;
+6. prove real Electron local-server BrowserSessionState -> Experience acceptance;
+7. dogfood the complete automatic loop;
+8. only then begin Laya shadow evaluation.
+
+The coordinator is orchestration only. No new source of truth or parallel executable abstraction is authorized.
+
+Canonical journal:
+[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
+
 ## 2026-09-23 H-080B native-browser vertical — LOCAL CAUSAL PROOF / CI PENDING
 
 `workstation/h080b-native-browser-experience-loop@6d8806b868` adds owner-controlled readback of Electron's persisted BrowserTask/tab projection, a bounded adaptive completion verifier, and an immutable verified revision in ExperienceCorpus. The normal Hermes Run A test calls the provider, uses one native browser dispatch and ends `verified_completed` with accepted `VERIFIED_SUCCESS`. Two distinct accepted runs (`run_ids=1,2` in the isolated causal fixture) compile `experience_bcc0974be58c73cf04a0b436@1.0.0`; positive and wrong-host controls validate the verifier, controlled replay passes, and `ExperiencePromotionPolicy.admitted=true`. Run C starts with a durable typed intent and achieves `EXECUTE`, nonempty certificate, one native physical action, `VERIFIED`/accepted/`COMMITTED`, provider calls 0. Focused 122 passed; strict seam audit passed. This is hermetic local state proof, not a claim that a remote site changed or the user is logged in. Laya remains deferred.
