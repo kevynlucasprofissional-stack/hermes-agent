@@ -77,7 +77,12 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
         'effect': tool_effect(name, args=arguments).value, 'duration_ms': duration_ms,
         'task_id': getattr(agent, '_canonical_work_task_id', None),
         'run_id': getattr(agent, '_canonical_work_run_id', None),
-        'operation_id': getattr(agent, '_current_operation_id', None) or 'observation_' + uuid.uuid4().hex,
+        'operation_id': (
+            getattr(agent, '_current_operation_id', None)
+            or (args.get('operation_id') if isinstance(args, dict) else None)
+            or (decoded.get('operation_id') if isinstance(decoded, dict) else None)
+            or ('observation_' + uuid.uuid4().hex)
+        ),
         'operation_index': len(traces),
         'captured_at': datetime.now(timezone.utc).isoformat(),
         'scope': scope,

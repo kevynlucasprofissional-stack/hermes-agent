@@ -23,6 +23,7 @@ import socket
 import sys
 import threading
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 from urllib.error import HTTPError, URLError
@@ -239,8 +240,12 @@ def read_native_browser_session_state(task_id: str, session_id: str, run_id: str
     if len(matches) != 1:
         raise ValueError("BrowserTask identity is missing or ambiguous")
     task = matches[0]
-    if task.get("sessionHost") != session_id or (task.get("runId") and str(task["runId"]) != str(run_id)):
-        raise ValueError("BrowserTask session or run binding drifted")
+    if not run_id or not task.get("runId") or str(task["runId"]) != str(run_id) or task.get("sessionHost") != session_id:
+        raise ValueError("BrowserTask session or run binding drifted or run_id is missing")
+    if task.get("lastReceipt"):
+        last_receipt = task["lastReceipt"]
+        if not isinstance(last_receipt, dict) or str(last_receipt.get("runId", "")) != str(run_id):
+            raise ValueError("BrowserTask receipt run binding drifted")
     if task.get("status") not in {"visible", "hidden", "parked"}:
         raise ValueError("BrowserTask status is invalid")
     tabs = state.get("tabs")
@@ -267,6 +272,8 @@ def read_native_browser_session_state(task_id: str, session_id: str, run_id: str
         "url": tab["safeUrl"], "host": actual.hostname,
         "page_family": actual.path or "/", "recovery_state": tab["recoveryState"],
         "browser_task_status": task["status"], "saved_at": state["savedAt"],
+        "revision": task.get("revision", 0),
+        "last_receipt": task.get("lastReceipt"),
     }
 
 
@@ -688,6 +695,44 @@ def _dispatch(
         pass
     card_id = (kanban_card_id or session_card_id or os.environ.get("HERMES_KANBAN_TASK") or "").strip() or None
     rid = (run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
+
+    if not card_id and task_id:
+        card_id = str(task_id).strip() or None
+
+    if not card_id and session_id:
+        try:
+            from hermes_cli import kanban_db
+            from hermes_cli.kanban_db_connect import connect
+            conn = connect()
+            try:
+                tasks = kanban_db.list_tasks(conn, status=None)
+                active = [t for t in tasks if t.session_id == session_id and t.status not in {'done', 'cancelled'}]
+                if len(active) == 1:
+                    card_id = active[0].id
+                    if not rid and active[0].current_run_id:
+                        rid = str(active[0].current_run_id)
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+    if card_id and not rid:
+        try:
+            from hermes_cli import kanban_db
+            from hermes_cli.kanban_db_connect import connect
+            conn = connect()
+            try:
+                ktask = kanban_db.get_task(conn, card_id)
+                if ktask and ktask.current_run_id:
+                    rid = str(ktask.current_run_id)
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+    if card_id and not task_id:
+        key = card_id
+
     if card_id and rid:
         from hermes_cli import kanban_db
         from hermes_cli.kanban_db_connect import connect
@@ -712,7 +757,9 @@ def _dispatch(
     if rid:
         payload["run_id"] = rid
     from workstation.batch_detection import call_key
-    payload['operation_id'] = call_key(action, args)
+    op_id = args.get("operation_id") or os.environ.get("HERMES_OPERATION_ID") or f"op_{action}_{uuid.uuid4().hex[:12]}"
+    payload["operation_id"] = op_id
+    payload["call_key"] = call_key(action, args)
     response = _request_json(
         "POST",
         "/v1/action",

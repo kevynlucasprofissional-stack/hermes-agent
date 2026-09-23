@@ -24,9 +24,35 @@ def _verified_native_navigation(artifacts, trace, task_id: str, session_id: str,
     from workstation.recipes import digest
     from tools.browser_workstation import read_native_browser_session_state
 
-    if len(trace) != 1:
-        raise ValueError("adaptive browser completion requires one bounded navigation")
-    action = trace[0]
+    read_only_tools = {
+        'browser_snapshot',
+        'browser_vision',
+        'browser_get_images',
+        'browser_read_http',
+        'browser_extract_items',
+        'snapshot',
+        'vision',
+        'get_images',
+        'read_http',
+        'extract_items',
+    }
+
+    nav_actions = []
+    for step in trace:
+        tool = step.get('tool')
+        outcome = step.get('outcome')
+        if outcome == 'failed':
+            raise ValueError("adaptive browser completion encountered a failed step in trace")
+        if tool == 'browser_navigate':
+            nav_actions.append(step)
+        elif tool in read_only_tools:
+            continue
+        else:
+            raise ValueError(f"adaptive browser completion requires exactly one bounded navigation and optional read-only observations, found unexpected action: {tool}")
+
+    if len(nav_actions) != 1:
+        raise ValueError("adaptive browser completion requires exactly one bounded navigation and optional read-only observations")
+    action = nav_actions[0]
     if (action.get('tool') != 'browser_navigate' or action.get('route') != 'native_browser'
             or action.get('runtime') != 'electron-chromium'
             or action.get('outcome') != 'executed_unverified'
