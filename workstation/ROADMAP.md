@@ -91,6 +91,49 @@ H-080A may close independently if scoped truthfully. Do not describe Progressive
 
 Laya remains deferred to System-1/shadow/shortlist work after H-080A qualification; it has no execution, authority, verification or promotion power.
 
+## Reference code-to-code self-improvement dogfood — PLANNED / READINESS-GATED (2026-09-23)
+
+Canonical protocol:
+[context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
+
+Registry:
+[SOURCE_MATRIX.md](SOURCE_MATRIX.md).
+
+Objective: use Hermes Work itself to perform a deep code-to-code audit of the external reference backlog, project by project, and convert verified findings into evidence-backed Hermes improvement proposals.
+
+This is deliberately **not active yet**. It becomes one of the next major self-improvement dogfood workloads only after the exploration stack is sufficiently mature.
+
+Readiness gates:
+1. H-080A production path is qualified on real authority/dispatch/evidence;
+2. H-080B closes the verified experience capture -> compile -> promotion -> future reuse loop;
+3. native Browser exploration/recovery/authenticated-session behavior is stable enough for long research sessions;
+4. Explorer (or an equivalent repo-scale exploration owner) is implemented/qualified rather than assumed;
+5. bounded structural reads, artifact references and compiled reuse materially reduce repeated context/token cost;
+6. resume/provenance can survive interruption across many repositories;
+7. token/cost metrics remain truthful (`None` when unavailable).
+
+Execution sequence once unblocked:
+```text
+pin Hermes head + pin external repo refs
+-> audit one project code-to-code
+-> persist evidence/FACT-PARTIAL-NV ledger
+-> map external symbols to Hermes owners/invariants
+-> run falsifiers / independent checks
+-> classify ADOPT | ADAPT | KEEP EXTERNAL | REFERENCE/EVAL | REJECT | DEFER
+-> update Source Matrix from receipts
+-> repeat
+-> synthesize cross-project patterns
+-> open separately reviewable Hermes roadmap proposals
+```
+
+Initial Wave A: Stagehand, FlowEvo, RethinkSkill, Double Ratchet, Ratchet, Memorizz, Trace2Skill and DeepSeek Harness.
+
+Wave B: OpenHands, DeerFlow, OpenClaw, OpenManus, Browser Use, LangGraph and Cradle.
+
+Hard rule: **README/paper comparison is intake, not completion.** The audit is not complete until claims are pinned to current code/tests/commits or remain explicitly `NV`.
+
+Dogfood success is not `read many repos`. It is: **bounded exploration + durable provenance + measured context reduction + falsifiable comparative conclusions + no self-issued proof.**
+
 ## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING
 
 Canonical:
