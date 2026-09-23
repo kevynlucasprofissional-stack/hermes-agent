@@ -61,8 +61,58 @@ Reference:
 [engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
 
 
+## D-033 — Verifier validation must be empirical and product closure requires runtime ownership
+
+**Decision date:** 2026-09-23
+**Status:** ACCEPTED
+
+The first implementation of `ExperienceValidationPromotionCoordinator` is retained as the correct orchestration direction, but its initial default validation path and closure claim are not accepted as promotion-grade product proof.
+
+### Decision
+
+1. **A coordinator cannot certify its own verifier by assertion.**
+   Production validation receipts must be derived from a real owner-controlled verification execution. Persisting expected effects or a divergent-state description and returning `passed=True` is test scaffolding, not verifier evidence.
+
+2. **Positive and negative validation are observations, not labels.**
+   A positive receipt must correspond to actual `VerificationEvidence` that satisfies the canonical `VerificationContract`.
+   A negative receipt must correspond to a case the verifier actually rejects/discriminates.
+   If no admissible validation environment/evidence exists, the candidate remains unpromoted.
+
+3. **H-080B.2 closes only when normal runtime owns candidate admission.**
+   The existence of `ExperienceValidationPromotionCoordinator` and a direct unit/integration call do not constitute product wiring. The normal `accept_run -> mine` path must hand eligible candidates into the lifecycle without fixture-only calls to `process_candidate()`.
+
+4. **Lifecycle idempotency must survive process restart.**
+   `threading.Lock()` is not a durable lifecycle checkpoint. Use existing `OperationalCapabilityRegistry`, `ArtifactStore` and `ExecutionJournal` to persist attributable validation/replay/promotion progress. Do not create a new database.
+
+5. **Browser owner receipts are promotion-grade proof only when enforced.**
+   Learned Browser transition evidence must validate the owner receipt against expected operation/task/run/BrowserTask/tab/revision/action/safe URL before projecting the trace as VERIFIED_SUCCESS. Receipt presence alone is insufficient.
+
+6. **Do not reopen accepted architecture.**
+   This correction does not authorize replacing `OperationalCapability`, weakening `ExperiencePromotionPolicy`, bypassing `CapabilityRouter`, adding a second browser/runtime, or introducing Laya into authority/verification.
+
+7. **Non-causal cleanup is explicitly deferrable.**
+   Read-only whitelist elegance, coordinator API polish, broad-exception narrowing and duplicate receipt projection are not promotion blockers unless they falsify the causal/product acceptance contract.
+
+### Closure criterion
+
+H-080B.2 may be marked closed only after a normal runtime path demonstrates:
+
+```text
+verified Experience
+-> candidate
+-> product-owned empirical verifier validation
+-> isolated discriminative negative control
+-> controlled replay
+-> unchanged ExperiencePromotionPolicy
+-> durable PROMOTED capability
+```
+
+with no coordinator-manufactured truth and no fixture-only lifecycle call required for closure.
+
+
+
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-032`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-033`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
