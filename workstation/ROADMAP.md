@@ -2,10 +2,11 @@
 
 ## 2026-09-23 H-080B decomposition after vertical proof — PRODUCT LIFECYCLE CLOSURE
 
-Repository truth at this decision:
-- PR #45 is open at `c23fe2233450b47d6d90ec9785376327e533bdef`; Workstation CI is green while the Windows product workflow is still in progress. H-080A architecture is not to be redesigned while qualification completes.
-- PR #46 is draft at `769002547428fa882ca1e5248387821482c70cd9`, still based on PR #45's older `72cfa4b389...` head. Against current PR #45 it is diverged: 2 commits ahead / 1 behind, merge-base `72cfa4b389...`.
-- Commit `6d8806b868...` proves that the existing components can form a complete hermetic native-browser Experience loop. It does **not** yet prove that the normal product lifecycle automatically validates, replays and promotes a mined candidate.
+Repository truth after the post-implementation deep audit:
+- PR #45 remains open at `72d5e688509078f8f6aaa6ba0b6bdc609cf40ed3`; observed Workstation CI and Workstation Browser Windows are green. H-080A architecture remains accepted and must not be reopened for H-080B cleanup.
+- PR #46 is draft at audited head `60d47e8c0426b84b36ea3a5304111f7997bbe8e9`, directly based on PR #45 head `72d5e688509078f8f6aaa6ba0b6bdc609cf40ed3`.
+- The coordinator, Browser owner receipt and semantic trace-slice work are useful and should be preserved, but the deep audit falsifies the claim that H-080B.2 is already product-closed.
+- Exact-head snapshot at this audit: Workstation CI green; Docker green; Workstation Browser Windows still running; Nix queued; the general `.github/workflows/ci.yaml` run failed before creating any jobs, so it is a merge gate to rerun/diagnose rather than evidence of an H-080B code regression.
 
 ### Canonical H-080B decomposition
 
@@ -18,34 +19,38 @@ H-081    optional System-1/Laya shadow acceleration
 ```
 
 Current classification:
-- **H-080B.1:** CLOSED / LOCALLY PROVEN. Native browser verified admission, owner causal receipts with monotonic task revisions, operation_id/call_key split, strict run binding, and semantic trace slice admission (1 mutation + N read-only observations).
-- **H-080B.2:** CLOSED / LOCALLY PROVEN. `ExperienceValidationPromotionCoordinator` productizes candidate discovery, eligibility checks, verifier validation with isolated negative controls, controlled replay in `SafeEnvironment`, and promotion under `ExperiencePromotionPolicy`.
+- **H-080B.1:** LOCALLY PROVEN / PROMOTION-GRADE CAUSAL HARDENING OPEN. Verified Experience admission, strict run binding and semantic trace slicing are useful, but the Electron receipt is not yet enforced as the causal proof for operation/task/tab/revision/action/URL lineage.
+- **H-080B.2:** IMPLEMENTED AS ORCHESTRATOR / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN. `ExperienceValidationPromotionCoordinator` exists and can compose existing owners in a fixture, but normal runtime still stops after `ExperienceCompiler.mine()`, and its default validation path currently fabricates positive/negative receipts marked `passed=True` instead of observing a real verifier decision.
 - **H-080B.3:** OPEN. Packaged/native Electron dogfood and multi-session durability validation.
-- **H-081 / Laya:** DEFERRED until H-080B.3 works without it.
+- **H-081 / Laya:** DEFERRED until H-080B.2/.3 work without it.
 
 ### Mandatory implementation order
 
 ```text
-0. finish PR #45 exact-head qualification; fix only real regressions
-1. reconcile/rebase PR #46 onto the promoted #45/main baseline
-2. strengthen learned Browser evidence before generalizing:
-   - converge on one unique per-execution operation_id created before physical I/O
-   - propagate that same instance ID through trace/provenance -> controller payload -> Electron owner -> receipt -> verifier
-   - do NOT promote call_key(action,args) into the causal instance ID; it may remain a structural/idempotency fingerprint
-   - owner-issued post-effect receipt/revision binds the canonical operation_id
-   - task_id + non-null exact run_id + BrowserTask/tab identity
-   - resulting state revision/readback
-   - one relevant browser mutation may coexist with N admissible read-only observations
-   - zero additional mutations / zero unresolved uncertainty
-3. productize candidate validation/promotion with a small coordinator over existing owners
-4. run a real Electron + local-server E2E through BrowserTask -> navigation -> persisted state -> Experience acceptance
-5. dogfood: novel run -> second compatible run -> candidate -> automatic validation/promotion -> future equivalent typed intent -> provider 0
-6. only after those gates, start H-081 Laya in SHADOW mode
+0. preserve the qualified H-080A/control-plane architecture; do not redesign accepted owners
+1. enforce Browser owner receipt as promotion-grade causal proof:
+   - one unique per-execution operation_id created before physical I/O
+   - same ID through trace/provenance -> controller -> Electron -> receipt -> verifier
+   - validate operationId/taskId/runId/browserTaskId/tabId/revision/action/safeUrl
+   - call_key remains a structural/idempotency fingerprint, not causal identity
+2. remove self-certified validation:
+   - no production helper may manufacture positive/negative receipts with passed=True
+   - positive validation must come from canonical VerificationEvidence/evaluate_verification or equivalent owner-controlled verifier execution
+   - negative sensitivity must be actually discriminated in an isolated environment or admissible historical counterexample
+   - unavailable validation => held_as_candidate / verifier_receipts_unavailable
+3. wire ExperienceValidationPromotionCoordinator into the normal post-mine product lifecycle
+   - normal completion -> accept_run -> mine -> lifecycle coordinator
+   - persist lifecycle evidence/checkpoints with existing registry/artifacts/journal
+   - restart/idempotency must not depend only on threading.Lock
+4. rerun focused + exact-head CI; do not call H-080B.2 closed until the normal runtime owns the lifecycle
+5. run H-080B.3 real Electron + isolated local-server E2E through BrowserTask -> receipt -> Experience -> real validation/replay/promotion
+6. dogfood: novel run -> second compatible run -> candidate -> automatic promotion -> future typed intent -> provider 0
+7. only after those gates, start H-081 Laya in SHADOW mode
 ```
 
 ### Product-lifecycle owner rule
 
-The next implementation may introduce an **Experience Validation/Promotion Coordinator** only as orchestration. It must reuse:
+The **Experience Validation/Promotion Coordinator now exists**, but existence is not product ownership. The next corrective implementation must wire it into the normal post-`mine()` lifecycle and make its validation receipts empirical rather than self-certified. It remains orchestration only. It must reuse:
 - `ExperienceCompiler.validate_verifier`;
 - `controlled_replay` / `SafeEnvironment`;
 - `ExperiencePromotionPolicy`;
