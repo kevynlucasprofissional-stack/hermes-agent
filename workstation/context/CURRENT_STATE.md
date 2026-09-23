@@ -1,5 +1,17 @@
 # Current State
 
+## 2026-09-23 External Reference Code-to-Code Audit — PLANNED / READINESS-GATED
+
+Documentation-only planning update. No implementation or qualification claim is added by this entry.
+
+- `../SOURCE_MATRIX.md` now serves as the canonical external-reference research backlog and includes the 2026-09-23 benchmark intake.
+- `REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md` defines the future audit protocol, evidence vocabulary and dogfood acceptance.
+- `../ROADMAP.md` now contains the concrete readiness-gated task.
+- the large audit is blocked on H-080A/H-080B maturity, stable native-Browser research sessions, a qualified Explorer (or equivalent repo-scale exploration owner), durable resume/provenance and truthful token/context accounting.
+- no dedicated Workstation Explorer owner is treated as qualified on current `main`; this remains a planned readiness capability until explicit implementation/tests establish otherwise.
+- the previous broad 17-project comparison must not be described as complete code-to-code verification; unverified cells remain research debt.
+- the Engineering Journal is intentionally unchanged by this planning/documentation intake.
+
 ## 2026-09-22 H-080 Production-Path Audit — H-080A OPEN / H-080B OPEN
 
 Canonical current audit:
