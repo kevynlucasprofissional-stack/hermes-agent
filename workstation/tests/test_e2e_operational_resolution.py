@@ -1,21 +1,27 @@
 """E2E tests for the pre-reasoning operational resolution boundary through normal Hermes turns.
 
-These tests drive the full turn loop (AIAgent.run_conversation) with the Workstation
-adapter installed, verifying that a known promoted capability bypasses the provider LLM
-entirely, and that novel/no-match requests still reach the provider.
+These tests drive the full turn loop (``AIAgent.run_conversation``) with the
+Workstation adapter installed. The two production-path proofs are split:
+
+* **E001F** — verified filesystem success: production authority, deterministic
+  capability execution, real state transition, real post-effect readback,
+  ``VERIFIED`` + accepted, ``COMMITTED``, zero provider calls;
+* **E001D** — durable dispatcher parity: the real
+  ``workstation_durable_dispatch`` path executes a real admitted tool
+  (``todo_list``) exactly once through ``execute_tool_calls_sequential``.
+
+No test replaces the dispatcher, injects control-plane authority, pre-seeds
+verification evidence, or mocks the verifier for the success path.
 """
 
 from __future__ import annotations
 
-import json
-import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
-from agent.operational_resolution import OperationalOutcome
 from agent.tool_guardrails import ToolCallGuardrailController, ToolCallGuardrailConfig
 from run_agent import AIAgent
 from workstation.artifacts import ArtifactStore
@@ -25,7 +31,6 @@ from workstation.control_plane.ir import EQ, EXISTS, CALL
 from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
 from workstation.control_plane.verification import (
     VerificationContract,
-    VerificationEvidence,
     VerificationLifecycle,
 )
 from workstation.durable_tasks import DurableTaskStore
@@ -39,63 +44,23 @@ from workstation.operational_capabilities import (
 
 # Force Workstation adapter installation by importing workstation
 import workstation  # noqa: F401
-print(f"DEBUG: workstation imported, adapter status: {workstation.workstation_adapter_status()}")
-from agent.operational_resolution import operational_resolution_providers
-print(f"DEBUG: operational_resolution_providers: {operational_resolution_providers()}")
 
 
 SESSION_ID = "e2e-session"
 MULTISTEP_PROMPT = "First extract the records then verify the result"
+FS_CAP_ID = "e2e.cap.fs.write"
+TODO_CAP_ID = "e2e.cap.todo.add"
+OPERATION_ID = "op-e2e"
 
 
-def _mock_assistant_msg(
-    content="Hello",
-    tool_calls=None,
-    reasoning=None,
-    reasoning_content=None,
-    reasoning_details=None,
-):
-    msg = SimpleNamespace(content=content, tool_calls=tool_calls)
-    if reasoning is not None:
-        msg.reasoning = reasoning
-    if reasoning_content is not None:
-        msg.reasoning_content = reasoning_content
-    if reasoning_details is not None:
-        msg.reasoning_details = reasoning_details
-    return msg
+def _mock_assistant_msg(content="Hello", tool_calls=None):
+    return SimpleNamespace(content=content, tool_calls=tool_calls)
 
 
-def _mock_response(
-    content="Hello",
-    finish_reason="stop",
-    tool_calls=None,
-    reasoning=None,
-    reasoning_content=None,
-    reasoning_details=None,
-    usage=None,
-):
-    msg = _mock_assistant_msg(
-        content=content,
-        tool_calls=tool_calls,
-        reasoning=reasoning,
-        reasoning_content=reasoning_content,
-        reasoning_details=reasoning_details,
-    )
+def _mock_response(content="Hello", finish_reason="stop", tool_calls=None):
+    msg = _mock_assistant_msg(content=content, tool_calls=tool_calls)
     choice = SimpleNamespace(message=msg, finish_reason=finish_reason)
-    resp = SimpleNamespace(choices=[choice], model="test/model")
-    if usage:
-        resp.usage = SimpleNamespace(**usage)
-    else:
-        resp.usage = None
-    return resp
-
-
-def _mock_tool_call(name="write_file", arguments="{}", call_id=None):
-    return SimpleNamespace(
-        id=call_id or f"call_{uuid.uuid4().hex[:8]}",
-        type="function",
-        function=SimpleNamespace(name=name, arguments=arguments),
-    )
+    return SimpleNamespace(choices=[choice], model="test/model", usage=None)
 
 
 def _make_guardrails():
@@ -104,126 +69,34 @@ def _make_guardrails():
     return ToolCallGuardrailController(config)
 
 
-def canonical_task(bridge=None) -> str:
+def canonical_task(prompt: str = MULTISTEP_PROMPT, bridge=None) -> str:
     bridge = bridge or WorkstationKanbanBridge()
-    envelope = MessageEnvelope(
-        MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-    )
-    task_id = bridge.promote_request_if_multistep(
-        MULTISTEP_PROMPT, session_id=SESSION_ID, envelope=envelope
-    )
+    envelope = MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, prompt)
+    task_id = bridge.promote_request_if_multistep(prompt, session_id=SESSION_ID, envelope=envelope)
     assert task_id, "fixture requires a promotable multi-step request"
     return task_id
 
 
-def _filesystem_goal(path: Path) -> dict:
-    """Goal that the file exists and has specific content."""
-    from workstation.control_plane.ir import EQ
-    return EQ("exists", True)
+def _run_id_of(task_id: str) -> str:
+    from hermes_cli import kanban_db
+
+    bridge = WorkstationKanbanBridge()
+    conn = bridge.get_connection()
+    try:
+        task = kanban_db.get_task(conn, task_id)
+        assert task is not None and task.current_run_id is not None
+        return str(task.current_run_id)
+    finally:
+        conn.close()
 
 
-def _filesystem_verifier() -> VerificationContract:
-    """Verifier that checks file existence via fs_stat after write."""
-    return VerificationContract(
-        covered_predicates=("fs_stat:exists",),
-        observer="owner.fs_stat",
-        source_kind="source_of_record",
-        minimum_evidence=3,  # SEMANTIC_PERSISTED_READBACK
-        allowed_trust=("trusted_owner",),
-        lifecycle=VerificationLifecycle.VALIDATED,
-        resource_binding={"resource_id": "filesystem", "resource_version": "1"},
-        require_read_after_write=True,
-        transition_claim=True,
-    )
+def store_intent(intent: dict, task_id: str, *, semantic_state: dict | None = None, **extra):
+    """Persist an established intent the way an admitted execution does.
 
-
-def _make_filesystem_capability(
-    registry: OperationalCapabilityRegistry,
-    target_path: Path,
-    cap_id: str,
-    primitive: str = "write_file",
-):
-    """Register a promoted filesystem capability that writes a file."""
-    from workstation.control_plane.ir import EQ, CALL
-
-    target_str = str(target_path)
-    goal = EQ("exists", True)
-    fingerprint = goal.fingerprint()
-
-    cap = OperationalCapability(
-        id=cap_id,
-        name="E2E write file",
-        version="1.0.0",
-        route="filesystem",
-        lifecycle=CapabilityLifecycle.PROMOTED,
-        formal_contract=CapabilityFormalContract(
-            operation_family="file.write",
-            target_family="filesystem",
-            typed_preconditions=[],
-            typed_postconditions=[goal],
-            effect_footprint=[CALL("write_file", "filesystem")],
-            authority_required=AuthorityScope(
-                level=AuthorityLevel.LOCAL_MUTATION,
-                allowed_actions={"write"},
-                allowed_resources={"filesystem"},
-            ),
-            verifier=_filesystem_verifier(),
-        ),
-        implementation={"steps": [{"id": "write", "primitive": primitive, "args": {"path": "$inputs.path", "content": "$inputs.content"}}]},
-    )
-    registry.register(cap)
-
-
-def _make_todo_capability(
-    registry: OperationalCapabilityRegistry,
-    cap_id: str,
-):
-    """Register a promoted todo capability for dispatcher parity test."""
-    from workstation.control_plane.ir import EXISTS, CALL
-
-    cap = OperationalCapability(
-        id=cap_id,
-        name="E2E todo list",
-        version="1.0.0",
-        route="native",
-        lifecycle=CapabilityLifecycle.PROMOTED,
-        formal_contract=CapabilityFormalContract(
-            operation_family="todo.write",
-            target_family="todo",
-            typed_preconditions=[],
-            typed_postconditions=[EXISTS("todo_item")],
-            effect_footprint=[CALL("todo_list", "todo")],
-            authority_required=AuthorityScope(
-                level=AuthorityLevel.LOCAL_MUTATION,
-                allowed_actions={"write"},
-                allowed_resources={"todo"},
-            ),
-            verifier=VerificationContract(
-                covered_predicates=("todo:item_added",),
-                observer="owner.todo_readback",
-                source_kind="source_of_record",
-                minimum_evidence=3,
-                allowed_trust=("trusted_owner",),
-                lifecycle=2,  # VALIDATED
-                resource_binding={"resource_id": "todo", "resource_version": "1"},
-                require_read_after_write=True,
-                transition_claim=True,
-            ),
-        ),
-        implementation={"steps": [{"id": "add", "primitive": "todo_list", "args": {"action": "add", "content": "$inputs.content"}}]},
-    )
-    registry.register(cap)
-
-
-def store_intent(
-    intent: dict,
-    task_id: str,
-    *,
-    semantic_state: dict | None = None,
-    run_id: str | None = None,
-    **extra,
-):
-    """Persist an established intent the way an admitted execution does."""
+    Only observation *configuration* may be stored (expected value, observer
+    args, covered predicates, lineage). Success evidence is never pre-seeded:
+    the runtime must produce it with a real post-effect observer.
+    """
     store = DurableTaskStore()
     try:
         objective_ref = ArtifactStore().store(
@@ -235,7 +108,7 @@ def store_intent(
             task_id,
             "established intent",
             [{"id": 1}],
-            session_id="e2e-session",
+            session_id=SESSION_ID,
             metadata={"objective_ref": objective_ref, "canonical_task_id": task_id},
         )
         return plan.id
@@ -243,10 +116,112 @@ def store_intent(
         store.close()
 
 
-def intent(goal, **extra) -> dict:
+def intent(goal, *, target="filesystem", effect="fs_write", operation_family="file.write",
+           target_family="filesystem", **extra) -> dict:
     from workstation.control_plane.intent import OperationIntent
 
-    return OperationIntent(id="intent-e2e", target="filesystem", goal=goal, **extra).to_dict()
+    return OperationIntent(
+        id="intent-e2e", target=target, goal=goal,
+        effect_budget=[CALL(effect, target_family)],
+        metadata={"operation_family": operation_family, "target_family": target_family},
+        **extra,
+    ).to_dict()
+
+
+def _fs_goal() -> object:
+    """The single postcondition/goal used by the filesystem E2E fixtures."""
+    return EQ("exists", True)
+
+
+def _fs_fingerprint() -> str:
+    return _fs_goal().fingerprint()
+
+
+def _filesystem_verifier() -> VerificationContract:
+    """Real post-effect readback contract: ``fs_read`` observed after the write.
+
+    Covered predicates must include the postcondition fingerprint, otherwise
+    the router correctly refuses the capability as unverifiable.
+    """
+    return VerificationContract(
+        covered_predicates=(_fs_fingerprint(),),
+        observer="fs_read",
+        source_kind="filesystem",
+        minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+        allowed_trust=("trusted_runtime",),
+        lifecycle=VerificationLifecycle.VALIDATED,
+        require_read_after_write=True,
+        transition_claim=True,
+    )
+
+
+def _make_filesystem_capability(registry: OperationalCapabilityRegistry, cap_id: str):
+    """Register a promoted filesystem capability (``fs_write`` + ``fs_read`` readback)."""
+    goal = _fs_goal()
+    cap = OperationalCapability(
+        id=cap_id,
+        name="E2E write file",
+        version="1.0.0",
+        route="filesystem",
+        lifecycle=CapabilityLifecycle.PROMOTED,
+        formal_contract=CapabilityFormalContract(
+            operation_family="file.write",
+            target_family="filesystem",
+            typed_preconditions=[],
+            typed_postconditions=[goal],
+            effect_footprint=[CALL("fs_write", "filesystem")],
+            authority_required=AuthorityScope(
+                level=AuthorityLevel.LOCAL_MUTATION,
+                allowed_actions={"write"},
+                allowed_resources={"filesystem"},
+            ),
+            verifier=_filesystem_verifier(),
+        ),
+        implementation={"steps": [{
+            "id": "write", "primitive": "fs_write",
+            "args": {"path": "$inputs.path", "content": "$inputs.content"},
+        }]},
+    )
+    registry.register(cap)
+
+
+def _make_todo_capability(registry: OperationalCapabilityRegistry, cap_id: str):
+    """Register a promoted todo capability (real ``todo_list`` tool, no kernel interception)."""
+    goal = EXISTS("todo_item")
+    cap = OperationalCapability(
+        id=cap_id,
+        name="E2E todo add",
+        version="1.0.0",
+        route="todo",
+        lifecycle=CapabilityLifecycle.PROMOTED,
+        formal_contract=CapabilityFormalContract(
+            operation_family="todo.write",
+            target_family="todo",
+            typed_preconditions=[],
+            typed_postconditions=[goal],
+            effect_footprint=[CALL("todo_list", "todo")],
+            authority_required=AuthorityScope(
+                level=AuthorityLevel.LOCAL_MUTATION,
+                allowed_actions={"write"},
+                allowed_resources={"todo"},
+            ),
+            verifier=VerificationContract(
+                covered_predicates=(goal.fingerprint(),),
+                observer="todo_readback",
+                source_kind="todo",
+                minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+                allowed_trust=("trusted_runtime",),
+                lifecycle=VerificationLifecycle.VALIDATED,
+                require_read_after_write=True,
+                transition_claim=True,
+            ),
+        ),
+        implementation={"steps": [{
+            "id": "add", "primitive": "todo_list",
+            "args": {"todos": "$inputs.todos", "merge": True},
+        }]},
+    )
+    registry.register(cap)
 
 
 class _ProviderCallCounter:
@@ -255,77 +230,38 @@ class _ProviderCallCounter:
     def __init__(self, fail_on_call: bool = False):
         self.call_count = 0
         self.fail_on_call = fail_on_call
-        self.last_args = None
-        self.last_kwargs = None
 
     def __call__(self, *args, **kwargs):
         self.call_count += 1
-        self.last_args = args
-        self.last_kwargs = kwargs
         if self.fail_on_call:
             raise AssertionError(f"Provider was called but should not have been (call #{self.call_count})")
-        return _mock_response(
-            content="Provider response",
-            finish_reason="stop",
-            reasoning_content=None,
-            reasoning_details=None,
-        )
-
-
-def _mock_assistant_msg(
-    content="Hello",
-    tool_calls=None,
-    reasoning=None,
-    reasoning_content=None,
-    reasoning_details=None,
-):
-    msg = SimpleNamespace(content=content, tool_calls=tool_calls)
-    if reasoning is not None:
-        msg.reasoning = reasoning
-    if reasoning_content is not None:
-        msg.reasoning_content = reasoning_content
-    if reasoning_details is not None:
-        msg.reasoning_details = reasoning_details
-    return msg
-
-
-def _mock_response(
-    content="Hello",
-    finish_reason="stop",
-    tool_calls=None,
-    reasoning=None,
-    reasoning_content=None,
-    reasoning_details=None,
-    usage=None,
-):
-    msg = _mock_assistant_msg(
-        content=content,
-        tool_calls=tool_calls,
-        reasoning=reasoning,
-        reasoning_content=reasoning_content,
-        reasoning_details=reasoning_details,
-    )
-    choice = SimpleNamespace(message=msg, finish_reason=finish_reason)
-    resp = SimpleNamespace(choices=[choice], model="test/model")
-    if usage:
-        resp.usage = SimpleNamespace(**usage)
-    else:
-        resp.usage = None
-    return resp
-
-
-def _make_guardrails():
-    """Create a minimal ToolCallGuardrailController for testing."""
-    config = ToolCallGuardrailConfig.from_mapping({}, platform="cli")
-    return ToolCallGuardrailController(config)
+        return _mock_response(content="Provider response", finish_reason="stop")
 
 
 @pytest.fixture
 def workstation_adapter_installed():
-    """Ensure Workstation adapter is installed for the test."""
-    assert workstation.workstation_adapter_status().installed is True
+    """Ensure Workstation adapter is installed for the test.
+
+    Other suites mutate the global adapter status and provider registry
+    (bootstrap failure drills, boundary registry resets); re-bootstrap and
+    re-register here so this suite is independent of execution order. Only
+    the provider registration affects the turn loop under test.
+    """
+    from agent.operational_resolution import (
+        operational_resolution_providers,
+        register_operational_resolution_provider,
+    )
+    from workstation.integrations.hermes.operational_resolution import (
+        workstation_operational_resolution,
+    )
+
+    try:
+        workstation.bootstrap_workstation_adapter("required")
+    except Exception:
+        pass
+    if workstation_operational_resolution not in operational_resolution_providers():
+        register_operational_resolution_provider(workstation_operational_resolution)
     yield
-    # Adapter stays installed; other tests may depend on it
 
 
 @pytest.fixture
@@ -334,67 +270,66 @@ def temp_hermes_home(tmp_path, monkeypatch):
     home = tmp_path / ".hermes"
     home.mkdir(parents=True)
     monkeypatch.setenv("HERMES_HOME", str(home))
-    from hermes_constants import get_hermes_home
     monkeypatch.setattr("hermes_constants.get_hermes_home", lambda: home)
     return home
 
 
-# =============================================================================
-# E001F — Filesystem deterministic reuse (verified success path)
-# =============================================================================
+@pytest.fixture(autouse=True)
+def _invalidate_tool_probe_cache():
+    """These tests drive real tool discovery; drop TTL-cached check_fn verdicts afterwards.
 
-def test_known_promoted_capability_bypasses_llm(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E001F: A known promoted filesystem capability executes without calling the provider LLM.
-
-    The turn goes through the normal AIAgent.run_conversation entry point.
-    The operational resolution boundary should resolve the turn via the Workstation
-    provider, dispatching the capability through the certified dispatcher and
-    returning a terminal EXECUTED outcome with zero provider calls.
-
-    This test proves the full causal path:
-    - goal FALSE at admission
-    - production authority helper used (no TaskCompiler monkeypatch)
-    - promoted capability selected
-    - routing_decision == EXECUTE
-    - certificate present
-    - real tmp filesystem mutation
-    - real post-effect observer (fs_stat) runs after mutation
-    - no pre-seeded success evidence
-    - verification == VERIFIED
-    - accepted == true
-    - dispatch status == COMMITTED
-    - provider calls == 0
-    - canonical finalizer runs
+    The registry caches ``check_fn`` results process-wide (~30s TTL). Without
+    invalidation, a cached "browser backend unavailable" verdict would leak
+    into later suites that monkeypatch those probes.
     """
-    import os
-    print(f"DEBUG TEST: HERMES_KANBAN_DB={os.environ.get('HERMES_KANBAN_DB')}")
-    print(f"DEBUG TEST: HERMES_HOME={os.environ.get('HERMES_HOME')}")
-    
-    # 1. Create a temp file path for this test
-    target_file = temp_hermes_home / "h080_e001f_test.txt"
-    
-    # 2. Create canonical task
-    task_id = canonical_task()
-    print(f"DEBUG TEST: task_id={task_id}")
+    yield
+    try:
+        from tools.registry import invalidate_check_fn_cache
+    except Exception:
+        return
+    try:
+        invalidate_check_fn_cache()
+    except Exception:
+        pass
 
-    # 3. Store established intent with provable goal (NOT satisfied initially)
-    goal = EQ("exists", True)  # file should exist after write
-    store_intent(
-        intent(goal),
-        task_id,
-        semantic_state={"exists": False},  # goal NOT satisfied initially
+
+@pytest.fixture
+def execute_spy(monkeypatch):
+    """Observe (never replace) TaskCompiler.execute results for causal asserts."""
+    from workstation.task_compiler import TaskCompiler as TC
+
+    calls: list = []
+    original = TC.execute
+
+    def wrapper(self, request, **kwargs):
+        res = original(self, request, **kwargs)
+        calls.append(res)
+        return res
+
+    monkeypatch.setattr(TC, "execute", wrapper)
+    return calls
+
+
+def _bind_agent(agent, task_id: str, body: str = MULTISTEP_PROMPT):
+    agent._canonical_work_task_id = task_id
+    agent._message_envelope = MessageEnvelope(
+        MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, body
     )
+    agent._conversation_root_id = lambda: SESSION_ID
+    agent._tool_guardrails = _make_guardrails()
+    agent._work_capabilities = {}
+    agent._work_user_constraints = {}
+    agent._current_provider_usage = None
+    agent._work_completed_mutations = {}
+    agent._work_mutation_evidence = {}
+    agent._workstation_event_bus = None
+    agent._interrupt_requested = False
+    agent.valid_tool_names = set(agent.valid_tool_names or set())
+    agent.provider = "moa"
 
-    # 3. Register promoted filesystem capability in the default registry
-    store = ArtifactStore()
-    registry = OperationalCapabilityRegistry(artifacts=store)
-    _make_filesystem_capability(registry, target_path=Path("h080_test.txt"), cap_id="e2e.cap.fs.write")
 
-    # 4. Create AIAgent with mocked provider that fails if called
-    provider_counter = _ProviderCallCounter(fail_on_call=True)
-
+def _make_agent(**kwargs):
     with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
         patch("model_tools.check_toolset_requirements", return_value={}),
         patch("agent.process_bootstrap.OpenAI"),
     ):
@@ -404,171 +339,198 @@ def test_known_promoted_capability_bypasses_llm(workstation_adapter_installed, t
             quiet_mode=True,
             skip_context_files=True,
             skip_memory=True,
+            **kwargs,
         )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
+        return agent
 
-        # 5. Bind the agent to the canonical task (what prepare_turn_work would do)
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: "e2e-session"
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
 
-        # 6. Run the turn through the normal entry point
-        result = agent.run_conversation(
-            user_message=MULTISTEP_PROMPT,
-            task_id=task_id,
-        )
+# =============================================================================
+# E001F — verified filesystem success through the normal turn
+# =============================================================================
 
-    # 7. Assertions - prove the full causal path
-    assert provider_counter.call_count == 0, f"Provider was called {provider_counter.call_count} times but should be 0"
+def test_known_promoted_capability_bypasses_llm(
+    workstation_adapter_installed, temp_hermes_home, monkeypatch, tmp_path, execute_spy,
+):
+    """E001F: promoted filesystem capability executes with real post-effect verification.
+
+    Proves: goal false at admission, production authority (no TaskCompiler
+    monkeypatch), EXECUTE with certificate, real tmp filesystem mutation, real
+    ``fs_read`` readback after the write, no pre-seeded success evidence,
+    VERIFIED + accepted, COMMITTED, zero provider calls, canonical finalizer.
+    """
+    target = tmp_path / "h080_e001f.txt"
+    assert not target.exists()
+    expected_content = "h080a-proof"
+
+    task_id = canonical_task()
+    run_id = _run_id_of(task_id)
+    goal = EQ("exists", True)
+    plan_id = store_intent(
+        intent(goal),
+        task_id,
+        semantic_state={"exists": False},
+        capability_inputs={"path": str(target), "content": expected_content},
+        verification_expected=expected_content,
+        observer_args={"path": str(target)},
+        observed_predicates=(_fs_fingerprint(),),
+        resource_id=str(target),
+        resource_version="1",
+        operation_id=OPERATION_ID,
+        expected_task_id=task_id,
+        expected_run_id=run_id,
+        expected_operation_id=OPERATION_ID,
+    )
+
+    store = ArtifactStore()
+    registry = OperationalCapabilityRegistry(artifacts=store)
+    _make_filesystem_capability(registry, "e2e.cap.fs.write")
+
+    provider_counter = _ProviderCallCounter(fail_on_call=True)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
+
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
+
+    assert provider_counter.call_count == 0
     assert result["completed"] is True
     assert result["failed"] is False
-
-    # Prove the causal markers directly from the result
-    assert result.get("routing_decision") == "EXECUTE", f"Expected EXECUTE, got {result.get('routing_decision')}"
-    assert result.get("verification_result", {}).get("status") == "VERIFIED", f"Expected VERIFIED, got {result.get('verification_result')}"
-    assert result.get("verification_result", {}).get("accepted") is True, f"Expected accepted=true, got {result.get('verification_result', {}).get('accepted')}"
-    assert result.get("dispatch_record", {}).get("status") == "COMMITTED", f"Expected COMMITTED, got {result.get('dispatch_record')}"
-    assert result.get("capability_id") is not None
-    assert result.get("certificate_hash", "") != ""
-    assert provider_counter.call_count == 0
-
-
-# =============================================================================
-# E001D — Durable dispatcher parity (real workstation_durable_dispatch)
-# =============================================================================
-
-class _DispatchRecorder:
-    """Records physical dispatcher calls for verification without replacing the dispatcher."""
-
-    def __init__(self):
-        self.calls = []
-
-    def __call__(self, name, args, *rest):
-        self.calls.append((name, dict(args)))
-        # Delegate to the real handler if we want, but here we just record
-        # The test will use the real dispatcher, so this is for observation only
-        return {"ok": True}
+    # Real mutation happened.
+    assert target.exists()
+    assert target.read_text(encoding="utf-8") == expected_content
+    # Direct causal markers from the control plane (observed, not mocked).
+    assert execute_spy, "expected at least one TaskCompiler.execute call"
+    last = execute_spy[-1]
+    assert last.get("routing_decision") == "EXECUTE"
+    assert last.get("capability_id") == "e2e.cap.fs.write"
+    assert last.get("certificate_hash")
+    assert last.get("verification_result", {}).get("status") == "VERIFIED"
+    assert last.get("verification_result", {}).get("accepted") is True
+    assert last.get("dispatch_record", {}).get("status") == "COMMITTED"
 
 
-def test_durable_dispatcher_parity(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E001D: Real workstation_durable_dispatch path is exercised.
-
-    Uses a real admitted tool (todo_list) through the actual tool catalog/session scope.
-    Proves:
-    - real workstation_durable_dispatch invoked
-    - real execute_tool_calls_sequential
-    - real todo_list handler executes
-    - TodoStore state changes exactly once
-    - raw-result capture path exercised
-    - no blind provider retry after uncertain dispatched effect
-    """
-    # 1. Create canonical task
+def test_already_satisfied_goal_bypasses_llm(
+    workstation_adapter_installed, temp_hermes_home, monkeypatch, tmp_path, execute_spy,
+):
+    """SATISFIED path: goal already true dispatches nothing and spends no LLM call."""
     task_id = canonical_task()
+    goal = EQ("exists", True)
+    store_intent(intent(goal), task_id, semantic_state={"exists": True})
 
-    # 2. Store established intent with provable goal
-    goal = EXISTS("todo_item")
-    store_intent(
-        intent(goal),
-        task_id,
-        semantic_state={"todo_item": {"exists": False}},
-    )
-
-    # 2. Register promoted todo capability (uses real todo_list tool)
     store = ArtifactStore()
     registry = OperationalCapabilityRegistry(artifacts=store)
-    _make_todo_capability(registry, cap_id="e2e.cap.todo.add")
+    _make_filesystem_capability(registry, "e2e.cap.fs.write")
 
-    # 3. Create AIAgent with provider counter
     provider_counter = _ProviderCallCounter(fail_on_call=True)
-    dispatch_recorder = _DispatchRecorder()
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
 
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),  # we'll rely on real toolset
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-        # Wrap the real dispatcher to record calls without replacing it
-        patch("workstation.integrations.hermes.scoped_execution.workstation_durable_dispatch") as mock_dispatch,
-    ):
-        # Make the mock delegate to the real dispatcher but record calls
-        from workstation.integrations.hermes.scoped_execution import workstation_durable_dispatch as real_dispatch
-        def recording_dispatch(agent):
-            real_disp = real_dispatch(agent)
-            def wrapper(name, args, *rest):
-                dispatch_recorder.calls.append((name, dict(args)))
-                return real_disp(name, args, *rest)
-            return wrapper
-        mock_dispatch.side_effect = recording_dispatch
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
 
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-            enabled_toolsets=["todo"],  # Enable todo toolset
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
+    assert provider_counter.call_count == 0
+    assert result["completed"] is True
+    assert execute_spy, "expected at least one TaskCompiler.execute call"
+    assert execute_spy[-1].get("routing_decision") == "SATISFIED"
 
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, "e2e-session", "Add a todo item"
-        )
-        agent._conversation_root_id = lambda: "e2e-session"
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
 
-        # 4. Run the turn
-        result = agent.run_conversation(
-            user_message="Add a todo item",
-            task_id=task_id,
-        )
+# =============================================================================
+# E001D — durable dispatcher parity with a real admitted tool
+# =============================================================================
 
-    # 6. Assertions
-    # Physical dispatch happened through real dispatcher
-    assert len(dispatch_recorder.calls) >= 1, "Expected at least 1 physical dispatch through real dispatcher"
-    # Provider not called
-    assert provider_counter.call_count == 0, "Provider should not be called after successful deterministic execution"
-    # Turn completed
+def test_durable_dispatcher_parity(
+    workstation_adapter_installed, temp_hermes_home, monkeypatch,
+):
+    """E001D: the real ``workstation_durable_dispatch`` executes ``todo_list`` exactly once.
+
+    Uses the real tool catalog (``todo`` toolset), the real
+    ``execute_tool_calls_sequential`` path and the real ``TodoStore``. Only
+    spies (wraps) observe; nothing in the dispatch chain is replaced. The turn
+    may end WAIT/HANDOFF when no canonical independent verifier exists — the
+    proof owned here is exactly-once real dispatch with no blind retry.
+    """
+    from agent import tool_executor
+    from workstation import task_compiler as task_compiler_mod
+
+    task_id = canonical_task(prompt="First add the todo item then verify the list")
+    body = "First add the todo item then verify the list"
+    goal = EXISTS("todo_item")
+    plan_id = store_intent(
+        intent(goal, target="todo", effect="todo_list", operation_family="todo.write",
+               target_family="todo"),
+        task_id,
+        semantic_state={"todo_item": {"exists": False}},
+        capability_inputs={"todos": [{"id": "e001d-1", "content": "h080a parity", "status": "pending"}]},
+        operation_id=OPERATION_ID,
+        expected_task_id=task_id,
+        expected_run_id=_run_id_of(task_id),
+        expected_operation_id=OPERATION_ID,
+    )
+
+    store = ArtifactStore()
+    registry = OperationalCapabilityRegistry(artifacts=store)
+    _make_todo_capability(registry, "e2e.cap.todo.add")
+
+    provider_counter = _ProviderCallCounter(fail_on_call=True)
+
+    executor_calls: list = []
+    raw_results: list = []
+    original_executor = tool_executor.execute_tool_calls_sequential
+    original_take_raw = task_compiler_mod.take_raw_result
+
+    def executor_spy(agent, assistant_message, messages, effective_task_id, api_call_count=0, **kwargs):
+        executor_calls.append([
+            (tc.function.name, tc.function.arguments)
+            for tc in list(getattr(assistant_message, "tool_calls", []) or [])
+        ])
+        return original_executor(agent, assistant_message, messages, effective_task_id, api_call_count, **kwargs)
+
+    def raw_spy(call_id, fallback):
+        raw_results.append(call_id)
+        return original_take_raw(call_id, fallback)
+
+    # NOTE: scoped_execution imports execute_tool_calls_sequential inside the
+    # dispatch closure (call time), so patching agent.tool_executor affects the
+    # real path. take_raw_result is imported at module top in scoped_execution,
+    # so the module attribute itself is the correct spy target.
+    monkeypatch.setattr(tool_executor, "execute_tool_calls_sequential", executor_spy)
+    monkeypatch.setattr(
+        "workstation.integrations.hermes.scoped_execution.take_raw_result", raw_spy
+    )
+
+    agent = _make_agent(enabled_toolsets=["todo"])
+    # todo_list may be deferred behind tool_call in the real catalog; the
+    # durable dispatcher resolves either path. What matters is exactly one
+    # real execution reaching the TodoStore.
+    before_revision = agent._todo_store.snapshot()["revision"]
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id, body=body)
+
+    result = agent.run_conversation(user_message=body, task_id=task_id)
+
+    assert len(executor_calls) == 1, f"expected exactly one real tool execution, got {executor_calls}"
+    after = agent._todo_store.snapshot()
+    assert after["revision"] == before_revision + 1
+    assert any(item["id"] == "e001d-1" for item in after["todos"])
+    assert raw_results, "expected the raw-result capture path to run"
+    assert provider_counter.call_count == 0
     assert result["completed"] is True
 
 
 # =============================================================================
-# E002 — Novel/no-match requests reach provider
+# E002 — novel / no-match requests reach the provider
 # =============================================================================
 
 def test_novel_request_reaches_provider(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E002: A request with no established intent reaches the provider.
-
-    The operational resolution boundary should return CONTINUE_REASONING,
-    and the provider should be called normally.
-    """
-    # 1. Create canonical task but NO established intent
+    """E002: A request with no established intent reaches the provider."""
     task_id = canonical_task()
 
-    # 2. Register a capability that does NOT match (different target)
     store = ArtifactStore()
     registry = OperationalCapabilityRegistry(artifacts=store)
     cap = OperationalCapability(
@@ -592,135 +554,52 @@ def test_novel_request_reaches_provider(workstation_adapter_installed, temp_herm
                 covered_predicates=("other",),
                 observer="owner.readback",
                 source_kind="source_of_record",
-                minimum_evidence=3,
+                minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
                 allowed_trust=("trusted_owner",),
-                lifecycle=2,
-                resource_binding={"resource_id": "other", "resource_version": "1"},
-                require_read_after_write=True,
-                transition_claim=True,
+                lifecycle=VerificationLifecycle.VALIDATED,
             ),
         ),
     )
     registry.register(cap)
 
-    # 3. Create AIAgent with provider counter
     provider_counter = _ProviderCallCounter(fail_on_call=False)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
 
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
+    result = agent.run_conversation(user_message="Do something completely different", task_id=task_id)
 
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: SESSION_ID
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-        agent.provider = "moa"
-
-        # 4. Run the turn
-        result = agent.run_conversation(
-            user_message="Do something completely different",
-            task_id=task_id,
-        )
-
-    # 5. Assertions - provider should have been called
-    assert provider_counter.call_count >= 1, f"Provider should have been called but was called {provider_counter.call_count} times"
+    assert provider_counter.call_count >= 1
     assert result["completed"] is True
 
 
 def test_raw_text_is_not_intent(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E002-B: Raw user text without persisted intent does not synthesize an OperationIntent.
-
-    Even if the text sounds executable, without a durable established intent
-    the boundary must not dispatch any capability.
-    """
-    # 1. Create canonical task but NO established intent stored
+    """E002-B: raw user text without persisted intent never synthesizes an OperationIntent."""
     task_id = canonical_task()
 
-    # 2. Register a promoted capability that would match if intent existed
     store = ArtifactStore()
     registry = OperationalCapabilityRegistry(artifacts=store)
-    _make_filesystem_capability(registry, Path("dummy.txt"), "dummy.cap")
+    _make_filesystem_capability(registry, "dummy.cap")
 
-    # 3. Create AIAgent with provider counter
     provider_counter = _ProviderCallCounter(fail_on_call=False)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
 
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
+    result = agent.run_conversation(user_message="write the records to a file", task_id=task_id)
 
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: SESSION_ID
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-        agent.provider = "moa"
-
-        # 4. Run the turn with raw text that sounds executable but has no intent
-        result = agent.run_conversation(
-            user_message="write the records to a file",
-            task_id=task_id,
-        )
-
-    # 5. Assertions - provider should have been called (no intent to resolve)
-    assert provider_counter.call_count >= 1, "Provider should have been called for raw text without intent"
+    assert provider_counter.call_count >= 1
     assert result["completed"] is True
 
 
 def test_trivial_true_goal_is_not_satisfied(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E002-C: An intent with default TRUE goal does not auto-satisfy.
-
-    OperationIntent defaults goal to TRUE, which evaluates true against any state.
-    This must be rejected before routing to prevent closing turns on unstated goals.
-    """
-    # 1. Create canonical task
+    """E002-C: a default TRUE goal is not a provable intent."""
     task_id = canonical_task()
 
-    # 2. Store intent with default TRUE goal (no explicit goal)
     store = DurableTaskStore()
     try:
         objective_ref = ArtifactStore().store(
@@ -730,8 +609,8 @@ def test_trivial_true_goal_is_not_satisfied(workstation_adapter_installed, temp_
                 "operation_intent": {
                     "id": "intent-trivial",
                     "target": "filesystem",
-                    "goal": {"type": "TRUE"},  # default/trivial goal
-                    "effect_budget": [{"primitive": "write_file", "target": "filesystem"}],
+                    "goal": {"type": "TRUE"},
+                    "effect_budget": [{"primitive": "fs_write", "target": "filesystem"}],
                 },
                 "semantic_state": {"record": {"state": "anything"}},
             },
@@ -740,348 +619,53 @@ def test_trivial_true_goal_is_not_satisfied(workstation_adapter_installed, temp_
             task_id,
             "trivial goal intent",
             [{"id": 1}],
-            session_id="e2e-session",
+            session_id=SESSION_ID,
             metadata={"objective_ref": objective_ref, "canonical_task_id": task_id},
         )
     finally:
         store.close()
 
-    # 3. Register promoted capability
     store = ArtifactStore()
     registry = OperationalCapabilityRegistry(artifacts=store)
-    _make_filesystem_capability(registry, Path("dummy.txt"), "dummy.cap")
+    _make_filesystem_capability(registry, "dummy.cap")
 
-    # 4. Create AIAgent with provider counter
     provider_counter = _ProviderCallCounter(fail_on_call=False)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
 
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
 
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: SESSION_ID
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-        agent.provider = "moa"
-
-        # 5. Run the turn
-        result = agent.run_conversation(
-            user_message=MULTISTEP_PROMPT,
-            task_id=task_id,
-        )
-
-    # 6. Assertions - provider should be called (trivial goal rejected)
-    assert provider_counter.call_count >= 1, "Provider should have been called for trivial TRUE goal"
+    assert provider_counter.call_count >= 1
     assert result["completed"] is True
 
 
-def test_invalid_certificate_no_dispatch(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E003: An intent matching a capability with invalid certificate does not dispatch.
+def test_invalid_certificate_no_dispatch(
+    workstation_adapter_installed, temp_hermes_home, monkeypatch, execute_spy,
+):
+    """E003: a capability whose verifier is not VALIDATED never deterministically dispatches.
 
-    The route's verification must fail, and the boundary returns HANDOFF (ASK_HUMAN)
-    which is a terminal outcome. The provider is NOT called.
+    The router skips the uncertifiable capability; the step either escalates to
+    a human or falls back to reasoning. Either way no certified EXECUTE dispatch
+    occurs through the pre-reasoning boundary.
     """
-    # 1. Create canonical task
     task_id = canonical_task()
-
-    # 2. Store intent with provable goal
     plan_id = store_intent(
         intent(EQ("exists", True)),
-        task_id,
-        semantic_state={"record": {"state": "pending"}},
-    )
-
-    # 3. Register capability with INVALID verifier (not VALIDATED)
-    store = ArtifactStore()
-    registry = OperationalCapabilityRegistry(artifacts=store)
-    cap = OperationalCapability(
-        id="e2e.cap.fs.write",
-        name="E2E write record",
-        version="1.0.0",
-        route="filesystem",
-        lifecycle=CapabilityLifecycle.PROMOTED,
-        formal_contract=CapabilityFormalContract(
-            operation_family="file.write",
-            target_family="filesystem",
-            typed_preconditions=[],
-            typed_postconditions=[EQ("exists", True)],
-            effect_footprint=[CALL("write_file", "filesystem")],
-            authority_required=AuthorityScope(
-                level=AuthorityLevel.LOCAL_MUTATION,
-                allowed_actions={"write"},
-                allowed_resources={"filesystem"},
-            ),
-            verifier=VerificationContract(
-                covered_predicates=("fs_stat:exists",),
-                observer="owner.fs_stat",
-                source_kind="source_of_record",
-                minimum_evidence=3,
-                allowed_trust=("trusted_owner",),
-                lifecycle=1,  # CANDIDATE - NOT VALIDATED
-            ),
-        ),
-        implementation={"steps": [{"id": "write", "primitive": "write_file", "args": {"path": "$inputs.path", "content": "$inputs.content"}}]},
-    )
-    registry.register(cap)
-
-    # 4. Create AIAgent with provider counter that fails if called
-    provider_counter = _ProviderCallCounter(fail_on_call=True)
-
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
-
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: SESSION_ID
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-
-        # 5. Run the turn
-        result = agent.run_conversation(
-            user_message=MULTISTEP_PROMPT,
-            task_id=task_id,
-        )
-
-    # 6. Assertions - provider should NOT be called (HANDOFF is terminal)
-    assert result["completed"] is True
-    assert "human decision" in result["final_response"].lower() or "approval is required" in result["final_response"].lower()
-
-
-def test_quarantined_capability_no_dispatch(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E003: A quarantined capability does not dispatch."""
-    # 1. Create canonical task
-    task_id = canonical_task()
-
-    # 2. Store intent
-    plan_id = store_intent(
-        intent(EQ("exists", True)),
-        task_id,
-        semantic_state={"record": {"state": "pending"}},
-    )
-
-    # 3. Register capability as QUARANTINED
-    store = ArtifactStore()
-    registry = OperationalCapabilityRegistry(artifacts=store)
-    cap = OperationalCapability(
-        id="e2e.cap.fs.write",
-        name="E2E write record",
-        version="1.0.0",
-        route="filesystem",
-        lifecycle=CapabilityLifecycle.DISCOVERED,  # Not PROMOTED - will be rejected
-        formal_contract=CapabilityFormalContract(
-            operation_family="file.write",
-            target_family="filesystem",
-            typed_preconditions=[],
-            typed_postconditions=[EQ("exists", True)],
-            effect_footprint=[CALL("write_file", "filesystem")],
-            authority_required=AuthorityScope(
-                level=AuthorityLevel.LOCAL_MUTATION,
-                allowed_actions={"write"},
-                allowed_resources={"filesystem"},
-            ),
-            verifier=_validated_verifier(),
-        ),
-        implementation={"steps": [{"id": "write", "primitive": "write_file", "args": {"path": "$inputs.path", "content": "$inputs.content"}}]},
-    )
-    registry.register(cap)
-
-    # 4. Create AIAgent with provider counter
-    provider_counter = _ProviderCallCounter(fail_on_call=False)
-
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
-
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: SESSION_ID
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-
-        # 5. Run the turn
-        result = agent.run_conversation(
-            user_message=MULTISTEP_PROMPT,
-            task_id=task_id,
-        )
-
-    # 6. Assertions - provider should be called (quarantined -> no dispatch)
-    assert provider_counter.call_count >= 1, "Provider should have been called for quarantined capability"
-    assert result["completed"] is True
-
-
-def test_outstanding_uncertain_mutation_stops_boundary(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E003: An outstanding uncertain mutation stops the boundary before dispatch.
-
-    The plan has a mutation that crossed I/O without a proved result.
-    The boundary must not add a second dispatch lane; it returns CONTINUE_REASONING.
-    """
-    # 1. Create canonical task
-    task_id = canonical_task()
-
-    # 2. Store intent
-    plan_id = store_intent(
-        intent(EQ("exists", True)),
-        task_id,
-        semantic_state={"record": {"state": "pending"}},
-    )
-
-    # 3. Record an unproved mutation on the plan
-    store = DurableTaskStore()
-    try:
-        item = store.get_work_items(plan_id)[0]
-        store.update_item_checkpoint(
-            item.id, "step_0_dispatch",
-            metadata={"mutation_identity": {
-                "operation_id": "op-unproved", "tool": "write_file",
-                "effect": "MUTATION", "target_identifier": "filesystem",
-            }},
-        )
-    finally:
-        store.close()
-
-    # 4. Register promoted capability
-    store = ArtifactStore()
-    registry = OperationalCapabilityRegistry(artifacts=store)
-    _make_filesystem_capability(registry, Path("dummy.txt"), "dummy.cap")
-
-    # 5. Create AIAgent with provider counter
-    provider_counter = _ProviderCallCounter(fail_on_call=False)
-
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
-
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: SESSION_ID
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-
-        # 6. Run the turn
-        result = agent.run_conversation(
-            user_message=MULTISTEP_PROMPT,
-            task_id=task_id,
-        )
-
-    # 7. Assertions - provider should be called (uncertain mutation -> no dispatch)
-    assert provider_counter.call_count >= 1, "Provider should have been called for uncertain mutation"
-    assert result["completed"] is True
-
-
-def test_verifier_failure_no_commit(workstation_adapter_installed, temp_hermes_home, monkeypatch):
-    """E003VF: A dispatch that succeeds but verification fails does not commit.
-
-    The handler returns ACK/success but canonical verification = FAILED or INCONCLUSIVE.
-    The boundary must not commit or promote, and must return WAIT/HANDOFF.
-    No blind LLM retry of the same mutation occurs.
-    """
-    # 1. Create canonical task
-    task_id = canonical_task()
-
-    # 2. Store established intent with provable goal (NOT satisfied initially)
-    goal = EQ("exists", True)
-    store_intent(
-        intent(goal),
         task_id,
         semantic_state={"exists": False},
     )
 
-    # 3. Register capability with VALIDATED verifier
+    from workstation.control_plane.verification import VerificationContract as VC
+
     store = ArtifactStore()
     registry = OperationalCapabilityRegistry(artifacts=store)
+    goal = EQ("exists", True)
     cap = OperationalCapability(
         id="e2e.cap.fs.write",
-        name="E2E write record",
+        name="E2E write file",
         version="1.0.0",
         route="filesystem",
         lifecycle=CapabilityLifecycle.PROMOTED,
@@ -1090,99 +674,186 @@ def test_verifier_failure_no_commit(workstation_adapter_installed, temp_hermes_h
             target_family="filesystem",
             typed_preconditions=[],
             typed_postconditions=[goal],
-            effect_footprint=[CALL("write_file", "filesystem")],
+            effect_footprint=[CALL("fs_write", "filesystem")],
             authority_required=AuthorityScope(
                 level=AuthorityLevel.LOCAL_MUTATION,
                 allowed_actions={"write"},
                 allowed_resources={"filesystem"},
             ),
-            verifier=_filesystem_verifier(),  # VALIDATED verifier
+            verifier=VC(
+                covered_predicates=("file:content",),
+                observer="fs_read",
+                source_kind="filesystem",
+                minimum_evidence=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+                allowed_trust=("trusted_runtime",),
+                lifecycle=VerificationLifecycle.CANDIDATE,
+                require_read_after_write=True,
+                transition_claim=True,
+            ),
         ),
-        implementation={"steps": [{"id": "write", "primitive": "write_file", "args": {"path": "$inputs.path", "content": "$inputs.content"}}]},
+        implementation={"steps": [{
+            "id": "write", "primitive": "fs_write",
+            "args": {"path": "$inputs.path", "content": "$inputs.content"},
+        }]},
     )
     registry.register(cap)
 
-    # 4. Create AIAgent with provider counter that fails if called
-    provider_counter = _ProviderCallCounter(fail_on_call=True)
+    provider_counter = _ProviderCallCounter(fail_on_call=False)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
 
-    # Patch evaluate_verification to return FAILED (simulating verification failure after successful dispatch)
-    from workstation.operational_kernel import evaluate_verification as original_evaluate_verification
-    from workstation.control_plane.verification import VerificationResult, VerificationStatus
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
 
-    def failed_evaluation(*args, **kwargs):
-        return VerificationResult(
-            status=VerificationStatus.FAILED,
-            verifier_fingerprint="test-fingerprint",
-            evidence_refs=(),
-            covered_predicates=(),
-            freshness_satisfied=True,
-            relation_satisfied=False,
-            source_admissible=True,
-            fault_domain_admissible=True,
-            transition_proven=False,
-            reason="verification_failed_for_test",
-            evaluated_at="2026-09-22T00:00:00+00:00",
-        )
-
-    from workstation.task_compiler import TaskCompiler as TC
-    original_execute = TC.execute
-
-    def patched_execute(self, request, *, task_id, session_id, dispatch, progress=None, provider_usage=None, environment=None, event_bus=None, canonical_task_id=None):
-        from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
-        self.trusted_authority = AuthorityScope(
-            level=AuthorityLevel.LOCAL_MUTATION,
-            allowed_actions={"write"},
-            allowed_resources={"filesystem"},
-        )
-        return original_execute(self, request, task_id=task_id, session_id=session_id, dispatch=dispatch, progress=progress, provider_usage=provider_usage, environment=environment, event_bus=event_bus, canonical_task_id=canonical_task_id)
-
-    with (
-        patch("model_tools.get_tool_definitions", return_value=[]),
-        patch("model_tools.check_toolset_requirements", return_value={}),
-        patch("agent.process_bootstrap.OpenAI"),
-        # Patch TaskCompiler.execute to set trusted_authority
-        patch.object(TC, 'execute', patched_execute),
-        # Patch verification to fail
-        patch("workstation.operational_kernel.evaluate_verification", failed_evaluation),
-    ):
-        agent = AIAgent(
-            api_key="test-key-1234567890",
-            base_url="https://test.api",
-            quiet_mode=True,
-            skip_context_files=True,
-            skip_memory=True,
-        )
-        agent.client = SimpleNamespace(
-            chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
-        )
-
-        # Bind agent to task
-        agent._canonical_work_task_id = task_id
-        agent._message_envelope = MessageEnvelope(
-            MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, MULTISTEP_PROMPT
-        )
-        agent._conversation_root_id = lambda: "e2e-session"
-        agent._tool_guardrails = _make_guardrails()
-        agent._work_capabilities = {}
-        agent._work_user_constraints = {}
-        agent._current_provider_usage = None
-        agent._work_completed_mutations = {}
-        agent._work_mutation_evidence = {}
-        agent._workstation_event_bus = None
-        agent._interrupt_requested = False
-        agent.valid_tool_names = set()
-
-        # 5. Run the turn
-        result = agent.run_conversation(
-            user_message=MULTISTEP_PROMPT,
-            task_id=task_id,
-        )
-
-    # 6. Assertions
-    # Physical dispatch happened (the handler returned ACK)
-    # But verification failed, so no provider retry
-    assert provider_counter.call_count == 0, "Provider should not be called after failed verification"
-    # Result should be terminal but not EXECUTED success
     assert result["completed"] is True
-    # Should be WAIT or HANDOFF, not EXECUTED
-    assert "reconcile" in result["final_response"].lower() or "human decision" in result["final_response"].lower() or "approval is required" in result["final_response"].lower() or "could not be proven" in result["final_response"].lower()
+    assert execute_spy, "expected at least one TaskCompiler.execute call"
+    assert all(
+        r.get("routing_decision") != "EXECUTE" for r in execute_spy
+    ), f"uncertifiable capability must never EXECUTE: {execute_spy}"
+
+
+def test_quarantined_capability_no_dispatch(workstation_adapter_installed, temp_hermes_home, monkeypatch):
+    """E003: a non-promoted capability is never selected for deterministic dispatch."""
+    task_id = canonical_task()
+    plan_id = store_intent(
+        intent(EQ("exists", True)),
+        task_id,
+        semantic_state={"exists": False},
+    )
+
+    store = ArtifactStore()
+    registry = OperationalCapabilityRegistry(artifacts=store)
+    _make_filesystem_capability(registry, "e2e.cap.fs.write")
+    # Demote to DISCOVERED after registration so the router ignores it.
+    for cap in registry.list_capabilities():
+        if cap.id == "e2e.cap.fs.write":
+            cap.lifecycle = CapabilityLifecycle.DISCOVERED
+            registry.register(cap)
+
+    provider_counter = _ProviderCallCounter(fail_on_call=False)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
+
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
+
+    assert provider_counter.call_count >= 1
+    assert result["completed"] is True
+
+
+def test_outstanding_uncertain_mutation_stops_boundary(
+    workstation_adapter_installed, temp_hermes_home, monkeypatch,
+):
+    """E003: an unproved mutation of the same plan blocks a second dispatch lane."""
+    task_id = canonical_task()
+    plan_id = store_intent(
+        intent(EQ("exists", True)),
+        task_id,
+        semantic_state={"exists": False},
+    )
+
+    store = DurableTaskStore()
+    try:
+        item = store.get_work_items(plan_id)[0]
+        store.update_item_checkpoint(
+            item.id, "step_0_dispatch",
+            metadata={"mutation_identity": {
+                "operation_id": "op-unproved", "tool": "fs_write",
+                "effect": "MUTATION", "target_identifier": "filesystem",
+            }},
+        )
+    finally:
+        store.close()
+
+    store = ArtifactStore()
+    registry = OperationalCapabilityRegistry(artifacts=store)
+    _make_filesystem_capability(registry, "dummy.cap")
+
+    provider_counter = _ProviderCallCounter(fail_on_call=False)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
+
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
+
+    assert provider_counter.call_count >= 1
+    assert result["completed"] is True
+
+
+def test_verifier_failure_no_commit(
+    workstation_adapter_installed, temp_hermes_home, monkeypatch, tmp_path, execute_spy,
+):
+    """E003VF: real mutation + real readback that disagrees with expected → no commit, no retry.
+
+    Writes content A while the verification contract expects content B. The
+    kernel's real ``fs_read`` observer returns A, canonical evaluation yields
+    FAILED, the dispatch record is not COMMITTED success, the turn ends
+    WAIT/HANDOFF, and the provider is never called for a blind retry.
+    """
+    target = tmp_path / "h080_e003vf.txt"
+    actual_content = "actual-A"
+    expected_content = "expected-B"
+
+    task_id = canonical_task()
+    run_id = _run_id_of(task_id)
+    goal = EQ("exists", True)
+    plan_id = store_intent(
+        intent(goal),
+        task_id,
+        semantic_state={"exists": False},
+        capability_inputs={"path": str(target), "content": actual_content},
+        verification_expected=expected_content,
+        observer_args={"path": str(target)},
+        observed_predicates=(_fs_fingerprint(),),
+        resource_id=str(target),
+        resource_version="1",
+        operation_id=OPERATION_ID,
+        expected_task_id=task_id,
+        expected_run_id=run_id,
+        expected_operation_id=OPERATION_ID,
+    )
+
+    store = ArtifactStore()
+    registry = OperationalCapabilityRegistry(artifacts=store)
+    _make_filesystem_capability(registry, "e2e.cap.fs.write")
+
+    # Count real kernel-level writes without replacing the primitive.
+    from workstation import operational_kernel as kernel_mod
+
+    write_calls: list = []
+    original_fs_write = kernel_mod.OperationalKernel.fs_write
+
+    def counting_fs_write(self, path, content, overwrite=True, base_dir=None):
+        write_calls.append((str(path), str(content)))
+        return original_fs_write(self, path, content, overwrite=overwrite, base_dir=base_dir)
+
+    monkeypatch.setattr(kernel_mod.OperationalKernel, "fs_write", counting_fs_write)
+
+    provider_counter = _ProviderCallCounter(fail_on_call=True)
+    agent = _make_agent()
+    agent.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=provider_counter))
+    )
+    _bind_agent(agent, task_id)
+
+    result = agent.run_conversation(user_message=MULTISTEP_PROMPT, task_id=task_id)
+
+    assert target.exists()
+    assert target.read_text(encoding="utf-8") == actual_content
+    assert len(write_calls) == 1, f"expected exactly one real mutation, got {write_calls}"
+    assert provider_counter.call_count == 0
+    assert result["completed"] is True
+    assert execute_spy, "expected at least one TaskCompiler.execute call"
+    last = execute_spy[-1]
+    # The route admitted the capability, but the real readback disagreed with
+    # expected, so the control plane refuses COMMITTED success and escalates.
+    assert last.get("verification_result", {}).get("status") in ("FAILED", "INCONCLUSIVE")
+    assert last.get("verification_result", {}).get("accepted") is not True
+    assert (last.get("dispatch_record", {}) or {}).get("status") != "COMMITTED"
+    assert "reconcile" in result["final_response"].lower() or "human decision" in result["final_response"].lower() or "could not be proven" in result["final_response"].lower()

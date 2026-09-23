@@ -265,6 +265,9 @@ def test_authority_the_task_does_not_hold_goes_to_a_human():
     The route refuses to certify it; the boundary must report that refusal as a
     handoff rather than degrade it into another reasoning round that could try the
     same mutation again.
+
+    The production authority bridge grants at most LOCAL_MUTATION, so the
+    fixture requires EXTERNAL_REVERSIBLE to preserve the shortfall.
     """
     from workstation.control_plane.contract import CapabilityFormalContract
     from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
@@ -284,7 +287,7 @@ def test_authority_the_task_does_not_hold_goes_to_a_human():
             typed_postconditions=[exists("record")],
             effect_footprint=[created("record")],
             authority_required=AuthorityScope(
-                level=AuthorityLevel.LOCAL_MUTATION,
+                level=AuthorityLevel.EXTERNAL_REVERSIBLE,
                 allowed_actions={"create"}, allowed_resources={"record"},
             ),
             verifier={"kind": "exists", "evidence_strength": "E2"},
