@@ -270,7 +270,10 @@ class OperationalKernel:
         if primitive in {"browser_navigate", "navigate"}:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")
-            return dispatch("browser_navigate", {"url": inputs["url"]})
+            nav_args = {"url": inputs["url"]}
+            if ctx.get("operation_id"):
+                nav_args["operation_id"] = ctx["operation_id"]
+            return dispatch("browser_navigate", nav_args)
         if primitive in {"browser_snapshot", "snapshot"}:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")
@@ -475,6 +478,17 @@ class OperationalKernel:
         }
         if context:
             exec_context.update({k: v for k, v in context.items() if k not in exec_context})
+
+        task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
+        run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
+        operation_id = str(
+            exec_context.get("operation_id")
+            or getattr(self, "operation_id", None)
+            or f"op_{cap.id}_{uuid4().hex[:8]}"
+        )
+        exec_context["task_id"] = task_id
+        exec_context["run_id"] = run_id
+        exec_context["operation_id"] = operation_id
 
         learned = cap.provenance.get('source') == 'experience_compiler'
         if learned and cap.lifecycle.value != 'promoted' and not exec_context.get('learning_replay'):
@@ -705,9 +719,9 @@ class OperationalKernel:
                 "verification_expected",
                 verifier_contract.relation_parameters.get("expected", exec_context.get("semantic_state")),
             )
-            task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
-            run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
-            operation_id = str(exec_context.get("operation_id") or getattr(self, "operation_id", None) or f"op_{cap.id}_{uuid4().hex[:8]}")
+            task_id = exec_context["task_id"]
+            run_id = exec_context["run_id"]
+            operation_id = exec_context["operation_id"]
 
             supplied_evidence = exec_context.get("verification_evidence")
             if (supplied_evidence is None and learned and cap.route == 'native_browser'
@@ -718,7 +732,14 @@ class OperationalKernel:
 
                 try:
                     readback = read_native_browser_session_state(
-                        task_id, str(exec_context.get('session_id') or ''), run_id, str(navigation_target))
+                        task_id, str(exec_context.get('session_id') or ''), run_id, str(navigation_target),
+                        expected_operation_id=operation_id,
+                        require_owner_receipt=True,
+                    )
+                    last_receipt = readback.get('last_receipt') or {}
+                    proven_op_id = last_receipt.get('operationId')
+                    if not proven_op_id or proven_op_id != operation_id:
+                        raise ValueError(f"Browser owner receipt operation_id mismatch: expected {operation_id}, got {proven_op_id}")
                     projected = abstract_state('native_browser', readback).semantic_predicates
                     expected_effects = cap.learning_metadata.get('effects') or {}
                     observed_effects = {key: projected[key] for key in expected_effects}
@@ -738,8 +759,8 @@ class OperationalKernel:
                         evidence_strength=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
                         trust_class='trusted_runtime', observer_failure_domain='browser_session_persistence',
                         resource_id=f"browser_task:{task_id}:tab:{readback['tab_id']}",
-                        resource_version=readback['saved_at'],
-                        observed_at=datetime.now(timezone.utc).isoformat(), read_after_write=True,
+                        resource_version=str(readback.get('revision', readback['saved_at'])),
+                        observed_at=readback.get('saved_at') or datetime.now(timezone.utc).isoformat(), read_after_write=True,
                         covered_predicates=observed_coverage,
                         artifact_ref=ref.ref, task_id=task_id, run_id=run_id, operation_id=operation_id,
                     )]

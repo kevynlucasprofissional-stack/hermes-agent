@@ -64,6 +64,8 @@ def sample_from_trace(trace, *, before=None, after=None, verification=None, prov
     outcome = trace.get('outcome', 'uncertain')
     if outcome == 'executed_unverified':
         outcome = 'uncertain'
+    elif outcome not in {o.value for o in TransitionOutcome}:
+        outcome = 'failed'
     args = normalized(trace.get('arguments', {}))
     raw_result_ref = trace.get('after_state_ref')  # Reference to the stored raw result
     return TransitionSample(state_before=before, state_after=after,
