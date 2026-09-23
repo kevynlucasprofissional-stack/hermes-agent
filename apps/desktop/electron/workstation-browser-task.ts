@@ -18,6 +18,18 @@ export interface BrowserHumanControlLease {
   renewedAt: string | null
 }
 
+export interface BrowserOwnerReceipt {
+  operationId: string
+  taskId: string
+  runId: string
+  browserTaskId: string
+  tabId: string
+  revision: number
+  action: string
+  safeUrl: string | null
+  executedAt: string
+}
+
 export interface BrowserTask {
   taskId: string
   createdAt: string
@@ -33,6 +45,8 @@ export interface BrowserTask {
   recoveryState: BrowserTaskRecoveryState
   updatedAt: string
   humanControlLease?: BrowserHumanControlLease
+  revision?: number
+  lastReceipt?: BrowserOwnerReceipt
 }
 
 export interface BrowserTaskSnapshot {
@@ -160,6 +174,27 @@ function parsePersistedTask(value: unknown): BrowserTask | null {
 
   if (validHumanControlLease(task.humanControlLease, parsed.taskId)) {
     parsed.humanControlLease = task.humanControlLease
+  }
+
+  if (typeof task.revision === 'number' && Number.isInteger(task.revision) && task.revision >= 0) {
+    parsed.revision = task.revision
+  }
+
+  if (task.lastReceipt && typeof task.lastReceipt === 'object') {
+    const r = task.lastReceipt as Partial<BrowserOwnerReceipt>
+    if (typeof r.operationId === 'string' && typeof r.taskId === 'string') {
+      parsed.lastReceipt = {
+        operationId: r.operationId,
+        taskId: r.taskId,
+        runId: String(r.runId ?? ''),
+        browserTaskId: String(r.browserTaskId ?? r.taskId),
+        tabId: String(r.tabId ?? ''),
+        revision: typeof r.revision === 'number' ? r.revision : 1,
+        action: String(r.action ?? ''),
+        safeUrl: typeof r.safeUrl === 'string' ? r.safeUrl : null,
+        executedAt: String(r.executedAt ?? task.updatedAt)
+      }
+    }
   }
 
   return parsed
@@ -361,6 +396,17 @@ export class BrowserTaskLifecycle<Page, ShowContext = void> {
     }
 
     task.runId = runId
+    task.updatedAt = this.timestamp()
+    this.persist()
+
+    return cloneTask(task)
+  }
+
+  recordReceipt(taskId: string, receipt: BrowserOwnerReceipt): BrowserTask {
+    const task = this.requireTask(taskId)
+    const revision = (task.revision ?? 0) + 1
+    task.revision = revision
+    task.lastReceipt = { ...receipt, revision }
     task.updatedAt = this.timestamp()
     this.persist()
 

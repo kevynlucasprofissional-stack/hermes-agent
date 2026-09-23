@@ -1,5 +1,76 @@
 # Workstation Known Issues
 
+## KI-023 — Browser owner receipt enforced as causal proof [RESOLVED IN H-080B.2]
+
+Resolved in H-080B.2:
+- Canonical `operation_id` established in `OperationalKernel.execute_capability` before physical I/O;
+- Propagated into native browser dispatch (`_dispatch` and `workstation_routed_browser_handler`);
+- `read_native_browser_session_state` enforces `expected_operation_id` and `require_owner_receipt=True`, verifying `operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, `revision`, `action`, `safeUrl`, and temporal ordering (`executedAt <= savedAt`);
+- `workstation/procedure_trace.py` detects caller/owner divergence, setting `operation_id_conflict=True`, `outcome="identity_conflict"`, `replayable=False`, and excluding it from candidate learning;
+- Tested via 9-case falsification matrix in `test_owner_receipt_strict_falsification_matrix` and `test_procedure_trace_operation_id_conflict_rejected_from_learning`.
+
+## KI-022 — Product-owned validation lifecycle and empirical verifier receipts [RESOLVED IN H-080B.2]
+
+Resolved in H-080B.2:
+- Removed verifier self-certification (`_build_positive_validation_receipt` / `_build_isolated_negative_control` returning fake `passed=True`);
+- Added `ValidationEnvironmentProvider` for product/test seam injection requiring real `VerificationEvidence` evaluated through `evaluate_verification()`; candidates without empirical receipts fail closed as `held_as_candidate / verifier_receipts_unavailable`;
+- Wired `ExperienceValidationPromotionCoordinator` directly into normal product runtime in `workstation/kanban.py::complete_task_with_report` after `compiler.mine()`;
+- Persisted restart-safe lifecycle progression into `candidate.learning_metadata["promotion_lifecycle"]` (`CANDIDATE`, `VALIDATION_PENDING`, `VERIFIER_VALIDATED`, `REPLAY_VALIDATED`, `PROMOTED`);
+- Empirically verified via `test_product_owned_completion_mines_and_promotes_candidate` (promotion without manual coordinator call) and `test_promotion_lifecycle_restart_and_idempotency`.
+
+`workstation/experience_compiler/lifecycle.py` adds `ExperienceValidationPromotionCoordinator`, and the fixture proves that the coordinator can invoke validation, controlled replay and promotion. This is useful orchestration and should be kept.
+
+Two blockers remain.
+
+### A. Default validation receipts are not empirical
+
+The coordinator fallback helpers:
+- `_build_positive_validation_receipt()`;
+- `_build_isolated_negative_control()`;
+
+persist descriptions and return receipts with `passed=True`. They do not prove that the canonical verifier actually observed the positive case or rejected the negative case. `validate_verifier_sensitivity()` currently accepts those booleans.
+
+Required closure:
+- production positive validation comes from real `VerificationEvidence` evaluated through `evaluate_verification()` or an equivalent owner-controlled verifier driver;
+- production negative sensitivity is actually discriminated in an isolated safe environment or comes from admissible historical counterexample evidence;
+- if evidence is unavailable, return `held_as_candidate / verifier_receipts_unavailable`;
+- no weakening of `ExperiencePromotionPolicy`.
+
+### B. Normal product runtime does not call the coordinator
+
+The completion/Experience path still ends after approximately:
+
+```text
+ExperienceCorpus.accept_run()
+-> ExperienceCompiler(...).mine()
+-> candidate
+-> journal "experience operational candidate; causal validation required"
+```
+
+No normal runtime caller sends those candidates into `ExperienceValidationPromotionCoordinator`.
+
+Required closure:
+- wire the coordinator after the existing `mine()` owner boundary;
+- preserve candidate state when validation cannot safely run;
+- persist lifecycle receipts/checkpoints through existing registry/artifacts/journal;
+- make validation/replay/promotion logically idempotent across restart;
+- do not rely on `threading.Lock()` as durable lifecycle ownership;
+- prove candidate -> product-owned validation/replay/promotion without the release E2E directly calling `process_candidate()`.
+
+Until both A and B close, canonical H-080B.2 status is:
+
+`ORCHESTRATOR IMPLEMENTED / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN`.
+
+Packaged/native proof remains H-080B.3. Laya remains deferred.
+
+## KI-021 update — first native-browser causal loop proven locally [CI/PRODUCTION QUALIFICATION OPEN]
+
+Commit `6d8806b868` proves a bounded hermetic normal-turn capture, owner persisted readback, canonical verified acceptance, two-run compilation, verifier validation, controlled replay, promotion and typed-intent reuse with no provider call. The old description below records the pre-fix product observation. Open qualification: run the new branch's CI and packaged/native product gate; no live ChatGPT login or fresh prose classifier has been claimed. Laya remains deferred.
+
+## KI-020 update — P0 contract fixed; Windows aggregate still red [OPEN — CI]
+
+PR #45 head `72cfa4b389`: Workstation contracts 779 passed. Windows `desktop-typecheck` still fails on `linux-crash-diagnostics` POSIX path expectation, `log-rotation` EPERM/ftruncate, `tray-host` process.getuid, 900-second `workstation_smoke`, and packaged GUI backend connection timeout. Focused browser, UI, typecheck and package build pass. Do not mark PR #45 all-green.
+
 ## KI-021 — H-080B production capture does not yet become verified learning capital [OPEN]
 
 Real native-browser product sessions already emit `TransitionSample`/trace artifacts and adaptive-observation journal events, but observed samples remain `uncertain`, `INCONCLUSIVE`, evidence strength 0. The existing conservative gates therefore reject them before real compilation/promotion.
@@ -319,7 +390,7 @@ hard-coding a browser exemption, making arbitrary browser JS read-only, disablin
 canary, allowing blind retry, weakening TaskRun/browser leases, adding a second
 memory or authority store, or globally bypassing work_execute.
 
-**Canonical design:** 
+**Canonical design:**
 [ADAPTIVE_EXECUTION_COMPILATION.md](ADAPTIVE_EXECUTION_COMPILATION.md).
 
 ## KI-012 — Upstream-derived ownership/resync/Kanban/recovery gaps [RESOLVED IN WORK P0 HARNESS — 2026-09-18]

@@ -270,7 +270,10 @@ class OperationalKernel:
         if primitive in {"browser_navigate", "navigate"}:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")
-            return dispatch("browser_navigate", {"url": inputs["url"]})
+            nav_args = {"url": inputs["url"]}
+            if ctx.get("operation_id"):
+                nav_args["operation_id"] = ctx["operation_id"]
+            return dispatch("browser_navigate", nav_args)
         if primitive in {"browser_snapshot", "snapshot"}:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")
@@ -476,6 +479,17 @@ class OperationalKernel:
         if context:
             exec_context.update({k: v for k, v in context.items() if k not in exec_context})
 
+        task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
+        run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
+        operation_id = str(
+            exec_context.get("operation_id")
+            or getattr(self, "operation_id", None)
+            or f"op_{cap.id}_{uuid4().hex[:8]}"
+        )
+        exec_context["task_id"] = task_id
+        exec_context["run_id"] = run_id
+        exec_context["operation_id"] = operation_id
+
         learned = cap.provenance.get('source') == 'experience_compiler'
         if learned and cap.lifecycle.value != 'promoted' and not exec_context.get('learning_replay'):
             raise CapabilityValidationError('learned candidates require controlled replay before execution')
@@ -484,6 +498,21 @@ class OperationalKernel:
             validate_inputs(cap.input_schema, cap.learning_metadata.get('relations', []), inputs)
             if cap.lifecycle.value == 'promoted' and not exec_context.get('learning_replay'):
                 from workstation.control_plane.validity_envelope import derive_validity_envelope
+                if cap.route == 'native_browser' and cap.scope.get('host'):
+                    from urllib.parse import urlsplit
+
+                    navigation = next((step for step in cap.implementation.get('steps', [])
+                                       if step.get('primitive') == 'browser_navigate'), None)
+                    if navigation is not None:
+                        bound = interpolate_variables(navigation.get('args', {}), exec_context)
+                        bound_url = urlsplit(str(bound.get('url') or ''))
+                        bound_host = bound_url.hostname
+                        if bound_host != cap.scope['host'] or (
+                            cap.scope.get('path_family') and (bound_url.path or '/') != cap.scope['path_family']
+                        ):
+                            raise CapabilityValidationError('bound navigation escaped learned host scope')
+                        exec_context.setdefault('host', bound_host)
+                        exec_context.setdefault('path_family', bound_url.path or '/')
                 envelope = derive_validity_envelope(cap, current_context=exec_context)
                 if not envelope.is_valid(exec_context):
                     return {"success": False, "execution_acknowledged": False,
@@ -496,12 +525,24 @@ class OperationalKernel:
         def observe_semantics(output=None):
             from workstation.experience_compiler.state_abstraction import abstract_state, filesystem_state
             if cap.route == 'native_browser':
+                if (learned and output is not None and navigation_target
+                        and isinstance(cap.verifier_contract, dict)
+                        and cap.verifier_contract.get('observer') == 'workstation.browser_session_state'):
+                    from tools.browser_workstation import read_native_browser_session_state
+
+                    readback = read_native_browser_session_state(
+                        str(exec_context.get('task_id') or owner or ''),
+                        str(exec_context.get('session_id') or ''),
+                        str(exec_context.get('run_id') or ''),
+                        str(navigation_target),
+                    )
+                    return abstract_state(cap.route, readback).semantic_predicates
                 if not dispatch:
                     raise CapabilityDriftError('semantic browser observation unavailable')
                 raw = dispatch('browser_snapshot', {'full': False})
                 if isinstance(raw, str):
                     raw = json.loads(raw)
-                if cap.scope.get('host'):
+                if output is not None and cap.scope.get('host'):
                     from urllib.parse import urlsplit
                     if urlsplit(raw.get('url', '')).hostname != cap.scope['host']:
                         raise CapabilityDriftError('browser scope drift')
@@ -584,7 +625,7 @@ class OperationalKernel:
             # 2. Verify preconditions
             pre_checkpoint = checkpoint_prefix + '_preconditions'
             pre_verified = durable_store and durable_store.get_item(durable_item_id).checkpoints.get(pre_checkpoint)
-            if learned and not pre_verified:
+            if learned and cap.preconditions and not pre_verified:
                 exec_context['semantic_state'] = observe_semantics()
             if not pre_verified:
                 self.check_conditions(cap.preconditions, exec_context, stage="precondition")
@@ -594,6 +635,7 @@ class OperationalKernel:
             # 3. Execute implementation steps
             steps = cap.implementation.get("steps", [])
             output = None
+            navigation_target = None
             for idx, step in enumerate(steps):
                 step_id = step.get("id", f"step_{idx}")
                 primitive = step.get("primitive") or step.get("tool") or step.get("action")
@@ -627,6 +669,8 @@ class OperationalKernel:
                 if admission:
                     admission(route, mutating)
                 bound_args = interpolate_variables(step_args, exec_context)
+                if learned and cap.route == 'native_browser' and primitive == 'browser_navigate':
+                    navigation_target = bound_args.get('url')
                 filesystem_scope = cap.scope.get('backends', {}).get('filesystem', cap.scope)
                 if learned and route == 'filesystem' and filesystem_scope.get('base_dir'):
                     base = Path(filesystem_scope['base_dir']).resolve()
@@ -675,11 +719,53 @@ class OperationalKernel:
                 "verification_expected",
                 verifier_contract.relation_parameters.get("expected", exec_context.get("semantic_state")),
             )
-            task_id = str(exec_context.get("task_id") or owner or getattr(self, "task_id", None) or "task_default")
-            run_id = str(exec_context.get("run_id") or getattr(self, "run_id", None) or "run_default")
-            operation_id = str(exec_context.get("operation_id") or getattr(self, "operation_id", None) or f"op_{cap.id}_{uuid4().hex[:8]}")
+            task_id = exec_context["task_id"]
+            run_id = exec_context["run_id"]
+            operation_id = exec_context["operation_id"]
 
             supplied_evidence = exec_context.get("verification_evidence")
+            if (supplied_evidence is None and learned and cap.route == 'native_browser'
+                    and navigation_target and verifier_contract.observer == 'workstation.browser_session_state'
+                    and verifier_contract.source_kind == 'browser_local_persistence'):
+                from tools.browser_workstation import read_native_browser_session_state
+                from workstation.experience_compiler.state_abstraction import abstract_state
+
+                try:
+                    readback = read_native_browser_session_state(
+                        task_id, str(exec_context.get('session_id') or ''), run_id, str(navigation_target),
+                        expected_operation_id=operation_id,
+                        require_owner_receipt=True,
+                    )
+                    last_receipt = readback.get('last_receipt') or {}
+                    proven_op_id = last_receipt.get('operationId')
+                    if not proven_op_id or proven_op_id != operation_id:
+                        raise ValueError(f"Browser owner receipt operation_id mismatch: expected {operation_id}, got {proven_op_id}")
+                    projected = abstract_state('native_browser', readback).semantic_predicates
+                    expected_effects = cap.learning_metadata.get('effects') or {}
+                    observed_effects = {key: projected[key] for key in expected_effects}
+                    from workstation.control_plane.ir import EQ
+                    observed_coverage = tuple(EQ(key, value).fingerprint()
+                                              for key, value in sorted(observed_effects.items()))
+                    if 'verification_expected' not in exec_context:
+                        expected_verification_value = expected_effects
+                    ref = self.artifacts.store(task_id,
+                        'learned_browser_readback_' + digest({'operation_id': operation_id, 'state': readback}) + '.json',
+                        {**readback, 'operation_id': operation_id, 'observed_effects': observed_effects},
+                        schema='hermes.browser_local_readback.v1')
+                    supplied_evidence = [VerificationEvidence(
+                        evidence_id='browser_session:' + operation_id,
+                        observer='workstation.browser_session_state',
+                        source_kind='browser_local_persistence', value=observed_effects,
+                        evidence_strength=EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+                        trust_class='trusted_runtime', observer_failure_domain='browser_session_persistence',
+                        resource_id=f"browser_task:{task_id}:tab:{readback['tab_id']}",
+                        resource_version=str(readback.get('revision', readback['saved_at'])),
+                        observed_at=readback.get('saved_at') or datetime.now(timezone.utc).isoformat(), read_after_write=True,
+                        covered_predicates=observed_coverage,
+                        artifact_ref=ref.ref, task_id=task_id, run_id=run_id, operation_id=operation_id,
+                    )]
+                except (OSError, ValueError, KeyError, TypeError):
+                    supplied_evidence = []
             if supplied_evidence is None:
                 # Do NOT manufacture evidence from expected values!
                 # Only execute real observers if available.

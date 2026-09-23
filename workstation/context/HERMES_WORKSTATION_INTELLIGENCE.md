@@ -1,5 +1,487 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-09-23 — Operational Telemetry Plane: de provar arquitetura para medir produto
+
+O Hermes Work chegou a uma mudança de fase: já temos várias propriedades arquiteturais comprovadas, mas agora precisamos medir continuamente se essas propriedades estão produzindo o resultado de produto que queremos.
+
+Pergunta central:
+
+> **Os outcomes verificados estão ficando mais baratos, mais determinísticos, mais reutilizáveis e mais confiáveis ao longo do tempo?**
+
+Sem uma trilha operacional mensurável, respostas sobre melhoria real dependem demais de testes pontuais, dogfood manual e interpretação de traces.
+
+### A telemetria não é outro control plane
+
+A nova camada é uma projeção observacional:
+
+```text
+OperationIntent
+-> Router
+-> Certificate
+-> Dispatcher
+-> Kernel
+-> effect owner
+-> Verifier
+-> Experience
+-> OperationalCapability
+
+        |
+        +-> observations
+              -> TelemetryEventV1
+              -> telemetry projection
+              -> ORA / VOLC / health / funnel
+```
+
+Regra:
+
+> **Telemetria observa. Nunca autoriza, verifica, promove, bloqueia, retenta ou executa.**
+
+Se a telemetria falhar, o produto continua.
+
+### Reaproveitar owners existentes
+
+Não criar outra verdade operacional.
+
+Fontes canônicas continuam:
+- ExecutionJournal;
+- ArtifactStore;
+- OperationalCapabilityRegistry;
+- verification evidence/results;
+- BrowserSessionState / BrowserOwnerReceipt;
+- provider/runtime accounting.
+
+`telemetry.sqlite` será uma materialized analytics projection reconstruível.
+
+### Events primeiro, métricas depois
+
+Não tornar counters mutáveis a única memória do sistema.
+
+```text
+operational fact
+-> immutable structured event
+-> projector
+-> metric
+```
+
+Isso permite mudar a definição de ORA/VOLC ou outra métrica e recalcular o histórico.
+
+Campos desconhecidos permanecem `None`, nunca zero inventado.
+
+### Métricas prioritárias
+
+O primeiro conjunto mede a tese de Progressive Operational Compilation:
+
+- Verified Outcome Rate;
+- ORA ratio;
+- LLM calls per verified outcome;
+- Provider-Zero Verified Rate;
+- Deterministic Reuse Success Rate;
+- False-Reuse Rate;
+- Uncertain Mutation Rate;
+- Experience funnel;
+- Runs to Competence;
+- Time to Competence;
+- Capability Drift / Quarantine Rate;
+- Avoidable Reasoning Rate;
+- Post-Goal Work / Oververification.
+
+Especialmente importantes:
+
+```text
+Experience
+-> candidate
+-> verifier validated
+-> replay validated
+-> promotion admitted
+-> PROMOTED
+-> reused
+-> reused + VERIFIED
+```
+
+Esse funil mostra onde a experiência deixa de virar competência.
+
+### Avoidable reasoning
+
+`ShadowRouter` já existe e deve ser usado futuramente sem mutation.
+
+Exemplo:
+
+```text
+actual: WAKE_LLM
+shadow: EXECUTE capability_X
+actual terminal result: VERIFIED
+```
+
+Isso pode revelar oportunidades determinísticas perdidas.
+
+Mais tarde, o mesmo framework mede:
+
+```text
+Laya shortlist
+vs canonical CapabilityRouter
+vs actual verified outcome
+```
+
+antes de qualquer autoridade ser concedida a Laya.
+
+### Oververification
+
+O caso real de navegação já mostrou uma nova categoria de desperdício:
+
+```text
+goal objectively satisfied
+-> additional read-only observation
+-> additional provider/model work
+```
+
+A telemetria deve conseguir identificar:
+- tool calls após goal satisfaction;
+- provider calls após goal satisfaction;
+- tokens após goal satisfaction;
+- wall time após goal satisfaction.
+
+Isso torna "verification must be proportional to declared goal" uma propriedade mensurável.
+
+### Privacidade
+
+Telemetria padrão é estrutural.
+
+Não duplicar:
+- prompt;
+- response;
+- DOM/page text;
+- form data;
+- credentials/tokens/cookies;
+- clipboard;
+- email/file contents;
+- URL query/fragment sensível.
+
+Guardar IDs, fingerprints, status, reason codes, latency/counts, versions e referências para evidência já armazenada pelo owner apropriado.
+
+### Sequencing
+
+Não interromper H-080B.2 para construir dashboard.
+
+```text
+H-080B.2 causal hardening
+-> Telemetry Phase 1
+-> H-080B lifecycle telemetry
+-> H-080B.3 emitting real telemetry
+-> ORA/VOLC projectors
+-> Shadow / oververification analytics
+-> dashboards
+-> Laya SHADOW
+```
+
+Canonical:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+
+## 2026-09-23 — Deep audit pós-coordinator: verdade causal acima de fechamento nominal
+
+A implementação mais recente confirma que a arquitetura geral do Hermes Work está saudável, mas também mostra um princípio que passa a ser canônico:
+
+> **Criar um componente de lifecycle e provar que ele funciona numa fixture não significa que o produto já possui esse lifecycle. E um receipt chamado "validation" não é evidência se o próprio coordinator decidiu sozinho que ele passou.**
+
+### O que deve ser preservado
+
+Não reabrir nesta lane:
+- `OperationIntent -> CapabilityRouter -> RoutingCertificate -> CertifiedDispatcher -> OperationalKernel`;
+- `OperationalCapability` como ontologia executável aprendida única;
+- `ExperiencePromotionPolicy` conservadora;
+- separação entre similaridade, autoridade, execução e verificação;
+- semantic trace slicing com uma mutação relevante + observações read-only;
+- provider-zero reuse depois de promoção real.
+
+Esses são fundamentos bons. O próximo trabalho é **hardening e wiring**, não redesign.
+
+### A falha mais importante: auto-certificação do verifier
+
+O novo `ExperienceValidationPromotionCoordinator` tem um default path que constrói artefatos positivo/negativo e retorna receipts com `passed=True`.
+
+Isso não demonstra sensibilidade do verifier. Demonstra apenas que o coordinator escreveu um boolean.
+
+A regra canônica passa a ser:
+
+```text
+validation receipt
+!=
+artifact describing what should have happened
+
+validation receipt
+=
+result of an actual verifier/owner-controlled validation observation
+```
+
+Positive validation deve vir de `VerificationEvidence` real avaliada por `evaluate_verification()` ou driver equivalente do owner.
+
+Negative control deve ser realmente discriminado em ambiente isolado, ou vir de counterexample histórico admissível.
+
+Sem isso:
+
+`held_as_candidate / verifier_receipts_unavailable`
+
+é o resultado correto.
+
+### O coordinator existe, mas ainda não é o lifecycle do produto
+
+Hoje o runtime normal ainda encerra aproximadamente em:
+
+```text
+accept_run
+-> mine
+-> candidate
+-> "causal validation required"
+```
+
+O coordinator não é chamado pelo fluxo normal.
+
+Logo:
+
+```text
+coordinator implemented
+!=
+product lifecycle owned
+```
+
+H-080B.2 fecha somente quando o caminho normal entrega candidates ao lifecycle e esse lifecycle persiste seu progresso através dos owners já existentes.
+
+### Owner receipt: emitir não basta; é preciso provar identidade
+
+O Electron agora produz `BrowserOwnerReceipt` com operation/task/run/tab/revision/action/URL. Isso é um avanço real.
+
+Mas promotion-grade verification deve comparar explicitamente o receipt observado com a operação esperada.
+
+A obrigação é:
+
+```text
+receipt.operationId   == expected_operation_id
+receipt.taskId        == canonical task
+receipt.runId         == canonical run
+receipt.browserTaskId == canonical BrowserTask
+receipt.tabId         == observed owned tab
+receipt.revision      == BrowserTask revision
+receipt.action        == browser_navigate
+receipt.safeUrl       == sanitized expected target
+```
+
+Se qualquer binding divergir, a transição não é causalmente provada.
+
+No caminho de reuso compilado, `OperationalKernel.execute_capability()` também precisa estabelecer essa identidade **antes** de despachar os steps. Hoje a derivação acontece depois da execução; isso deve ser invertido para que o mesmo ID atravesse kernel -> Browser -> Electron -> receipt -> verifier.
+
+Nunca copiar o `operation_id` esperado do trace para o artifact final e chamar isso de prova.
+
+### Restart safety é propriedade persistente
+
+`threading.Lock()` é útil para concorrência local, mas não fecha restart/idempotency.
+
+O lifecycle deve recuperar seu estado usando:
+- OperationalCapabilityRegistry;
+- ArtifactStore;
+- ExecutionJournal;
+- receipts/checkpoints versionados.
+
+Não criar outro banco.
+
+### Dívida aceitável
+
+Não bloquear H-080B por:
+- whitelist ainda explícita de read-only browser tools;
+- argumento `policy` pouco aproveitado pelo coordinator;
+- catch amplo em candidate discovery com logging;
+- duplicação temporária entre `BrowserTask.lastReceipt` e projection top-level de receipts;
+- limpeza estética de APIs.
+
+Esses itens só viram prioridade quando produzirem um bug real ou quando outra lane exigir generalização.
+
+### Novo status mental
+
+```text
+H-080B.1 = prova local útil; enforcement causal do receipt ainda endurece promoção
+H-080B.2 = coordinator existe; wiring + validação empírica + restart ownership ainda abertos
+H-080B.3 = próximo grande milestone depois da correção curta
+H-081    = Laya SHADOW somente após B.2/B.3
+```
+
+A disciplina agora é:
+
+> **Corrigir o que ameaça a verdade causal e a autonomia real do lifecycle; aceitar imperfeições que não mudam essas propriedades; depois avançar.**
+
+
+## 2026-09-23 — A prova mostrou a máquina; agora falta o lifecycle do produto
+
+A principal descoberta após auditar o trabalho do Codex é uma distinção arquitetural que passa a ser canônica:
+
+> **Conseguir conectar os componentes num teste causal completo não é o mesmo que o produto possuir automaticamente esse lifecycle.**
+
+O vertical de `6d8806b868...` demonstrou que a arquitetura existente consegue fechar:
+
+```text
+LLM resolve novidade
+-> efeito nativo
+-> evidência verificável
+-> Experience
+-> compilação
+-> validação causal
+-> promoção
+-> capacidade operacional
+-> reuso determinístico
+-> provider 0
+```
+
+Isso valida a tese profunda do Hermes Work. Porém, no runtime normal, o caminho ainda para aproximadamente em:
+
+```text
+ExperienceCorpus.accept_run(...)
+-> ExperienceCompiler.mine()
+-> candidate
+-> "causal validation required"
+```
+
+A fixture de H-080B é quem chama explicitamente `validate_verifier()`, `controlled_replay()` e `promote()`. Portanto o próximo problema não é inventar outro compiler; é **dar ownership de produto à passagem candidate -> validated -> promoted**.
+
+### Modelo mental consolidado
+
+```text
+LLM / System 2            = intérprete exploratório para competência desconhecida
+Experience Compiler       = compilador que transforma experiência verificada em hipótese operacional
+OperationalCapability     = programa operacional compilado
+CapabilityRouter          = prova/binding de aplicabilidade
+RoutingCertificate        = autorização derivada das provas
+CertifiedDispatcher       = fronteira certificada de efeito
+OperationalKernel         = runtime determinístico
+Verifier                  = oráculo operacional de correção
+ArtifactStore + Journal   = evidência, lineage e depuração
+Laya / System 1 futuro    = índice semântico rápido que diz onde olhar
+```
+
+A regra continua:
+
+> **Similaridade pode recuperar/rankear/shortlistar; nunca autoriza execução.**
+
+### Descoberta concreta — há duas identidades operacionais potenciais no Browser
+
+No código atual, `tools/browser_workstation.py::_dispatch()` já envia um campo `operation_id`, mas ele é derivado de `call_key(action,args)`. Ao mesmo tempo, `workstation/procedure_trace.py::record_trace()` usa `agent._current_operation_id` ou gera `observation_<uuid>`. O Electron (`BrowserControlRequest`) hoje nem declara/consome o `operation_id` enviado pelo Python.
+
+Portanto, o hardening causal não deve apenas "persistir o operation_id que já existe". Primeiro deve **convergir para uma única identidade de instância operacional**, criada antes do I/O e propagada sem alteração por:
+
+```text
+control plane / tool execution
+-> adaptive trace / provenance
+-> Browser controller payload
+-> Electron effect owner
+-> persisted operation receipt + state revision
+-> verifier evidence
+```
+
+`call_key` pode continuar como fingerprint estrutural/idempotency key, mas não deve ser promovido a identidade causal única porque a mesma ação/argumentos pode ocorrer em runs distintos.
+
+### Novo owner necessário: coordenação, não nova ontologia
+
+Pode existir um pequeno **Experience Validation/Promotion Coordinator**, mas apenas para orquestrar owners que já existem:
+
+```text
+candidate
+-> eligibility
+-> owner-safe validation
+-> verifier sensitivity / negative control
+-> controlled replay / causal validation
+-> ExperiencePromotionPolicy
+-> promote OR remain candidate
+```
+
+Ele não vira:
+- banco novo;
+- novo registry;
+- novo tipo executável;
+- nova autoridade;
+- novo verifier;
+- substituto do ExperienceCompiler;
+- substituto do CapabilityRouter.
+
+`OperationalCapability` continua sendo a única ontologia executável aprendida.
+
+### O Browser precisa provar causalidade mais forte
+
+O `browser-session.json` já é uma boa fonte de estado pós-efeito, mas promoção de experiência deve preferir uma relação causal emitida pelo próprio owner do efeito.
+
+Target desejado:
+
+```text
+Electron recebe operation_id
+-> executa a ação
+-> atualiza/persiste BrowserTask + tab
+-> emite/persiste receipt/revision:
+   operation_id
+   task_id
+   run_id
+   browserTaskId
+   tabId
+   resulting_state_revision
+   post-effect safe state
+-> Python verifica o receipt
+```
+
+Assim a evidência deixa de ser apenas "o estado correto apareceu temporalmente depois" e passa a ser "o owner declara qual operação produziu qual revisão".
+
+Para capital de aprendizado:
+- `run_id` deve existir e coincidir exatamente;
+- task/run/operation/tab precisam formar lineage não ambígua;
+- o verifier só pode provar predicados que seu owner realmente observa;
+- host/path/live local não implica login nem mutação de servidor externo.
+
+### A unidade semântica não é `len(trace) == 1`
+
+A restrição atual foi boa para isolar o primeiro experimento, mas é frágil como abstração de produto. Conversas reais mostraram navegação correta seguida de observações redundantes, como vision/readback adicional.
+
+A regra de produto deve ser:
+
+```text
+exatamente uma mutação relevante
++ N observações read-only admissíveis
++ zero segunda mutação
++ zero efeito incerto não reconciliado
+```
+
+O Experience Compiler deve aprender a partir do slice operacional/causal, não rejeitar uma experiência só porque o Reasoner observou o estado depois.
+
+### H-080B agora tem três fechamentos diferentes
+
+```text
+H-080B.1  Experience verificada consegue virar candidate
+H-080B.2  produto valida/replay/promove sem fixture manual
+H-080B.3  Electron/packaged/dogfood prova o ciclo no produto real
+```
+
+O Codex praticamente fechou a prova local de H-080B.1 e demonstrou em teste que H-080B.2 é arquiteturalmente possível. Isso não autoriza declarar H-080B end-to-end fechado.
+
+### Laya continua depois do determinismo comprovado
+
+Laya entra somente depois que H-080B.2/.3 funcionarem sem ele.
+
+Primeira função futura:
+```text
+contexto/intent
+-> candidate shortlist + reasoning-likely-needed
+```
+
+Primeira modalidade:
+`SHADOW`.
+
+Labels devem vir de decisões e outcomes canônicos — nunca de "o LLM disse X".
+
+Princípio:
+
+> **Laya diz onde olhar. Hermes Work prova se é aplicável, autorizado e verdadeiro.**
+
+Canonical journal:
+[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
+
+## 2026-09-23 — Primeiro loop causal de experiência nativa (prova local)
+
+Em `6d8806b868`, a navegação adaptativa usa o BrowserTask/tab persistido pelo Electron como pós-efeito local verificável. O raw result conserva sua observação original `uncertain`; a revisão `VERIFIED_SUCCESS` aponta para um artifact de readback com task/run/operation, observador `workstation.browser_session_state`, source `browser_local_persistence`, trust `trusted_runtime`, força 2 e relação causal com o raw result. Dois runs compatíveis alimentam o compiler sem relaxar thresholds; um replay positivo e um host errado validam o verifier. A capability promovida é reutilizada em um turno normal com intent tipado já estabelecido e provider 0. O objetivo é host/path e BrowserTask live, sem alegação de autenticação ou mutação externa. Laya continua deferred.
+
 ## Real-use H-080B intelligence — verification capital, not trace volume — 2026-09-23
 
 Canonical evidence:

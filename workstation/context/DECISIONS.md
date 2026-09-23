@@ -1,7 +1,168 @@
 # Architectural Decisions
 
+## D-032 — Productize Experience validation/promotion without creating a parallel authority plane
+
+**Decision date:** 2026-09-23
+**Status:** ACCEPTED
+
+The first H-080B native-browser vertical proves that the existing Experience/Capability stack can form a complete causal loop, but it also exposes a product-lifecycle gap: the fixture explicitly invokes verifier validation, controlled replay and promotion after candidate compilation. Product runtime must own this lifecycle before Progressive Operational Compilation is described as end-to-end closed.
+
+### Decision
+
+1. **Keep one executable learned ontology.**
+   `OperationalCapability` remains the executable learned object. Do not introduce `LearnedScript`, `BrowserSkill`, a second capability registry or any similarity-authorized execution object.
+
+2. **Compilation proposes; product lifecycle validates and promotes.**
+   `ExperienceCompiler.mine()/compile()` may create/update a candidate. Recurrence alone never grants promotion. Promotion requires the existing causal/verifier/policy gates.
+
+3. **A coordinator may be added only as orchestration.**
+   A small Workstation-owned Experience Validation/Promotion Coordinator may invoke:
+   - `ExperienceCompiler.validate_verifier`;
+   - `controlled_replay` / `SafeEnvironment`;
+   - `ExperiencePromotionPolicy`;
+   - `OperationalCapabilityRegistry`;
+   - canonical domain-owner verifiers;
+   - ArtifactStore / ExecutionJournal for evidence and lineage.
+
+   It must not become a new database, authority source, verifier authority, execution runtime or semantic source of truth.
+
+4. **Negative controls are isolated.**
+   Verifier sensitivity/counterfactual validation must use an owner-controlled safe environment or admissible historical evidence. Never deliberately mutate or navigate the user's live state to a wrong target merely to manufacture a negative control.
+
+5. **Browser promotion-grade evidence needs one canonical operation instance and owner causality.**
+   Current code has two possible notions of operation identity: `tools/browser_workstation.py::_dispatch()` derives `payload['operation_id']` from `call_key(action,args)`, while adaptive trace provenance uses `agent._current_operation_id` or an `observation_<uuid>`. Electron does not yet consume the field. Do not canonize `call_key` as the causal instance ID. Establish one unique per-execution `operation_id` before physical I/O and propagate it unchanged through trace/provenance, Browser controller payload, Electron effect owner, persisted/returned receipt and verifier evidence. `call_key` may remain a structural/idempotency fingerprint.
+
+   For learned Browser capabilities, prefer an Electron-owner post-effect receipt/revision that binds:
+   `operation_id + task_id + non-null exact run_id + browserTaskId + tabId + resulting state revision`.
+   Temporal readback correlation remains useful evidence but is weaker than an owner-issued causal receipt.
+
+6. **Trace shape is semantic, not cardinal.**
+   The first vertical's `len(trace) == 1` is an experimental bound, not the product abstraction. A learnable browser segment may contain exactly one relevant mutation plus bounded read-only observations, provided there is no second mutation and no unresolved uncertain effect. Operational/causal slicing decides what is reusable.
+
+7. **H-080B is decomposed.**
+   ```text
+   H-080B.1 = verified Experience admission -> candidate
+   H-080B.2 = automatic product validation/replay/promotion lifecycle
+   H-080B.3 = real Electron/packaged qualification + dogfood
+   ```
+   H-080B is not globally closed until the relevant product gates are proven.
+
+8. **Laya remains downstream of deterministic closure.**
+   H-081 may introduce System-1 providers in SHADOW mode for candidate/family shortlist and reasoning hints only after H-080B.2/.3 work without Laya. Laya cannot grant authority, issue certificates, verify effects, promote capabilities or override CapabilityRouter.
+
+9. **Branch sequencing is part of correctness.**
+   PR #46 must be reconciled onto the promoted/current PR #45/main baseline before promotion. Exact-head CI and final upstream-drift classification remain required.
+
+### Canonical principle
+
+> **Reasoning discovers competence. Verified experience proposes competence. Causal validation earns competence. The deterministic control plane decides whether that competence may act.**
+
+Reference:
+[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+
+
+## D-033 — Verifier validation must be empirical and product closure requires runtime ownership
+
+**Decision date:** 2026-09-23
+**Status:** ACCEPTED
+
+The first implementation of `ExperienceValidationPromotionCoordinator` is retained as the correct orchestration direction, but its initial default validation path and closure claim are not accepted as promotion-grade product proof.
+
+### Decision
+
+1. **A coordinator cannot certify its own verifier by assertion.**
+   Production validation receipts must be derived from a real owner-controlled verification execution. Persisting expected effects or a divergent-state description and returning `passed=True` is test scaffolding, not verifier evidence.
+
+2. **Positive and negative validation are observations, not labels.**
+   A positive receipt must correspond to actual `VerificationEvidence` that satisfies the canonical `VerificationContract`.
+   A negative receipt must correspond to a case the verifier actually rejects/discriminates.
+   If no admissible validation environment/evidence exists, the candidate remains unpromoted.
+
+3. **H-080B.2 closes only when normal runtime owns candidate admission.**
+   The existence of `ExperienceValidationPromotionCoordinator` and a direct unit/integration call do not constitute product wiring. The normal `accept_run -> mine` path must hand eligible candidates into the lifecycle without fixture-only calls to `process_candidate()`.
+
+4. **Lifecycle idempotency must survive process restart.**
+   `threading.Lock()` is not a durable lifecycle checkpoint. Use existing `OperationalCapabilityRegistry`, `ArtifactStore` and `ExecutionJournal` to persist attributable validation/replay/promotion progress. Do not create a new database.
+
+5. **Browser owner receipts are promotion-grade proof only when enforced.**
+   Learned Browser transition evidence must validate the owner receipt against expected operation/task/run/BrowserTask/tab/revision/action/safe URL before projecting the trace as VERIFIED_SUCCESS. Receipt presence alone is insufficient. For compiled learned mutation, the canonical operation ID must be established before implementation-step I/O and propagated into the Browser dispatch; post-effect code may not invent/relabel the operation after the physical action occurred.
+
+6. **Do not reopen accepted architecture.**
+   This correction does not authorize replacing `OperationalCapability`, weakening `ExperiencePromotionPolicy`, bypassing `CapabilityRouter`, adding a second browser/runtime, or introducing Laya into authority/verification.
+
+7. **Non-causal cleanup is explicitly deferrable.**
+   Read-only whitelist elegance, coordinator API polish, broad-exception narrowing and duplicate receipt projection are not promotion blockers unless they falsify the causal/product acceptance contract.
+
+### Closure criterion
+
+H-080B.2 may be marked closed only after a normal runtime path demonstrates:
+
+```text
+verified Experience
+-> candidate
+-> product-owned empirical verifier validation
+-> isolated discriminative negative control
+-> controlled replay
+-> unchanged ExperiencePromotionPolicy
+-> durable PROMOTED capability
+```
+
+with no coordinator-manufactured truth and no fixture-only lifecycle call required for closure.
+
+
+
+## D-034 — Operational Telemetry is a rebuildable non-authoritative projection
+
+**Decision date:** 2026-09-23
+**Status:** ACCEPTED
+
+Hermes Work requires durable empirical measurement of whether verified operational work is becoming cheaper, more deterministic, more reusable and more reliable. This observability must not become another source of operational truth or authority.
+
+### Decision
+
+1. **Telemetry is observational only.**
+   Telemetry cannot authorize effects, issue RoutingCertificates, determine verifier truth, promote capabilities, block work, choose retries, or mutate execution state.
+
+2. **Telemetry failure is not product failure.**
+   Failure to emit/store/project a telemetry event must not convert a valid product operation into failure or a failed operation into success. Product owners remain authoritative.
+
+3. **Events precede metrics.**
+   Runtime facts are captured as versioned structured events. ORA, VOLC, Experience funnels and later analytics are projections over observed events, not the only mutable counters preserving those facts.
+
+4. **Canonical owners emit their own facts.**
+   Provider, routing, kernel, dispatcher/effect owner, verifier, accepted outcome, Experience lifecycle and capability registry boundaries emit observations they actually own. A central analytics layer must not infer causal facts it cannot observe.
+
+5. **The telemetry store is rebuildable analytics state.**
+   Initial local persistence may use `~/.hermes/workstation/telemetry/telemetry.sqlite`, but it is not task, evidence, capability, Browser or verification truth. Deleting it must not delete or invalidate canonical state.
+
+6. **Use existing metric semantics.**
+   `workstation/control_plane/metrics.py` remains the semantic home for ORA, VOLC, failure attribution and ShadowRouter concepts. Telemetry supplies durable observed facts to those metrics rather than replacing them with a parallel model.
+
+7. **Unknown is not zero.**
+   Missing/unobserved denominators, costs or counts remain `None`/unknown. Telemetry may not fabricate free execution, zero tokens, zero latency or success.
+
+8. **Structural telemetry is the privacy default.**
+   Do not duplicate prompts, responses, DOM/page text, forms, cookies, credentials, clipboard, email/file contents, or unsafe URL query/fragment data. Prefer IDs, hashes/fingerprints, route/family, status, reason codes, versions, counts, latency and artifact/evidence references.
+
+9. **Generic Hermes core remains decoupled.**
+   Do not restore direct generic-core -> Workstation imports solely for telemetry. Reuse generic lifecycle hooks/boundaries and adapt under `workstation/integrations/hermes/`.
+
+10. **Sequencing is part of correctness.**
+    Close the currently open H-080B.2 causal blockers first. Implement minimal Telemetry Phase 1 immediately afterward, then instrument the H-080B lifecycle before substantial H-080B.3/Laya expansion. H-080B.3 should emit telemetry from its real Electron proof.
+
+11. **Shadow is evaluation, not authority.**
+    `ShadowRouter` and future Laya shadow telemetry may compare hypothetical deterministic decisions to actual verified outcomes, but dispatch zero mutations and never change canonical routing.
+
+### Canonical purpose
+
+> **Telemetry exists so Hermes Work can prove from product data whether verified operational outcomes are becoming cheaper, more deterministic, more reusable and more reliable over time — and identify where they are not.**
+
+Canonical architecture:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-032`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-034`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.

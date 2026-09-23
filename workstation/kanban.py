@@ -4,6 +4,7 @@ import logging
 import json
 from typing import Any, Iterable, Optional
 import sqlite3
+from datetime import datetime, timezone
 
 from hermes_cli import kanban_db, kanban_db_connect
 from workstation.config import load_workstation_config
@@ -13,6 +14,113 @@ from workstation.contracts import (AcceptanceContract, AcceptanceEvaluator, Mess
 from dataclasses import asdict
 
 _log = logging.getLogger(__name__)
+
+
+def _verified_native_navigation(artifacts, trace, task_id: str, session_id: str, run_id: str):
+    """Verify one adaptive navigation against Electron's persisted BrowserTask state."""
+    from workstation.contracts import EvidenceRef
+    from workstation.experience_compiler.models import TransitionSample
+    from workstation.execution_policy import EvidenceStrength
+    from workstation.recipes import digest
+    from tools.browser_workstation import read_native_browser_session_state
+
+    read_only_tools = {
+        'browser_snapshot',
+        'browser_vision',
+        'browser_get_images',
+        'browser_read_http',
+        'browser_extract_items',
+        'snapshot',
+        'vision',
+        'get_images',
+        'read_http',
+        'extract_items',
+    }
+
+    nav_actions = []
+    for step in trace:
+        tool = step.get('tool')
+        outcome = step.get('outcome')
+        if outcome == 'failed':
+            raise ValueError("adaptive browser completion encountered a failed step in trace")
+        if tool == 'browser_navigate':
+            nav_actions.append(step)
+        elif tool in read_only_tools:
+            continue
+        else:
+            raise ValueError(f"adaptive browser completion requires exactly one bounded navigation and optional read-only observations, found unexpected action: {tool}")
+
+    if len(nav_actions) != 1:
+        raise ValueError("adaptive browser completion requires exactly one bounded navigation and optional read-only observations")
+    action = nav_actions[0]
+    if (action.get('tool') != 'browser_navigate' or action.get('route') != 'native_browser'
+            or action.get('runtime') != 'electron-chromium'
+            or action.get('outcome') != 'executed_unverified'
+            or action.get('task_id') != task_id or str(action.get('run_id')) != run_id
+            or not action.get('operation_id')):
+        raise ValueError("adaptive navigation lineage or route is not verified")
+    sample = TransitionSample.from_dict(artifacts.read_json(action['transition_ref']))
+    if (sample.provenance.task_id != task_id or sample.provenance.run_id != run_id
+            or sample.provenance.operation_id != action['operation_id']
+            or sample.provenance.trust_class != 'trusted_runtime'
+            or not sample.provenance.authority_ref or not sample.provenance.authority_scope):
+        raise ValueError("adaptive navigation lacks trusted authority provenance")
+    raw = artifacts.read_json(action['after_state_ref'])
+    if (not isinstance(raw, dict) or raw.get('success') is not True
+            or raw.get('runtime') != 'electron-chromium'
+            or raw.get('readiness') != 'stable'):
+        raise ValueError("native navigation did not report a stable successful effect")
+    expected_url = str(action.get('arguments', {}).get('url') or '')
+    from urllib.parse import urlsplit
+    expected = urlsplit(expected_url)
+    reported = urlsplit(str(raw.get('url') or ''))
+    if (expected.scheme, expected.hostname, expected.path or '/') != (
+            reported.scheme, reported.hostname, reported.path or '/'):
+        raise ValueError("native navigation result drifted from the requested URL")
+    expected_op_id = action.get('operation_id')
+    readback = read_native_browser_session_state(
+        task_id, session_id, run_id, expected_url,
+        expected_operation_id=expected_op_id,
+        require_owner_receipt=True,
+    )
+    last_receipt = readback.get('last_receipt') or {}
+    proven_op_id = last_receipt.get('operationId')
+    if not proven_op_id or proven_op_id != expected_op_id:
+        raise ValueError(f"Browser owner receipt does not match expected operation identity: expected {expected_op_id}, got {proven_op_id}")
+    saved_at_str = readback['saved_at']
+    saved_at = datetime.fromisoformat(saved_at_str.replace('Z', '+00:00'))
+    captured_at = datetime.fromisoformat(action['captured_at'].replace('Z', '+00:00'))
+    if saved_at.tzinfo is None or captured_at.tzinfo is None or not -5 <= (captured_at - saved_at).total_seconds() <= 120:
+        raise ValueError("BrowserSessionState readback is stale or temporally inconsistent")
+    observed_at = saved_at_str
+    evidence = {
+        **readback,
+        'operation_id': proven_op_id,
+        'observer': 'workstation.browser_session_state',
+        'source_kind': 'browser_local_persistence',
+        'trust_class': 'trusted_runtime',
+        'evidence_strength': int(EvidenceStrength.SEMANTIC_PERSISTED_READBACK),
+        'resource_id': f"browser_task:{task_id}:tab:{readback['tab_id']}",
+        'resource_version': str(readback.get('revision', 0)),
+        'observed_at': observed_at,
+        'read_after_write': True,
+        'covered_predicates': ['host', 'url', 'page_family', 'recovery_state'],
+        'raw_result_ref': action['after_state_ref'],
+        'transition_ref': action['transition_ref'],
+    }
+    stored = artifacts.store(task_id, 'browser_readback_' + digest(evidence) + '.json',
+                             evidence, schema='hermes.browser_local_readback.v1')
+    ref = EvidenceRef('browser_local_persistence', stored.ref, sha256=stored.sha256,
+                      task_id=task_id, run_id=run_id, operation_id=proven_op_id,
+                      verifier='native_browser_session_state')
+    verifier = {'verifier': 'native_browser_session_state', 'passed': True,
+                'evidence_ref': stored.ref, 'task_id': task_id, 'run_id': run_id,
+                'operation_id': proven_op_id, 'observer': evidence['observer'],
+                'source_kind': evidence['source_kind'], 'trust_class': evidence['trust_class'],
+                'evidence_strength': evidence['evidence_strength'],
+                'covered_predicates': evidence['covered_predicates'],
+                'observed_at': observed_at, 'read_after_write': True}
+    return ref, verifier
 
 
 def is_multistep_request(prompt: str) -> bool:
@@ -295,23 +403,53 @@ class WorkstationKanbanBridge:
         )
         from workstation.experience_compiler.corpus import ExperienceCorpus
         from workstation.experience_compiler.compiler import ExperienceCompiler
+        from workstation.experience_compiler.lifecycle import ExperienceValidationPromotionCoordinator
         from workstation.operational_capabilities import OperationalCapabilityRegistry, CapabilityValidationError
         from workstation.artifacts import ArtifactStore
         artifacts = ArtifactStore()
         # Mining is a projection after canonical commit; insufficient state evidence
         # remains observations and cannot affect completion or grant write authority.
         corpus = None
+        learned = []
         try:
             corpus = ExperienceCorpus(artifacts, discover=True)
             corpus.accept_run(journal, outcome)
-            learned = ExperienceCompiler(OperationalCapabilityRegistry(artifacts), corpus).mine()
+            registry = OperationalCapabilityRegistry(artifacts)
+            compiler = ExperienceCompiler(registry, corpus)
+            learned = compiler.mine()
+            coordinator = ExperienceValidationPromotionCoordinator(
+                registry,
+                compiler,
+                artifacts,
+            )
+            for capability in learned:
+                journal.record(
+                    ExecutionEventKind.ACTION,
+                    'experience operational candidate discovered; causal validation required',
+                    metadata={'capability_id': capability.id, 'capability_version': capability.version},
+                )
+                cycle_result = coordinator.process_candidate(
+                    capability,
+                    task_id=task_id,
+                    run_id=str(target_run_id) if target_run_id is not None else None,
+                    journal=journal,
+                )
+                if cycle_result.action == "promoted":
+                    journal.record(
+                        ExecutionEventKind.ACTION,
+                        'experience operational candidate promoted under policy',
+                        metadata={'capability_id': capability.id, 'capability_version': capability.version},
+                    )
+                elif cycle_result.action == "held_as_candidate":
+                    journal.record(
+                        ExecutionEventKind.ACTION,
+                        'experience operational candidate validation pending',
+                        metadata={'capability_id': capability.id, 'reasons': list(cycle_result.reasons)},
+                    )
         except (OSError, ValueError, CapabilityValidationError) as error:
             import logging
             logging.getLogger(__name__).warning('Experience projection failed after accepted completion: %s', type(error).__name__)
             learned = []
-        for capability in learned:
-            journal.record(ExecutionEventKind.ACTION, 'experience operational candidate; causal validation required',
-                metadata={'capability_id': capability.id, 'capability_version': capability.version})
         if report.repeatability_hint and report.procedure_steps and corpus is not None and not corpus.refs:
             from workstation.memory import ProceduralMemory
             from workstation.routines import RoutinePromotionService
@@ -366,7 +504,19 @@ class WorkstationKanbanBridge:
                     if metadata.get("canonical_task_id") == task_id:
                         plans.append((row[0], row[1], metadata))
             if not plans:
-                pending.append("No persisted execution verifies the acceptance contract")
+                trace = turn_result.get('_adaptive_trace') or []
+                if trace:
+                    try:
+                        ref, verifier = _verified_native_navigation(
+                            artifacts, trace, task_id, session_id,
+                            str(expected_run_id if expected_run_id is not None else task.current_run_id),
+                        )
+                        evidence.append(ref)
+                        verifiers.append(verifier)
+                    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+                        pending.append(f"Adaptive browser evidence is not verified: {exc}")
+                else:
+                    pending.append("No persisted execution verifies the acceptance contract")
             for plan_id, plan_status, metadata in plans:
                 if metadata.get("handoff", {}).get("status") == "waiting-for-human":
                     handoffs.append(metadata["handoff"]["handoff_id"])
@@ -413,6 +563,8 @@ class WorkstationKanbanBridge:
             pending_items=pending, evidence=evidence, verifier_results=verifiers,
             deliverables=[e.uri for e in evidence], outcome_status=status,
             run_id=str(target_run_id) if target_run_id is not None else None)
+        if len(verifiers) == 1 and verifiers[0].get('verifier') == 'native_browser_session_state':
+            report.operation_id = verifiers[0]['operation_id']
         report.repeatability_hint = turn_result.get('_adaptive_repeatability_hint', False)
         report.procedure_steps = turn_result.get('_adaptive_procedure_steps', [])
         report.procedure_scope = session_id
