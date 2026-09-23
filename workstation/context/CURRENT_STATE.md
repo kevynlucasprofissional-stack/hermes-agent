@@ -1,5 +1,76 @@
 # Current State
 
+## 2026-09-23 Operational Telemetry Plane — ARCHITECTURE ACCEPTED / IMPLEMENTATION QUEUED AFTER H-080B.2
+
+Canonical:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+Hermes Work now has a formal observability direction for measuring whether Progressive Operational Compilation is producing the intended product outcome.
+
+Existing `workstation/control_plane/metrics.py` already defines the metric semantics for:
+- VOLC;
+- ORA;
+- FailureAttributor;
+- ShadowRouter.
+
+The missing layer is durable, correlated event capture.
+
+Canonical rule:
+
+> **Telemetry observes Hermes Work. It never becomes authority, verification truth, promotion truth or a product execution dependency.**
+
+Target:
+
+```text
+canonical product owners
+-> TelemetryEventV1
+-> non-authoritative TelemetrySink
+-> rebuildable local telemetry.sqlite
+-> metrics projectors
+-> reports / shadow analysis
+```
+
+The telemetry database is disposable analytics state. Deleting it must not invalidate:
+- ExecutionJournal;
+- ArtifactStore evidence;
+- OperationalCapabilityRegistry state;
+- BrowserSessionState / BrowserOwnerReceipt;
+- verifier truth.
+
+Initial instrumentation boundaries:
+- provider calls;
+- routing decisions;
+- capability invocation;
+- verification;
+- accepted outcome;
+- Experience/candidate/validation/replay/promotion lifecycle.
+
+Initial product questions:
+- are verified outcomes increasing?
+- are LLM calls per verified outcome falling?
+- are promoted capabilities actually reused?
+- do deterministic reuses remain VERIFIED?
+- where does the Experience funnel lose candidates?
+- how many runs/time are required to reach competence?
+- where do drift, uncertain mutation, avoidable reasoning and oververification occur?
+
+Privacy:
+telemetry is structural by default. Do not duplicate prompts, responses, page/DOM text, form contents, credentials, cookies, email/file contents or unsafe URL components.
+
+Sequencing:
+```text
+close H-080B.2 causal blockers
+-> Telemetry Phase 1 backbone
+-> Telemetry Phase 2 H-080B lifecycle instrumentation
+-> H-080B.3 real Electron proof emitting telemetry
+-> ORA/VOLC projectors
+-> shadow/oververification/dashboard
+-> H-081 Laya SHADOW
+```
+
+This sequencing is intentional: telemetry must not delay current causal correctness, but H-080B.3 should not become a large new product phase without inspectable empirical data.
+
+
 ## 2026-09-23 H-080B post-implementation deep audit — H-080B.2 REOPENED / NARROW CORRECTION REQUIRED
 
 Status: **H-080A ARCHITECTURE ACCEPTED / H-080B.1 LOCALLY PROVEN WITH CAUSAL HARDENING OPEN / H-080B.2 ORCHESTRATOR IMPLEMENTED BUT PRODUCT CLOSURE OPEN / H-080B.3 OPEN / LAYA DEFERRED**
