@@ -111,8 +111,58 @@ with no coordinator-manufactured truth and no fixture-only lifecycle call requir
 
 
 
+## D-034 — Operational Telemetry is a rebuildable non-authoritative projection
+
+**Decision date:** 2026-09-23
+**Status:** ACCEPTED
+
+Hermes Work requires durable empirical measurement of whether verified operational work is becoming cheaper, more deterministic, more reusable and more reliable. This observability must not become another source of operational truth or authority.
+
+### Decision
+
+1. **Telemetry is observational only.**
+   Telemetry cannot authorize effects, issue RoutingCertificates, determine verifier truth, promote capabilities, block work, choose retries, or mutate execution state.
+
+2. **Telemetry failure is not product failure.**
+   Failure to emit/store/project a telemetry event must not convert a valid product operation into failure or a failed operation into success. Product owners remain authoritative.
+
+3. **Events precede metrics.**
+   Runtime facts are captured as versioned structured events. ORA, VOLC, Experience funnels and later analytics are projections over observed events, not the only mutable counters preserving those facts.
+
+4. **Canonical owners emit their own facts.**
+   Provider, routing, kernel, dispatcher/effect owner, verifier, accepted outcome, Experience lifecycle and capability registry boundaries emit observations they actually own. A central analytics layer must not infer causal facts it cannot observe.
+
+5. **The telemetry store is rebuildable analytics state.**
+   Initial local persistence may use `~/.hermes/workstation/telemetry/telemetry.sqlite`, but it is not task, evidence, capability, Browser or verification truth. Deleting it must not delete or invalidate canonical state.
+
+6. **Use existing metric semantics.**
+   `workstation/control_plane/metrics.py` remains the semantic home for ORA, VOLC, failure attribution and ShadowRouter concepts. Telemetry supplies durable observed facts to those metrics rather than replacing them with a parallel model.
+
+7. **Unknown is not zero.**
+   Missing/unobserved denominators, costs or counts remain `None`/unknown. Telemetry may not fabricate free execution, zero tokens, zero latency or success.
+
+8. **Structural telemetry is the privacy default.**
+   Do not duplicate prompts, responses, DOM/page text, forms, cookies, credentials, clipboard, email/file contents, or unsafe URL query/fragment data. Prefer IDs, hashes/fingerprints, route/family, status, reason codes, versions, counts, latency and artifact/evidence references.
+
+9. **Generic Hermes core remains decoupled.**
+   Do not restore direct generic-core -> Workstation imports solely for telemetry. Reuse generic lifecycle hooks/boundaries and adapt under `workstation/integrations/hermes/`.
+
+10. **Sequencing is part of correctness.**
+    Close the currently open H-080B.2 causal blockers first. Implement minimal Telemetry Phase 1 immediately afterward, then instrument the H-080B lifecycle before substantial H-080B.3/Laya expansion. H-080B.3 should emit telemetry from its real Electron proof.
+
+11. **Shadow is evaluation, not authority.**
+    `ShadowRouter` and future Laya shadow telemetry may compare hypothetical deterministic decisions to actual verified outcomes, but dispatch zero mutations and never change canonical routing.
+
+### Canonical purpose
+
+> **Telemetry exists so Hermes Work can prove from product data whether verified operational outcomes are becoming cheaper, more deterministic, more reusable and more reliable over time — and identify where they are not.**
+
+Canonical architecture:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-033`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-034`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
