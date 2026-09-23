@@ -1,5 +1,32 @@
 # Current State
 
+## 2026-09-23 latest H-080 qualification snapshot — PRODUCT GATES RED / OPERATION IDENTITY GAP CONFIRMED
+
+Latest observed GitHub qualification after the H-080B lifecycle audit:
+- PR #45 H-080A head advanced through a dogfood-note update and whitespace cleanup; Workstation CI is green.
+- PR #46 remains draft on the older H-080A base; Workstation CI is green.
+- Windows qualification on both observed heads remains red in two real product gates:
+  1. release qualification cannot import the optional `anthropic` SDK in `test_anthropic_sdk_construction.py`;
+  2. packaged Desktop GUI opens, but backend boot reports `Timed out connecting to Hermes backend`.
+- candidate-diff whitespace blockers in the PR #45 dogfood note and PR #46 decisions document were corrected; new exact-head reruns are required.
+
+A separate causal seam is now confirmed:
+```text
+tools/browser_workstation.py::_dispatch()
+  -> operation_id = call_key(action,args)
+
+procedure_trace.record_trace()
+  -> agent._current_operation_id OR observation_<uuid>
+
+Electron BrowserControlRequest
+  -> currently does not declare/consume operation_id
+```
+
+H-080B promotion-grade Browser evidence must therefore converge on a **single unique operation instance ID created before physical I/O**, not simply persist the current `call_key`. The same ID must cross trace/provenance, controller request, Electron effect owner, owner receipt/state revision and verifier evidence.
+
+This is part of H-080B.2/.3 hardening, not a new authority plane.
+
+
 ## 2026-09-23 H-080B product lifecycle closure — VERTICAL PROOF != PRODUCT AUTOMATION
 
 Observed repository state:
