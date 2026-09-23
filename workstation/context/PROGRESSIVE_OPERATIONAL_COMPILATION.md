@@ -1,5 +1,71 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 Operational Telemetry — measurement contract for progressive compilation
+
+Progressive Operational Compilation is not complete as a product thesis merely because a candidate can be compiled and reused in a fixture. It must become empirically measurable over time.
+
+Canonical architecture:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+The telemetry plane must allow the system to derive, from observed product events:
+
+```text
+verified Experience volume
+-> candidate conversion
+-> verifier validation
+-> replay validation
+-> promotion
+-> deterministic reuse
+-> reused + VERIFIED
+-> drift/quarantine
+```
+
+and the cost trajectory:
+
+```text
+reasoned verified outcomes
+vs deterministic verified outcomes
+vs provider calls
+vs tokens
+vs wall time
+vs tool calls
+```
+
+### Measurement invariants
+
+- ORA/VOLC are derived from real captured facts; they do not become authority.
+- unknown denominators remain `None`;
+- provider-zero is only meaningful for an eligible verified outcome;
+- reuse success requires canonical verification, not merely route selection;
+- false reuse includes deterministic invocation followed by FAILED/INCONCLUSIVE verification;
+- promotion count without subsequent successful reuse is not sufficient evidence of useful learning;
+- Experience funnel metrics must preserve capability family/version lineage;
+- telemetry failure cannot block or alter operational execution.
+
+### Product acceptance consequence
+
+After H-080B.2 causal closure, H-080B.3 should produce a real telemetry trace for:
+
+```text
+adaptive run A
+-> adaptive run B
+-> candidate
+-> validation
+-> replay
+-> promotion
+-> typed-intent deterministic reuse
+-> VERIFIED
+-> COMMITTED
+-> provider 0
+```
+
+The telemetry trace is not the proof itself; canonical owners remain the proof. It is the queryable projection that lets us analyze the proof and compare future runs.
+
+### Future shadow evaluation
+
+After actual-event lineage is trustworthy, use `ShadowRouter` to measure missed deterministic opportunities without dispatching mutations. Later Laya SHADOW output can be evaluated against the same canonical router/outcome telemetry.
+
+
 ## 2026-09-23 deep audit after lifecycle coordinator implementation
 
 Progressive Operational Compilation remains architecturally sound, but its competence-admission loop is **not product-closed yet**.
