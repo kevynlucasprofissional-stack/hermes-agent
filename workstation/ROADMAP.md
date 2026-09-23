@@ -1,5 +1,55 @@
 # Workstation roadmap
 
+## H-080B — REAL-USE VERTICAL CLOSURE / PR #45 EXACT-HEAD CI RED (2026-09-23)
+
+Canonical new audit:
+[context/engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](context/engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+Current truth:
+- PR #45 carries the materially improved H-080A production path;
+- H-080A core causal proofs are implemented, but exact-head qualification is **not green** at this snapshot;
+- Workstation CI currently exposes a stale router test-double signature (`runtime_state`);
+- Workstation Browser Windows is red in broader platform/release gates even though focused native-browser/browser-foundation checks are green;
+- H-080B remains OPEN;
+- real product use proves Experience capture is active, but no real production experience has yet crossed the verified acceptance gates into a promoted learned capability.
+
+### Immediate priority order
+
+```text
+P0  qualify PR #45 exact head truthfully
+    -> fix/triage current CI reds
+    -> do not redesign H-080A
+
+P1  close one native-browser H-080B vertical loop
+    -> real browser effect
+    -> authoritative post-effect browser readback
+    -> canonical verified completion
+    -> ExperienceCorpus accepted run
+    -> candidate
+    -> second compatible verified run where promotion requires diversity
+    -> controlled replay/verifier validation
+    -> promotion
+    -> future normal turn EXECUTE/VERIFIED/COMMITTED
+    -> provider calls = 0
+
+P2  remove observed real-use waste
+    -> explicit native-browser intent never detours through BrowserClaw skill discovery
+    -> stop after goal-sufficient browser evidence; do not invoke vision for unrelated predicates
+
+DEFER
+    -> Laya production routing
+    -> broad BrowserProcedureIR redesign
+    -> arbitrary generated scripts / Playwright escape hatches
+    -> generalized workflow synthesis beyond the first vertical proof
+```
+
+### H-080B architectural constraint
+
+Do not create a new `LearnedScript` / `BrowserSkill` authority plane.
+`OperationalCapability` remains the executable object. If browser-specific IR is eventually required, it lives inside `OperationalCapability.implementation` and executes through the existing certified native-browser control path.
+
+Laya remains post-H-080B: shadow/shortlist only, with CapabilityRouter retaining proof authority.
+
 ## H-080 — Progressive Operational Compilation — H-080A PRODUCTION-PATH QUALIFICATION / H-080B EXPERIENCE LOOP OPEN (2026-09-22)
 
 Canonical current audit:
