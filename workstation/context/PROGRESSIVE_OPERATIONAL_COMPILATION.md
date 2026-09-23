@@ -35,7 +35,7 @@ novel normal turn
 -> independent compatible run(s)
 -> controlled replay + verifier validation
 -> PROMOTED OperationalCapability
--> future equivalent normal turn
+-> future normal turn with an already-established typed OperationIntent
 -> pre-provider Operational Resolution
 -> CapabilityRouter proof
 -> native Browser exact-once execution
@@ -43,7 +43,7 @@ novel normal turn
 -> provider calls = 0
 ```
 
-No parallel LearnedScript/BrowserSkill execution plane is allowed. `OperationalCapability` remains the executable abstraction. Laya remains deferred until this loop is proven; then it may shortlist candidates only.
+No parallel LearnedScript/BrowserSkill execution plane is allowed. `OperationalCapability` remains the executable abstraction. The first H-080B proof does not need to recognize fresh natural-language paraphrases; it may start from an already-established typed OperationIntent. Laya remains deferred until this loop is proven; then it may shortlist candidates for fresh intent recognition only.
 
 ## 2026-09-22 production-path audit — H-080A control plane works, production authority/dispatch proof still open
 
