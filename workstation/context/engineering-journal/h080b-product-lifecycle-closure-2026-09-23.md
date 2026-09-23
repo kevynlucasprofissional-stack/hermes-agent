@@ -249,6 +249,16 @@ Allowed sources:
 - already-observed admissible historical counterexample;
 - deterministic synthetic owner fixture when explicitly a test gate.
 
+### Concrete operation-id seam observed in current code
+
+Current code already attempts to send an operation identity at the Python -> Electron boundary:
+- `tools/browser_workstation.py::_dispatch()` sets `payload['operation_id'] = call_key(action, args)`;
+- `apps/desktop/electron/workstation-browser-runtime.ts::BrowserControlRequest` does not declare `operation_id`;
+- `executeControlRequest()` therefore does not consume/persist/return that identity;
+- `workstation/procedure_trace.py::record_trace()` separately uses `agent._current_operation_id` or generates an `observation_<uuid>`.
+
+This can create two different notions of operation identity. The fix is **not** to treat deterministic `call_key(action,args)` as the canonical causal instance ID. A single per-execution `operation_id` must be established before physical I/O, then propagated unchanged through trace/provenance, controller payload, Electron owner receipt/state revision and verifier evidence. `call_key` may remain a structural/idempotency fingerprint where appropriate, but must not substitute for unique causal lineage across runs.
+
 ## Browser causality hardening
 
 Current persisted BrowserSessionState is strong evidence of local post-effect state. The next step is stronger causal provenance.
