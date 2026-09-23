@@ -1,29 +1,39 @@
 # Upstream strategy
 
-## 2026-09-22 H-080 / H-079.3 published branch status
+## 2026-09-22 H-080 / H-079.3 production-path qualification status
 
 The rejected direct operational-resolution commit `471e9b529f745c89a3b18caad865e762f09dfab3` remains reverted and inactive.
 
-The replacement branch is now published:
-`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+Current feature branch audited:
+`integration/upstream-20260922-71a2fe39-h0793@89a745d2ee0346c7030134c10b24071ce9e234f1`.
 
-It retains the frozen H-079.3 upstream pin:
-`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`,
-true-merged by:
-`a8dfcd21f5c641d01a5989e223a987687018db7f`.
+Frozen pin remains:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, true-merged by `a8dfcd21f5c641d01a5989e223a987687018db7f`.
 
-The one-pin rule still applies: do not chase a moving upstream head inside this correction lane. Fetch/classify latest upstream immediately before promotion and reopen Stage A only for a proven material overlapping conflict.
+Latest upstream observed:
+`d3b25b52ad1318c526bdb259b600eeca3d5f38e6`.
 
-The target upstream intervention is now implemented in the correct architectural form:
+Compared with the frozen pin, the observed upstream is 23 commits ahead and has **no overlap** in the four H-080 upstream intervention owners:
+- `agent/conversation_loop.py`;
+- `agent/operational_resolution.py`;
+- `agent/turn_operational_resolution.py`;
+- `tools/browser_tool.py`.
+
+Current classification: `NON_OVERLAPPING`. This is a dated snapshot, not permission to skip the final pre-promotion drift check.
+
+The upstream abstraction shape remains accepted:
 - generic pre-reasoning operational-resolution contract under `agent/`;
 - narrow call site in `agent/conversation_loop.py`;
-- Workstation routing/execution behind a first-party provider;
-- Browser Workstation domain projection removed from generic `tools/browser_tool.py`.
+- Workstation routing/execution behind the first-party provider;
+- Workstation Browser domain projection outside generic `browser_tool.py`.
 
-Promotion is not yet allowed. The branch must first prove real normal-turn `EXECUTE` with exact-once dispatch, canonical VERIFIED/accepted result, COMMITTED status and zero provider calls; prove verifier failure end to end; reconcile intervention/seam registries; qualify Browser/owners/full suite; and obtain exact-head CI plus final drift classification.
+Promotion is still blocked, but for a narrower reason than the prior audit:
+- E001 now requires execution, but injects control-plane authority with a `TaskCompiler.execute` monkeypatch;
+- E001 replaces the real `workstation_durable_dispatch`, so actual Hermes tool-scope/guardrail/raw-result execution is not qualified;
+- structured EXECUTE/certificate/verification/dispatch markers are not all asserted directly;
+- scratch test hygiene and exact-head CI remain open.
 
-Canonical audit:
-`workstation/context/engineering-journal/h080-branch-quality-audit-2026-09-22.md`.
+Do not change the frozen pin during these corrections. Fix H-080A on the existing lane, then perform one final upstream drift observation.
 
 ## H-079.2 active baseline refresh requirement
 

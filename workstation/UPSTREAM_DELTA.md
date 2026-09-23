@@ -1,44 +1,45 @@
 # Hermes Workstation upstream delta
 
-## HW-032 — Generic pre-reasoning boundary implemented on published branch; promotion proof remains open (2026-09-22)
+## HW-032 — H-080 abstraction accepted; production authority/dispatch qualification remains open (2026-09-22)
 
-The rejected direct implementation `471e9b5` remains reverted.
+The generic pre-reasoning intervention has survived the second audit and remains the intended architecture.
 
-Its replacement now exists on published branch:
-`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`,
-built on frozen upstream pin `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` via true merge `a8dfcd21f5c641d01a5989e223a987687018db7f`.
+Published candidate audited:
+`integration/upstream-20260922-71a2fe39-h0793@89a745d2ee0346c7030134c10b24071ce9e234f1`.
 
-Implemented upstream-owned surfaces:
-- `agent/conversation_loop.py`: narrow phase call between preflight and provider;
-- `agent/operational_resolution.py`: generic provider registry/outcome contract;
-- `agent/turn_operational_resolution.py`: canonical turn-phase adapter;
-- `tools/browser_tool.py`: Workstation-specific extract-items projection removed.
+Confirmed corrections since the first audit:
+- E001 goal is false at admission, so it can no longer pass via `SATISFIED`;
+- verifier-failure E2E is implemented;
+- `upstream_interventions.json` contains only four upstream-owned interventions, all with correct feature provenance;
+- `SEAM-OPERATIONAL-RESOLUTION` exists as `UPSTREAM_ABSTRACT`;
+- Browser domain projection/routing authority remains accepted.
 
-Implemented downstream surfaces:
-- Workstation operational-resolution provider;
-- Workstation Browser result projection;
-- uncertain-mutation runtime-state plumbing;
-- normal-turn and provider tests;
-- intervention registry.
+Remaining H-080A gap is now **production-path equivalence**, not architecture:
+1. E001 injects `EXTERNAL_REVERSIBLE` by monkeypatching `TaskCompiler.execute`; the production authority bridge is not proven.
+2. E001 substitutes `workstation_durable_dispatch` with a recorder; real tool scope, `execute_tool_calls_sequential`, guardrails and raw-result capture are not qualified.
+3. The test/report claims EXECUTE/certificate/VERIFIED/accepted/COMMITTED more strongly than the direct assertions establish.
+4. `test_zz_scratch_route_fixture.py` remains.
+5. exact-head PR/CI remains absent.
 
-Architecture accepted:
+Current upstream drift snapshot:
+`71a2fe399... -> d3b25b52...` = 23 upstream commits, with no overlap in the four H-080 upstream-owned intervention files. Classification: `NON_OVERLAPPING` at audit time.
+
+Required replacement proof:
 ```text
-generic pre-provider lifecycle
--> registered first-party Workstation provider
--> established durable intent
--> existing Workstation control plane
+trusted production ingress
+-> bounded effect AuthorityScope
+-> established OperationIntent
+-> EXECUTE + certificate
+-> real workstation_durable_dispatch
+-> actual admitted tool path exactly once
+-> VERIFIED + accepted
+-> COMMITTED
+-> provider calls = 0
 ```
 
-Promotion remains blocked because:
-1. the current no-LLM E2E can terminate as `SATISFIED` before capability execution;
-2. verifier-failure E2E is an empty `pass`;
-3. scratch direct-route fixture must become canonical evidence or be removed;
-4. intervention registry provenance/scope is incorrect;
-5. `SEAM-OPERATIONAL-RESOLUTION` is referenced but not registered;
-6. Experience compile/promote/future-reuse cycle is not yet end-to-end proven;
-7. audited head had no PR/CI status.
+Do not resurrect direct Workstation imports in generic core and do not solve authority by treating `CREATE_WORK` or raw prose as unrestricted effect permission.
 
-The branch should be corrected in place. Do not resurrect the reverted direct-coupling design.
+H-080B Experience capture/compile/promote/future-reuse remains a separate open lane.
 
 ## HW-031 — H-079.2 promotion-gap and dogfood closure (2026-09-20)
 

@@ -1,81 +1,95 @@
 # Workstation roadmap
 
-## H-080 — Native Pre-Reasoning Operational Resolution / Progressive Compilation Closure (2026-09-22) — BRANCH PUBLISHED / ARCHITECTURE ACCEPTED / PROMOTION BLOCKED
+## H-080 — Progressive Operational Compilation — H-080A PRODUCTION-PATH QUALIFICATION / H-080B EXPERIENCE LOOP OPEN (2026-09-22)
 
-Canonical quality audit:
-[context/engineering-journal/h080-branch-quality-audit-2026-09-22.md](context/engineering-journal/h080-branch-quality-audit-2026-09-22.md).
+Canonical current audit:
+[context/engineering-journal/h080-production-path-audit-2026-09-22.md](context/engineering-journal/h080-production-path-audit-2026-09-22.md).
 
-Audited implementation branch:
-`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+Implementation branch at audit:
+`integration/upstream-20260922-71a2fe39-h0793@89a745d2ee0346c7030134c10b24071ce9e234f1`.
 
-Frozen upstream pin:
-`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, true-merged by
-`a8dfcd21f5c641d01a5989e223a987687018db7f`.
+Frozen upstream pin remains:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`, true-merged by `a8dfcd21f5c641d01a5989e223a987687018db7f`.
 
-The implementation direction is accepted:
-- generic pre-reasoning boundary lives under `agent/`;
-- generic `conversation_loop.py` remains free of direct Workstation imports;
-- Workstation integrates through `workstation/integrations/hermes/operational_resolution.py`;
-- raw prose is not converted into executable `OperationIntent`;
-- `TaskCompiler` / `CapabilityRouter` / certified dispatch / canonical verification remain the execution authority chain;
-- uncertain mutations block another deterministic dispatch lane;
-- Browser extract-items domain projection moved from generic `tools/browser_tool.py` to `workstation/browser_projection.py`.
+Latest upstream observed in the production-path audit:
+`d3b25b52ad1318c526bdb259b600eeca3d5f38e6`.
+Delta from the frozen pin is 23 commits with no overlap in the four H-080 upstream intervention owners; classification is `NON_OVERLAPPING` at this snapshot and must be repeated immediately before promotion.
 
-Do **not** revert or redesign this lane from scratch. Repair and qualify it.
+### Accepted / already repaired
 
-Promotion blockers:
+- generic pre-reasoning boundary under `agent/` remains the correct architecture;
+- no direct generic-core -> Workstation import for this concern;
+- established typed/durable intent remains required;
+- E001 no longer starts from an already-satisfied goal;
+- verifier-failure E2E is implemented rather than `pass`;
+- `upstream_interventions.json` now contains only four upstream-owned interventions with corrected feature provenance;
+- `SEAM-OPERATIONAL-RESOLUTION` is registered as `UPSTREAM_ABSTRACT`;
+- Browser routing/projection authority remains accepted and focused exactly-once/fallback/fail-closed tests exist.
 
-1. **E001 false-positive** — `test_known_promoted_capability_bypasses_llm` currently starts from a semantic state that already satisfies the goal, so it proves `SATISFIED -> 0 LLM`, not `promoted capability EXECUTE -> 0 LLM`.
-2. **Verifier-failure E2E is empty** — `test_verifier_failure_no_commit` currently ends in `pass`.
-3. **Scratch fixture remains** — useful direct-routing proof lives in `test_zz_scratch_route_fixture.py`; absorb/rename it as permanent semantic evidence.
-4. **Intervention provenance is wrong** — `upstream_interventions.json` points feature entries at baseline merge `a8dfcd21...` instead of the feature/final semantic commits, and misclassifies several `workstation/**` files as upstream interventions.
-5. **Seam registry mismatch** — intervention records reference `SEAM-OPERATIONAL-RESOLUTION`, but `first_party_seams.json` does not define that concern.
-6. **Experience feedback loop remains open** — no end-to-end proof yet of verified novel execution -> TransitionSample -> corpus -> compile/replay/promote -> future normal-turn reuse with zero LLM.
-7. **Promotion evidence absent** — audited head had no PR/Actions/status evidence.
+Do not redesign or revert this lane.
 
-Mandatory correction order:
+### H-080A — remaining promotion blockers
+
+1. **Production authority is still test-injected.**
+   E001 monkeypatches `TaskCompiler.execute` and sets `self.trusted_authority = EXTERNAL_REVERSIBLE`. Production currently resolves authority from `self.trusted_authority -> canonical task.authority_scope -> READ`, while canonical task creation/admission does not currently persist/provide that `AuthorityScope`. The release proof must use the production authority source, not a monkeypatch.
+
+2. **The real Hermes durable dispatcher is still replaced in E001.**
+   The test patches `workstation_durable_dispatch` to a recorder. This proves the control plane reaches a dispatch callback exactly once, but does not prove the real tool-scope / `execute_tool_calls_sequential` / guardrail / raw-result path.
+
+3. **Causal evidence is not asserted directly.**
+   E001 must directly prove `EXECUTE`, non-empty certificate, `VERIFIED`, `accepted == true`, `COMMITTED`, physical exact-once and provider calls 0. E003V must directly prove FAILED/INCONCLUSIVE verification cannot become COMMITTED success.
+
+4. **Verification success is still pre-seeded in E001.**
+   The fixture writes trusted `verification_evidence` into the objective before execution, including `read_after_write=True` and covered predicates. `OperationalKernel` consumes supplied evidence directly, so the release proof must remove it and obtain evidence from a real post-effect observer/readback.
+
+5. **Scratch fixture remains.**
+   `test_zz_scratch_route_fixture.py` must be absorbed or renamed/restructured as permanent semantic coverage.
+
+6. **Runtime metrics remain coarser than the report claims.**
+   Generic counters expose attempts/hits/misses/errors, not a canonical `EXECUTED+VERIFIED` counter. Derive/wire truthful operational metrics through existing resolution + ORA/VOLC owners; unknown denominators remain `None`.
+
+7. **Exact-head remote qualification is absent.**
+   No PR/Actions evidence yet qualifies the final candidate head.
+
+### H-080A mandatory correction order
 
 ```text
-reconcile current main docs/state into feature branch
--> fix E001 to require EXECUTE + exact-once physical dispatch
-   + VERIFIED/accepted + COMMITTED + provider calls = 0
--> implement real verifier-failure E2E
--> absorb/remove scratch fixture
--> correct upstream_interventions provenance/scope
--> add SEAM-OPERATIONAL-RESOLUTION
--> close or explicitly keep OPEN Experience feedback-loop closure
--> finish truthful operational metrics
--> Browser + owner regressions
--> strict seam audit
--> full exact-head qualification + GitHub CI
+merge current main docs/state into feature branch
+-> create/use a trusted production AuthorityScope bridge
+-> remove TaskCompiler authority monkeypatch from release E2E
+-> exercise real workstation_durable_dispatch through a real admitted safe primitive
+-> expose non-authoritative causal observability
+-> assert EXECUTE/certificate/VERIFIED/accepted/COMMITTED directly
+-> assert verifier failure is not COMMITTED and never blindly retried
+-> absorb/rename scratch test
+-> truthful metrics wiring
+-> focused + Browser + strict seam + full Workstation/upstream-owner qualification
 -> final upstream drift classification
--> PR / promotion
+-> PR
+-> exact-head GitHub CI
+-> promote H-080A only if green
 ```
 
-Target proof:
+### H-080B — Experience feedback-loop closure
+
+Remains OPEN. It requires a single E2E proving:
 
 ```text
-trusted established OperationIntent
--> generic pre-reasoning boundary
--> Workstation provider
--> CapabilityRouter
--> valid certificate
--> CertifiedDispatcher
--> OperationalKernel
--> physical effect exactly once
--> canonical VERIFIED + accepted
--> COMMITTED
--> canonical turn finalizer
--> provider LLM calls = 0
-
-no trustworthy intent / no proven capability
--> CONTINUE_REASONING
--> normal Hermes provider
+novel verified execution
+-> TransitionSample / ExperienceCorpus
+-> compile
+-> controlled replay / causal validation
+-> verifier validation
+-> ExperiencePromotionPolicy
+-> promoted capability
+-> future normal turn
+-> EXECUTE / VERIFIED / COMMITTED
+-> provider calls = 0
 ```
 
-Laya remains deferred to optional System-1/shadow proposal. It has no execution, verification, promotion or authority-granting power.
+H-080A may close independently if scoped truthfully. Do not describe Progressive Operational Compilation as end-to-end closed until H-080B is proven.
 
-**Promotion rule:** H-080 remains OPEN while any of the seven blockers above remains unresolved.
+Laya remains deferred to System-1/shadow/shortlist work after H-080A qualification; it has no execution, authority, verification or promotion power.
 
 ## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING
 

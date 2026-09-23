@@ -1,68 +1,74 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## H-080 branch audit — the boundary design is accepted; proof quality now dominates the lane — 2026-09-22
+## H-080 production-path audit — control-plane correctness is no longer enough — 2026-09-22
 
-The published implementation at `integration/upstream-20260922-71a2fe39-h0793@9c217af...` validates the architectural correction that followed the rejected `471e9b5` attempt.
+The H-080 implementation now demonstrates a strong architectural/control-plane path, but the latest audit establishes a stricter qualification rule:
 
-Accepted architecture:
+> **A normal-turn test is not a production-path test if it injects the authority owner or replaces the durable dispatcher being claimed as proven.**
+
+What is accepted:
+- generic pre-reasoning lifecycle under `agent/`;
+- Workstation first-party provider;
+- trusted persisted `OperationIntent`;
+- existing CapabilityRouter / certificate / CertifiedDispatcher / OperationalKernel / verifier chain;
+- corrected E001 initial state;
+- implemented verifier-failure scenario;
+- corrected upstream intervention registry;
+- registered operational-resolution seam;
+- Browser domain ownership and single routing authority.
+
+The remaining causal gap is authority provenance.
+
+Production `TaskCompiler._execute_route()` resolves trusted authority as:
+
 ```text
-generic Hermes turn owner
--> generic operational-resolution lifecycle
--> first-party Workstation provider
--> established durable OperationIntent
--> CapabilityRouter
--> certificate
--> CertifiedDispatcher
--> OperationalKernel
--> canonical verifier
--> canonical finalizer
+self.trusted_authority
+-> canonical task.authority_scope
+-> READ
 ```
 
-This preserves the H-078B rule that generic Hermes core does not import Workstation implementation directly while still allowing the Hermes runtime itself to prefer deterministic operational competence before spending another reasoning round.
+but the audited E001 manually assigns `self.trusted_authority = EXTERNAL_REVERSIBLE`. Canonical task creation/admission does not currently expose the corresponding persisted `AuthorityScope`. The test therefore proves that routing works **if authority is injected**, not that the runtime naturally carries an authorized user grant into the deterministic control plane.
 
-The audit also establishes a new methodological rule:
+New invariant:
 
-> **A test named after a capability path is not evidence that the capability path executed.**
+> **Intent authority and effect authority are related but not interchangeable.**
 
-The current E001-style test registers a promoted capability but starts from a semantic state where the goal is already true. Because `CapabilityRouter` checks goal satisfaction before candidate search, the capability can be entirely irrelevant to the passing result. Promotion evidence must therefore assert causal path markers, not only end-state outcomes.
+`MessageEnvelope(IntentAuthority.CREATE_WORK)` may establish that a trusted human can create work; it must not silently become unrestricted `EXTERNAL_REVERSIBLE`. Effect authority needs its own bounded, trusted scope with explicit action/resource containment. The intended operation may only narrow that scope.
 
-For deterministic reuse, the minimum causal proof is:
+The second causal gap is physical dispatch. Patching `workstation_durable_dispatch` with a recorder proves the certified route calls a dispatch callback exactly once, but skips:
 ```text
-goal false at admission
--> ExecutableDecision
--> valid RoutingCertificate
--> physical dispatcher count = 1
--> canonical verifier = VERIFIED
--> accepted = true
--> dispatch record = COMMITTED
--> provider calls = 0
+tool-scope validation
+-> tool_call wrapping
+-> execute_tool_calls_sequential
+-> guardrails / approval / route policy
+-> raw post-tool observation
+-> take_raw_result
 ```
 
-A second rule is strengthened:
+Therefore release qualification must include a harmless real admitted primitive through the actual durable dispatcher.
 
-> **ACK-without-verification must be tested through the real turn path, not delegated to a nearby unit test.**
+A third intelligence rule follows:
 
-The current end-to-end verifier-failure case is a `pass`; therefore the branch has not yet demonstrated that a successful physical ACK followed by FAILED/INCONCLUSIVE verification cannot become COMMITTED success or a blind LLM retry.
+> **Preloaded expected evidence is not post-effect verification.**
 
-Registry intelligence:
-- `upstream_interventions.json` must describe interventions in upstream-owned code, not all downstream architecture changes;
-- provenance must name the commit that actually introduced the intervention, not the upstream baseline merge;
-- seam IDs referenced from intervention records must exist in `first_party_seams.json`;
-- closure is behavioral, not file-presence based.
+The current E001 objective persists `verification_evidence` before execution and marks it as trusted/read-after-write. Because `OperationalKernel` accepts supplied evidence directly, this can produce VERIFIED without a real observer running after the mutation. Release tests must omit pre-seeded success evidence and obtain verification from runtime-owned readback. For the smallest deterministic proof, a filesystem capability can use the kernel's builtin filesystem observer against `tmp_path`; durable-dispatch parity should be tested separately through the real dispatcher if combining both concerns would require artificial production plumbing.
 
-Experience intelligence:
-the new pre-reasoning boundary is only the **reuse admission half** of Progressive Compilation. End-to-end closure still requires:
+A fourth intelligence rule follows:
+
+> **User-facing completion text is not causal evidence.**
+
+E001/E003V must assert the structured markers already produced by the control plane: routing decision, certificate, canonical verification status/acceptance and dispatch record state. `OperationalResolution.details` may expose these as read-only observability, but they must never become authority inputs.
+
+Metrics rule:
+generic `hits` are terminal operational resolutions, not synonymous with `EXECUTED+VERIFIED`. Verified deterministic execution and LLM-cost ratios should be derived through existing resolution + ORA/VOLC owners; unknown denominators remain `None`.
+
+Lane split:
 ```text
-novel verified execution
--> TransitionSample
--> corpus
--> causal compilation
--> controlled replay
--> promotion
--> later normal-turn reuse with zero provider calls
+H-080A = production-qualified pre-reasoning capability reuse
+H-080B = full Experience capture->compile->promote->future-reuse closure
 ```
 
-Until that cycle is demonstrated, describe Progressive Operational Compilation as a validated substrate plus a promising pre-reasoning reuse boundary, not as fully closed.
+H-080A can be promoted independently when the real authority/dispatcher path and exact-head gates are green. H-080B remains open until the full amortized-reasoning loop is proven.
 
 ## H-079.2 — Promotion topology is part of correctness — 2026-09-20
 

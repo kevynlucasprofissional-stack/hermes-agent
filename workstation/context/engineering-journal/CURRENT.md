@@ -1,93 +1,79 @@
 # CURRENT — Workstation Engineering Journal
 
-## H-080 — Published branch audit and correction lane (2026-09-22)
+## H-080 — Production-path audit after E001/E003V repairs (2026-09-22)
 
-**Status:** ARCHITECTURE ACCEPTED / IMPLEMENTATION PARTIAL / PROMOTION BLOCKED.
+**Status:** ARCHITECTURE ACCEPTED / CONTROL-PLANE E2E IMPROVED / PRODUCTION-PATH QUALIFICATION BLOCKED.
 
-Canonical audit:
-[h080-branch-quality-audit-2026-09-22.md](h080-branch-quality-audit-2026-09-22.md).
+Canonical current audit:
+[h080-production-path-audit-2026-09-22.md](h080-production-path-audit-2026-09-22.md).
 
-The implementation is now published at:
+Audited branch:
+`integration/upstream-20260922-71a2fe39-h0793@89a745d2ee0346c7030134c10b24071ce9e234f1`.
 
-`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+### Corrections confirmed
 
-This supersedes the earlier statement that the second implementation existed only locally.
+- E001 now begins with a false goal state and cannot pass through `SATISFIED`.
+- E003V is implemented and drives FAILED verification with no provider retry.
+- upstream intervention registry now contains only the four upstream-owned files and correct feature provenance.
+- `SEAM-OPERATIONAL-RESOLUTION` is registered.
+- Browser authority/projection model remains healthy.
+- branch had been reconciled with `main@df2222c...` and was 24 ahead / 0 behind at audit time.
 
-### What the audit accepts
+### New production-path falsifications
 
-- `agent/operational_resolution.py` + `agent/turn_operational_resolution.py` form a generic pre-provider lifecycle boundary.
-- `agent/conversation_loop.py` has a narrow integration call and no direct Workstation import.
-- Workstation semantics live in `workstation/integrations/hermes/operational_resolution.py`.
-- Durable established intent replaces synthetic intent-from-prose.
-- The existing CapabilityRouter / certificate / dispatcher / kernel / verifier chain remains authoritative.
-- Browser extract-items projection moved into `workstation/browser_projection.py`.
-- Uncertain mutation state is surfaced to routing rather than silently retried.
+**Authority is still injected in the E2E.**
+The release test patches `TaskCompiler.execute` and writes an `EXTERNAL_REVERSIBLE` `trusted_authority` directly onto the compiler. Production route authority otherwise resolves through `self.trusted_authority -> canonical task.authority_scope -> READ`; canonical Kanban/task-admission owners currently do not provide that scope. Therefore the test proves an assisted authority path, not production authority propagation.
 
-### What the audit falsifies
+**Physical dispatch is still replaced.**
+The E001 patches `workstation_durable_dispatch` to `_DispatchRecorder`. This proves the certified control plane reaches its dispatch callback exactly once, but not the actual Hermes tool execution chain (`tool scope -> execute_tool_calls_sequential -> guardrails -> raw-result capture`). The same fixture empties tool definitions and `valid_tool_names`, so it is not a realistic admitted production primitive.
 
-**E001 is not yet the advertised EXECUTE proof.**
-The current test names a promoted capability but starts with `record.state = written` while the goal is also `record.state == written`. The router can terminate as `SATISFIED` before capability search. Therefore the existing test proves no-LLM for already-satisfied state, not no-LLM after deterministic capability execution.
+**Causal claims exceed direct assertions.**
+The runtime already returns routing decision, certificate, verification and dispatch record, but the E2E currently asserts mainly final response text, provider count and dispatch-callback count. Release evidence must assert `EXECUTE`, certificate, `VERIFIED`, `accepted`, `COMMITTED` directly; verifier-failure must directly prove not-COMMITTED.
 
-**Verifier failure is not tested end to end.**
-`test_verifier_failure_no_commit` currently contains `pass`.
+**Verification evidence is pre-seeded before execution.**
+The E001 objective contains trusted `verification_evidence` with `read_after_write=True` before the mutation runs. `OperationalKernel` consumes supplied evidence directly, so this can certify success without a real post-effect observer. Release evidence must remove that synthetic success evidence and use runtime-owned readback.
 
-**The scratch route fixture is not release evidence.**
-It proves useful direct `TaskCompiler._execute_route` behavior, but bypasses the normal turn and must be absorbed or renamed into permanent semantic coverage.
+**Scratch artifact remains.**
+`test_zz_scratch_route_fixture.py` is still present.
 
-**Registry truth is inconsistent.**
-`upstream_interventions.json` attributes feature changes to `a8dfcd21...`, the upstream merge baseline. It also includes downstream-only `workstation/**` changes as upstream interventions. Both need correction.
+**Metrics report is stronger than telemetry.**
+Generic operational metrics are steps/attempts/hits/misses/errors/self_reported. A hit is not synonymous with `EXECUTED+VERIFIED`. Use existing ORA/VOLC owners for truthful derived metrics.
 
-**Seam truth is incomplete.**
-`SEAM-OPERATIONAL-RESOLUTION` is referenced but absent from `first_party_seams.json`.
+### H-080A discriminating experiments
 
-**Experience closure remains open.**
-The new boundary proves a reuse path can exist, but not the entire novel-execution -> compile -> promotion -> future normal-turn reuse loop.
-
-### Required discriminating experiments
-
-**H-080-E001R — real promoted capability execution**
-- initial semantic state does NOT satisfy the goal;
-- normal `AIAgent.run_conversation` path;
-- `routing_decision == EXECUTE`;
-- physical dispatch count exactly 1;
-- canonical verification `VERIFIED`;
-- `accepted == true`;
+**E001P — production authority + real dispatcher**
+- normal `AIAgent.run_conversation`;
+- trusted authority arrives through the real production owner;
+- no `TaskCompiler.execute` monkeypatch;
+- real `workstation_durable_dispatch`;
+- a real admitted, harmless primitive;
+- actual tool executor/guardrails/raw-result path;
+- physical effect exactly once;
+- routing decision `EXECUTE`;
+- certificate non-empty/valid;
+- canonical verification `VERIFIED`, accepted;
 - dispatch record `COMMITTED`;
-- provider call count 0;
-- canonical finalization/persistence executed.
+- provider calls 0;
+- canonical finalization preserved.
 
-**H-080-E003V — ACK but verifier fails/inconclusive**
-- physical handler ACKs;
-- verifier returns FAILED or INCONCLUSIVE;
-- no COMMITTED-success claim;
+**E003VP — failed verification on production dispatch path**
+- real dispatch crosses the physical boundary exactly once;
+- verifier FAILED/INCONCLUSIVE;
+- dispatch record not COMMITTED-success;
 - no terminal EXECUTED-success;
-- no blind provider retry of the mutation.
+- provider calls 0 for the same mutation;
+- reconciliation/handoff semantics preserved.
 
-**H-080-E005 — Experience feedback closure**
-- verified novel execution enters TransitionSample/corpus;
-- candidate is compiled;
-- controlled replay/causal validation runs;
-- promotion policy admits only after evidence;
-- future equivalent normal turn reuses the promoted capability with provider calls 0.
+### H-080B
 
-### Promotion sequence
+Experience feedback-loop closure remains separate/open: novel verified execution -> corpus -> compile -> controlled replay -> verifier validation -> promotion -> future normal-turn reuse with zero provider calls.
 
-1. reconcile current main documentation/state into the feature branch;
-2. fix E001R;
-3. implement E003V;
-4. absorb/remove scratch fixture;
-5. repair intervention registry;
-6. add/qualify operational-resolution seam;
-7. close or explicitly leave OPEN Experience feedback-loop closure;
-8. complete truthful metrics mapping;
-9. Browser/owner regressions;
-10. strict seam audit;
-11. canonical full Workstation suite + upstream-owner tests;
-12. exact-head GitHub CI;
-13. final upstream drift classification;
-14. PR.
+### Upstream
 
-Do not merge while E001R or E003V is missing.
+Latest observed upstream: `d3b25b52ad1318c526bdb259b600eeca3d5f38e6`.
+Compared with frozen pin `71a2fe399...`: 23 upstream commits, no overlap with the four H-080 upstream intervention owners. Current classification: `NON_OVERLAPPING`, to be repeated immediately before promotion.
+
+Do not open/merge the PR until E001P/E003VP and exact-head qualification are green.
 
 ## H-079.2 — Promotion-gap audit after one-click dogfood failure (2026-09-20)
 

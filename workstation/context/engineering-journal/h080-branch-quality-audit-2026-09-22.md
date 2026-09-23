@@ -1,5 +1,13 @@
 # H-080 — Published Branch Quality Audit
 
+> **SUPERSEDED BY PRODUCTION-PATH AUDIT.** The original blockers around SATISFIED,
+> verifier-pass, registry provenance and seam registration were partially corrected on the branch.
+> Current release blockers are production authority propagation, real durable dispatch,
+> structured causal assertions, scratch-test hygiene and exact-head qualification.
+> Use [h080-production-path-audit-2026-09-22.md](h080-production-path-audit-2026-09-22.md)
+> as the current H-080A audit.
+
+
 Date: 2026-09-22
 
 Status: **IMPLEMENTATION DIRECTION SOUND / PROMOTION BLOCKED**

@@ -1,53 +1,72 @@
 # Progressive Operational Compilation — Capability Runtime
 
-## 2026-09-22 published-branch audit — reuse boundary implemented; EXECUTE proof and Experience closure still open
+## 2026-09-22 production-path audit — H-080A control plane works, production authority/dispatch proof still open
 
-The deterministic Capability Runtime and Experience Compiler substrate remain implemented. A materially improved pre-reasoning integration now exists on published branch:
+The deterministic Capability Runtime and Experience Compiler substrate remain implemented. The pre-reasoning integration on `integration/upstream-20260922-71a2fe39-h0793` has improved beyond the first published-branch audit:
 
-`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+- the goal is no longer initially satisfied in E001;
+- verifier failure is exercised rather than left as `pass`;
+- the intervention/seam registries are corrected;
+- Browser routing/projection ownership remains healthy.
 
-Accepted shape:
+However, the critical mutable E2E is still **test-assisted** in two ways:
+
 ```text
-normal Hermes turn
--> generic operational-resolution boundary
--> Workstation provider
--> established durable OperationIntent
--> CapabilityRouter
--> certificate / dispatcher / kernel
--> canonical verifier
--> canonical finalizer
+TaskCompiler.execute monkeypatch
+-> injects EXTERNAL_REVERSIBLE trusted_authority
+
+workstation_durable_dispatch monkeypatch
+-> replaces the actual Hermes tool execution path with a recorder
 ```
 
-However, the current headline E2E starts from a semantic state that already satisfies its goal, so it proves `SATISFIED -> provider calls 0`, not deterministic capability execution.
+Therefore the current evidence proves:
 
-Required normal-turn reuse proof:
 ```text
-goal initially false
--> promoted capability selected
--> routing_decision = EXECUTE
--> physical dispatch exactly once
--> canonical verification = VERIFIED
--> accepted = true
--> dispatch record = COMMITTED
--> provider LLM calls = 0
+normal turn
+-> operational boundary
+-> trusted intent
+-> CapabilityRouter/certificate/dispatcher/kernel
+-> supplied dispatch callback exactly once
+-> verified terminal outcome
+-> provider calls = 0
 ```
 
-The verifier-failure path must also be proven end to end: physical ACK followed by FAILED/INCONCLUSIVE verification must not become committed success and must not trigger a blind duplicate mutation through the LLM.
+but does not yet prove:
 
-The broader Experience closure remains:
+```text
+trusted production ingress
+-> real bounded effect AuthorityScope
+-> real workstation_durable_dispatch
+-> real tool scope / guardrails / raw-result capture
+-> exact-once physical effect
+-> EXECUTE
+-> VERIFIED + accepted
+-> COMMITTED
+-> provider calls = 0
+```
+
+A third gap also remains: the current E001 preloads trusted `verification_evidence` before execution. Since the kernel consumes supplied evidence directly, H-080A also requires genuine post-effect readback rather than synthetic pre-seeded success evidence.
+
+That distinction defines **H-080A**. H-080A closes only after production authority, real dispatch parity where applicable, and real post-effect verification are proven without replacing those owners in the release E2E.
+
+The broader Experience closure is **H-080B** and remains open:
+
 ```text
 novel verified execution
 -> TransitionSample
 -> ExperienceCorpus
 -> candidate compilation
 -> controlled replay / causal validation
+-> verifier validation
 -> promotion
 -> future equivalent normal turn
--> promoted capability EXECUTE
+-> EXECUTE / VERIFIED / COMMITTED
 -> provider calls = 0
 ```
 
-Until these causal proofs exist on the exact promoted head, describe Progressive Operational Compilation as **validated substrate + implemented pre-reasoning boundary, with deterministic EXECUTE reuse and full Experience feedback closure still open**.
+Metrics must remain truthful: generic `hits` are terminal resolutions, not a direct `EXECUTED+VERIFIED` metric. Derive verified deterministic and LLM-efficiency measures through existing resolution + ORA/VOLC owners; unknown denominators remain `None`.
+
+Until H-080A is exact-head qualified, describe the system as **validated deterministic substrate + implemented pre-reasoning control-plane integration, with production-path qualification open**. Until H-080B is proven, do not describe Progressive Operational Compilation as end-to-end closed.
 
 Date established: 2026-09-18
 
