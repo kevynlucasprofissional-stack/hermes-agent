@@ -1,5 +1,50 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 deep audit after lifecycle coordinator implementation
+
+Progressive Operational Compilation remains architecturally sound, but its competence-admission loop is **not product-closed yet**.
+
+The current branch now has:
+- candidate compilation;
+- `ExperienceValidationPromotionCoordinator`;
+- Browser owner receipts/revisions;
+- semantic trace slicing;
+- controlled replay/promotion components;
+- provider-zero reuse after a capability is promoted.
+
+What is still missing is the truth-preserving product bridge.
+
+### Invariant 1 — no self-certified verifier truth
+
+The competence-admission loop may not turn:
+
+`candidate.learning_metadata["effects"]`
+
+into a positive receipt merely by writing those values to an artifact and marking `passed=True`.
+
+Likewise, a negative-control description is not evidence that the verifier discriminated it.
+
+Validation truth must come from the canonical verifier/owner path.
+
+### Invariant 2 — product ownership means normal-runtime wiring
+
+H-080B.2 is not closed until the normal `accept_run -> mine` path schedules/adjudicates candidate validation and promotion without a fixture explicitly calling the coordinator.
+
+### Invariant 3 — Browser causality is owner receipt + enforced binding
+
+Promotion-grade Browser evidence requires both:
+- owner-issued receipt/state revision;
+- verifier-side proof that receipt identity matches the expected operation/task/run/BrowserTask/tab/revision/action/URL.
+
+### Invariant 4 — restart safety is durable
+
+A process-local lock may protect concurrent code, but lifecycle progress must be recoverable and idempotent through existing persistent owners.
+
+### Engineering discipline
+
+Do not broaden this corrective lane into general cleanup. Preserve accepted router/certificate/dispatcher/kernel/capability architecture. After these causal/product blockers are closed and exact-head gates are green, move to H-080B.3 rather than continuing to polish H-080B.2 indefinitely.
+
+
 ## 2026-09-23 H-080B product-lifecycle closure semantics
 
 The first native-browser H-080B vertical changes the interpretation of "end-to-end closed."
