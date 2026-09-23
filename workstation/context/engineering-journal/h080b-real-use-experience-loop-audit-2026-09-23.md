@@ -243,7 +243,7 @@ normal novel Hermes turn
 -> controlled replay / verifier validation
 -> ExperiencePromotionPolicy
 -> PROMOTED OperationalCapability
--> future semantically equivalent normal turn
+-> future normal turn with an already-established typed OperationIntent
 -> Operational Resolution before provider
 -> CapabilityRouter selects/proves capability
 -> native Browser executes exactly once
@@ -319,7 +319,9 @@ Because implementation-model budget is constrained, spend it only on:
 2. produce the first real accepted verified browser TransitionSample;
 3. produce cross-run evidence required for promotion;
 4. compile/validate/promote an OperationalCapability;
-5. prove future equivalent normal turn executes before provider with 0 provider calls.
+5. prove a future normal turn with an already-established typed OperationIntent executes before provider with 0 provider calls.
+
+Fresh natural-language paraphrase -> OperationIntent/capability recognition is **not** part of this first H-080B closure. That is the later System-1/Laya lane; do not add an ad-hoc prose classifier to close H-080B.
 
 ### P2 — eliminate obvious real-use waste
 1. explicit native-browser intent must avoid BrowserClaw/skill detours;
@@ -342,7 +344,8 @@ real verified browser experience accepted by ExperienceCorpus: YES
 real experience-derived candidate created: YES
 cross-run/promotion requirements satisfied without weakening policy: YES
 promoted learned OperationalCapability exists: YES
-future equivalent normal turn routes before LLM: YES
+future normal turn with established typed OperationIntent routes before LLM: YES
+fresh-paraphrase semantic recognizer implemented as part of H-080B: NO
 native browser is the only mutation executor: YES
 future verification: VERIFIED
 future dispatch: COMMITTED
