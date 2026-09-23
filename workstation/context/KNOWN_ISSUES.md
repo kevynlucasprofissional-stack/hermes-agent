@@ -1,61 +1,86 @@
 # Workstation Known Issues
 
-## KI-023 — Browser learning evidence lacks owner-issued causal receipt and strict learnable run binding [OPEN]
+## KI-023 — Browser owner receipt is emitted but not yet enforced as causal proof [OPEN — BLOCKER FOR PROMOTION-GRADE BROWSER LEARNING]
 
-The first H-080B native-browser vertical correlates the adaptive trace with persisted `browser-session.json` state using task/run identity, expected URL and time bounds, then records the trace `operation_id` into verifier evidence. This is strong local readback evidence, but the persisted Browser owner state does not yet prove with an owner-issued receipt which operation produced which state revision.
+The current H-080B branch now transports `operation_id` and `call_key` into Electron and persists a `BrowserOwnerReceipt` with task/run/BrowserTask/tab/revision/action/safe URL metadata. Strict non-null `run_id` binding is also present.
 
-Promotion-grade target:
+The remaining problem is enforcement.
+
+`read_native_browser_session_state()` currently verifies the caller/task run binding but does not require the latest owner receipt to match the expected:
+- operation ID;
+- task ID;
+- BrowserTask ID;
+- owned tab ID;
+- BrowserTask revision;
+- action;
+- sanitized target URL.
+
+`_verified_native_navigation()` then projects the trace `operation_id` into verifier evidence after the readback instead of proving that the Electron receipt carries that same operation identity.
+
+This leaves a causal aliasing failure mode:
+
 ```text
-Electron receives operation_id
--> executes browser mutation
--> persists/returns owner receipt:
-   operation_id
-   task_id
-   non-null exact run_id
-   browserTaskId
-   tabId
-   resulting_state_revision
-   safe post-effect state
--> Experience verifier validates the receipt
+trace operation A
++ Browser state/lastReceipt produced by operation B
++ target state happens to match
+-> Python projects evidence as operation A
 ```
 
-Additional hardening:
-- learnable evidence requires non-null exact `run_id`; permissive null run bindings may remain valid for ordinary Browser UX where appropriate;
-- the product rule must not remain `len(trace) == 1`; allow one relevant mutation plus bounded admissible read-only observations, with no second mutation or unresolved uncertainty;
-- Browser-local host/path/live evidence does not prove authentication or remote/server mutation.
+Required closure:
+- promotion-grade Browser readback accepts the expected operation identity;
+- receipt fields are validated against canonical task/run/BrowserTask/tab/revision/action/URL;
+- mismatch/stale/missing receipt fails closed;
+- tests falsify wrong operation ID, wrong task, wrong run, wrong tab, wrong revision, wrong action and wrong URL;
+- ordinary non-learning Browser continuity may remain more permissive where appropriate.
 
-Closure evidence must come from a real Electron/native path, preferably against an isolated local server.
+This is a narrow hardening of an otherwise useful owner-receipt design. Do not replace the Browser ownership architecture.
 
-### Concrete operation-id seam observed in current code
+## KI-022 — Coordinator exists, but H-080B.2 is not product-owned and its default verifier validation self-certifies [OPEN — BLOCKER]
 
-Current code already attempts to send an operation identity at the Python -> Electron boundary:
-- `tools/browser_workstation.py::_dispatch()` sets `payload['operation_id'] = call_key(action, args)`;
-- `apps/desktop/electron/workstation-browser-runtime.ts::BrowserControlRequest` does not declare `operation_id`;
-- `executeControlRequest()` therefore does not consume/persist/return that identity;
-- `workstation/procedure_trace.py::record_trace()` separately uses `agent._current_operation_id` or generates an `observation_<uuid>`.
+`workstation/experience_compiler/lifecycle.py` adds `ExperienceValidationPromotionCoordinator`, and the fixture proves that the coordinator can invoke validation, controlled replay and promotion. This is useful orchestration and should be kept.
 
-This can create two different notions of operation identity. The fix is **not** to treat deterministic `call_key(action,args)` as the canonical causal instance ID. A single per-execution `operation_id` must be established before physical I/O, then propagated unchanged through trace/provenance, controller payload, Electron owner receipt/state revision and verifier evidence. `call_key` may remain a structural/idempotency fingerprint where appropriate, but must not substitute for unique causal lineage across runs.
+Two blockers remain.
 
-## KI-022 — Experience candidate validation/replay/promotion is proven in fixture but not product-owned [OPEN]
+### A. Default validation receipts are not empirical
 
-H-080B commit `6d8806b868...` proves the existing components can complete:
-candidate -> verifier validation -> negative control -> controlled replay -> policy admission -> promotion -> future provider-0 reuse.
+The coordinator fallback helpers:
+- `_build_positive_validation_receipt()`;
+- `_build_isolated_negative_control()`;
 
-However, the normal product lifecycle still stops after Experience acceptance/mining and candidate creation. The H-080B fixture explicitly calls `validate_verifier()`, `controlled_replay()` and `promote()`.
+persist descriptions and return receipts with `passed=True`. They do not prove that the canonical verifier actually observed the positive case or rejected the negative case. `validate_verifier_sensitivity()` currently accepts those booleans.
 
 Required closure:
-- add a small Workstation-owned orchestration lifecycle over the existing compiler/causal/promotion/registry owners;
-- preserve candidate state when validation is unavailable or fails;
-- perform negative controls only in owner-controlled isolated environments or from admissible evidence;
-- persist causal receipts/evidence through ArtifactStore/ExecutionJournal;
-- never create another database, registry, authority plane or executable capability type;
-- prove candidate -> automatic validation/promotion -> future normal-turn provider-0 reuse without test-only lifecycle calls.
+- production positive validation comes from real `VerificationEvidence` evaluated through `evaluate_verification()` or an equivalent owner-controlled verifier driver;
+- production negative sensitivity is actually discriminated in an isolated safe environment or comes from admissible historical counterexample evidence;
+- if evidence is unavailable, return `held_as_candidate / verifier_receipts_unavailable`;
+- no weakening of `ExperiencePromotionPolicy`.
 
-This gap defines H-080B.2. Packaged/native proof and dogfood remain H-080B.3.
+### B. Normal product runtime does not call the coordinator
 
-Canonical:
-[engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md](engineering-journal/h080b-product-lifecycle-closure-2026-09-23.md).
+The completion/Experience path still ends after approximately:
 
+```text
+ExperienceCorpus.accept_run()
+-> ExperienceCompiler(...).mine()
+-> candidate
+-> journal "experience operational candidate; causal validation required"
+```
+
+No normal runtime caller sends those candidates into `ExperienceValidationPromotionCoordinator`.
+
+Required closure:
+- wire the coordinator after the existing `mine()` owner boundary;
+- preserve candidate state when validation cannot safely run;
+- persist lifecycle receipts/checkpoints through existing registry/artifacts/journal;
+- make validation/replay/promotion logically idempotent across restart;
+- do not rely on `threading.Lock()` as durable lifecycle ownership;
+- prove candidate -> product-owned validation/replay/promotion without the release E2E directly calling `process_candidate()`.
+
+Until both A and B close, canonical H-080B.2 status is:
+
+`ORCHESTRATOR IMPLEMENTED / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN`.
+
+Packaged/native proof remains H-080B.3. Laya remains deferred.
 
 ## KI-021 update — first native-browser causal loop proven locally [CI/PRODUCTION QUALIFICATION OPEN]
 
