@@ -31,7 +31,7 @@ The first H-080B native-browser vertical proves that the existing Experience/Cap
 
 5. **Browser promotion-grade evidence needs one canonical operation instance and owner causality.**
    Current code has two possible notions of operation identity: `tools/browser_workstation.py::_dispatch()` derives `payload['operation_id']` from `call_key(action,args)`, while adaptive trace provenance uses `agent._current_operation_id` or an `observation_<uuid>`. Electron does not yet consume the field. Do not canonize `call_key` as the causal instance ID. Establish one unique per-execution `operation_id` before physical I/O and propagate it unchanged through trace/provenance, Browser controller payload, Electron effect owner, persisted/returned receipt and verifier evidence. `call_key` may remain a structural/idempotency fingerprint.
-   
+
    For learned Browser capabilities, prefer an Electron-owner post-effect receipt/revision that binds:
    `operation_id + task_id + non-null exact run_id + browserTaskId + tabId + resulting state revision`.
    Temporal readback correlation remains useful evidence but is weaker than an owner-issued causal receipt.
