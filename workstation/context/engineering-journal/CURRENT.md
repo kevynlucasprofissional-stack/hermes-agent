@@ -1,5 +1,56 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080B post-implementation deep audit — 2026-09-23
+
+Audited implementation head:
+`workstation/h080b-native-browser-experience-loop@60d47e8c0426b84b36ea3a5304111f7997bbe8e9`
+
+Base:
+`integration/upstream-20260922-71a2fe39-h0793@72d5e688509078f8f6aaa6ba0b6bdc609cf40ed3`
+
+The latest implementation is retained as useful progress, but the prior claim that H-080B.2 is CLOSED is retracted.
+
+Accepted:
+- H-080A/control-plane architecture remains strong and should not be redesigned;
+- OperationalCapability remains the single learned executable abstraction;
+- Browser owner receipts/revisions, strict run binding and semantic trace slicing are useful additions;
+- the coordinator is the correct orchestration direction;
+- provider-zero reuse after genuine promotion remains proven in the hermetic path.
+
+Blockers:
+
+1. **Self-certified verifier receipts.**
+   `ExperienceValidationPromotionCoordinator` can create positive/negative receipts with `passed=True` without an actual canonical verifier observation. Production must instead consume empirical owner-controlled `VerificationEvidence` / `evaluate_verification()` results. If unavailable, hold the candidate.
+
+2. **No product wiring.**
+   Normal runtime still ends after `accept_run -> mine -> candidate`. The coordinator is not called by the normal product lifecycle. Direct fixture invocation does not close H-080B.2.
+
+3. **Owner receipt not enforced end-to-end.**
+   Electron emits a receipt, but promotion-grade Python readback does not yet prove operation/task/BrowserTask/tab/revision/action/URL identity against the expected operation before projecting verifier evidence.
+
+4. **Restart ownership is incomplete.**
+   `threading.Lock()` is process-local. Lifecycle progress must be durable/idempotent through existing registry/artifact/journal owners.
+
+Canonical classification:
+
+```text
+H-080A   ACCEPTED / DO NOT REDESIGN
+H-080B.1 LOCALLY PROVEN / PROMOTION-GRADE RECEIPT ENFORCEMENT OPEN
+H-080B.2 ORCHESTRATOR IMPLEMENTED / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN
+H-080B.3 OPEN
+H-081    DEFERRED
+```
+
+Corrective scope is deliberately narrow. Do not block on read-only whitelist elegance, coordinator API polish, broad-exception cleanup or duplicate receipt projection unless they falsify the acceptance contract.
+
+Next:
+`receipt enforcement -> empirical validation -> normal-runtime wiring + durable lifecycle -> exact-head gates -> H-080B.3`.
+
+Canonical detailed record:
+[h080b-product-lifecycle-closure-2026-09-23.md](h080b-product-lifecycle-closure-2026-09-23.md).
+
+
+
 ## H-080B product lifecycle closure audit — 2026-09-23
 
 Canonical detailed record:
