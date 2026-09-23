@@ -1,5 +1,17 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080B real-use audit — 2026-09-23
+
+Detailed canonical audit:
+[h080b-real-use-experience-loop-audit-2026-09-23.md](h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+New evidence changes the next-work priority:
+- PR #45 implements the important H-080A causal path, but current exact-head CI is red and must be qualified truthfully;
+- real native-browser conversations demonstrate route-selection and over-verification waste;
+- production Experience capture is active, but real samples remain uncertain/inconclusive and have not produced a learned promoted capability;
+- next feature work is one bounded browser-native H-080B capture -> verify -> compile -> validate -> promote -> future provider-0 vertical proof;
+- Laya stays deferred until that causal loop works without it.
+
 ## H-080A — Production-path closure qualified locally (2026-09-23)
 
 **Status:** CODE COMPLETE / LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING.
