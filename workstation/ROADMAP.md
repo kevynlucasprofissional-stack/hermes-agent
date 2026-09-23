@@ -1,5 +1,100 @@
 # Workstation roadmap
 
+## 2026-09-23 Operational Telemetry Plane — MEASURE BEFORE BROADENING
+
+Hermes Work now needs durable empirical feedback, not only architecture review and release tests.
+
+Canonical architecture:
+[context/OPERATIONAL_TELEMETRY.md](context/OPERATIONAL_TELEMETRY.md).
+
+The telemetry plane is observational only:
+
+```text
+product owners
+-> structured telemetry events
+-> rebuildable local projection
+-> metrics / reports / shadow analysis
+```
+
+It never authorizes, verifies, promotes, blocks, retries or mutates.
+
+Existing semantic owners remain:
+- ExecutionJournal / ArtifactStore for durable evidence;
+- OperationalCapabilityRegistry for capability lifecycle;
+- canonical verification results/evidence;
+- BrowserSessionState / BrowserOwnerReceipt for Browser effect evidence;
+- `workstation/control_plane/metrics.py` for ORA/VOLC/FailureAttributor/ShadowRouter semantics.
+
+### Sequencing
+
+Do **not** delay the open H-080B.2 causal blockers to build a broad observability stack.
+
+```text
+P0  close H-080B.2 blockers
+    -> receipt identity enforced
+    -> empirical verifier validation
+    -> normal-runtime lifecycle wiring
+    -> durable restart/idempotency
+
+P1  Operational Telemetry Phase 1
+    -> TelemetryEventV1
+    -> TelemetrySink
+    -> rebuildable local SQLite event projection
+    -> canonical lineage + privacy/sanitization
+    -> routing/provider/capability/verification/outcome/Experience boundary events
+
+P2  Operational Telemetry Phase 2
+    -> Experience funnel instrumentation
+    -> candidate/validation/replay/promotion/reuse/drift
+
+P3  H-080B.3 real Electron/local-server/dogfood proof
+    -> must emit inspectable telemetry from the real product run
+
+P4  Operational Telemetry Phase 3
+    -> derive ORA/VOLC from observed events
+    -> provider-zero, false-reuse, uncertain-mutation
+    -> runs/time-to-competence, drift/quarantine
+
+P5  Operational Telemetry Phase 4
+    -> ShadowRouter missed deterministic opportunity
+    -> post-goal work / oververification
+    -> dashboards/time series
+
+P6  H-081 / Laya
+    -> SHADOW first
+    -> evaluate shortlist against canonical router + verified outcome telemetry
+```
+
+### Priority product metrics
+
+First metrics must answer whether Progressive Operational Compilation is working:
+- Verified Outcome Rate;
+- ORA ratio;
+- LLM calls per verified outcome;
+- Provider-Zero Verified Rate;
+- Deterministic Reuse Success Rate;
+- False-Reuse Rate;
+- Uncertain Mutation Rate;
+- Experience funnel;
+- Runs to Competence;
+- Time to Competence;
+- Capability Drift / Quarantine Rate;
+- Avoidable Reasoning Rate;
+- Post-Goal Work / Oververification.
+
+Unknown denominators remain `None`. Do not manufacture zeros.
+
+### Explicit non-goals for Phase 1
+
+- no dashboard-first implementation;
+- no OpenTelemetry/cloud dependency requirement;
+- no new authority/control plane;
+- no content telemetry by default;
+- no prompt/response/DOM/cookie/token capture;
+- no change to routing/promotion/verification truth;
+- no Laya integration beyond future shadow-compatible event design.
+
+
 ## 2026-09-23 H-080B decomposition after vertical proof — PRODUCT LIFECYCLE CLOSURE
 
 Repository truth after the post-implementation deep audit:
