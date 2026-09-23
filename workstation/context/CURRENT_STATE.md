@@ -1,5 +1,11 @@
 # Current State
 
+## 2026-09-23 H-080B native-browser vertical — LOCAL CAUSAL PROOF / CI PENDING
+
+`workstation/h080b-native-browser-experience-loop@6d8806b868` adds owner-controlled readback of Electron's persisted BrowserTask/tab projection, a bounded adaptive completion verifier, and an immutable verified revision in ExperienceCorpus. The normal Hermes Run A test calls the provider, uses one native browser dispatch and ends `verified_completed` with accepted `VERIFIED_SUCCESS`. Two distinct accepted runs (`run_ids=1,2` in the isolated causal fixture) compile `experience_bcc0974be58c73cf04a0b436@1.0.0`; positive and wrong-host controls validate the verifier, controlled replay passes, and `ExperiencePromotionPolicy.admitted=true`. Run C starts with a durable typed intent and achieves `EXECUTE`, nonempty certificate, one native physical action, `VERIFIED`/accepted/`COMMITTED`, provider calls 0. Focused 122 passed; strict seam audit passed. This is hermetic local state proof, not a claim that a remote site changed or the user is logged in. Laya remains deferred.
+
+PR #45 P0 commit `72cfa4b389` fixed the stale `MockRouterWait.route(runtime_state=...)`; exact-head Workstation contracts passed 779. Windows aggregate remains red in platform tests, 900-second workstation smoke and packaged GUI backend startup. PR #45 remains unqualified for all-green promotion.
+
 ## 2026-09-23 H-080B Real-Use Audit — CAPTURE ACTIVE / COMPILE-TO-REUSE OPEN / PR #45 CI RED
 
 Canonical:

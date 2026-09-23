@@ -1,5 +1,13 @@
 # Workstation Known Issues
 
+## KI-021 update — first native-browser causal loop proven locally [CI/PRODUCTION QUALIFICATION OPEN]
+
+Commit `6d8806b868` proves a bounded hermetic normal-turn capture, owner persisted readback, canonical verified acceptance, two-run compilation, verifier validation, controlled replay, promotion and typed-intent reuse with no provider call. The old description below records the pre-fix product observation. Open qualification: run the new branch's CI and packaged/native product gate; no live ChatGPT login or fresh prose classifier has been claimed. Laya remains deferred.
+
+## KI-020 update — P0 contract fixed; Windows aggregate still red [OPEN — CI]
+
+PR #45 head `72cfa4b389`: Workstation contracts 779 passed. Windows `desktop-typecheck` still fails on `linux-crash-diagnostics` POSIX path expectation, `log-rotation` EPERM/ftruncate, `tray-host` process.getuid, 900-second `workstation_smoke`, and packaged GUI backend connection timeout. Focused browser, UI, typecheck and package build pass. Do not mark PR #45 all-green.
+
 ## KI-021 — H-080B production capture does not yet become verified learning capital [OPEN]
 
 Real native-browser product sessions already emit `TransitionSample`/trace artifacts and adaptive-observation journal events, but observed samples remain `uncertain`, `INCONCLUSIVE`, evidence strength 0. The existing conservative gates therefore reject them before real compilation/promotion.

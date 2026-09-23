@@ -1,5 +1,9 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-080B first native-browser vertical — 2026-09-23
+
+Implementation: `workstation/h080b-native-browser-experience-loop@6d8806b868`, based on P0 `72cfa4b389`, frozen upstream `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`. H-080B hermetic proof: normal Run A native route/accepted Experience; two compatible accepted run IDs; candidate `experience_bcc0974be58c73cf04a0b436@1.0.0`, semantic fingerprint `4bc13bdf68ea16aa4bb43d811045c7749a10e4e0c80f2c587849eb8597e6c141`, compatibility fingerprint `bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2`; validated browser-local readback verifier; positive replay and wrong-host negative control; promotion admitted; future normal Run C EXECUTE, nonempty certificate, exactly one native physical action, VERIFIED/accepted/COMMITTED, provider 0. Focused regression 122 passed; strict seam audit passed with 14 classified and no budget growth. P0 PR #45 exact-head contracts 779 passed but Windows aggregate red; branch CI/native packaged qualification pending. Laya DEFERRED.
+
 ## H-080B real-use audit — 2026-09-23
 
 Detailed canonical audit:

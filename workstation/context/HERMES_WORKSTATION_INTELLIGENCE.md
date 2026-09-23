@@ -1,5 +1,9 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-09-23 — Primeiro loop causal de experiência nativa (prova local)
+
+Em `6d8806b868`, a navegação adaptativa usa o BrowserTask/tab persistido pelo Electron como pós-efeito local verificável. O raw result conserva sua observação original `uncertain`; a revisão `VERIFIED_SUCCESS` aponta para um artifact de readback com task/run/operation, observador `workstation.browser_session_state`, source `browser_local_persistence`, trust `trusted_runtime`, força 2 e relação causal com o raw result. Dois runs compatíveis alimentam o compiler sem relaxar thresholds; um replay positivo e um host errado validam o verifier. A capability promovida é reutilizada em um turno normal com intent tipado já estabelecido e provider 0. O objetivo é host/path e BrowserTask live, sem alegação de autenticação ou mutação externa. Laya continua deferred.
+
 ## Real-use H-080B intelligence — verification capital, not trace volume — 2026-09-23
 
 Canonical evidence:

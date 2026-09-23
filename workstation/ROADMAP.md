@@ -1,5 +1,11 @@
 # Workstation roadmap
 
+## 2026-09-23 H-080B first native-browser vertical — LOCAL PROOF COMPLETE / CI PENDING
+
+Branch `workstation/h080b-native-browser-experience-loop`, implementation `6d8806b868` (base `72cfa4b389`). A normal Hermes turn navigates through the native browser and closes a canonical verified run using Electron's persisted `browser-session.json`. Two distinct accepted run IDs compile one learned `OperationalCapability`; owner readback drives positive and wrong-host verifier controls, controlled replay, and existing promotion policy. A later normal turn with a durable typed `OperationIntent` routes `EXECUTE`, dispatches once, returns `VERIFIED`/accepted/`COMMITTED`, and calls the provider zero times. Focused regression: 122 passed; strict seam audit: 14 classified, 0 unclassified, 0 budget growth. This is hermetic proof, not a production ChatGPT or packaged Desktop run. Laya remains deferred.
+
+PR #45 exact-head Workstation contracts pass (779), but Windows aggregate is red in platform, release smoke, and packaged GUI startup gates; do not promote it as all-green.
+
 ## H-080B — REAL-USE VERTICAL CLOSURE / PR #45 EXACT-HEAD CI RED (2026-09-23)
 
 Canonical new audit:

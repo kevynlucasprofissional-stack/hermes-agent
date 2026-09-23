@@ -1,5 +1,9 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-09-23 native-browser Experience admission proof
+
+`6d8806b868` connects a normal adaptive browser trace to Electron's persisted BrowserSessionState through canonical completion. The original `uncertain` transition is immutable; `ExperienceCorpus.accept_run()` accepts a separate verified revision only when the owner readback links the same task/run/operation, original transition and raw result. Its strength 2 describes browser-local persisted state. Two distinct accepted runs compile `experience_bcc0974be58c73cf04a0b436@1.0.0`; owner positive/wrong-host validation, controlled replay, and the unchanged `ExperiencePromotionPolicy` promote it. A later typed-intent normal turn reuses it with one native dispatch and provider 0. This is local hermetic evidence pending branch CI and packaged/native qualification.
+
 ## Native product evidence audit — 2026-09-23
 
 Real Hermes Work browser use confirms an important distinction:

@@ -1,5 +1,9 @@
 # Progressive Operational Compilation — Capability Runtime
 
+## 2026-09-23 H-080B bounded native-browser proof
+
+Commit `6d8806b868` closes the first hermetic path from adaptive normal-turn native navigation to owner-persisted post-effect evidence, `verified_completed`, accepted verified transition, two-run compilation, validated verifier, controlled replay, policy admission and a promoted `OperationalCapability`. The future normal turn starts with a durable typed `OperationIntent`, routes through the existing certificate/dispatcher/kernel/broker/browser path and ends `VERIFIED`/accepted/`COMMITTED` after one physical navigation and zero provider calls. The verifier uses BrowserTask local host/path/recovery state and makes no login or external server claim. No Laya classifier or generated script executor was added. Branch CI and production GUI qualification remain open.
+
 ## 2026-09-23 real-use audit — H-080A implementation strong; H-080B evidence bridge is the next causal gap
 
 The previous production-path blockers in this document have been materially addressed in PR #45: bounded production authority, real dispatcher parity, real post-effect verifier evidence, structured EXECUTE/certificate/VERIFIED/COMMITTED assertions and provider-0 success/failure behavior now have direct tests.
