@@ -1,3 +1,185 @@
 Deu um erro inicial para abrir o Work (Código 01), mas tentei de novo e deu certo. Talvez fosse por causa que bem na hora o Open Code estava fazendo uns ajustes.
 Consegui abrir o ChatGPT, usar o browser nativo, estava com sessão logada... Mas tenho receio que o compilador de experiência não esteja funcionando de acordo com minha visão, mas fiz poucos testes para ter alguma certeza se está ou não funcionando.
-Acredito que preciso dar exemplo de u
+Acredito que preciso dar exemplo dessa visão que eu tenho do Hermes Work funcionando, descrever como vejo que o Hermes Work deveria funcionar.
+
+Veja esse briefing abaixo, ele tem ótimos exemplos:
+
+@GitHub 
+https://github.com/kevynlucasprofissional-stack/hermes-agent
+
+Tá, eu tô tendo uma ideia aqui, que é o seguinte: você vai precisar entrar no meu repositório downstream do Hermes Agent, dentro do meu GitHub, e analisar principalmente duas partes do Hermes Work: o **Experience Compiler** e o **browser nativo** que eu estou criando para ser usado pelo Hermes.
+
+Você vai encontrar os dois dentro da pasta `workstation`: tanto a parte do browser quanto a do Experience Compiler.
+
+A ideia que eu estou tendo é a seguinte.
+
+O Experience Compiler é uma abstração mais geral. Pelo que eu entendo, ele tenta compilar experiências de diferentes tipos. Por exemplo, pode compilar experiências relacionadas a automações locais, automações web e provavelmente outros tipos de processos também.
+
+Só que eu quero explorar isso especificamente no contexto do browser nativo.
+
+Eu ainda não sei se essa lógica deveria ficar dentro da pasta do browser, dentro do Experience Compiler ou distribuída entre os dois. Isso precisa ser analisado arquiteturalmente. Mas, em nível de abstração, a ideia seria fazer com que **Experience Compiler, IA, browser nativo e, futuramente, Laya trabalhem juntos para transformar interações inicialmente feitas pela LLM em pequenos procedimentos determinísticos reutilizáveis**.
+
+Por exemplo: o usuário pede para “abrir o ChatGPT”.
+
+Na primeira vez, a LLM ainda precisa interpretar o pedido, decidir qual ferramenta usar, abrir o browser nativo do Hermes Work, navegar para a URL correta e, talvez, abrir diretamente um novo chat.
+
+Até aí tudo bem: a inteligência artificial está resolvendo aquela situação pela primeira vez.
+
+Mas, depois que isso funciona, talvez não faça sentido chamar novamente uma LLM toda vez que o usuário disser “abra o ChatGPT”.
+
+O Experience Compiler poderia observar essa execução bem-sucedida e transformar aquele caminho em algum tipo de procedimento reutilizável: talvez um pequeno script em TypeScript, JavaScript, Node.js, Python ou outra tecnologia adequada.
+
+Se for possível usar **Playwright, Puppeteer ou Chrome DevTools Protocol apontando diretamente para o browser nativo do Hermes Work**, melhor ainda. O importante é que a automação continue acontecendo dentro do browser do Hermes, e não abrindo um Chrome externo separado.
+
+A tecnologia específica é secundária. Pode ser TypeScript, JavaScript, Node.js, Python, Playwright, Puppeteer, CDP, browser extensions ou uma combinação delas. O que importa é construir uma camada capaz de transformar experiências bem-sucedidas em **ações determinísticas reutilizáveis**.
+
+Então o fluxo poderia ser mais ou menos assim:
+
+Na primeira vez, a LLM resolve o problema.
+
+Depois, o Experience Compiler identifica quais partes daquela execução podem ser transformadas em procedimentos determinísticos.
+
+A partir disso, ele cria pequenas “pontes” executáveis.
+
+E, nas próximas vezes, em vez de chamar uma LLM novamente para pensar em todo o processo, o Hermes simplesmente executa essas pontes.
+
+O Laya entraria justamente como uma camada de apoio nesse processo.
+
+Eu vou anexar materiais de uma pesquisa anterior que fiz sobre como poderíamos utilizar o Laya dentro do Hermes Work. Quero que você leia esses anexos também, porque já existe um raciocínio anterior sobre isso.
+
+A hipótese seria usar o Laya para aprender a reconhecer situações em que uma ação já compilada existe.
+
+Por exemplo: depois que a LLM criou e validou uma rotina determinística para abrir o ChatGPT, o Laya poderia aprender que pedidos semanticamente equivalentes a “abra o ChatGPT” devem disparar aquela rotina diretamente.
+
+Ou seja, talvez nem seja necessário chamar uma LLM completa para decidir isso.
+
+O Laya reconhece a intenção, associa aquela situação a uma capability ou procedimento já compilado e executa o script que o Experience Compiler deixou pronto.
+
+E isso não precisa acontecer apenas com ações simples.
+
+Um exemplo real que eu tive foi quando precisei criar vários cartões no Trello. Eram aproximadamente 12 cartões, e cada um precisava receber título, descrição e prazo. Para definir o prazo, era necessário abrir o calendário e selecionar a data correta.
+
+Eu lembro que, na primeira execução, a LLM aparentemente precisou pensar bastante para descobrir como realizar o processo: entender onde estavam os botões, qual era a sequência correta de ações e como interagir com a interface.
+
+Durante essa primeira execução, eu também vi algum script sendo escrito no meio do processo.
+
+Não tenho certeza se aquilo era o Experience Compiler funcionando, mas tive essa impressão.
+
+Depois disso, as próximas execuções ficaram significativamente mais rápidas e simples.
+
+Então pode ser que alguma forma dessa lógica já exista hoje.
+
+Quero que você verifique isso no código antes de propor qualquer coisa nova.
+
+Se o Experience Compiler e o browser nativo já possuem parcialmente essa abstração, não quero reinventar o que já existe. Quero entender o que já está implementado e aprofundar essa direção.
+
+A ideia seria fazer com que o sistema comece a construir uma espécie de **biblioteca incremental de procedimentos determinísticos derivados da experiência**.
+
+Por exemplo:
+
+um procedimento para acessar determinado site;
+
+um procedimento para localizar determinado botão;
+
+um procedimento para preencher determinado tipo de campo;
+
+um procedimento para selecionar uma data;
+
+um procedimento para entrar em uma área específica de uma interface;
+
+um procedimento para localizar determinado elemento;
+
+um procedimento para executar uma pequena sequência recorrente de ações.
+
+Individualmente, cada um desses procedimentos pode ser muito pequeno.
+
+Mas, conforme o sistema acumula essas pequenas capacidades, ele pode começar a perceber que vários procedimentos pequenos formam uma operação maior.
+
+Então ele pode compor:
+
+pequenos passos → em passos maiores;
+
+passos maiores → em rotas;
+
+rotas → em workflows completos;
+
+workflows → em processos inteiros.
+
+Por exemplo, inicialmente o sistema aprende:
+
+“abrir Trello”;
+
+“abrir determinado board”;
+
+“criar cartão”;
+
+“preencher título”;
+
+“preencher descrição”;
+
+“abrir calendário”;
+
+“selecionar prazo”;
+
+“confirmar cartão”.
+
+Depois ele percebe que essa sequência inteira representa uma operação mais abstrata:
+
+**criar cartão completo no Trello**.
+
+Mais tarde, várias execuções dessa operação podem formar algo ainda maior:
+
+**criar uma lista de tarefas estruturadas no Trello a partir de um plano**.
+
+E, dessa forma, aquilo que inicialmente exigia bastante raciocínio da LLM passa gradualmente a ser executado por processos cada vez mais determinísticos.
+
+Esse é o ponto central da ideia.
+
+Eu não quero simplesmente criar scripts de automação isolados.
+
+Quero investigar se podemos transformar o **Experience Compiler em um mecanismo de compilação progressiva da experiência operacional do Hermes**.
+
+A LLM seria utilizada principalmente quando o sistema ainda não sabe fazer alguma coisa.
+
+Quando consegue resolver e verificar aquela tarefa, o sistema tenta extrair dela capacidades reutilizáveis.
+
+Essas capacidades passam a fazer parte do repertório operacional.
+
+O Laya aprende a reconhecer quando essas capacidades são aplicáveis.
+
+E o browser nativo fornece o ambiente de execução dessas capacidades quando elas envolvem navegação e interação web.
+
+Com o tempo, o comportamento esperado seria:
+
+**LLM → descoberta e resolução de situações novas**
+
+**Experience Compiler → transformação de experiências bem-sucedidas em capacidades reutilizáveis**
+
+**Browser nativo → execução das capacidades relacionadas à web**
+
+**Laya → reconhecimento barato e rápido de quando e como acionar capacidades já conhecidas**
+
+**scripts/procedimentos determinísticos → execução efetiva das operações já aprendidas**
+
+A consequência seria um Hermes Work que, conforme é utilizado, precisa cada vez menos recorrer a processamento caro de modelos grandes para tarefas que ele já aprendeu a executar.
+
+A inteligência mais cara ficaria concentrada principalmente na descoberta, adaptação, exceções e situações realmente novas.
+
+O restante poderia migrar progressivamente para processos determinísticos, baratos, rápidos e verificáveis.
+
+Então o que eu quero que você faça é analisar o estado atual do meu downstream, principalmente o **Experience Compiler e o browser dentro de `workstation`**, relacionar isso com os materiais que vou anexar sobre o Laya e verificar:
+
+1. quanto dessa ideia já existe hoje;
+2. se o comportamento que eu observei anteriormente pode realmente ter sido causado pelo Experience Compiler;
+3. quais abstrações existentes já podem ser reutilizadas;
+4. quais abstrações precisariam ser adaptadas;
+5. se precisamos criar uma nova abstração para representar esses pequenos procedimentos reutilizáveis;
+6. como esses procedimentos poderiam ser compostos progressivamente em operações, rotas e workflows maiores;
+7. como o Laya poderia participar como mecanismo de reconhecimento e roteamento para capacidades já compiladas;
+8. e como fazer tudo isso sem criar uma arquitetura paralela desnecessária ou duplicar funcionalidades que o Hermes Work já possui.
+
+A direção geral é fazer com que **Experience Compiler, browser nativo e Laya formem um ciclo de aprendizado operacional**, no qual cada experiência bem-sucedida tenha potencial de reduzir a necessidade de raciocínio por LLM nas próximas execuções.
+
+Em outras palavras: quero que o Hermes não apenas execute tarefas, mas que **aprenda a transformar o que já conseguiu fazer em software operacional reutilizável**.
+
+E, quanto mais ele trabalha, mais partes do trabalho deixam de depender de inferência cara e passam a depender de capacidades determinísticas acionáveis.
