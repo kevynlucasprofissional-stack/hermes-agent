@@ -30,6 +30,8 @@ Current classification:
 0. preserve the qualified H-080A/control-plane architecture; do not redesign accepted owners
 1. enforce Browser owner receipt as promotion-grade causal proof:
    - one unique per-execution operation_id created before physical I/O
+   - in OperationalKernel, establish the operation_id before implementation-step dispatch rather than after postconditions
+   - inject the same ID into native browser step dispatch so Electron receives the certified/expected operation identity
    - same ID through trace/provenance -> controller -> Electron -> receipt -> verifier
    - validate operationId/taskId/runId/browserTaskId/tabId/revision/action/safeUrl
    - call_key remains a structural/idempotency fingerprint, not causal identity
