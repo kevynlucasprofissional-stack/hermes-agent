@@ -1,33 +1,40 @@
 # Workstation Known Issues
 
-## KI-020 — Normal-turn Progressive Compilation pre-reasoning closure is not yet promoted [OPEN — PUBLISHED BRANCH / QUALIFICATION BLOCKED]
+## KI-020 — H-080 production path is still test-assisted [OPEN — AUTHORITY + DURABLE DISPATCH + EXACT-HEAD CI]
 
-Implementation branch:
-`integration/upstream-20260922-71a2fe39-h0793@9c217afbc84e89acb32f83043f800ad6df9eb55d`.
+Implementation branch at latest audit:
+`integration/upstream-20260922-71a2fe39-h0793@89a745d2ee0346c7030134c10b24071ce9e234f1`.
 
-The generic pre-reasoning boundary and Workstation first-party provider now exist on a published branch and are architecturally preferable to the reverted `471e9b5` implementation. The branch must be repaired and qualified rather than reverted.
+Resolved since the prior audit:
+- E001 no longer starts from an already-satisfied goal;
+- verifier-failure E2E is implemented;
+- intervention registry provenance/scope is corrected;
+- `SEAM-OPERATIONAL-RESOLUTION` is registered;
+- Browser ownership/authority remains healthy.
 
-Open blockers:
-- E001 currently proves an already-satisfied goal bypasses the provider, not that a promoted capability actually EXECUTEs and bypasses the provider;
-- the normal-turn verifier-failure test is empty (`pass`);
-- `test_zz_scratch_route_fixture.py` contains useful direct-routing evidence but is not canonical release evidence;
-- `upstream_interventions.json` records incorrect downstream commit provenance and includes downstream-only `workstation/**` changes as upstream interventions;
-- `SEAM-OPERATIONAL-RESOLUTION` is referenced by the intervention registry but absent from `first_party_seams.json`;
-- the full Experience Compiler feedback cycle through compilation/promotion/future normal-turn reuse is not yet proven;
-- the audited branch head had no PR or GitHub Actions/status evidence.
+Open H-080A blockers:
+- E001 injects `EXTERNAL_REVERSIBLE` by monkeypatching `TaskCompiler.execute`; production authority propagation is not proven;
+- E001 replaces `workstation_durable_dispatch` with a recorder; actual tool-scope/guardrail/raw-result execution is not proven end to end;
+- E001 does not directly assert every claimed causal marker (`EXECUTE`, certificate, `VERIFIED`, accepted, `COMMITTED`);
+- E003V must directly assert failed/inconclusive verification cannot produce a COMMITTED success record;
+- `test_zz_scratch_route_fixture.py` remains and must be absorbed/renamed;
+- verified deterministic metrics are not yet a first-class truthful runtime measure;
+- exact-head PR/CI evidence is absent.
 
-Closure requires all of:
-- initial goal false -> promoted capability -> EXECUTE -> physical dispatch exactly once -> canonical VERIFIED/accepted -> COMMITTED -> provider calls = 0;
-- no match/insufficient trusted intent -> normal provider reasoning;
-- ACK + FAILED/INCONCLUSIVE verifier -> no committed success and no blind retry;
-- invalid certificate / non-promoted or quarantined capability / uncertain mutation fail safely;
-- canonical finalization preserved;
-- intervention registry and seam registry consistent and truthful;
-- Experience feedback-loop status either proven CLOSED or explicitly retained OPEN;
-- strict seam audit, Browser/owner regressions, full exact-head qualification, GitHub CI and final upstream drift classification.
+Closure requires:
+- production trusted ingress supplies a bounded `AuthorityScope` through a real owner; raw prose and `CREATE_WORK` alone never expand effect authority;
+- normal-turn E2E uses real `workstation_durable_dispatch` and a real admitted safe primitive;
+- physical effect occurs exactly once through the actual Hermes tool executor path;
+- structured evidence directly proves EXECUTE, certificate, VERIFIED+accepted, COMMITTED and provider calls 0;
+- failed/inconclusive verifier proves not-COMMITTED and no blind retry;
+- scratch fixture normalized/removed;
+- focused/Browser/seam/full Workstation/affected upstream tests green;
+- final drift classified and exact-head GitHub CI green.
+
+H-080B remains a separate OPEN sub-lane for Experience capture -> compilation -> controlled replay/verifier -> promotion -> future normal-turn reuse.
 
 Canonical audit:
-[engineering-journal/h080-branch-quality-audit-2026-09-22.md](engineering-journal/h080-branch-quality-audit-2026-09-22.md).
+[engineering-journal/h080-production-path-audit-2026-09-22.md](engineering-journal/h080-production-path-audit-2026-09-22.md).
 
 ## KI-019 — Anthropic routing contract lacks a real SDK construction proof [CLOSED LOCALLY — CI PENDING]
 
