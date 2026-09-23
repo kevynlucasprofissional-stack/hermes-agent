@@ -2,20 +2,20 @@
 
 ## D-032 — Productize Experience validation/promotion without creating a parallel authority plane
 
-**Decision date:** 2026-09-23  
+**Decision date:** 2026-09-23
 **Status:** ACCEPTED
 
 The first H-080B native-browser vertical proves that the existing Experience/Capability stack can form a complete causal loop, but it also exposes a product-lifecycle gap: the fixture explicitly invokes verifier validation, controlled replay and promotion after candidate compilation. Product runtime must own this lifecycle before Progressive Operational Compilation is described as end-to-end closed.
 
 ### Decision
 
-1. **Keep one executable learned ontology.**  
+1. **Keep one executable learned ontology.**
    `OperationalCapability` remains the executable learned object. Do not introduce `LearnedScript`, `BrowserSkill`, a second capability registry or any similarity-authorized execution object.
 
-2. **Compilation proposes; product lifecycle validates and promotes.**  
+2. **Compilation proposes; product lifecycle validates and promotes.**
    `ExperienceCompiler.mine()/compile()` may create/update a candidate. Recurrence alone never grants promotion. Promotion requires the existing causal/verifier/policy gates.
 
-3. **A coordinator may be added only as orchestration.**  
+3. **A coordinator may be added only as orchestration.**
    A small Workstation-owned Experience Validation/Promotion Coordinator may invoke:
    - `ExperienceCompiler.validate_verifier`;
    - `controlled_replay` / `SafeEnvironment`;
@@ -26,15 +26,15 @@ The first H-080B native-browser vertical proves that the existing Experience/Cap
 
    It must not become a new database, authority source, verifier authority, execution runtime or semantic source of truth.
 
-4. **Negative controls are isolated.**  
+4. **Negative controls are isolated.**
    Verifier sensitivity/counterfactual validation must use an owner-controlled safe environment or admissible historical evidence. Never deliberately mutate or navigate the user's live state to a wrong target merely to manufacture a negative control.
 
-5. **Browser promotion-grade evidence needs owner causality.**  
+5. **Browser promotion-grade evidence needs owner causality.**
    For learned Browser capabilities, prefer an Electron-owner post-effect receipt/revision that binds:
    `operation_id + task_id + non-null exact run_id + browserTaskId + tabId + resulting state revision`.
    Temporal readback correlation remains useful evidence but is weaker than an owner-issued causal receipt.
 
-6. **Trace shape is semantic, not cardinal.**  
+6. **Trace shape is semantic, not cardinal.**
    The first vertical's `len(trace) == 1` is an experimental bound, not the product abstraction. A learnable browser segment may contain exactly one relevant mutation plus bounded read-only observations, provided there is no second mutation and no unresolved uncertain effect. Operational/causal slicing decides what is reusable.
 
 7. **H-080B is decomposed.**
@@ -45,10 +45,10 @@ The first H-080B native-browser vertical proves that the existing Experience/Cap
    ```
    H-080B is not globally closed until the relevant product gates are proven.
 
-8. **Laya remains downstream of deterministic closure.**  
+8. **Laya remains downstream of deterministic closure.**
    H-081 may introduce System-1 providers in SHADOW mode for candidate/family shortlist and reasoning hints only after H-080B.2/.3 work without Laya. Laya cannot grant authority, issue certificates, verify effects, promote capabilities or override CapabilityRouter.
 
-9. **Branch sequencing is part of correctness.**  
+9. **Branch sequencing is part of correctness.**
    PR #46 must be reconciled onto the promoted/current PR #45/main baseline before promotion. Exact-head CI and final upstream-drift classification remain required.
 
 ### Canonical principle
