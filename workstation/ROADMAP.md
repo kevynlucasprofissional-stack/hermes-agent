@@ -48,7 +48,7 @@ Do not redesign or revert this lane.
 6. **Runtime metrics remain coarser than the report claims.**
    Generic counters expose attempts/hits/misses/errors, not a canonical `EXECUTED+VERIFIED` counter. Derive/wire truthful operational metrics through existing resolution + ORA/VOLC owners; unknown denominators remain `None`.
 
-6. **Exact-head remote qualification is absent.**
+7. **Exact-head remote qualification is absent.**
    No PR/Actions evidence yet qualifies the final candidate head.
 
 ### H-080A mandatory correction order
