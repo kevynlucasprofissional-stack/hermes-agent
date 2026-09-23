@@ -332,6 +332,30 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
             details={"task_id": task.id, "plan_id": plan_row.get("id")},
         )
 
+    if isinstance(result, dict):
+        from workstation.telemetry import TelemetryEventType, emit_event
+        decision = str(result.get("routing_decision") or "")
+        emit_event(TelemetryEventType.ROUTING_DECIDED,
+                   source_owner="workstation.operational_resolution",
+                   session_id=str(getattr(context, "session_id", "") or ""),
+                   task_id=task.id,
+                   run_id=str(task.current_run_id) if task.current_run_id is not None else None,
+                   operation_id=result.get("operation_id"),
+                   capability_id=result.get("capability_id"),
+                   capability_version=result.get("capability_version"),
+                   route=decision.lower() or None, status=decision or None,
+                   reason_code=str(result.get("reason") or "") or None,
+                   payload={"certificate_hash": result.get("certificate_hash"),
+                            "intent_family": result.get("intent_family"),
+                            "target_family": result.get("target_family")})
+        if decision == "WAKE_LLM":
+            emit_event(TelemetryEventType.LLM_WOKEN,
+                       source_owner="workstation.operational_resolution",
+                       session_id=str(getattr(context, "session_id", "") or ""),
+                       task_id=task.id,
+                       run_id=str(task.current_run_id) if task.current_run_id is not None else None,
+                       status="WAKE_LLM", reason_code=str(result.get("reason") or "unspecified"))
+
     outcome, text = _outcome_for(result)
     if outcome is None:
         return None
