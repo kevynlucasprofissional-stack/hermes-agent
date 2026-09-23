@@ -26,6 +26,16 @@ Additional hardening:
 
 Closure evidence must come from a real Electron/native path, preferably against an isolated local server.
 
+### Concrete operation-id seam observed in current code
+
+Current code already attempts to send an operation identity at the Python -> Electron boundary:
+- `tools/browser_workstation.py::_dispatch()` sets `payload['operation_id'] = call_key(action, args)`;
+- `apps/desktop/electron/workstation-browser-runtime.ts::BrowserControlRequest` does not declare `operation_id`;
+- `executeControlRequest()` therefore does not consume/persist/return that identity;
+- `workstation/procedure_trace.py::record_trace()` separately uses `agent._current_operation_id` or generates an `observation_<uuid>`.
+
+This can create two different notions of operation identity. The fix is **not** to treat deterministic `call_key(action,args)` as the canonical causal instance ID. A single per-execution `operation_id` must be established before physical I/O, then propagated unchanged through trace/provenance, controller payload, Electron owner receipt/state revision and verifier evidence. `call_key` may remain a structural/idempotency fingerprint where appropriate, but must not substitute for unique causal lineage across runs.
+
 ## KI-022 — Experience candidate validation/replay/promotion is proven in fixture but not product-owned [OPEN]
 
 H-080B commit `6d8806b868...` proves the existing components can complete:
