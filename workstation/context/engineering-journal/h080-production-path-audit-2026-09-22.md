@@ -243,3 +243,27 @@ merge current main docs/state into feature branch
 ## Promotion rule
 
 Do not merge H-080A while the only mutable normal-turn proof requires injected control-plane authority or a replacement durable dispatcher.
+
+## Additional blocker E — E001 pre-seeds verification evidence
+
+The current E001 fixture persists `verification_evidence` in the objective **before execution**. The evidence already claims:
+- expected value present;
+- `read_after_write=True`;
+- trusted owner/source-of-record provenance;
+- covered predicate fingerprint;
+- matching task/run/operation lineage.
+
+`OperationalKernel.execute_capability()` consumes `exec_context["verification_evidence"]` directly when supplied and therefore does not run a real post-effect observer in that case.
+
+This means E001 can obtain a canonical VERIFIED result from synthetic preloaded evidence even though the claimed readback did not occur after the mutation.
+
+Required correction:
+- remove pre-seeded success `verification_evidence` from the release E2E;
+- use an actual post-effect observer/readback owned by the runtime;
+- never manufacture `read_after_write`, trust class, coverage or provenance from expected values.
+
+Preferred minimal proof decomposition:
+1. **E001F — filesystem deterministic reuse:** use a `filesystem` capability with a harmless `fs_write` to `tmp_path`, `LOCAL_MUTATION` authority, and the kernel's real builtin `fs_stat`/filesystem readback after the write. This proves production authority -> route -> certificate -> kernel mutation -> independent canonical verification -> COMMITTED -> 0 LLM without synthetic evidence.
+2. **E001D — durable dispatcher parity:** separately exercise real `workstation_durable_dispatch` with a real admitted tool through `execute_tool_calls_sequential`; instrument only the lowest safe handler/controller, never replace the dispatcher. For Browser, reuse a deterministic fake `BrowserControlBroker` controller rather than network/runtime I/O.
+
+A single combined Browser test is acceptable only if it can obtain genuine post-navigation readback without pre-seeded evidence. Do not add production-only complexity merely to force one monolithic test.
