@@ -66,8 +66,6 @@ Metrics must remain truthful: generic `hits` are terminal resolutions, not a dir
 
 Until H-080A is exact-head qualified, describe the system as **validated deterministic substrate + implemented pre-reasoning control-plane integration, with production-path qualification open**. Until H-080B is proven, do not describe Progressive Operational Compilation as end-to-end closed.
 
-Date established:
-
 Date established: 2026-09-18
 
 Status: **IMPLEMENTED & VALIDATED** (2026-09-18)
