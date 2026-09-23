@@ -4,7 +4,7 @@ Acredito que preciso dar exemplo dessa visão que eu tenho do Hermes Work funcio
 
 Veja esse briefing abaixo, ele tem ótimos exemplos:
 
-@GitHub 
+@GitHub
 https://github.com/kevynlucasprofissional-stack/hermes-agent
 
 Tá, eu tô tendo uma ideia aqui, que é o seguinte: você vai precisar entrar no meu repositório downstream do Hermes Agent, dentro do meu GitHub, e analisar principalmente duas partes do Hermes Work: o **Experience Compiler** e o **browser nativo** que eu estou criando para ser usado pelo Hermes.
