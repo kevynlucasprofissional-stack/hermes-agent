@@ -17,6 +17,7 @@ Open H-080A blockers:
 - E001 replaces `workstation_durable_dispatch` with a recorder; actual tool-scope/guardrail/raw-result execution is not proven end to end;
 - E001 does not directly assert every claimed causal marker (`EXECUTE`, certificate, `VERIFIED`, accepted, `COMMITTED`);
 - E003V must directly assert failed/inconclusive verification cannot produce a COMMITTED success record;
+- E001 pre-seeds trusted success `verification_evidence` before execution; release evidence must come from a real post-effect observer/readback and must not manufacture `read_after_write`, trust or coverage;
 - `test_zz_scratch_route_fixture.py` remains and must be absorbed/renamed;
 - verified deterministic metrics are not yet a first-class truthful runtime measure;
 - exact-head PR/CI evidence is absent.
