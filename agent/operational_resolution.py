@@ -104,6 +104,11 @@ _providers: list[OperationalResolutionProvider] = []
 
 # Resolution accounting. ``unknown`` is never folded into zero: a step that was
 # never consulted is a miss in coverage, not a hit.
+#
+# ``hits`` counts every terminal outcome. The per-outcome counters distinguish
+# them: only ``executed`` corresponds to a deterministically verified execution
+# (the provider contract requires VERIFIED + accepted for EXECUTED). A ``hit``
+# that is SATISFIED/WAIT/HANDOFF is not a verified execution.
 _metrics: Dict[str, int] = {
     "steps": 0,
     "attempts": 0,
@@ -111,6 +116,11 @@ _metrics: Dict[str, int] = {
     "misses": 0,
     "errors": 0,
     "self_reported": 0,
+    "executed": 0,
+    "satisfied": 0,
+    "wait": 0,
+    "handoff": 0,
+    "continue_reasoning": 0,
 }
 
 
@@ -155,14 +165,11 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
     """
     _metrics["steps"] += 1
     if not _providers:
-        logger.debug("resolve_operational_step: no providers registered")
         return OperationalResolution()
 
-    logger.debug(f"resolve_operational_step: consulting {len(_providers)} providers")
     for provider in list(_providers):
         _metrics["attempts"] += 1
         name = _provider_name(provider)
-        logger.debug(f"resolve_operational_step: consulting provider {name}")
         try:
             resolution = provider(context)
         except Exception:
@@ -174,7 +181,6 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
             )
             continue
         if resolution is None:
-            logger.debug(f"resolve_operational_step: provider {name} returned None")
             continue
         if not isinstance(resolution, OperationalResolution):
             _metrics["errors"] += 1
@@ -200,6 +206,12 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
             continue
         if resolution.is_terminal:
             _metrics["hits"] += 1
+            _metrics[{
+                OperationalOutcome.EXECUTED: "executed",
+                OperationalOutcome.SATISFIED: "satisfied",
+                OperationalOutcome.WAIT: "wait",
+                OperationalOutcome.HANDOFF: "handoff",
+            }.get(resolution.outcome, "hits")] += 1
             logger.info(
                 "Operational resolution: %s by %s (%s)",
                 resolution.outcome.value,
@@ -207,9 +219,8 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
                 resolution.reason or "no reason given",
             )
             return resolution
-        logger.debug(f"resolve_operational_step: provider {name} returned non-terminal")
         _metrics["self_reported"] += 1
+        _metrics["continue_reasoning"] += 1
 
     _metrics["misses"] += 1
-    logger.debug("resolve_operational_step: no provider returned terminal resolution")
     return OperationalResolution()
