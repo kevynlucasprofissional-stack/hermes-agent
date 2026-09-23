@@ -1,5 +1,182 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-09-23 — Operational Telemetry Plane: de provar arquitetura para medir produto
+
+O Hermes Work chegou a uma mudança de fase: já temos várias propriedades arquiteturais comprovadas, mas agora precisamos medir continuamente se essas propriedades estão produzindo o resultado de produto que queremos.
+
+Pergunta central:
+
+> **Os outcomes verificados estão ficando mais baratos, mais determinísticos, mais reutilizáveis e mais confiáveis ao longo do tempo?**
+
+Sem uma trilha operacional mensurável, respostas sobre melhoria real dependem demais de testes pontuais, dogfood manual e interpretação de traces.
+
+### A telemetria não é outro control plane
+
+A nova camada é uma projeção observacional:
+
+```text
+OperationIntent
+-> Router
+-> Certificate
+-> Dispatcher
+-> Kernel
+-> effect owner
+-> Verifier
+-> Experience
+-> OperationalCapability
+
+        |
+        +-> observations
+              -> TelemetryEventV1
+              -> telemetry projection
+              -> ORA / VOLC / health / funnel
+```
+
+Regra:
+
+> **Telemetria observa. Nunca autoriza, verifica, promove, bloqueia, retenta ou executa.**
+
+Se a telemetria falhar, o produto continua.
+
+### Reaproveitar owners existentes
+
+Não criar outra verdade operacional.
+
+Fontes canônicas continuam:
+- ExecutionJournal;
+- ArtifactStore;
+- OperationalCapabilityRegistry;
+- verification evidence/results;
+- BrowserSessionState / BrowserOwnerReceipt;
+- provider/runtime accounting.
+
+`telemetry.sqlite` será uma materialized analytics projection reconstruível.
+
+### Events primeiro, métricas depois
+
+Não tornar counters mutáveis a única memória do sistema.
+
+```text
+operational fact
+-> immutable structured event
+-> projector
+-> metric
+```
+
+Isso permite mudar a definição de ORA/VOLC ou outra métrica e recalcular o histórico.
+
+Campos desconhecidos permanecem `None`, nunca zero inventado.
+
+### Métricas prioritárias
+
+O primeiro conjunto mede a tese de Progressive Operational Compilation:
+
+- Verified Outcome Rate;
+- ORA ratio;
+- LLM calls per verified outcome;
+- Provider-Zero Verified Rate;
+- Deterministic Reuse Success Rate;
+- False-Reuse Rate;
+- Uncertain Mutation Rate;
+- Experience funnel;
+- Runs to Competence;
+- Time to Competence;
+- Capability Drift / Quarantine Rate;
+- Avoidable Reasoning Rate;
+- Post-Goal Work / Oververification.
+
+Especialmente importantes:
+
+```text
+Experience
+-> candidate
+-> verifier validated
+-> replay validated
+-> promotion admitted
+-> PROMOTED
+-> reused
+-> reused + VERIFIED
+```
+
+Esse funil mostra onde a experiência deixa de virar competência.
+
+### Avoidable reasoning
+
+`ShadowRouter` já existe e deve ser usado futuramente sem mutation.
+
+Exemplo:
+
+```text
+actual: WAKE_LLM
+shadow: EXECUTE capability_X
+actual terminal result: VERIFIED
+```
+
+Isso pode revelar oportunidades determinísticas perdidas.
+
+Mais tarde, o mesmo framework mede:
+
+```text
+Laya shortlist
+vs canonical CapabilityRouter
+vs actual verified outcome
+```
+
+antes de qualquer autoridade ser concedida a Laya.
+
+### Oververification
+
+O caso real de navegação já mostrou uma nova categoria de desperdício:
+
+```text
+goal objectively satisfied
+-> additional read-only observation
+-> additional provider/model work
+```
+
+A telemetria deve conseguir identificar:
+- tool calls após goal satisfaction;
+- provider calls após goal satisfaction;
+- tokens após goal satisfaction;
+- wall time após goal satisfaction.
+
+Isso torna "verification must be proportional to declared goal" uma propriedade mensurável.
+
+### Privacidade
+
+Telemetria padrão é estrutural.
+
+Não duplicar:
+- prompt;
+- response;
+- DOM/page text;
+- form data;
+- credentials/tokens/cookies;
+- clipboard;
+- email/file contents;
+- URL query/fragment sensível.
+
+Guardar IDs, fingerprints, status, reason codes, latency/counts, versions e referências para evidência já armazenada pelo owner apropriado.
+
+### Sequencing
+
+Não interromper H-080B.2 para construir dashboard.
+
+```text
+H-080B.2 causal hardening
+-> Telemetry Phase 1
+-> H-080B lifecycle telemetry
+-> H-080B.3 emitting real telemetry
+-> ORA/VOLC projectors
+-> Shadow / oververification analytics
+-> dashboards
+-> Laya SHADOW
+```
+
+Canonical:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+
 ## 2026-09-23 — Deep audit pós-coordinator: verdade causal acima de fechamento nominal
 
 A implementação mais recente confirma que a arquitetura geral do Hermes Work está saudável, mas também mostra um princípio que passa a ser canônico:
