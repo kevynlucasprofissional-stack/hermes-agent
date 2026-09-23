@@ -427,7 +427,7 @@ Canonical:
 
 ## H-077.1 — Post-merge truthful-core qualification closure — 2026-09-19
 
-**Status:** IMPLEMENTATION COMPLETE / QUALIFIED.  
+**Status:** IMPLEMENTATION COMPLETE / QUALIFIED.
 **Audit baseline:** `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`.
 
 Resolved and verified:
@@ -444,10 +444,10 @@ Canonical:
 
 ## H-077 — Architectural falsification / external validity / post-H-076 residual audit (2026-09-19)
 
-**Status:** IMPLEMENTATION COMPLETE / EXACT-HEAD QUALIFICATION PENDING.  
+**Status:** IMPLEMENTATION COMPLETE / EXACT-HEAD QUALIFICATION PENDING.
 **Audit baseline:** `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`.
 
-**Hypothesis:** PR #36 fully qualified H-077.  
+**Hypothesis:** PR #36 fully qualified H-077.
 **Result:** refuted as a full qualification claim; core implementation retained.
 
 Reproduced evidence:
