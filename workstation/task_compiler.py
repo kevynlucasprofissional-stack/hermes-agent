@@ -1400,7 +1400,7 @@ class TaskCompiler:
             'capability_pins': self.store.get_plan(plan.id).metadata['capability_pins'],
             'durable_store': self.store, 'durable_item_id': item.id, 'primitive_admission': admit,
         }
-        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'resource_id', 'resource_version', 'operation_id', 'expected_task_id', 'expected_run_id'):
+        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'observer_args', 'observed_predicates', 'resource_id', 'resource_version', 'operation_id', 'expected_task_id', 'expected_run_id', 'expected_operation_id'):
             if k in request:
                 exec_context[k] = request[k]
         result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner, context=exec_context)

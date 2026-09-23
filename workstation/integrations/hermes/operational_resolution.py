@@ -83,9 +83,7 @@ def _canonical_task(agent: Any, session_id: str):
 
     task_id = str(getattr(agent, "_canonical_work_task_id", None) or "")
     envelope = getattr(agent, "_message_envelope", None)
-    logger.debug(f"_canonical_task: task_id={task_id}, envelope={envelope is not None}, session_id={session_id}")
     if not task_id or envelope is None:
-        logger.debug("_canonical_task: missing task_id or envelope")
         return None
 
     bridge = WorkstationKanbanBridge()
@@ -94,19 +92,12 @@ def _canonical_task(agent: Any, session_id: str):
         task = kanban_db.get_task(conn, task_id)
     finally:
         conn.close()
-    if task is None:
-        logger.debug(f"_canonical_task: task not found for task_id={task_id}")
-        return None
-    if str(task.session_id) != str(session_id):
-        logger.debug(f"_canonical_task: session_id mismatch task.session_id={task.session_id} != session_id={session_id}")
+    if task is None or str(task.session_id) != str(session_id):
         return None
     if str(task.status) in {"done", "cancelled"}:
-        logger.debug(f"_canonical_task: task status is {task.status}")
         return None
     if task.body != envelope.content:
-        logger.debug(f"_canonical_task: body mismatch task.body={task.body!r} != envelope.content={envelope.content!r}")
         return None
-    logger.debug(f"_canonical_task: returning task {task.id}")
     return task
 
 
@@ -139,7 +130,6 @@ def _established_intent(store: Any, artifacts: Any, task: Any):
     rows = [dict(row) for row in conn.execute(
         "SELECT * FROM work_plans ORDER BY created_at DESC LIMIT ?", (PLAN_SCAN_LIMIT,)
     )]
-    logger.debug(f"_established_intent: scanning {len(rows)} plans for task_id={task.id}")
     for row in rows:
         try:
             metadata = json.loads(row.get("metadata") or "{}")
@@ -147,26 +137,19 @@ def _established_intent(store: Any, artifacts: Any, task: Any):
             continue
         if not isinstance(metadata, dict):
             continue
-        logger.debug(f"_established_intent: checking plan_row={row.get('id')}, metadata task_id={metadata.get('task_id')}, canonical_task_id={metadata.get('canonical_task_id')}, task.id={task.id}")
         if row.get("task_id") != task.id and metadata.get("canonical_task_id") != task.id:
-            logger.debug(f"_established_intent: task_id mismatch, skipping plan {row.get('id')}")
             continue
         objective_ref = metadata.get("objective_ref")
         if not objective_ref:
-            logger.debug(f"_established_intent: no objective_ref in plan {row.get('id')}")
             continue
         try:
             objective = artifacts.read_json(objective_ref)
         except Exception:
-            logger.debug(f"_established_intent: unreadable objective {objective_ref}", exc_info=True)
+            logger.debug("operational resolution: unreadable objective %s", objective_ref, exc_info=True)
             continue
-        logger.debug(f"_established_intent: read objective={objective}")
         if not isinstance(objective, dict) or not _provable_goal(objective.get("operation_intent")):
-            logger.debug(f"_established_intent: objective not dict or goal not provable: {objective}")
             continue
-        logger.debug(f"_established_intent: found valid plan_row={row.get('id')}, objective={objective}")
         return row, objective
-    logger.debug(f"_established_intent: no valid plan found for task_id={task.id}")
     return None, None
 
 
@@ -288,16 +271,13 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
     from workstation.artifacts import ArtifactStore
     from workstation.durable_tasks import DurableTaskStore
 
-    logger.critical("workstation_operational_resolution: ENTRY")
     agent = getattr(context, "agent", None)
     if agent is None:
-        logger.critical("workstation_operational_resolution: agent is None")
         return None
 
     try:
         task = _canonical_task(agent, str(getattr(context, "session_id", "") or ""))
         if task is None:
-            logger.debug("workstation_operational_resolution: _canonical_task returned None")
             return None
         store = DurableTaskStore()
         try:
@@ -306,7 +286,6 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
         finally:
             store.close()
         if plan_row is None:
-            logger.debug("workstation_operational_resolution: _established_intent returned None")
             return None
     except Exception:
         logger.debug("operational resolution: no trustworthy intent to read", exc_info=True)
@@ -333,7 +312,6 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
 
     try:
         result = _dispatch_intent(agent, context, task, objective, runtime_state)
-        logger.debug(f"workstation_operational_resolution: _dispatch_intent returned result={result}")
     except InterruptedError:
         # The operator stopped the session; the ordinary interrupt path owns this
         # turn, and a terminal resolution here would race it.
@@ -355,9 +333,7 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
         )
 
     outcome, text = _outcome_for(result)
-    logger.debug(f"workstation_operational_resolution: _outcome_for returned outcome={outcome}, text={text}")
     if outcome is None:
-        logger.debug("workstation_operational_resolution: _outcome_for returned None, returning None")
         return None
     return OperationalResolution(
         outcome=outcome,
