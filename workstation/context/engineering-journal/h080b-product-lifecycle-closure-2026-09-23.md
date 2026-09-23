@@ -4,6 +4,155 @@ Date: 2026-09-23
 
 Status: **VERTICAL CAUSAL PROOF ACCEPTED / PRODUCT VALIDATION-PROMOTION LIFECYCLE OPEN / NATIVE PRODUCT QUALIFICATION OPEN**
 
+## Post-implementation deep audit — coordinator exists, closure does not
+
+Audited implementation head:
+`60d47e8c0426b84b36ea3a5304111f7997bbe8e9`
+
+PR #46 is now directly based on PR #45 head `72d5e688509078f8f6aaa6ba0b6bdc609cf40ed3`. The base reconciliation, Browser receipt transport, strict run binding, semantic trace-slice admission and coordinator implementation are accepted as useful progress.
+
+However, the post-implementation audit falsifies the claim that H-080B.2 is already closed.
+
+### Finding A — coordinator-manufactured validation is not verifier evidence
+
+The default coordinator path currently builds positive/negative validation artifacts and returns receipts marked `passed=True`.
+
+This is not admissible as promotion-grade verifier sensitivity evidence because the same coordinator:
+1. chooses the expected/divergent content;
+2. writes the artifact;
+3. labels the result as passed;
+4. hands that label to `validate_verifier_candidate()`.
+
+The old explicit test path is stronger: it builds real `VerificationEvidence`, runs `evaluate_verification()`, observes positive VERIFIED and negative non-VERIFIED, and only then creates sensitivity receipts.
+
+Production must use the stronger semantics.
+
+Required invariant:
+
+```text
+expected value / test description
+!= evidence
+
+actual owner-controlled verification decision
+= evidence
+```
+
+No safe validation environment/evidence => candidate stays pending.
+
+### Finding B — coordinator is not wired to normal runtime
+
+`workstation/kanban.py` still performs approximately:
+
+```text
+ExperienceCorpus.accept_run()
+-> ExperienceCompiler(...).mine()
+-> candidate
+-> journal "causal validation required"
+```
+
+There is no normal runtime call into `ExperienceValidationPromotionCoordinator`.
+
+Therefore the current implementation proves:
+
+```text
+components can compose when fixture calls coordinator
+```
+
+not:
+
+```text
+product automatically owns candidate validation/replay/promotion
+```
+
+H-080B.2 remains open.
+
+### Finding C — owner receipt is emitted but not yet causal proof
+
+Electron now persists a `BrowserOwnerReceipt` and monotonic BrowserTask revision.
+
+Promotion-grade readback currently verifies strict run binding but does not require the receipt to match expected:
+- operationId;
+- taskId;
+- browserTaskId;
+- tabId;
+- revision;
+- action;
+- safeUrl.
+
+`_verified_native_navigation()` then writes the trace operation ID into verifier evidence. Without the receipt comparison, the system can theoretically attribute state produced by operation B to trace operation A.
+
+Required correction: receipt identity must be an enforced verifier precondition.
+
+### Finding D — restart/idempotency remains process-local
+
+The coordinator uses a `threading.Lock()`, which does not survive process restart and is not a durable lifecycle checkpoint.
+
+Use existing:
+- OperationalCapabilityRegistry;
+- ArtifactStore;
+- ExecutionJournal;
+
+to persist/recover lifecycle progress. Do not add a new database.
+
+### Accepted debt — do not derail the lane
+
+The following are not blockers:
+- explicit read-only Browser tool whitelist;
+- coordinator `policy` constructor/API cleanup;
+- broad candidate-discovery exception handling with logging;
+- temporary duplicate receipt projection;
+- general API/style cleanup.
+
+Fix only if they become causal/product failures.
+
+### Corrected classification
+
+```text
+H-080B.1 verified Experience -> candidate
+  LOCALLY PROVEN
+  promotion-grade receipt enforcement still open
+
+H-080B.2 product validation/replay/promotion
+  COORDINATOR IMPLEMENTED
+  empirical verifier validation + normal-runtime wiring + restart-safe ownership OPEN
+
+H-080B.3 real Electron/package/dogfood
+  OPEN
+
+H-081 Laya/System-1
+  DEFERRED
+```
+
+### Exact-head qualification snapshot
+
+At the audit:
+- PR #45 Workstation CI: green;
+- PR #45 Workstation Browser Windows: green;
+- PR #46 Workstation CI: green;
+- PR #46 Docker: green;
+- PR #46 Windows: still running;
+- PR #46 Nix: queued;
+- PR #46 general `.github/workflows/ci.yaml`: failed immediately with zero jobs, while the workflow blob is unchanged from base.
+
+Treat the zero-job workflow failure as a merge gate to rerun/diagnose, not as evidence requiring H-080B redesign.
+
+### Corrective next step
+
+Run one narrow hardening lane:
+
+```text
+enforce owner receipt identity
+-> replace self-certified receipts with empirical verifier decisions
+-> wire coordinator after mine()
+-> persist restart-safe lifecycle progress
+-> prove normal-runtime candidate -> promotion
+-> exact-head gates
+-> move to H-080B.3
+```
+
+No Laya, no second ontology, no promotion-gate weakening, no broad architecture rewrite.
+
+
 ## Why this journal exists
 
 The first H-080B native-browser implementation materially advances Progressive Operational Compilation. It proves that the existing Workstation architecture can take a verified adaptive browser experience, compile it into an OperationalCapability, validate its verifier, replay it, promote it, and later reuse it in a normal turn with zero provider calls.
