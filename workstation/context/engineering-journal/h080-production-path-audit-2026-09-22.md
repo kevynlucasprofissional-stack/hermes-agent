@@ -267,3 +267,7 @@ Preferred minimal proof decomposition:
 2. **E001D — durable dispatcher parity:** separately exercise real `workstation_durable_dispatch` with a real admitted tool through `execute_tool_calls_sequential`; instrument only the lowest safe handler/controller, never replace the dispatcher. For Browser, reuse a deterministic fake `BrowserControlBroker` controller rather than network/runtime I/O.
 
 A single combined Browser test is acceptable only if it can obtain genuine post-navigation readback without pre-seeded evidence. Do not add production-only complexity merely to force one monolithic test.
+
+Implementation note from code inspection:
+- `OperationalKernel.execute_primitive()` handles `fs_write/write_file` internally, so a filesystem success test does **not** exercise `workstation_durable_dispatch`; that is acceptable for E001F but must not be mislabeled.
+- `todo_list` is an actual always-available registered Hermes tool, is not intercepted by the kernel's filesystem/browser primitives, and is a good hermetic candidate for a separate real-dispatch parity test through `workstation_durable_dispatch -> execute_tool_calls_sequential`. Use its real `TodoStore` revision/state to prove exactly-once mutation. The dispatcher-parity test may intentionally end WAIT/HANDOFF if canonical post-effect verification is unavailable; E001F separately owns verified-success proof.
