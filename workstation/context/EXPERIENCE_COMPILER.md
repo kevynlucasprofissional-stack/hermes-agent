@@ -1,5 +1,67 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-09-23 post-coordinator deep audit — orchestration exists, product closure does not
+
+The latest branch adds `ExperienceValidationPromotionCoordinator`, owner receipts and semantic trace-slice admission. These are retained.
+
+The audit found two conditions that prevent H-080B.2 from being called closed.
+
+### Verifier validation must be empirical
+
+The coordinator must not validate a verifier by storing expected effects/divergent-state descriptions and returning receipts marked `passed=True`.
+
+A promotion-grade receipt must be backed by an actual owner-controlled verification execution:
+
+```text
+positive state/effect
+-> canonical VerificationEvidence
+-> evaluate_verification()
+-> VERIFIED
+
+isolated negative/counterexample
+-> canonical verifier execution
+-> NOT VERIFIED / discriminated
+
+only then
+-> validation receipts
+-> validate_verifier_candidate()
+```
+
+If the validation environment or admissible evidence is unavailable, the candidate remains unpromoted.
+
+### Candidate lifecycle must be invoked by normal runtime
+
+A coordinator class tested by calling `process_candidate()` directly is not product ownership.
+
+The normal Workstation path must own:
+
+```text
+accept_run
+-> mine
+-> candidate
+-> lifecycle scheduling/checkpoint
+-> empirical verifier validation
+-> controlled replay
+-> promotion policy
+-> promoted OR pending candidate
+```
+
+using existing registry/artifact/journal owners.
+
+### Browser receipt enforcement
+
+For promotion-grade Browser transitions, receipt presence is insufficient. The readback must prove that the owner receipt matches expected operation/task/run/BrowserTask/tab/revision/action/safe URL before `ExperienceCorpus` accepts the revised terminal state.
+
+### Status
+
+- H-080B.1: locally proven, with owner-receipt enforcement hardening still open.
+- H-080B.2: coordinator implemented; empirical validation + normal-runtime wiring + restart-safe lifecycle open.
+- H-080B.3: real packaged Electron/local-server qualification open.
+- H-081: deferred.
+
+Do not solve these gaps by making compilation or promotion more permissive.
+
+
 ## 2026-09-23 candidate generation is not product promotion closure
 
 The native-browser H-080B vertical validates the existing compiler architecture, but exposes the next owner boundary.
