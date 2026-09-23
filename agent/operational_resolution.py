@@ -155,11 +155,14 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
     """
     _metrics["steps"] += 1
     if not _providers:
+        logger.debug("resolve_operational_step: no providers registered")
         return OperationalResolution()
 
+    logger.debug(f"resolve_operational_step: consulting {len(_providers)} providers")
     for provider in list(_providers):
         _metrics["attempts"] += 1
         name = _provider_name(provider)
+        logger.debug(f"resolve_operational_step: consulting provider {name}")
         try:
             resolution = provider(context)
         except Exception:
@@ -171,6 +174,7 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
             )
             continue
         if resolution is None:
+            logger.debug(f"resolve_operational_step: provider {name} returned None")
             continue
         if not isinstance(resolution, OperationalResolution):
             _metrics["errors"] += 1
@@ -203,7 +207,9 @@ def resolve_operational_step(context: OperationalResolutionContext) -> Operation
                 resolution.reason or "no reason given",
             )
             return resolution
+        logger.debug(f"resolve_operational_step: provider {name} returned non-terminal")
         _metrics["self_reported"] += 1
 
     _metrics["misses"] += 1
+    logger.debug("resolve_operational_step: no provider returned terminal resolution")
     return OperationalResolution()
