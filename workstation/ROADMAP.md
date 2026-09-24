@@ -134,6 +134,120 @@ Hard rule: **README/paper comparison is intake, not completion.** The audit is n
 
 Dogfood success is not `read many repos`. It is: **bounded exploration + durable provenance + measured context reduction + falsifiable comparative conclusions + no self-issued proof.**
 
+## ChatGPT-style Plugin System parity benchmark — PLANNED / RESEARCH + CODE-TO-CODE (2026-09-24)
+
+Registry:
+[SOURCE_MATRIX.md](SOURCE_MATRIX.md), section **Plugin platform / ChatGPT-style integration references — 2026-09-24 intake**.
+
+### Objective
+
+Evolve the **existing** Hermes plugin/catalog/MCP architecture so the user-facing plugin experience and behavioral contracts converge as far as practical with ChatGPT Plugins/Apps:
+
+```text
+discover/search
+-> install
+-> connect/authenticate
+-> grant bounded permissions
+-> capabilities become available to Hermes
+-> natural-language or explicit @Plugin-style invocation
+-> read/write approval policy
+-> safe multi-plugin composition
+-> health/status/update
+-> disable/uninstall/revoke
+```
+
+The target is **observable behavioral parity**, not reverse engineering or reproducing proprietary OpenAI implementation details. ChatGPT is a black-box product/UX oracle; code-to-code evidence comes from open-source systems.
+
+### Existing Hermes owners are the baseline, not throwaway scaffolding
+
+The benchmark must begin by mapping current `main`:
+
+- native plugin discovery/runtime under `plugins/` and the existing `PluginManager`;
+- curated `plugin-catalog/` plus `hermes plugins catalog/search/install/update`;
+- catalog provenance, exact-SHA pinning, security validation and removal/blocklist behavior;
+- existing MCP catalog/config/security/startup surfaces under `hermes_cli/mcp_*`;
+- plugin compatibility contracts, degraded boot and extension isolation;
+- current secret/config/profile scoping and the repository's per-conversation prompt-cache invariant.
+
+**Do not create a second plugin manager, registry, catalog, MCP owner, secrets store or approval system.** Prefer extending generic plugin surfaces and adapters; preserve the narrow-waist/core-at-the-edges rule.
+
+### Benchmark set
+
+1. **ChatGPT Plugins / Apps** — black-box behavior and UX matrix only: discovery, installation/connection, auth, permissions, confirmation, invocation, composition, status and removal.
+2. **Dify + Dify Plugin Daemon + official plugins** — primary code-to-code reference for plugin lifecycle/runtime ownership, SDK contracts, installation/execution and failure containment.
+3. **LobeHub / LobeChat + plugin index** — primary marketplace/one-click UX and MCP integration reference.
+4. **Open WebUI** — Tools/Functions/MCP/OpenAPI extensibility, community loading, security and degraded-mode behavior.
+5. **LibreChat** — Agent/MCP tool attachment, OpenAPI Actions and capability-selection boundaries.
+6. **MCP specification** — protocol-level tool/resource discovery and invocation baseline; treat MCP as one transport/adapter beneath the plugin product layer.
+
+Exact repositories/refs, licenses and relevant dependency licenses must be pinned before code-level reuse claims. README/docs evidence remains intake; implementation conclusions require file/symbol/test/commit receipts.
+
+### Research sequence
+
+```text
+P0 current-Hermes plugin architecture/code audit
+-> P1 ChatGPT black-box behavior matrix and parity scenarios
+-> P2 Dify / Plugin Daemon code-to-code
+-> P3 LobeHub/LobeChat code-to-code + UX flow audit
+-> P4 Open WebUI + LibreChat code-to-code
+-> P5 MCP protocol cross-cut and adapter boundary audit
+-> P6 capability/security/lifecycle gap matrix
+-> P7 architecture synthesis against Hermes owners/invariants
+-> P8 separately reviewable implementation proposals
+```
+
+The **research** may start before the broader self-improvement dogfood is fully autonomous. Any **runtime implementation** produced from it remains subject to the Upstream-First Change Gate, exact-ref license review, seam policy, security review and exact-head qualification.
+
+### Mandatory comparison dimensions
+
+- marketplace/discovery/search/suggestion;
+- install provenance, dependency handling, version pinning, update/rollback and uninstall;
+- OAuth/account connection, API-key handling, secret scope, revoke/reconnect;
+- global permission defaults plus per-plugin overrides;
+- explicit distinction between read actions, low-risk writes and important/sensitive writes;
+- user confirmation/approval semantics and durable audit receipts;
+- tool/resource/action schema discovery without uncontrolled prompt-cache invalidation;
+- natural-language invocation plus an explicit plugin selector affordance;
+- safe composition of multiple plugins in one task with lineage and failure attribution;
+- plugin health, restart recovery, isolation, quarantine and degraded core boot;
+- Desktop/CLI/TUI/remote-client projection over one canonical plugin state;
+- MCP/OpenAPI/native-plugin interoperability without making any protocol the canonical task/state owner.
+
+### Parity acceptance scenarios
+
+The lane is not complete because a marketplace screen exists. At minimum, executable evidence must prove:
+
+1. a user can search/discover a plugin and inspect what capabilities/permissions it requests;
+2. install/connect persists provenance and survives restart;
+3. an authenticated plugin exposes only its declared capabilities;
+4. a read can run according to the configured permission mode while a protected write triggers the expected review/confirmation gate;
+5. one task can read through Plugin A and write through Plugin B without losing lineage, ordering or approval state;
+6. explicit `@Plugin` selection and ordinary natural-language selection resolve to the same canonical capability path;
+7. a broken optional plugin can be quarantined/disabled without preventing Hermes core from booting;
+8. update/rollback preserves last-known-good behavior and does not silently widen capabilities;
+9. uninstall/revoke removes runtime capability and credential access without leaving stale executable registrations;
+10. the same plugin state is visible consistently across supported Hermes surfaces.
+
+A provider-neutral external-service integration (for example a WhatsApp/CRM-style connector or another reversible test service) should be used as one realistic E2E, but the architecture must remain generic.
+
+### Implementation posture after the benchmark
+
+Expected target shape, subject to code-to-code evidence rather than assumption:
+
+```text
+Hermes Plugin UX / Catalog
+        |
+existing PluginManager + install provenance + policy
+        |
+capability adapters
+   |        |        |
+ native    MCP     OpenAPI
+        |
+existing Hermes execution / authority / approval / journal owners
+```
+
+Success means a ChatGPT user can move to Hermes and understand plugin discovery, connection, permissioning and invocation with minimal relearning **without** sacrificing Hermes prompt caching, exact-version trust, degraded boot, canonical lineage, scoped authority or upstream-delta discipline.
+
 ## H-079.2 — Upstream Re-adoption + Dogfood Installer Closure (2026-09-20) — LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING
 
 Canonical:
