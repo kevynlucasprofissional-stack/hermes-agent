@@ -1,5 +1,222 @@
 # Workstation roadmap
 
+## Strategic map — 2026-09-28 conversation-derived intake
+
+This section is the **current navigation layer** for Hermes Workstation development.
+The detailed milestone/history sections below remain canonical evidence for what was
+implemented, qualified, reopened or deferred; this section does not erase or renumber
+them.
+
+Research source: the 2026-08-18 → 2026-09-28 briefing/conversation corpus was reviewed as
+an **intake source**, not as architecture authority. Ideas were deduplicated against
+current code, tests, decisions and the V3.2–V3.4 contract layers. Items already owned
+there (watchdog boundary, model routing, replay, plugin isolation, durable workers,
+typed resources, human handoff, etc.) are not reopened merely because the conversation
+mentioned them again.
+
+### Priority rule
+
+Prioritize work by:
+
+```text
+user/system impact
+× reliability/safety gain
+× reuse across Workstation surfaces
+× evidence quality
+÷ implementation/maintenance cost
+÷ upstream-delta risk
+```
+
+Current sequencing remains constrained by the existing release gates:
+
+```text
+H-080A truthful production-path qualification
+-> H-080B verified experience-loop closure
+-> targeted cross-cutting reliability hardening
+-> readiness-gated code-to-code/reference investigations
+-> optional/experimental product expansion
+```
+
+No item below authorizes bypassing H-079 upstream-first qualification, H-078 minimum-seam
+policy, D-002/D-007 canonical ownership or the Canonical Execution Reliability Gate.
+
+### Immediate improvements / next hardening work
+
+1. **Close H-080A and H-080B before broad feature expansion.**  
+   Production authority, real dispatch, real post-effect evidence, truthful metrics,
+   exact-head CI and the verified experience capture → promotion → future reuse loop
+   remain the current highest-priority blockers. Do not dilute them with parallel feature
+   work.
+
+2. **Operational authority and effect safety.**  
+   Harden the existing intent/capability/verification path with explicit control
+   semantics, refusal atomicity, pre/post effect verification and a derived Effect Ledger.
+   Context:
+   [context/OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md](context/OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md).
+
+3. **Identity, ownership and cross-tenant isolation.**  
+   Make `Gateway/Runtime -> Profile/Agent -> Session -> TaskRun/Operation -> Worker/Process/BrowserTask/Effect`
+   ownership resolvable without conflating execution location with semantic owner.
+   Add an A/B isolation falsification matrix and allowlist-first MCP child environments.
+   Context:
+   [context/IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md](context/IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md).
+
+4. **Liveness, progress and budget governance.**  
+   Extend existing EvidenceState/supervisor/budget mechanisms so “alive” is not confused
+   with “making progress”. Add progress/no-progress policy, circuit breakers, required
+   capability health and outcome-oriented cost metrics.
+   Context:
+   [context/LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md](context/LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md).
+
+5. **Audit upstream reuse before any new Browser/Desktop/Kanban owner.**  
+   Re-evaluate current upstream Bot Screen/Desktop/Kanban/task surfaces at the next pinned
+   upstream cycle before expanding equivalent downstream infrastructure. The desired split
+   remains: upstream Hermes supplies as much execution/UI substrate as can preserve parity;
+   Workstation supplies operational semantics, policy, evidence and recovery. Any retained
+   first-party seam must survive H-078/H-079 evidence gates.
+
+### Important medium-term improvements
+
+- **Agent identity / operator registry projection.**  
+  Expose a read-only inventory from existing owners: profile/agent ID, runtime, principal,
+  active TaskRun/session, capabilities, health, phase, cost and last activity. This is a
+  projection, **not** a new Agent DB.
+
+- **Typed capability health and typed orchestration refusals.**  
+  Capabilities/dependencies should distinguish `required|optional` and
+  `healthy|degraded|unavailable`, with structured reasons such as
+  `precondition_failed`, `authority_required`, `dependency_unhealthy`,
+  `budget_exhausted`, `verification_failed` and `cancelled`. Extend existing owners;
+  do not introduce a second lifecycle.
+
+- **Explicit operational phase projection.**  
+  Project `planned -> preparing -> awaiting_authority -> executing -> verifying -> waiting
+  -> recovering -> terminal` from canonical TaskRun/EvidenceState state so Desktop,
+  Dashboard and TUI show the same operational truth without exposing private chain-of-thought.
+
+- **Browser/computer backend benchmark by verified outcome.**  
+  Compare first-party Hermes Browser with selected external/reference lanes
+  (Stagehand, Playwright/Chrome DevTools MCP, Browser Use and other pinned candidates)
+  on the same tasks using task success, recovery, latency, actions, tokens and
+  **Cost per Verified Outcome**. No backend becomes default from vendor benchmarks alone.
+
+- **Verified skill/capability promotion.**  
+  Extend Experience Compiler investigation with the pattern:
+  `extract candidate capability -> generate/associate tests/oracles -> execute -> reject on
+  failed validation -> promote only with evidence`. Paper2Agent is a research lead for
+  this pattern and must be pinned/license-audited before entering SOURCE_MATRIX as a
+  code-level reference.
+
+- **Verifier diversity experiments.**  
+  Measure same-model self-verification vs independent model vs deterministic/external
+  oracle for critical task classes. Diversity is useful only when it reduces correlated
+  failure or improves external validity at justified cost.
+
+### Experimental / exploratory ideas
+
+These are preserved as research directions and **must not become architectural
+dependencies without falsification/evidence**:
+
+- **Cordis-style dynamic composition study.** Compare DeepSeek Harness/Cordis plugin
+  lifecycle and composition against current Workstation capability/integration boundaries.
+  The question is whether contracts can become cleaner, not whether Workstation should be
+  replatformed onto Cordis.
+
+- **Agent-native workspace UX.** Study persistent-agent workspace patterns (agent inbox,
+  presence, task membership, human/agent collaboration) as UI/operability references.
+  Canonical state remains Hermes/Workstation-owned.
+
+- **External enforcement/watchdog backends.** Evaluate OS/container/hardware policy
+  enforcement as stronger implementations of the already-defined independent-watchdog
+  contract when local software boundaries are insufficient.
+
+- **Map-of-Work / process-model ingestion.** Explore converting organizational process
+  knowledge into explicit `state -> condition -> decision -> effect -> exception -> evidence`
+  models that can feed task compilation without turning documentation into automatic
+  execution authority.
+
+- **Distributed local inference pool and large-search orchestration.** Retain the existing
+  V4 radar ideas, but require measurable task/cost/reliability wins before productization.
+
+### Known problems / active blockers
+
+The strategic map treats the following as active truth, not historical footnotes:
+
+- H-080A production authority/real dispatch/real post-effect evidence/truthful metrics/
+  exact-head CI remain open;
+- H-080B verified Experience Compiler feedback-loop closure remains open;
+- Browser Operational Admission / Ownership-Recovery corrective evidence gates remain
+  authoritative where their canonical sections say OPEN/PENDING;
+- no repo-scale Explorer owner is qualified yet for the large reference audit;
+- canonical TaskRun identity/fencing is not yet universally proven through every
+  completion, event, evidence and effect boundary;
+- product-level release evidence remains narrower than some contract-layer claims and must
+  never be inferred from unit/contract success alone.
+
+Use [context/CURRENT_STATE.md](context/CURRENT_STATE.md),
+[context/KNOWN_ISSUES.md](context/KNOWN_ISSUES.md) and the active Engineering Journal for
+exact current evidence.
+
+### Technical debt to reduce
+
+- **Identity vocabulary fragmentation.** Remove implicit “current/active” identity
+  fallbacks where a canonical profile/session/TaskRun/operation owner is required.
+- **Metric semantic drift.** A hit/replay/tool success must not be labeled
+  `EXECUTED+VERIFIED`; derive metrics from the actual resolution/verification owners and
+  leave unknowns as `None`.
+- **Capability degradation ambiguity.** Required dependency failure must not silently
+  become a different workflow; optional degradation needs an explicit policy.
+- **Roadmap readability.** New strategic work should land in this navigation layer plus a
+  focused context document rather than adding another large historical block without a
+  clear category/owner.
+- **Upstream delta maintenance.** Prefer generic upstream hooks and first-party adapters;
+  delete/reduce seams when parity is proven instead of preserving historical patch
+  locations.
+
+### Investigations required
+
+1. Reproduce and classify recent upstream profile/session/process/browser/cache/secret
+   isolation reports against a freshly pinned upstream baseline; historical reports are
+   hypotheses until current main reproduces them.
+2. Audit stdio MCP/plugin child-process environment construction and prove an explicit
+   allowlist excludes Workstation-internal secrets by default.
+3. Inspect current upstream Bot Screen, Kanban/task/run and Desktop ownership paths
+   code-to-code before any competing downstream implementation.
+4. Execute the readiness-gated DeepSeek Harness audit from
+   [context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md),
+   focusing on typed refusals, required capability health, plugin lifecycle, execution
+   phases, Browser/Computer backends and refusal atomicity.
+5. Pin the exact Paper2Agent implementation/release/license and decide
+   `REFERENCE/EVAL | BENCHMARK CANDIDATE | REJECT/DEFER` before adding it to SOURCE_MATRIX.
+6. Define experiments for verifier diversity and browser backend Cost per Verified Outcome
+   before adopting either as a production policy.
+
+### Major initiatives with dedicated context
+
+Coding agents encountering these initiatives **must read the linked context before
+designing or implementing the lane**:
+
+| Initiative | Priority | Context |
+|---|---|---|
+| Operational Authority & Effect Safety | immediate/high | [OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md](context/OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md) |
+| Identity, Ownership & Tenant Isolation | high | [IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md](context/IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md) |
+| Liveness, Progress & Budget Governance | high | [LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md](context/LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md) |
+| External Reference Code-to-Code Audit | readiness-gated | [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md) |
+
+### Explicit non-goals
+
+- no second SessionDB, Kanban, Memory, scheduler, approval store, browser owner or control
+  plane;
+- no new “Agent Registry database”; registry/inventory is a projection of existing owners;
+- no Cordis/DeepSeek Harness replatforming without comparative evidence;
+- no second Browser/Desktop implementation merely because an external/upstream reference
+  looks attractive;
+- no automatic learned-skill promotion without independent validation/evidence;
+- no model/vendor benchmark as architecture authority;
+- no feature expansion that bypasses H-080/H-079/H-078 qualification gates.
+
+---
+
 ## H-080 — Progressive Operational Compilation — H-080A PRODUCTION-PATH QUALIFICATION / H-080B EXPERIENCE LOOP OPEN (2026-09-22)
 
 Canonical current audit:
