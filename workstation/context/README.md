@@ -44,6 +44,20 @@ Before changing Workstation code, read these documents in order:
 17. [`../SOURCE_MATRIX.md`](../SOURCE_MATRIX.md) — canonical external-reference intake/triage matrix: projects, benchmarks, reuse posture and code-to-code audit backlog.
    - Audit protocol: [`REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md`](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md) — readiness-gated self-improvement dogfood, evidence vocabulary, project waves and comparative acceptance.
 18. [`../ROADMAP.md`](../ROADMAP.md) — sequencing and intentionally deferred work. Browser Operational Admission / Primitive Closure remains an active corrective P0 after the PR #29 post-merge audit; CP0–CP9 and Experience Compiler EC0–EC8 are implemented baselines.
+
+### Roadmap-linked strategic initiative context — read on demand
+
+The roadmap's 2026-09-28 strategic map links three cross-cutting initiatives. They are
+**not mandatory reading for unrelated work**. Read the relevant file before designing,
+changing or reviewing that lane:
+
+- [`OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md`](OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md) — ControlIntent, refusal atomicity, pre/post effect verification and derived Effect Ledger.
+- [`IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md`](IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md) — identity vocabulary, ownership projection, cross-tenant falsification and allowlist-first MCP environments.
+- [`LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md`](LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md) — progress watchdog, circuit breakers, capability health, typed operational failures and Cost per Verified Outcome.
+
+These documents extend existing owners and gates. They do not authorize parallel stores,
+a second control plane, a second scheduler or bypass of H-080/H-079/H-078.
+
 19. [`TESTING.md`](TESTING.md) — validation ladder and evidence required before a Workstation change is considered stable.
 20. [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — reproduced/observed problems whose causes must not be guessed.
 21. [`engineering-journal/CURRENT.md`](engineering-journal/CURRENT.md) — active hypothesis/experiment ledger. H-078/H-078A/H-078B are the upstream-migration and minimum-first-party-seam program; H-077.1 is the current post-merge qualification closure; H-077 is the parent architectural-falsification/external-validity program; H-071 is the PR #29 Browser Operational Admission audit; H-072 is the Browser Ownership/Recovery post-implementation corrective audit; H-076 records the verification-contract/operational-truth audit; H-075 records the in-flight operationalization falsification/implementation; H-074 is the PR #32 implementation claim corrected by H-075; H-073 records the hierarchical operational-learning/reasoning-amortization audit; H-070 records the landed admission implementation claim and H-069 the Control Plane milestone.
