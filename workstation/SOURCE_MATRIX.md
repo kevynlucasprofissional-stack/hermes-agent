@@ -89,6 +89,42 @@ Canonical split of responsibility:
 | WebArena / Mind2Web | **REFERENCE/EVAL** | Web task generalization/workflow-memory comparison; use only with exact benchmark/version receipts |
 | Playwright | **REFERENCE/ORACLE** | Deterministic browser test/readback surface where it provides an independent enough oracle; not automatically authoritative for every external effect |
 
+
+## Plugin platform / ChatGPT-style integration references — 2026-09-24 intake
+
+Target: evolve Hermes Work so its plugin experience and operational semantics are as close as practical to the observable ChatGPT Plugins/Apps behavior, while preserving Hermes' own invariants. **ChatGPT itself is a closed-source product reference, not a code-to-code source**: use it as a black-box behavioral/UX contract and use the open-source projects below for implementation evidence.
+
+Before proposing new architecture, audit the existing Hermes plugin stack on current `main`: `plugins/`, `plugin-catalog/`, `hermes_cli/plugins.py`, `hermes_cli/plugin_catalog.py`, the existing `hermes_cli/mcp_*` surfaces, compatibility contracts, install provenance/security scanning, degraded boot and prompt-cache constraints. Extend these owners where possible. **Do not create a second plugin manager, registry, catalog, secrets store or MCP owner merely to imitate ChatGPT.**
+
+| Project / surface | Decision | V1/current use |
+|---|---|---|
+| OpenAI ChatGPT Plugins / Apps | **REFERENCE** | Behavioral/UX oracle only: discovery/search/suggestion, explicit install/connect, account authorization, per-plugin permissions, read-vs-write confirmation, capability invocation from natural language, multi-plugin composition, status/disable/uninstall and user-visible failure/approval flows. No proprietary implementation assumptions. |
+| langgenius/dify | **BENCHMARK CANDIDATE** | End-to-end plugin platform architecture, marketplace/product integration, plugin SDK boundaries and lifecycle ownership. |
+| langgenius/dify-plugin-daemon | **BENCHMARK CANDIDATE + ADAPT CODE/PATTERNS** | High-priority code-to-code target for plugin process/runtime lifecycle, isolation, install/load/update behavior, execution and failure containment. |
+| langgenius/dify-official-plugins | **REFERENCE + BENCHMARK CANDIDATE** | Concrete plugin manifests/tool/provider patterns and the contract between host, SDK and installed plugin packages. |
+| lobehub/lobe-chat | **BENCHMARK CANDIDATE + REFERENCE** | High-priority UX/marketplace comparison: discover -> connect/install -> expose MCP/tool capabilities to an agent with minimal setup friction. |
+| lobehub/lobe-chat-plugins | **REFERENCE** | Plugin index/registry representation and catalog UX patterns; verify current license and compatibility before adapting code. |
+| open-webui/open-webui | **BENCHMARK CANDIDATE** | Tools/Functions/MCP/OpenAPI extensibility, community extension loading, server-side execution boundaries and security/degraded-mode trade-offs. |
+| LibreChat-AI/LibreChat | **BENCHMARK CANDIDATE** | Agent + MCP tool selection, OpenAPI Actions, per-agent capability attachment and configuration/authorization boundaries. |
+| modelcontextprotocol/modelcontextprotocol | **REFERENCE + BENCHMARK CANDIDATE** | Protocol baseline for tool/resource discovery and invocation. MCP is an adapter/protocol under the plugin layer, not by itself the full marketplace/auth/permissions/runtime product. |
+
+### Plugin-system code-to-code questions
+
+Every project above must be compared against the current Hermes implementation, not against an imagined greenfield system:
+
+1. **Registry / install ownership:** how are discovery, install records, provenance, version pins, dependencies, updates, rollback and uninstall represented?
+2. **Connection/auth:** how are OAuth, API keys, account linking, scoped secrets and reconnect/revocation modeled?
+3. **Permissions:** can the user define global defaults and per-plugin overrides; are reads, low-risk writes and important/sensitive writes distinguishable?
+4. **Capability discovery:** how are tools/resources/actions surfaced to the model without uncontrolled prompt/tool-schema churn or cache invalidation?
+5. **Invocation UX:** can natural language and an explicit plugin selector (for example an `@Plugin`-style affordance) converge on the same capability path?
+6. **Multi-plugin composition:** can one task safely read from one plugin and write through another while preserving lineage, approvals, ordering and failure attribution?
+7. **Isolation / degraded boot:** can one broken or malicious optional plugin fail independently without taking down core Hermes?
+8. **Lifecycle / health:** install -> configure -> enable -> execute -> update -> disable -> uninstall must be observable, testable and restart-safe.
+9. **Security / trust:** source provenance, exact-version review, requested capabilities, secret scope, sandboxing, approval gates and audit receipts must remain explicit.
+10. **Surface parity:** Desktop, CLI/TUI and future remote clients should project the same canonical plugin state rather than becoming separate plugin implementations.
+
+**Parity criterion:** the goal is not a visual clone or reverse engineering of proprietary ChatGPT internals. The goal is **observable behavioral parity where compatible**: a user should be able to discover a plugin, install/connect it, grant bounded permissions, ask Hermes naturally to use it, combine it with another plugin, review sensitive writes, inspect status and remove it with the same mental model and roughly the same interaction cost as ChatGPT.
+
 ## 2026-09-23 research intake
 
 The attached benchmark research compared 17 external systems but explicitly reported that the collection did **not** complete a full code-to-code audit of all 17. Stagehand received concrete current-repository verification; many other matrix cells remained `NV`. That methodological honesty is now a Source Matrix invariant: **unverified is a work item, not a negative fact**.
@@ -102,5 +138,7 @@ Duplicate copies of the same benchmark report were deduplicated during intake. T
 **Wave B — harness/runtime comparison:** OpenHands, DeerFlow, OpenClaw, OpenManus, Browser Use, LangGraph, Cradle.
 
 **Wave C — browser/perception/evaluation long tail:** existing Browser references plus Agent Workflow Memory, SkillRL, Voyager and external benchmark suites.
+
+**Plugin-system lane — parallel research intake, implementation gated:** current Hermes plugin/catalog/MCP baseline -> ChatGPT black-box behavior matrix -> Dify + Plugin Daemon -> LobeHub/LobeChat -> Open WebUI + LibreChat -> MCP cross-cut -> gap synthesis -> separately reviewable Hermes proposals.
 
 The waves are sequencing hints only. The canonical readiness gates and evidence schema live in `context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md`.
