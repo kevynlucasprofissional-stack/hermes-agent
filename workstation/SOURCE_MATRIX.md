@@ -66,6 +66,36 @@ Canonical split of responsibility:
 | BAAI-Agents/Cradle | **REFERENCE** | General computer control, self-improvement and skill curation under multimodal interaction |
 | langchain-ai/langgraph | **REFERENCE** | Graph/state orchestration, resumability/checkpointing and compositional execution patterns |
 
+## Plugin / connector / MCP host references
+
+These projects are research references for the Hermes Work integration surface: plugin discovery, connector lifecycle, MCP hosting, OAuth/credentials, tool routing, permissions, action confirmation, multi-user isolation and external-service UX. They are **not** approved runtime owners or dependencies by virtue of appearing here.
+
+| Project | Decision | V1/current use |
+|---|---|---|
+| modelcontextprotocol/typescript-sdk | **REFERENCE + BENCHMARK CANDIDATE** | Protocol-first baseline for MCP client/server contracts, tools/resources/prompts, transports, authorization boundaries and host/server separation; study before framework-specific abstractions |
+| LibreChat-AI/LibreChat | **BENCHMARK CANDIDATE** | High-priority full-stack reference for MCP hosting, connector/tool integration, OAuth/auth boundaries, multi-user isolation, agent/tool surfaces and ChatGPT-like extensibility |
+| open-webui/open-webui | **REFERENCE + BENCHMARK CANDIDATE** | Extensibility model: tools, functions, pipes/filters/actions/events, MCP/OpenAPI bridges, permissions and UI-to-tool lifecycle; verify current license/ref before any code reuse |
+| Mintplex-Labs/anything-llm | **BENCHMARK CANDIDATE** | Tool discovery/routing at scale, MCP servers, agent skills and dynamic reduction of tool schemas/context pressure |
+| langgenius/dify | **REFERENCE + BENCHMARK CANDIDATE** | Plugin lifecycle/marketplace architecture, provider/tool/agent-strategy boundaries, credentials/configuration and packaging model |
+| janhq/jan | **REFERENCE + BENCHMARK CANDIDATE** | Smaller desktop MCP-host reference: tool routing, local-first integration, permissions/confirmation and host-to-server execution path |
+| CherryHQ/cherry-studio | **REFERENCE** | Desktop client integration patterns, MCP/server management, user-facing connector configuration and multi-provider UX |
+| lobehub/lobehub | **REFERENCE + BENCHMARK CANDIDATE** | Current repository identity for the former LobeChat project; study plugin/tool ecosystem, agent integration and extensible chat UX. Historical references to `lobehub/lobe-chat` must resolve to the current repo/ref before audit |
+| FlowiseAI/Flowise | **REFERENCE / ARCHIVED SNAPSHOT** | Visual agent/tool/MCP orchestration reference. GitHub repository was marked archived at intake (2026-09-30); treat as historical architecture evidence unless an active successor repository is pinned |
+
+### Connector-study questions
+
+For each project, the audit should answer at minimum:
+
+1. How are tools/connectors discovered, registered and versioned?
+2. Where are credentials, OAuth scopes and user/tenant identity bound?
+3. How does the host decide which tools reach model context when the catalog is large?
+4. What requires user confirmation, and where is authorization enforced versus merely represented in UI?
+5. How are tool schemas normalized across MCP, OpenAPI/native functions and project-specific plugin formats?
+6. What are the failure, retry, timeout, cancellation and recovery semantics?
+7. How are external effects, provenance, receipts and audit history represented?
+8. Which parts belong in Hermes Work versus remaining external MCP/plugin servers?
+9. Which invariants can be adapted without importing another framework's lifecycle or state ownership?
+
 ## Experience Compiler / self-improving-agent references
 
 | Project | Decision | V1/current use |
@@ -102,5 +132,7 @@ Duplicate copies of the same benchmark report were deduplicated during intake. T
 **Wave B — harness/runtime comparison:** OpenHands, DeerFlow, OpenClaw, OpenManus, Browser Use, LangGraph, Cradle.
 
 **Wave C — browser/perception/evaluation long tail:** existing Browser references plus Agent Workflow Memory, SkillRL, Voyager and external benchmark suites.
+
+**Wave D — plugins/connectors/MCP architecture:** MCP TypeScript SDK first, then LibreChat, AnythingLLM, Open WebUI, Dify, Jan, LobeHub, Cherry Studio and the archived Flowise snapshot. Focus on discovery, auth/identity, tool routing, confirmation/effect safety, multi-user isolation and host/server ownership boundaries.
 
 The waves are sequencing hints only. The canonical readiness gates and evidence schema live in `context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md`.
