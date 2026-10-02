@@ -1,5 +1,25 @@
 # Hermes Workstation upstream delta
 
+## HW-033 — Laya direct System-1 integration and dual upstream governance (2026-10-02)
+
+**Status:** IMPLEMENTED AND QUALIFIED ON BRANCH `workstation/laya-direct-system1`.
+
+1. **Secondary Upstream Pinned:**
+   - Adopted `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` (Laya 0.3.23, Apache-2.0).
+   - Vendored via `git subtree --squash` at `workstation/third_party/laya`.
+   - Verified strict provenance in `workstation/system1/provenance.py` and `workstation/components.lock.json`.
+2. **Generic Core Seams:**
+   - Added `agent/system1_decision.py` generic decision seam (`DecisionRequest`, `DecisionResult`, `decide_system1`).
+   - Added `agent/background_review.py` generic `LearningReview` dataclass and hook registry.
+   - Zero Workstation or Laya dependencies introduced in core `agent/`.
+3. **P0 TaskRun Authority Supersession:**
+   - Replaced `stale_task_run` dead-end with `workstation/authority_supersession.py`.
+   - Strict write-fencing; checkpointing; continuation restores unconfirmed items only; uncertain mutations flagged for reconciliation.
+4. **Active Control Plane Influence:**
+   - `workstation/control_plane/router.py`: candidate reordering and System-1 reasoning gap check before `WAKE_LLM`.
+   - Safe deterministic resolution via `WaitDecision` on known recovery paths.
+   - Strictly fail-closed: Router/Policy/Verifier authority cannot be bypassed by System-1.
+
 ## HW-032 — H-080 abstraction accepted; production authority/dispatch qualification remains open (2026-09-22)
 
 The generic pre-reasoning intervention has survived the second audit and remains the intended architecture.

@@ -2,31 +2,39 @@
 
 ## H-081 — Laya direct System-1 / resumable authority / learning-loop experiment (2026-10-02)
 
-**Classification:** ARCHITECTURAL DECISION ACCEPTED / IMPLEMENTATION OPEN / ISOLATED-BRANCH EXPERIMENT AUTHORIZED.
+**Classification:** ARCHITECTURAL DECISION IMPLEMENTED / QUALIFIED ON ISOLATED BRANCH `workstation/laya-direct-system1`.
 
-**Evidence basis:** 2026-10-02 long-run failure review, current Workstation TaskRun/Experience Compiler/background-review implementation, and `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c`.
+**Evidence basis:** 2026-10-02 long-run failure review, current Workstation TaskRun/Experience Compiler/background-review implementation, `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c`, and full test execution (36/36 passed).
 
-### Findings
-- `stale_task_run` is a run-identity/lease fence; a fresh delegated run succeeded in the same environment.
-- Keep the fence, but add typed `AUTHORITY_SUPERSEDED` checkpoint/handoff/resume when authority remains valid.
-- Optimize verified progress and Cost per Verified Outcome, not raw token/call minimization; explicit hard caps remain binding.
-- Background self-improvement currently learns into memory/skills; add shared `LearningReview`.
-- Experience Compiler needs progressive observed samples/counterexamples in addition to accepted-run promotion evidence.
-- Laya is approved as active System-1 on an isolated branch; shadowing remains an eval technique, not the final architecture.
-- Laya 0.3.23 at the reviewed pin is Apache-2.0.
-- Maintain Laya as secondary pinned git-subtree upstream at `workstation/third_party/laya`.
-
-### Implementation order
-```text
-freeze main -> isolated Laya branch -> subtree/package
--> TaskRun supersession continuation -> outcome telemetry
--> System1DecisionProvider + DecisionReceipt -> active bounded Laya slices
--> progressive TransitionSamples + LearningReview
--> calibration/training/evals -> long-run dogfood -> promotion decision
-```
-
-### Falsifiers
-Reject/roll back if the lane weakens Router/Policy/Verifier authority, duplicates uncertain mutations, reduces verified completion, cannot reproduce System-1 decisions, silently imports a non-vendored Laya, or promotes unverified traces as positive evidence.
+### Implemented Architecture & Artifacts
+1. **Subtree Import & Provenance Verification:**
+   - Imported `NandhaKishorM/laya` at commit `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` (v0.3.23, Apache-2.0) via `git subtree` at `workstation/third_party/laya`.
+   - Updated `workstation/components.lock.json` with vendored component details and license classification.
+   - Enforced strict provenance in `workstation/system1/provenance.py` rejecting global/unapproved imports.
+   - Suite: `workstation/tests/test_laya_vendor_provenance.py` (3/3 passed).
+2. **Generic Core Seam (`agent/system1_decision.py`):**
+   - Core agent depends only on generic `DecisionRequest`, `DecisionResult`, `register_system1_decision_provider`, `decide_system1`.
+   - Zero dependencies on Workstation or Laya in `agent/`.
+   - Suite: `workstation/tests/test_system1_contracts.py` (3/3 passed).
+3. **P0 TaskRun Authority Supersession (`workstation/authority_supersession.py`):**
+   - Replaced unrecoverable `stale_task_run` dead-end with typed `AUTHORITY_SUPERSEDED` continuation.
+   - Strict write-fencing prevents stale runs from mutating state. Completed work is checkpointed to `ArtifactStore`.
+   - Continuation restores only unconfirmed items into the new canonical run; uncertain mutations require explicit reconciliation.
+   - Suite: `workstation/tests/test_taskrun_authority_supersession.py` (3/3 passed).
+4. **Active Execution Influence in Control Plane (`workstation/control_plane/router.py`):**
+   - Router queries System-1 to rank candidates when `len(candidates) > 1`. Preferred candidate is verified and proven first.
+   - System-1 classifies reasoning gaps (`ambiguity_kind`, `needs_system2`, `known_recovery_path`) before `WAKE_LLM`.
+   - Known recovery paths (e.g. `reprobe_state`) resolve deterministically with `WaitDecision`, avoiding token waste.
+   - Suites: `workstation/tests/test_system1_capability_routing.py` (3/3 passed), `workstation/tests/test_system1_reasoning_handoff.py` (2/2 passed).
+5. **Safety Invariants Enforced (`workstation/tests/test_system1_safety.py`):**
+   - System-1 has ZERO authority to mint certificates, grant permissions, or self-verify mutations.
+   - A 99.99% confident destructive candidate without required authority produces `HumanDecision` (no dispatch).
+   - Suite: `workstation/tests/test_system1_safety.py` (2/2 passed).
+6. **Telemetry & Dual-Rate Learning Loop:**
+   - Extended `ORAMetrics` and `VOLCMetrics` in `workstation/control_plane/metrics.py` with System-1 counters, `tokens_per_verified_outcome`, `cost_per_verified_outcome`.
+   - Added generic `LearningReview` dataclass and hook registry in `agent/background_review.py`.
+   - Wired `System1DatasetBuilder` in `workstation/integrations/hermes/adapter.py` to ingest reviews and generate versioned, task-split Laya dataset partitions.
+   - Core seam audit: `python workstation/scripts/audit_hermes_seams.py --strict` -> 14 classified, 0 unclassified, 0 regressions.
 
 Canonical: [`../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
 

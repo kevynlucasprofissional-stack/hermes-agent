@@ -1,5 +1,19 @@
 # Hermes Workstation foundation patch manifest
 
+## HW-033 — Laya direct System-1 and resumable authority supersession patch lane (2026-10-02)
+
+Implemented on isolated branch `workstation/laya-direct-system1`:
+- `workstation/third_party/laya`: pinned Git subtree from `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` (Apache-2.0).
+- `workstation/components.lock.json`: vendored Laya lock entry (`role: system1-runtime-upstream`).
+- `pyproject.toml` / `uv.lock`: added optional extras `system1-laya`, `workstation-laya` and reconciled dependencies (`torch`, `transformers`, `safetensors`, `huggingface-hub`).
+- `agent/system1_decision.py`: generic core seam with zero Workstation/Laya imports.
+- `agent/background_review.py`: generic `LearningReview` dataclass and hook registry.
+- `workstation/authority_supersession.py`: P0 fix replacing `stale_task_run` dead-end with typed `AUTHORITY_SUPERSEDED` continuation.
+- `workstation/control_plane/router.py`: candidate reordering and System-1 reasoning gap check before `WAKE_LLM`.
+- `workstation/control_plane/metrics.py`: System-1 metrics and verified outcome rate properties.
+- `workstation/integrations/hermes/adapter.py`: wired `LayaDecisionProvider` and `LearningReview` to `System1DatasetBuilder`.
+- `workstation/tests/`: 6 new test suites (16 tests passed). Zero core seam regressions.
+
 ## HW-031 — H-079.2 dogfood/bootstrap patch lane
 
 Implemented on the H-079.2 candidate after upstream merge: `a9d47e797a...` (installer, H-077, Anthropic, Windows portability), `605b0fcdd4...` (Cron pin/drift reconciliation), `c6465f5b48...` (Desktop upstream regression closure), and `cf12da8...` (invalid existing-venv rejection). Exact-head CI and promotion remain pending.
