@@ -1,5 +1,46 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+
+## 2026-10-02 extension — dual-rate learning and System-1 dataset bridge
+
+The accepted-run / replay / causal-validation / verifier / promotion path remains the trust boundary for executable capability promotion. It is no longer the only experience-capture path.
+
+Add a progressive observation lane:
+
+```text
+live run
+-> OBSERVED TransitionSample / capability invocation / state delta
+-> candidate mining + counterexample retention
+-> no automatic positive promotion
+```
+
+and keep the retrospective promotion lane:
+
+```text
+accepted VERIFIED outcome
+-> accepted corpus
+-> replay / ablation / causal validation
+-> verifier validation
+-> ExperiencePromotionPolicy
+-> promoted OperationalCapability
+```
+
+`FAILED`, `UNCERTAIN`, `INTERRUPTED` and `AUTHORITY_SUPERSEDED` are useful learning evidence but retain typed semantics and do not silently become positive examples.
+
+Background self-improvement should emit a structured `LearningReview` that can route distilled lessons to skills, Experience Compiler candidates/counterexamples, eval corpora and the Laya/System-1 dataset builder. Skills, executable capabilities and decision labels remain distinct products.
+
+System-1 dataset examples may include:
+- state + candidate capabilities -> operational family;
+- state + delta -> progress / no_progress;
+- OperationIntent -> capability family;
+- reasoning gap -> ambiguity class / needs_system2;
+- browser semantic state + admitted targets -> target family.
+
+Positive labels require compatible verified evidence. System-1 can consume promoted capabilities and verified traces but never acquires ExperiencePromotionPolicy authority.
+
+Canonical: [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+
 ## 2026-09-23 dogfood target — external code-to-code research without context explosion
 
 The external-reference audit is a future **Experience Compiler dogfood target**, not a new compiler feature by itself.
