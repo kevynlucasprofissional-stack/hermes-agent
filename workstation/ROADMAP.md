@@ -27,7 +27,7 @@ user/system impact
 ÷ upstream-delta risk
 ```
 
-Current sequencing remains constrained by the existing release gates:
+Current **mainline promotion** remains constrained by the existing release gates:
 
 ```text
 H-080A truthful production-path qualification
@@ -36,6 +36,13 @@ H-080A truthful production-path qualification
 -> readiness-gated code-to-code/reference investigations
 -> optional/experimental product expansion
 ```
+
+A controlled exception is authorized for the **Laya direct System-1 experiment**: work may begin
+immediately on an isolated branch from a frozen main baseline because it directly targets reasoning
+amortization, long-run continuity and cost/progress telemetry. That branch may let Laya influence
+bounded real decisions before H-080A closes, but it does not bypass Router/Policy/Verifier authority
+and must not become the default mainline path until its own qualification plus the touched
+H-080/H-079/H-078 gates are green.
 
 No item below authorizes bypassing H-079 upstream-first qualification, H-078 minimum-seam
 policy, D-002/D-007 canonical ownership or the Canonical Execution Reliability Gate.
@@ -48,27 +55,37 @@ policy, D-002/D-007 canonical ownership or the Canonical Execution Reliability G
    remain the current highest-priority blockers. Do not dilute them with parallel feature
    work.
 
-2. **Operational authority and effect safety.**  
+2. **Direct Laya System-1 experimental lane — begin now, branch-gated.**  
+   Freeze current main, create an isolated `workstation/laya-direct-system1`-style branch,
+   vendor a pinned Laya upstream by git subtree, and activate a generic System-1 Decision Plane
+   on bounded closed-schema decisions rather than keeping Laya permanently shadow-only. The lane
+   must remove the `stale_task_run` dead end through resumable TaskRun handoff, add
+   outcome-oriented telemetry, preserve Router/Policy/Verifier sovereignty, and connect
+   progressive + retrospective experience to Laya training/evaluation. Canonical context:
+   [context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+
+3. **Operational authority and effect safety.**  
    Harden the existing intent/capability/verification path with explicit control
    semantics, refusal atomicity, pre/post effect verification and a derived Effect Ledger.
    Context:
    [context/OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md](context/OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md).
 
-3. **Identity, ownership and cross-tenant isolation.**  
+4. **Identity, ownership and cross-tenant isolation.**  
    Make `Gateway/Runtime -> Profile/Agent -> Session -> TaskRun/Operation -> Worker/Process/BrowserTask/Effect`
    ownership resolvable without conflating execution location with semantic owner.
    Add an A/B isolation falsification matrix and allowlist-first MCP child environments.
    Context:
    [context/IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md](context/IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md).
 
-4. **Liveness, progress and budget governance.**  
+5. **Liveness, progress and budget governance.**  
    Extend existing EvidenceState/supervisor/budget mechanisms so “alive” is not confused
    with “making progress”. Add progress/no-progress policy, circuit breakers, required
    capability health and outcome-oriented cost metrics.
    Context:
    [context/LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md](context/LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md).
 
-5. **Audit upstream reuse before any new Browser/Desktop/Kanban owner.**  
+6. **Audit upstream reuse before any new Browser/Desktop/Kanban owner.**  
    Re-evaluate current upstream Bot Screen/Desktop/Kanban/task surfaces at the next pinned
    upstream cycle before expanding equivalent downstream infrastructure. The desired split
    remains: upstream Hermes supplies as much execution/UI substrate as can preserve parity;
@@ -202,6 +219,7 @@ designing or implementing the lane**:
 | Identity, Ownership & Tenant Isolation | high | [IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md](context/IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md) |
 | Liveness, Progress & Budget Governance | high | [LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md](context/LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md) |
 | External Reference Code-to-Code Audit | readiness-gated | [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md) |
+| Laya Direct System-1 / dual-upstream integration | immediate experimental, branch-gated | [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md) |
 
 ### Explicit non-goals
 
@@ -306,7 +324,7 @@ novel verified execution
 
 H-080A may close independently if scoped truthfully. Do not describe Progressive Operational Compilation as end-to-end closed until H-080B is proven.
 
-Laya remains deferred to System-1/shadow/shortlist work after H-080A qualification; it has no execution, authority, verification or promotion power.
+Laya direct System-1 work is now authorized immediately on an isolated experimental branch. It may actively rank/choose among deterministic valid alternatives and reduce System-2 wakeups, but it has no authority, certificate-minting, verification or capability-promotion power. Permanent shadow-only operation is not the target; branch activation is bounded, observable, abstaining/fallback-safe and mainline promotion remains evidence-gated. See [context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
 
 ## Reference code-to-code self-improvement dogfood — PLANNED / READINESS-GATED (2026-09-23)
 
