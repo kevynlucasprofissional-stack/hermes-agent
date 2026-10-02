@@ -1,5 +1,29 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+
+## Laya como System-1 ativo + continuidade de runs — 2026-10-02
+
+A análise de runs longas muda a política anterior. `stale_task_run: mutation authority no longer belongs to this run` foi isolado como perda de lease/lineage de TaskRun, não como simples teto de chamadas: uma nova run no mesmo ambiente continuou executando. O fence contra a run stale permanece; o dead end deve virar checkpoint + handoff/resume quando a autoridade do usuário continua válida.
+
+Token/tool-call count isolado também deixa de ser proxy de desperdício. A unidade econômica passa a ser **Cost per Verified Outcome** e progresso verificado. Circuit breakers devem mirar custo crescente sem nova evidência/efeito, estado equivalente repetido e reconstrução sem avanço.
+
+A arquitetura intelectual passa a ser:
+
+```text
+DETERMINISTIC -> SYSTEM 1 / LAYA -> SYSTEM 2 / LLM -> DETERMINISTIC PROOF/EXECUTION/VERIFICATION
+```
+
+Laya é ativo em branch experimental, não um shadow permanente. Ele pode influenciar decisões reais dentro de candidate sets válidos, com abstention/fallback, mas não cria authority, certificate, verification, causal truth ou promotion. O core conhece `System1DecisionProvider`; Laya é a primeira implementação.
+
+Experience Compiler passa a ter dois ritmos: samples observacionais/progressivos durante a run e a barreira accepted/verified para promoção. O background self-improvement deve emitir `LearningReview` estruturado para skill curation, Experience Compiler, eval corpus, diagnostics e dataset System-1.
+
+Laya terá upstream secundário pinado por `git subtree` em `workstation/third_party/laya`; Hermes upstream principal continua H-079. Pin inicial revisado: `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c`, Laya 0.3.23, Apache-2.0.
+
+Canônico: [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+> **Hermes deve gastar System-2 para descobrir o que ainda não sabe; decisões fechadas já conhecidas devem migrar para System-1 e capacidades verificadas, sem reduzir autoridade, prova ou completude.**
+
+
 ## External-reference audit becomes a self-improvement dogfood objective — 2026-09-23
 
 The 2026-09-23 research intake establishes a new strategic use for the Workstation: the external benchmark backlog should become a **future self-improvement workload executed by Hermes Work itself**, not a static reading list.
