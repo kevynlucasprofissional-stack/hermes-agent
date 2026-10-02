@@ -5,6 +5,23 @@
 **Canonical owners reused:** EvidenceState, AwaitCondition/AwaitContinuation, RuntimeSupervisor, WorkerRegistry, ORAMetrics, TaskRun, Policy Engine, scheduler and existing model/provider routing.  
 **Non-goal:** do not create a second scheduler, task queue, metrics database or agent loop.
 
+
+## 2026-10-02 policy refinement — budget pressure is not proof of waste
+
+Recent long-run evidence confirms that many tool/model calls can be legitimate when each round reduces pending work or adds verified evidence. The default autonomous policy must not equate raw token count, call count or elapsed work with lack of progress.
+
+```text
+cost rising + verified progress/pending reduction -> PROGRESSING (within explicit hard caps)
+cost rising + no new evidence/effect + repeated equivalent state/failure -> BUDGET_PRESSURE / LOOP_SUSPECTED
+```
+
+User/admin hard budgets and risk limits remain authoritative. This changes the default interpretation of budget pressure, not the ability to enforce an explicit cap.
+
+TaskRun telemetry should expose Cost per Verified Outcome, tokens per verified outcome, pending-item delta, LLM/System-2 wake rate, System-1 hit/abstain/fallback, retries without new evidence and authority-supersession events.
+
+Canonical: [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+
 ## Problem
 
 A long-running agent can be **alive without making progress**.
