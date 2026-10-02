@@ -504,6 +504,7 @@ export class BrowserSessionStateFilePersistence {
     receipts?: Record<string, BrowserOwnerReceipt>
   ): BrowserSessionStateSnapshot {
     const current = this.currentOrEmpty()
+
     const mergedReceipts = {
       ...(current.receipts ?? {}),
       ...(receipts ?? {})

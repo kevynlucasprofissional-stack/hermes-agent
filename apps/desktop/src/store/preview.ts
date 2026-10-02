@@ -553,14 +553,14 @@ export function openBrowserTab() {
 }
 
 export function isBrowserHubRoute(): boolean {
-  if (typeof window === 'undefined') return false
+  if (typeof window === 'undefined') {return false}
 
   return window.location.pathname.startsWith('/browser') || window.location.hash.includes('/browser')
 }
 
 /** Re-front the task-owned native Workstation Browser without creating a guest webview. */
 export function openWorkstationBrowserPreview() {
-  if (isBrowserHubRoute()) return
+  if (isBrowserHubRoute()) {return}
 
   openPreview({
     kind: 'url',

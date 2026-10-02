@@ -32,6 +32,7 @@ const electron = vi.hoisted(() => {
       const current = this.listeners.get(event) ?? []
       current.push(listener)
       this.listeners.set(event, current)
+
       return this
     }
 
@@ -71,7 +72,7 @@ const electron = vi.hoisted(() => {
     }
 
     close(): void {
-      if (this.destroyed) return
+      if (this.destroyed) {return}
       this.destroyed = true
       this.emit('destroyed')
     }
@@ -88,6 +89,7 @@ const electron = vi.hoisted(() => {
         if (source.includes('ClipboardEvent') && source.includes("'paste'")) {
           return { success: true, count: 12 }
         }
+
         if (source.includes('byRef.get')) {
           return {
             success: true,
@@ -185,7 +187,8 @@ const electron = vi.hoisted(() => {
       },
       removeChildView: (view: FakeWebContentsView) => {
         const idx = this.views.indexOf(view)
-        if (idx >= 0) this.views.splice(idx, 1)
+
+        if (idx >= 0) {this.views.splice(idx, 1)}
       }
     }
   }
@@ -223,11 +226,13 @@ function runtimeHome(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-runtime-test-'))
   tempHomes.push(dir)
   process.env.HERMES_HOME = dir
+
   return dir
 }
 
 afterEach(() => {
   delete process.env.HERMES_HOME
+
   for (const dir of tempHomes.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true })
   }
@@ -236,6 +241,7 @@ afterEach(() => {
 test('browser_type supports plain_text_paste returning semantic_effect paste_text', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()
+
   const executeControlRequest = (
     runtime as unknown as {
       executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>
@@ -269,6 +275,7 @@ test('browser_type supports plain_text_paste returning semantic_effect paste_tex
 test('browser_read_http executes GET and returns structured JSON/text', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()
+
   const executeControlRequest = (
     runtime as unknown as {
       executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>
@@ -299,6 +306,7 @@ test('browser_read_http executes GET and returns structured JSON/text', async ()
     action: 'browser_read_http', task_id: 'task-http-1',
     arguments: { url: '/api/v1/resource', method: 'HEAD' }
   })) as Record<string, unknown>
+
   assert.equal(relativeHead.status, 200)
 
   await runtime.destroy()
@@ -307,6 +315,7 @@ test('browser_read_http executes GET and returns structured JSON/text', async ()
 test('browser_read_http rejects mutation methods, request body, and loopback destinations', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()
+
   const executeControlRequest = (
     runtime as unknown as {
       executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>
