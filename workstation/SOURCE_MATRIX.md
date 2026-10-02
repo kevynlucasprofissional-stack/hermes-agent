@@ -96,6 +96,16 @@ For each project, the audit should answer at minimum:
 8. Which parts belong in Hermes Work versus remaining external MCP/plugin servers?
 9. Which invariants can be adapted without importing another framework's lifecycle or state ownership?
 
+## System-1 decision-engine runtime
+
+Laya is no longer only a research lead. D-033/D-034 approve it as an **experimental runtime dependency on an isolated branch**, with mainline promotion still evidence-gated. This is the explicit exception to the general Source Matrix intake-only rule.
+
+| Project | Decision | V1/current use |
+|---|---|---|
+| NandhaKishorM/laya @ `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` | **APPROVED EXPERIMENTAL RUNTIME + PINNED SECONDARY UPSTREAM** | First `System1DecisionProvider`; typed decisions, candidate ranking, abstention/calibration/evals; planned git subtree at `workstation/third_party/laya`. Laya 0.3.23, Apache-2.0. It may influence bounded choices but never owns authority, certification, verification or capability promotion. |
+
+Canonical: [`context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
 ## Experience Compiler / self-improving-agent references
 
 | Project | Decision | V1/current use |
