@@ -70,6 +70,15 @@
       "license": "MIT",
       "role": "perception-reference",
       "vendored": false
+    },
+    "laya": {
+      "repository": "NandhaKishorM/laya",
+      "ref": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+      "version": "0.3.23",
+      "license": "Apache-2.0",
+      "role": "system1-runtime-upstream",
+      "vendored": true,
+      "path": "workstation/third_party/laya"
     }
   }
 }
