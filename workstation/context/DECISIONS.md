@@ -1,7 +1,7 @@
 # Architectural Decisions
 
 **Reading this file.** Decisions are numbered in the order they were recorded and appear in
-ascending numeric order (`D-001` … `D-032`). Read by decision number, not by position. `D-028`,
+ascending numeric order (`D-001` … `D-034`). Read by decision number, not by position. `D-028`,
 `D-029` and `D-030` were briefly prepended when they were added; they were moved into ascending
 position on 2026-09-20. A replacement decision states which decision it supersedes — see
 [Changing a decision](#changing-a-decision) below.
@@ -842,4 +842,29 @@ This decision does not add a new runtime subsystem. It defines how external know
 
 Canonical:
 [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
+
+## D-033 — Laya is the first active System-1 decision provider, not an authority or verifier
+
+Hermes Work will add a generic `System1DecisionProvider` boundary and use Laya as its first implementation. The role is typed semantic classification, ranking, shortlisting and selection among application-defined valid alternatives so routine known decisions can leave the System-2/LLM path.
+
+This is an **active branch experiment**, not a permanent shadow-only observer. Laya may influence real decisions on bounded slices once candidate construction, DecisionReceipts, abstention/fallback and telemetry exist.
+
+The deterministic control plane remains sovereign. Laya cannot create/widen authority, mint a RoutingCertificate, establish effect safety, verify an outcome, declare COMMITTED success, retry an UNCERTAIN mutation, or promote an OperationalCapability. Failure/abstention falls back to the existing deterministic/System-2 path.
+
+Every behavior-influencing System-1 decision requires canonical state/candidate references, versioned question schema, pinned model revision, calibration policy and recorded distribution.
+
+Canonical: [`LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+## D-034 — Maintain Laya as a secondary pinned git-subtree upstream inside the fork
+
+The fork has two upstream relationships with different semantics:
+
+- `NousResearch/hermes-agent` remains the primary structural upstream and follows H-079 upstream-first true-merge/seam-reconciliation discipline.
+- `NandhaKishorM/laya` is a secondary runtime upstream and will be vendored at `workstation/third_party/laya` using `git subtree --squash` at exact reviewed SHAs.
+
+The local convenience remote name is `laya-upstream`, but remote configuration is not repository truth. The subtree plus `workstation/components.lock.json` must record the exact Laya source SHA, version, license and vendored state in the same change that imports/updates it.
+
+Do not use a Git submodule: a normal clone of the Hermes fork should contain the pinned Laya source. Do not couple every Hermes upstream sync to a Laya update; each upstream is frozen and qualified independently for the lane that touches it.
+
+Reviewed initial pin: `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` (Laya 0.3.23, Apache-2.0). Vendoring source does not pin model checkpoints; checkpoint revisions/digests remain separate runtime provenance.
 
