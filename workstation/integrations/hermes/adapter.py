@@ -98,11 +98,9 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
         from agent.background_review import register_learning_review_hook
         from workstation.system1.dataset import System1DatasetBuilder
 
-        _dataset_builder = System1DatasetBuilder()
-
         def _workstation_learning_review_hook(review: Any) -> None:
             try:
-                _dataset_builder.ingest_learning_review(review)
+                System1DatasetBuilder().ingest_learning_review(review)
             except Exception as _rev_err:
                 logger.debug("Failed to ingest LearningReview in dataset builder: %s", _rev_err)
 

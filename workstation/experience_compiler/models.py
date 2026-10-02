@@ -25,6 +25,7 @@ def normalized(value):
 
 
 class TransitionOutcome(str, Enum):
+    OBSERVED = 'observed'
     VERIFIED_SUCCESS = 'verified_success'
     FAILED = 'failed'
     UNCERTAIN = 'uncertain'

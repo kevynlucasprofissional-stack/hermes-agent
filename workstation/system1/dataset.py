@@ -76,6 +76,42 @@ class System1DatasetBuilder:
         self._samples: List[DatasetSample] = []
         from workstation.artifacts import ArtifactStore
         self.artifacts = artifact_store or ArtifactStore()
+        self.reconstruct()
+
+    def reconstruct(self):
+        """Artifacts are the source; this bounded in-memory list is rebuildable."""
+        from itertools import islice
+        found = {}
+        for directory in islice(self.artifacts.root.iterdir(), 4096):
+            if directory.is_dir():
+                for path in islice(directory.glob("system1_sample_*.json"), 8192):
+                    if path.name.endswith(".meta.json"):
+                        continue
+                    body = json.loads(path.read_text(encoding="utf-8"))
+                    sample = DatasetSample(**body)
+                    found[sample.sample_id] = sample
+        self._samples = list(found.values())
+        return len(self._samples)
+
+    def _persist_sample(self, sample):
+        from workstation.recipes import digest
+        body = asdict(sample)
+        self.artifacts.store(sample.task_id or "system1_proposals", "system1_sample_" + digest(body) + ".json",
+            body, schema="hermes.system1_dataset_sample.v1")
+        self._samples = [s for s in self._samples if s.sample_id != sample.sample_id] + [sample]
+
+    def ingest_invocation(self, ref):
+        body = self.artifacts.read_json(ref)
+        task, run, operation = body.get("task_id"), str(body.get("run_id") or ""), body.get("operation_id")
+        verified = self._verified_invocation([ref], task, run, operation)
+        sample = self.add_capability_routing_sample(task or "", run, operation or "", "Canonical capability outcome", {},
+            [body["capability_id"]], body["capability_id"],
+            verification_status="VERIFIED_SUCCESS" if verified else "UNCERTAIN", persist=False)
+        sample.sample_id = "invocation_" + body["invocation_id"]
+        sample.provenance.update(source="OperationalKernel", source_refs=[ref],
+            evidence_refs=body.get("verification_evidence_refs", []), canonical_verifier_grounded=bool(verified))
+        self._persist_sample(sample)
+        return sample
 
     def _determine_split(self, task_id: str) -> str:
         """Deterministic task-level split assignment to prevent run-level data leakage."""
@@ -99,6 +135,7 @@ class System1DatasetBuilder:
         candidate_capabilities: List[str],
         chosen_capability: str,
         verification_status: str = "UNVERIFIED",
+        persist: bool = True,
     ) -> DatasetSample:
         """Build sample for capability selection/ranking."""
         from workstation.system1.schemas import build_candidate_ranking_schema
@@ -119,6 +156,8 @@ class System1DatasetBuilder:
             provenance={"task_id": task_id, "run_id": run_id, "operation_id": operation_id},
         )
         self._samples.append(sample)
+        if persist:
+            self._persist_sample(sample)
         return sample
 
     def add_progress_sample(
@@ -157,6 +196,7 @@ class System1DatasetBuilder:
             provenance={"task_id": task_id, "run_id": run_id},
         )
         self._samples.append(sample)
+        self._persist_sample(sample)
         return sample
 
     def add_reasoning_gap_sample(
@@ -194,6 +234,7 @@ class System1DatasetBuilder:
             provenance={"task_id": task_id, "run_id": run_id},
         )
         self._samples.append(sample)
+        self._persist_sample(sample)
         return sample
 
     def ingest_learning_review(self, review: Any) -> List[DatasetSample]:
@@ -213,12 +254,13 @@ class System1DatasetBuilder:
             sample = self.add_capability_routing_sample(task_id, run_id, operation_id, "Learning review proposal", {},
                 [invocation["capability_id"]] if verified else ["NO_MATCH"],
                 invocation["capability_id"] if verified else "NO_MATCH",
-                verification_status="VERIFIED_SUCCESS" if verified else "FAILED" if getattr(review, "status", "") == "error" else "UNVERIFIED_REVIEW")
+                verification_status="VERIFIED_SUCCESS" if verified else "FAILED" if getattr(review, "status", "") == "error" else "UNVERIFIED_REVIEW", persist=False)
             sample.sample_id = "review_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, idx, refs, action], sort_keys=True, default=str).encode()).hexdigest()[:24]
             sample.provenance.update(source="LearningReview", source_refs=list(refs), action_shape=type(act).__name__,
                 review_status=getattr(review, "status", ""), canonical_verifier_grounded=verified,
                 evidence_refs=invocation["verification_evidence_refs"] if verified else [])
             samples.append(sample)
+            self._persist_sample(sample)
         return samples
 
     def _verified_invocation(self, refs, task_id, run_id, operation_id):
@@ -247,7 +289,8 @@ class System1DatasetBuilder:
                         required_predicates=set(body["covered_predicates"]), expected_task_id=task_id,
                         expected_run_id=str(run_id), expected_operation_id=operation_id,
                         mutation_failure_domains=set(record.get("mutation_failure_domains", [])),
-                        mutation_observed_at=record.get("mutation_observed_at", ""))
+                        mutation_observed_at=record.get("mutation_observed_at", ""),
+                        now=datetime.fromisoformat(record["result"]["evaluated_at"]))
                     if result.verified and result.verifier_fingerprint == body["verifier_fingerprint"]:
                         return body
             except (OSError, ValueError, KeyError, TypeError):
@@ -265,7 +308,8 @@ class System1DatasetBuilder:
         }
         for sample in self._samples:
             eligible = (sample.verification_status == "VERIFIED_SUCCESS" and sample.task_id and sample.run_id
-                and sample.operation_id and sample.provenance.get("canonical_verifier_grounded"))
+                and sample.operation_id and sample.provenance.get("canonical_verifier_grounded")
+                and self._verified_invocation(sample.provenance.get("source_refs", []), sample.task_id, sample.run_id, sample.operation_id))
             negative = sample.verification_status.lower() in {"failed", "uncertain", "interrupted", "authority_superseded"}
             partition = sample.split if eligible else "counterevidence" if negative else "proposals"
             partitions[partition].append(sample.to_laya_format())

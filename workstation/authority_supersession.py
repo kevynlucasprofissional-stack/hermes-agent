@@ -188,6 +188,11 @@ def checkpoint_superseded_execution(
         media_type="application/json",
         schema="workstation.authority_superseded.v1",
     )
+    from workstation.experience_compiler.progressive import capture_progressive
+    for effect in uncertain_list:
+        capture_progressive(store, task_id=task_id, run_id=stale_run_id,
+            operation_id=effect.get("operation_id"), primitive=effect.get("tool", ""),
+            route=effect.get("route", ""), outcome="authority_superseded")
 
     return record
 

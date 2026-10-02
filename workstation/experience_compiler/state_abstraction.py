@@ -63,7 +63,7 @@ def sample_from_trace(trace, *, before=None, after=None, verification=None, prov
     after = after or SemanticState(trace.get('after_state_ref'))
     outcome = trace.get('outcome', 'uncertain')
     if outcome == 'executed_unverified':
-        outcome = 'uncertain'
+        outcome = 'observed' if trace.get('effect') in {'PURE_READ', 'DISCOVERY', 'read_only'} else 'uncertain'
     elif outcome not in {o.value for o in TransitionOutcome}:
         outcome = 'failed'
     args = normalized(trace.get('arguments', {}))

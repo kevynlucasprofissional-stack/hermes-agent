@@ -112,8 +112,8 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
         'replayable': replayable}
     if len(traces) >= 64:
         agent._work_procedure_trace_truncated = True
-        return
-    traces.append(record)
+    else:
+        traces.append(record)
     agent._work_procedure_trace = traces
     from workstation.experience_compiler.state_abstraction import abstract_state, sample_from_trace
     provenance = None

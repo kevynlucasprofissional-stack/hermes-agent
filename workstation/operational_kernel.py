@@ -489,6 +489,13 @@ class OperationalKernel:
         exec_context["task_id"] = task_id
         exec_context["run_id"] = run_id
         exec_context["operation_id"] = operation_id
+        from workstation.experience_compiler.progressive import capture_progressive
+        def capture(outcome, verification=None):
+            return capture_progressive(self.artifacts, task_id=task_id, run_id=run_id,
+                operation_id=operation_id, primitive=cap.id, route=cap.route, outcome=outcome,
+                state=exec_context.get("semantic_state"), verification=verification)
+        capture("observed")
+        mutation_attempted = False
         from workstation.telemetry import TelemetryEventType, emit_event
         emit_event(TelemetryEventType.CAPABILITY_EXECUTION_STARTED,
                    source_owner="workstation.operational_kernel", task_id=task_id,
@@ -672,6 +679,7 @@ class OperationalKernel:
                 owner_reads = {'fs_stat', 'fs_read', 'fs_hash', 'fs_list_dir', 'stat', 'read', 'hash_file', 'list_dir',
                                'process_observe', 'wait', 'sleep'}
                 mutating = primitive not in owner_reads and tool_effect(primitive) not in READ_EFFECTS
+                mutation_attempted = mutation_attempted or mutating
                 route = 'filesystem' if primitive.startswith('fs_') or primitive in {'read_file', 'write_file', 'stat', 'copy', 'move', 'mkdir', 'hash_file'} else 'host_process' if primitive == 'process_observe' else 'native_browser'
                 admission = exec_context.get('primitive_admission')
                 if admission:
@@ -699,6 +707,7 @@ class OperationalKernel:
                 exec_context["steps"][step_id] = step_result
                 exec_context["prev"] = step_result
                 output = step_result
+                capture("uncertain" if mutating else "observed")
 
             # If implementation declares explicit return mapping or output
             if "output" in cap.implementation:
@@ -880,6 +889,12 @@ class OperationalKernel:
                 "mutation_failure_domains": list(exec_context.get("mutation_failure_domains", ())),
                 "mutation_observed_at": str(exec_context.get("mutation_observed_at", "")),
             }, schema="hermes.canonical_verification.v1").ref
+            from workstation.experience_compiler.models import Verification
+            capture("verified_success" if verification_result.verified else "uncertain", Verification(
+                status=verification_result.status.value, verifier_fingerprint=verification_result.verifier_fingerprint,
+                evidence_refs=list(verification_result.evidence_refs), observer=verifier_contract.observer,
+                source_kind=verifier_contract.source_kind, trust_class="trusted_runtime",
+                evidence_strength=verifier_contract.minimum_evidence))
             auth_scope = exec_context.get("authority_scope") or getattr(self, "authority_scope", None)
             if hasattr(auth_scope, "to_dict"):
                 auth_scope = auth_scope.to_dict()
@@ -911,7 +926,9 @@ class OperationalKernel:
 
             # Durable persistence in ArtifactStore
             try:
-                self.artifacts.store(task_id, f"invocation_{invocation.invocation_id}.json", invocation.to_dict(), schema="hermes.capability_invocation.v1")
+                invocation_ref = self.artifacts.store(task_id, f"invocation_{invocation.invocation_id}.json", invocation.to_dict(), schema="hermes.capability_invocation.v1").ref
+                from workstation.system1.dataset import System1DatasetBuilder
+                System1DatasetBuilder(artifact_store=self.artifacts).ingest_invocation(invocation_ref)
             except Exception:
                 pass
 
@@ -973,6 +990,7 @@ class OperationalKernel:
             }
 
         except CapabilityDriftError as drift_err:
+            capture("authority_superseded" if "AUTHORITY_SUPERSEDED" in str(drift_err) else "uncertain" if mutation_attempted else "failed")
             if not exec_context.get('learning_replay'):
                 self.registry.record_drift(cap.id, str(drift_err), quarantine=True, version=cap.version)
             if owner:
@@ -987,6 +1005,13 @@ class OperationalKernel:
                     context={"capability_id": cap.id, "phase": "operational_kernel"},
                 )
                 return handoff
+            raise
+
+        except InterruptedError:
+            capture("interrupted")
+            raise
+        except Exception:
+            capture("uncertain" if mutation_attempted else "failed")
             raise
 
     def load_invocations(self, task_id: str):
