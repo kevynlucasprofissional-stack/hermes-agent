@@ -1,5 +1,58 @@
 # Architectural Decisions
 
+## D-036 — H-081 qualification requires real-provider, causal-continuation and empirical-learning closure
+
+**Decision date:** 2026-10-02  
+**Status:** ACCEPTED
+
+The first `workstation/laya-direct-system1` implementation validates useful architecture
+but not production qualification. Focused FakeSystem1/helper tests are not evidence that
+the real Laya runtime, TaskRun continuation or learning loop works end to end.
+
+### Decision
+
+1. **Architecture and qualification are separate claims.**
+   Preserve the generic System-1 seam and non-authoritative Laya role, but label H-081
+   `NOT QUALIFIED` until real runtime evidence closes the audit gates.
+
+2. **Vendored means actually imported.**
+   A supported Hermes installation must import Laya from the approved subtree when the
+   Workstation provider is enabled. Provenance fails closed; an unrelated global/PyPI
+   package is never a silent substitute.
+
+3. **Provider tests must match the real upstream contract.**
+   Laya decisions are decoded from the actual 0.3.23 typed answer schema. Fake provider
+   tests remain useful for control-plane isolation, not for claiming real-provider activity.
+
+4. **System-1 savings must alter execution.**
+   `needs_system2=False` counts as amortization only when an admissible known path closes
+   without a main-provider/System-2 call and still reaches the same required verification.
+
+5. **Authority supersession is resumable only through canonical ownership.**
+   A stale run stays fenced. Legitimate supersession may continue only after checkpoint,
+   adoption by the current canonical TaskRun and reconciliation of uncertain effects.
+   Explicit cancel/revoke/policy revoke never auto-resumes.
+
+6. **Review success is not verifier truth.**
+   LearningReview may propose labels/examples; positive System-1 training/eval truth
+   requires canonical compatible verification evidence and task/run/operation lineage.
+
+7. **Learning is dual-rate but promotion remains evidence-gated.**
+   Progressive observations may be captured before terminal success, including failures
+   and supersession, but OperationalCapability promotion and positive reusable competence
+   remain downstream of accepted verifier/causal/replay policy.
+
+8. **Metrics come from owner observations.**
+   System-1 calls, fallbacks, System-2 wakes, authority supersession and outcome economics
+   must be derived from observed canonical events. Unknown remains unknown.
+
+9. **Promotion remains upstream-first and exact-head qualified.**
+   H-079 current preflight/classification, seam audit, affected regressions, real-Laya
+   dogfood, long-run resume proof and exact-head CI are mandatory before merge/promotion.
+
+Canonical audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
 ## D-032 — Productize Experience validation/promotion without creating a parallel authority plane
 
 **Decision date:** 2026-09-23

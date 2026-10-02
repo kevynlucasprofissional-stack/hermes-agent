@@ -55,14 +55,19 @@ policy, D-002/D-007 canonical ownership or the Canonical Execution Reliability G
    remain the current highest-priority blockers. Do not dilute them with parallel feature
    work.
 
-2. **Direct Laya System-1 experimental lane — begin now, branch-gated.**  
-   Freeze current main, create an isolated `workstation/laya-direct-system1`-style branch,
-   vendor a pinned Laya upstream by git subtree, and activate a generic System-1 Decision Plane
-   on bounded closed-schema decisions rather than keeping Laya permanently shadow-only. The lane
-   must remove the `stale_task_run` dead end through resumable TaskRun handoff, add
-   outcome-oriented telemetry, preserve Router/Policy/Verifier sovereignty, and connect
-   progressive + retrospective experience to Laya training/evaluation. Canonical context:
+2. **Direct Laya System-1 experimental lane — remediate before qualification.**  
+   The isolated branch exists and the architectural direction remains accepted, but the
+   2026-10-02 post-implementation audit falsified the branch-local qualification claim.
+   Preserve the generic System-1 seam, non-authoritative candidate ranking, subtree
+   governance and Router/Policy/Verifier sovereignty. Before merge, close in order:
+   supported vendored-Laya packaging + fail-closed provenance; real Laya response parsing;
+   end-to-end TaskRun authority supersession/resume; `needs_system2=False` deterministic
+   closure; verifier-grounded learning labels; progressive durable TransitionSamples;
+   complete receipts/provenance; owner-event telemetry; then H-079, dogfood and exact-head
+   CI. Focused FakeSystem1/unit tests are not product qualification. Canonical design:
    [context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+   Post-implementation audit and merge gates:
+   [context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
 
 
 3. **Operational authority and effect safety.**  
@@ -168,7 +173,10 @@ The strategic map treats the following as active truth, not historical footnotes
 - canonical TaskRun identity/fencing is not yet universally proven through every
   completion, event, evidence and effect boundary;
 - product-level release evidence remains narrower than some contract-layer claims and must
-  never be inferred from unit/contract success alone.
+  never be inferred from unit/contract success alone;
+- H-081/Laya branch qualification is OPEN: real-provider parsing/packaging, runtime
+  supersession continuation, verifier-grounded learning, progressive durable capture,
+  observed telemetry, H-079 refresh, dogfood and exact-head CI remain required.
 
 Use [context/CURRENT_STATE.md](context/CURRENT_STATE.md),
 [context/KNOWN_ISSUES.md](context/KNOWN_ISSUES.md) and the active Engineering Journal for

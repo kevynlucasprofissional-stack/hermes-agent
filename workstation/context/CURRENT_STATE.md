@@ -1,5 +1,34 @@
 # Current State
 
+## 2026-10-02 H-081 Laya direct System-1 — POST-IMPLEMENTATION AUDIT / NOT QUALIFIED
+
+Audited branch `workstation/laya-direct-system1` at
+`736be5b9cebc8ffcb1c02a084a4bdba3755a5074`, based directly on
+`main@e4d079f005ba6b324316e70bb4f9915460f555aa` (9 commits ahead / 0 behind at audit).
+
+Accepted:
+- generic System-1 seam and Laya-as-non-authoritative-provider architecture;
+- candidate ranking remains subordinate to Router/Policy/Verifier;
+- Laya subtree governance and typed authority-supersession concepts are useful;
+- focused tests establish several contract/safety properties.
+
+Open:
+- current Laya adapter does not match the real 0.3.23 answer shape;
+- supported environment does not prove the vendored subtree is the active import and
+  adapter registration is not fail-closed on provenance;
+- TaskRun supersession is checkpointed but not resumed end-to-end;
+- `needs_system2=False` does not generally eliminate `WAKE_LLM`;
+- background-review success is not admissible positive verifier truth;
+- progressive durable learning/data capture, complete receipts and observed telemetry
+  remain incomplete;
+- H-079 current preflight, real-Laya dogfood and exact-head GitHub CI remain required.
+
+Previous branch-local **QUALIFIED** wording is superseded. Focused local tests are not full
+qualification.
+
+Canonical audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
 ## 2026-09-23 External Reference Code-to-Code Audit — PLANNED / READINESS-GATED
 
 Documentation-only planning update. No implementation or qualification claim is added by this entry.
