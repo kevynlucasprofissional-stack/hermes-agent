@@ -5,6 +5,26 @@
 **Canonical owners reused:** `OperationIntent`, `TaskRun`, `OperationalCapability`, Policy Engine, Verification Contracts, Execution Journal, Run Closure and Human Handoff.  
 **Non-goal:** do not create a second control plane, approval store, evidence store, task store or effect database.
 
+
+## 2026-10-02 policy refinement — stale run fence must support safe continuation
+
+`stale_task_run` is a valid mutation fence: an old run must not keep writing after canonical TaskRun ownership moved. It must not turn ordinary supersession into an unrecoverable dead end when the user still authorizes the underlying work.
+
+Distinguish:
+```text
+SUPERSEDED / AUTHORITY_SUPERSEDED
+REVOKED_BY_USER
+CANCELLED
+POLICY_REVOKED
+```
+
+For `SUPERSEDED`, the runtime may atomically checkpoint pending/uncertain work and hand it to the current/new canonical run, then resume only unconfirmed work. Explicit revoke/cancel/policy revocation continues to fence future mutation until the proper authority path is satisfied.
+
+> **STALE RUN MAY NOT MUTATE; VALID WORK SHOULD SURVIVE RUN REPLACEMENT WITHOUT DUPLICATING UNCERTAIN EFFECTS.**
+
+Canonical: [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+
 ## Problem
 
 Hermes Work already has a strong verified-execution architecture, but several recent
