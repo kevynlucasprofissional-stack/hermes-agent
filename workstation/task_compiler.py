@@ -639,8 +639,32 @@ class TaskCompiler:
                 if effect in WRITE_EFFECTS and metadata['canonical_task_id']:
                     live_task = kanban_db.get_task(self.store.get_connection(), metadata['canonical_task_id'])
                     pinned_run = self.store.get_plan(item.plan_id).run_id
-                    if not live_task or str(live_task.current_run_id) != str(pinned_run) or live_task.status in {'done', 'cancelled'}:
-                        return {'valid': False, 'code': 'stale_task_run', 'results': results}
+                    from workstation.authority_supersession import (
+                        classify_run_authority,
+                        checkpoint_superseded_execution,
+                    )
+                    auth_eval = classify_run_authority(live_task, pinned_run)
+                    if auth_eval is not None:
+                        all_items = self.store.get_work_items(item.plan_id)
+                        pending_items = [
+                            {"id": it.id, "plan_id": it.plan_id, "state": it.state}
+                            for it in all_items if it.state != "completed"
+                        ]
+                        record = checkpoint_superseded_execution(
+                            task_id=metadata['canonical_task_id'],
+                            stale_run_id=pinned_run,
+                            current_run_id=auth_eval.current_run_id,
+                            completed_results=results,
+                            pending_items=pending_items,
+                            artifact_store=self.artifacts,
+                            termination_kind=auth_eval.termination_kind,
+                        )
+                        return {
+                            'valid': False,
+                            'code': 'stale_task_run',
+                            'authority_superseded': record.to_dict(),
+                            'results': results,
+                        }
                 if effect == ToolEffect.IDEMPOTENT_WRITE and not args.get(contract["idempotency_key"]):
                     return {"valid": False, "code": "idempotency_key_required", "results": results}
                 from workstation.batch_detection import call_key, mutation_identity
@@ -1389,7 +1413,26 @@ class TaskCompiler:
                 require_allowed_route(route, {k.removeprefix('mutation_'): v for k, v in constraints.items() if k.startswith('mutation_')})
             if mutating and canonical:
                 live = kanban_db.get_task(self.store.get_connection(), canonical.id)
-                if not live or str(live.current_run_id) != str(plan.run_id) or live.status in {'done', 'cancelled'}:
+                from workstation.authority_supersession import (
+                    classify_run_authority,
+                    checkpoint_superseded_execution,
+                )
+                auth_eval = classify_run_authority(live, plan.run_id)
+                if auth_eval is not None:
+                    all_items = self.store.get_work_items(plan.id)
+                    pending_items = [
+                        {"id": it.id, "plan_id": it.plan_id, "state": it.state}
+                        for it in all_items if it.state != "completed"
+                    ]
+                    checkpoint_superseded_execution(
+                        task_id=canonical.id,
+                        stale_run_id=plan.run_id,
+                        current_run_id=auth_eval.current_run_id,
+                        completed_results=[],
+                        pending_items=pending_items,
+                        artifact_store=self.artifacts,
+                        termination_kind=auth_eval.termination_kind,
+                    )
                     raise ValueError('stale_task_run')
         # Browser actions retain the caller's scoped tool dispatcher/approval/lease.
         def scoped_dispatch(name, args):

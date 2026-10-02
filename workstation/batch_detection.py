@@ -169,7 +169,20 @@ def prepare_mutation(agent, name, args):
         conn = kanban_db_connect.connect()
         try:
             task = kanban_db.get_task(conn, task_id)
-            if not task or task.current_run_id != run_id or task.status in {'done', 'cancelled'}:
+            from workstation.authority_supersession import (
+                classify_run_authority,
+                checkpoint_superseded_execution,
+            )
+            auth_eval = classify_run_authority(task, run_id)
+            if auth_eval is not None:
+                checkpoint_superseded_execution(
+                    task_id=task_id,
+                    stale_run_id=run_id or "",
+                    current_run_id=auth_eval.current_run_id,
+                    completed_results=[],
+                    pending_items=[],
+                    termination_kind=auth_eval.termination_kind,
+                )
                 raise RuntimeError('stale_task_run: mutation authority no longer belongs to this run')
         finally:
             conn.close()

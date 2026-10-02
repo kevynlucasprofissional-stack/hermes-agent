@@ -29,6 +29,7 @@ class TransitionOutcome(str, Enum):
     FAILED = 'failed'
     UNCERTAIN = 'uncertain'
     INTERRUPTED = 'interrupted'
+    AUTHORITY_SUPERSEDED = 'authority_superseded'
 
 
 class AuthorityOrigin(str, Enum):
