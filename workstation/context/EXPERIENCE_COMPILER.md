@@ -1,5 +1,44 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-10-02 — duas capacidades candidatas de uma run verificada (ACIRV/Instagram)
+
+O caminho canônico de aprendizado é o de sempre: run verificada -> corpus -> replay/ablação ->
+validação causal -> verifier -> `ExperiencePromotionPolicy` -> capability promovida. Uma run
+verificada, porém, já pode **propor candidatas** — e é isso que foi feito aqui, sem atalho de
+autoridade.
+
+Entrada pela API, nunca edição manual do índice (o índice guarda só ponteiros; o corpo da
+capability vive no artifact store):
+
+```python
+from workstation.operational_capabilities import OperationalCapabilityRegistry, learn_operational_capability
+reg = OperationalCapabilityRegistry()          # <LOCALAPPDATA>/hermes/workstation/operational_capabilities
+learn_operational_capability(reg, name=..., route="browser", steps=[...], preconditions=[...],
+                            postconditions=[...], provenance={"source": "experience_compiler", ...})
+```
+
+`learn_operational_capability()` registra em **`discovered`**. Promover exige
+`ExperiencePromotionPolicy().evaluate(cap)` admitir; se não admitir, o retorno lista os portões
+abertos em `reasons`.
+
+Capacidades propostas em 2026-10-02 (run `20261002_103232_e8a45c`, captura Instagram da ACIRV):
+
+| id | o que codifica | lifecycle | portões abertos |
+|---|---|---|---|
+| `cap_acirv_folhas_de_contato@1.0.0` | leitura em lote de imagens por folhas de contato 3×3, com `natureza` conferida contra o dado da captura | `discovered` | 12 |
+| `cap_acirv_varredura_de_legendas@1.0.0` | varredura de legendas em segundo plano (`localStorage` em fatias) com entrega do lote por navegação de topo ao sink | `discovered` | 12 |
+
+Os 12 portões abertos são idênticos e **não são um defeito**: `semantic_closure`,
+`parameterization`, `causal_grade`, `effect_evidence`, `provenance`, `trust`, `authority`,
+`cross_run_diversity`, `drift`, `utility`, `replay`, `verifier_validated`. `cross_run_diversity`
+exige ≥2 runs distintas — uma sessão só, por definição, não satisfaz. Duas observações ainda são a
+resposta honesta; quinze seriam promoção. Registrar como promovida seria falso positivo de
+autoridade, exatamente o que a política existe para impedir.
+
+Regra para a próxima rodada: repetir o procedimento em outro mês (ou outro canal) e reconhecer a
+**mesma** capability (não criar uma nova) é o que acumula `cross_run_diversity`; sem verifier
+validado, o replay não conta.
+
 ## 2026-10-02 extension — dual-rate learning and System-1 dataset bridge
 
 The accepted-run / replay / causal-validation / verifier / promotion path remains the trust boundary for executable capability promotion. It is no longer the only experience-capture path.
