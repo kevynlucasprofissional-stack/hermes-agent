@@ -621,18 +621,22 @@ class CapabilityRouter:
                 context={"run_id": run_id, "operation_id": operation_id},
             )
             s1_res = decide_system1(s1_req)
-            if s1_res and s1_res.provider != "deterministic_fallback":
+            if s1_res and s1_res.provider != "deterministic_fallback" and not s1_res.fallback_recommended:
+                from workstation.system1.calibration import default_calibration_policy
+                def admitted(question):
+                    confidence = s1_res.calibrated_confidences.get(question, s1_res.confidence.get(question, 0.0))
+                    return not s1_res.is_abstained(question) and default_calibration_policy.evaluate_confidence(question, confidence)
                 ak = s1_res.decisions.get("ambiguity_kind")
-                if ak and ak not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
+                if admitted("ambiguity_kind") and ak and ak not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
                     ambiguity_kind = ak
                 ns2_raw = s1_res.decisions.get("needs_system2")
-                if ns2_raw == "no":
+                if admitted("needs_system2") and ns2_raw == "no":
                     needs_system2 = False
                 elif ns2_raw == "yes":
                     needs_system2 = True
 
                 recovery = s1_res.decisions.get("known_recovery_path")
-                if not needs_system2 and recovery == "reprobe_state":
+                if not needs_system2 and admitted("known_recovery_path") and recovery == "reprobe_state":
                     return WaitDecision(
                         await_condition={"type": "reprobe_state", "target": operation_intent.target},
                         reason="System-1 identified reprobe_state recovery path without requiring System-2",
@@ -647,5 +651,5 @@ class CapabilityRouter:
                 "goal": operation_intent.goal.to_dict() if hasattr(operation_intent.goal, "to_dict") else str(operation_intent.goal),
             },
             ambiguity_kind=ambiguity_kind,
-            needs_system2=needs_system2,
+            needs_system2=True,
         )

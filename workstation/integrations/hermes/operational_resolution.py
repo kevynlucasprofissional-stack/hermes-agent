@@ -247,6 +247,8 @@ def _dispatch_intent(agent: Any, context: Any, task: Any, objective: dict, runti
         compiler.trusted_authority = trusted_effect_authority_from_agent(
             agent, str(context.session_id), task
         )
+        from workstation.task_compiler_recovery import bind_native_reprobe
+        bind_native_reprobe(compiler, objective, task, str(context.session_id))
         dispatch = workstation_durable_dispatch(agent)
         with workstation_scoped_execution(agent, task.id, context.messages):
             return compiler.execute(

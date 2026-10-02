@@ -1290,6 +1290,13 @@ class TaskCompiler:
                     "certificate_hash": cert_hash,
                 }
 
+        if isinstance(decision, WaitDecision) and isinstance(decision.await_condition, dict) and decision.await_condition.get("type") == "reprobe_state":
+            from workstation.task_compiler_recovery import resolve_reprobe
+            recovered = resolve_reprobe(self, intent, task_id, session_id)
+            if recovered is not None:
+                return recovered
+            decision = ReasoningDecision(reason="known_recovery_unavailable", needs_system2=True)
+
         if isinstance(decision, WaitDecision):
             from workstation.control_plane.waiting import (
                 AwaitCondition,
