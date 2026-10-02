@@ -1,5 +1,24 @@
 # Upstream strategy
 
+
+## 2026-10-02 — Secondary upstream: Laya
+
+Hermes Work now has two upstream relationships with different semantics. `NousResearch/hermes-agent` remains the primary structural upstream under H-079 true-history merge/seam qualification. `NandhaKishorM/laya` is the secondary System-1 runtime upstream and is approved for a pinned `git subtree --squash` at `workstation/third_party/laya`.
+
+Reviewed starting source: `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c`, Laya 0.3.23, Apache-2.0.
+
+```bash
+git remote add laya-upstream https://github.com/NandhaKishorM/laya.git
+git fetch laya-upstream --prune
+git subtree add --prefix=workstation/third_party/laya laya-upstream 4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c --squash
+# updates: git subtree pull --prefix=workstation/third_party/laya laya-upstream <EXACT_LAYA_SHA> --squash
+```
+
+The remote name is local Git config. Reproducible truth is the subtree plus `workstation/components.lock.json`, which becomes `vendored: true` only in the commit that actually imports Laya. Do not use a submodule. Laya updates are frozen/qualified independently from Hermes Stage A updates. Prefer adapters outside the vendored subtree.
+
+Canonical: [context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+
 ## 2026-09-22 H-080 / H-079.3 production-path qualification status
 
 The rejected direct operational-resolution commit `471e9b529f745c89a3b18caad865e762f09dfab3` remains reverted and inactive.
