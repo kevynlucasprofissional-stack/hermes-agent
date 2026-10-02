@@ -872,6 +872,14 @@ class OperationalKernel:
                 self.registry.register(cap)
 
             from workstation.experience_compiler.models import CapabilityInvocation
+            proof_ref = self.artifacts.store(task_id, f"verification_{operation_id}.json", {
+                "task_id": task_id, "run_id": run_id, "operation_id": operation_id,
+                "contract": verifier_contract.to_dict(), "expected": expected_verification_value,
+                "evidence": [e.to_dict() if hasattr(e, "to_dict") else e for e in supplied_evidence],
+                "result": verification_result.to_dict(),
+                "mutation_failure_domains": list(exec_context.get("mutation_failure_domains", ())),
+                "mutation_observed_at": str(exec_context.get("mutation_observed_at", "")),
+            }, schema="hermes.canonical_verification.v1").ref
             auth_scope = exec_context.get("authority_scope") or getattr(self, "authority_scope", None)
             if hasattr(auth_scope, "to_dict"):
                 auth_scope = auth_scope.to_dict()
@@ -892,6 +900,7 @@ class OperationalKernel:
                 verifier_status=verification_result.status.value,
                 verifier_fingerprint=verification_result.verifier_fingerprint,
                 verification_evidence_refs=list(verification_result.evidence_refs),
+                verification_record_ref=proof_ref,
                 covered_predicates=list(verification_result.covered_predicates),
                 freshness_satisfied=verification_result.freshness_satisfied,
                 verification_reason=verification_result.reason,
@@ -902,7 +911,7 @@ class OperationalKernel:
 
             # Durable persistence in ArtifactStore
             try:
-                self.artifacts.store(task_id, f"invocation_{invocation.invocation_id}.json", invocation.to_dict())
+                self.artifacts.store(task_id, f"invocation_{invocation.invocation_id}.json", invocation.to_dict(), schema="hermes.capability_invocation.v1")
             except Exception:
                 pass
 

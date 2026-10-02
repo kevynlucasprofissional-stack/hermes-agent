@@ -137,6 +137,7 @@ class CapabilityInvocation:
     verifier_status: str = 'INCONCLUSIVE'
     verifier_fingerprint: str = ''
     verification_evidence_refs: list[str] = field(default_factory=list)
+    verification_record_ref: str | None = None
     covered_predicates: list[str] = field(default_factory=list)
     freshness_satisfied: bool = False
     verification_reason: str = ''

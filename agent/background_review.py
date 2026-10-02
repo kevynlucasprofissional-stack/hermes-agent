@@ -30,7 +30,10 @@ class LearningReview:
     session_id: str = ""
     run_id: str = ""
     status: str = "success"  # "success", "empty", "error"
-    actions: List[Dict[str, Any]] = field(default_factory=list)
+    actions: List[Any] = field(default_factory=list)
+    task_id: str = ""
+    operation_id: str = ""
+    evidence_refs: List[str] = field(default_factory=list)
     usage: Dict[str, Any] = field(default_factory=dict)
     messages: List[Dict[str, Any]] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -1308,7 +1311,8 @@ def _run_review_in_thread(
         _emit_learning_review(
             LearningReview(
                 session_id=session_id,
-                run_id=run_id,
+                task_id=str(getattr(agent, "_canonical_work_task_id", "") or ""),
+                run_id=str(getattr(agent, "_canonical_work_run_id", "") or run_id),
                 status=_classify_review_result(actions),
                 actions=actions,
                 usage=st.review_usage or {},

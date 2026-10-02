@@ -36,7 +36,7 @@ class DatasetSample:
     expected_answers: Dict[str, Any]
     confidence_target: float = 1.0
     split: str = "train"  # train | validation | held_out
-    verification_status: str = "VERIFIED_SUCCESS"
+    verification_status: str = "UNVERIFIED"
     provenance: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=_utc_now)
 
@@ -50,8 +50,10 @@ class DatasetSample:
                 "sample_id": self.sample_id,
                 "task_id": self.task_id,
                 "run_id": self.run_id,
+                "operation_id": self.operation_id,
                 "split": self.split,
                 "verification_status": self.verification_status,
+                "provenance": self.provenance,
             },
         }
 
@@ -65,12 +67,15 @@ class System1DatasetBuilder:
         train_ratio: float = 0.70,
         val_ratio: float = 0.15,
         held_out_ratio: float = 0.15,
+        artifact_store=None,
     ):
         self.output_dir = output_dir or Path("workstation/system1/dataset")
         self.train_ratio = train_ratio
         self.val_ratio = val_ratio
         self.held_out_ratio = held_out_ratio
         self._samples: List[DatasetSample] = []
+        from workstation.artifacts import ArtifactStore
+        self.artifacts = artifact_store or ArtifactStore()
 
     def _determine_split(self, task_id: str) -> str:
         """Deterministic task-level split assignment to prevent run-level data leakage."""
@@ -93,7 +98,7 @@ class System1DatasetBuilder:
         state: Dict[str, Any],
         candidate_capabilities: List[str],
         chosen_capability: str,
-        verification_status: str = "VERIFIED_SUCCESS",
+        verification_status: str = "UNVERIFIED",
     ) -> DatasetSample:
         """Build sample for capability selection/ranking."""
         from workstation.system1.schemas import build_candidate_ranking_schema
@@ -126,7 +131,7 @@ class System1DatasetBuilder:
         after_state: Dict[str, Any],
         delta: Dict[str, Any],
         progress_class: str,
-        verification_status: str = "VERIFIED_SUCCESS",
+        verification_status: str = "UNVERIFIED",
     ) -> DatasetSample:
         """Build sample for progress classification."""
         from workstation.system1.schemas import STANDARD_SCHEMAS
@@ -185,7 +190,7 @@ class System1DatasetBuilder:
                 "needs_system2": needs_system2,
             },
             split=self._determine_split(task_id),
-            verification_status="VERIFIED_SUCCESS",
+            verification_status="UNVERIFIED",
             provenance={"task_id": task_id, "run_id": run_id},
         )
         self._samples.append(sample)
@@ -194,24 +199,60 @@ class System1DatasetBuilder:
     def ingest_learning_review(self, review: Any) -> List[DatasetSample]:
         """Convert actions and outcomes from a LearningReview into training samples."""
         samples: List[DatasetSample] = []
-        task_id = getattr(review, "session_id", "session_unknown") or "session_unknown"
-        run_id = getattr(review, "run_id", "run_unknown") or "run_unknown"
+        task_id = getattr(review, "task_id", "") or ""
+        run_id = getattr(review, "run_id", "") or ""
         actions = getattr(review, "actions", []) or []
         for idx, act in enumerate(actions):
-            if isinstance(act, dict):
-                tool = act.get("tool") or act.get("action") or "unknown"
-                sample = self.add_capability_routing_sample(
-                    task_id=task_id,
-                    run_id=run_id,
-                    operation_id=f"op_{idx}",
-                    objective=act.get("description", "Execute review action"),
-                    state=act.get("parameters", {}),
-                    candidate_capabilities=[tool, "no_match", "abstain"],
-                    chosen_capability=tool,
-                    verification_status="VERIFIED_SUCCESS" if getattr(review, "status", "") == "success" else "UNCERTAIN",
-                )
-                samples.append(sample)
+            # The real producer emits strings (memory/skill summaries). Such a
+            # summary is a proposal, not an executable capability or truth label.
+            action = act if isinstance(act, dict) else {"action_kind": "review_summary", "shape": type(act).__name__}
+            operation_id = action.get("operation_id") or getattr(review, "operation_id", "")
+            refs = action.get("evidence_refs") or getattr(review, "evidence_refs", [])
+            invocation = self._verified_invocation(refs, task_id, run_id, operation_id)
+            verified = invocation is not None and getattr(review, "status", "") == "success"
+            sample = self.add_capability_routing_sample(task_id, run_id, operation_id, "Learning review proposal", {},
+                [invocation["capability_id"]] if verified else ["NO_MATCH"],
+                invocation["capability_id"] if verified else "NO_MATCH",
+                verification_status="VERIFIED_SUCCESS" if verified else "FAILED" if getattr(review, "status", "") == "error" else "UNVERIFIED_REVIEW")
+            sample.sample_id = "review_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, idx, refs, action], sort_keys=True, default=str).encode()).hexdigest()[:24]
+            sample.provenance.update(source="LearningReview", source_refs=list(refs), action_shape=type(act).__name__,
+                review_status=getattr(review, "status", ""), canonical_verifier_grounded=verified,
+                evidence_refs=invocation["verification_evidence_refs"] if verified else [])
+            samples.append(sample)
         return samples
+
+    def _verified_invocation(self, refs, task_id, run_id, operation_id):
+        if not task_id or not run_id or not operation_id:
+            return None
+        for ref in refs:
+            try:
+                resolved = self.artifacts.resolve_structured(ref)
+                body = resolved.get("content") or {}
+                if (resolved.get("schema") == "hermes.capability_invocation.v1"
+                    and body.get("task_id") == task_id and str(body.get("run_id")) == str(run_id)
+                    and body.get("operation_id") == operation_id
+                    and body.get("verified") is True and body.get("verifier_status") == "VERIFIED"
+                    and body.get("freshness_satisfied") is True and body.get("verifier_fingerprint")
+                    and body.get("covered_predicates") and body.get("verification_evidence_refs")
+                    and all(self.artifacts.resolve_ref(e) for e in body["verification_evidence_refs"])):
+                    proof = self.artifacts.resolve_structured(body.get("verification_record_ref", ""))
+                    record = proof.get("content") or {}
+                    if proof.get("schema") != "hermes.canonical_verification.v1":
+                        continue
+                    from workstation.control_plane.verification import evaluate_verification
+                    if (record.get("task_id") != task_id or str(record.get("run_id")) != str(run_id)
+                        or record.get("operation_id") != operation_id):
+                        continue
+                    result = evaluate_verification(record["contract"], record["expected"], record["evidence"],
+                        required_predicates=set(body["covered_predicates"]), expected_task_id=task_id,
+                        expected_run_id=str(run_id), expected_operation_id=operation_id,
+                        mutation_failure_domains=set(record.get("mutation_failure_domains", [])),
+                        mutation_observed_at=record.get("mutation_observed_at", ""))
+                    if result.verified and result.verifier_fingerprint == body["verifier_fingerprint"]:
+                        return body
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        return None
 
     def export_partitions(self) -> Dict[str, List[Dict[str, Any]]]:
         """Export dataset grouped by split."""
@@ -219,9 +260,15 @@ class System1DatasetBuilder:
             "train": [],
             "validation": [],
             "held_out": [],
+            "proposals": [],
+            "counterevidence": [],
         }
         for sample in self._samples:
-            partitions[sample.split].append(sample.to_laya_format())
+            eligible = (sample.verification_status == "VERIFIED_SUCCESS" and sample.task_id and sample.run_id
+                and sample.operation_id and sample.provenance.get("canonical_verifier_grounded"))
+            negative = sample.verification_status.lower() in {"failed", "uncertain", "interrupted", "authority_superseded"}
+            partition = sample.split if eligible else "counterevidence" if negative else "proposals"
+            partitions[partition].append(sample.to_laya_format())
         return partitions
 
     def write_to_disk(self, target_dir: Optional[Path] = None) -> Dict[str, Path]:
