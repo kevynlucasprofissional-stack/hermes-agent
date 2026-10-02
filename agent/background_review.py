@@ -14,7 +14,7 @@ import os
 import threading
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 from agent.prompt_cache_scope import resolve_prompt_cache_scope_safe
 from agent.thread_scoped_output import thread_scoped_silence
@@ -22,6 +22,41 @@ from agent.thread_scoped_output import thread_scoped_silence
 logger = logging.getLogger(__name__)
 
 _BACKGROUND_REVIEW_CANCEL_TIMEOUT_SECONDS = 2.0
+
+
+@dataclass
+class LearningReview:
+    """Generic learning review artifact emitted upon background review completion."""
+    session_id: str = ""
+    run_id: str = ""
+    status: str = "success"  # "success", "empty", "error"
+    actions: List[Dict[str, Any]] = field(default_factory=list)
+    usage: Dict[str, Any] = field(default_factory=dict)
+    messages: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+_LEARNING_REVIEW_HOOKS: List[Callable[[LearningReview], None]] = []
+
+
+def register_learning_review_hook(hook: Callable[[LearningReview], None]) -> None:
+    """Register a generic hook called when a background review completes."""
+    if hook not in _LEARNING_REVIEW_HOOKS:
+        _LEARNING_REVIEW_HOOKS.append(hook)
+
+
+def unregister_learning_review_hook(hook: Callable[[LearningReview], None]) -> None:
+    """Unregister a previously registered learning review hook."""
+    if hook in _LEARNING_REVIEW_HOOKS:
+        _LEARNING_REVIEW_HOOKS.remove(hook)
+
+
+def _emit_learning_review(review: LearningReview) -> None:
+    for hook in list(_LEARNING_REVIEW_HOOKS):
+        try:
+            hook(review)
+        except Exception:
+            logger.debug("Learning review hook failed", exc_info=True)
 
 
 class _BackgroundReviewRun:
@@ -1268,10 +1303,36 @@ def _run_review_in_thread(
         _log_review_completion(st.review_usage, _classify_review_result(actions))
         if actions:
             _publish_review_summary(agent, actions)
+        session_id = getattr(agent, "session_id", "") or str(getattr(agent, "id", ""))
+        run_id = getattr(review_run, "run_id", "") or ""
+        _emit_learning_review(
+            LearningReview(
+                session_id=session_id,
+                run_id=run_id,
+                status=_classify_review_result(actions),
+                actions=actions,
+                usage=st.review_usage or {},
+                messages=st.review_messages or [],
+                metadata={"review_memory": review_memory, "explicit": explicit},
+            )
+        )
     except Exception as e:
         logger.warning("Background memory/skill review failed: %s", e)
         if st.review_usage:
             _log_review_completion(st.review_usage, "error")
+        session_id = getattr(agent, "session_id", "") or str(getattr(agent, "id", ""))
+        run_id = getattr(review_run, "run_id", "") or ""
+        _emit_learning_review(
+            LearningReview(
+                session_id=session_id,
+                run_id=run_id,
+                status="error",
+                actions=[],
+                usage=st.review_usage or {},
+                messages=st.review_messages or [],
+                metadata={"error": str(e), "review_memory": review_memory, "explicit": explicit},
+            )
+        )
         agent._emit_auxiliary_failure("background review", e)
     finally:
         # Safety net for the exception path (setup failures before the request-phase finally).
@@ -1327,6 +1388,7 @@ def spawn_background_review_thread(
 __all__ = [
     "_MEMORY_REVIEW_PROMPT", "_SKILL_REVIEW_PROMPT", "_COMBINED_REVIEW_PROMPT", "load_background_review_settings",
     "spawn_background_review_thread", "summarize_background_review_actions", "build_memory_write_metadata",
+    "LearningReview", "register_learning_review_hook", "unregister_learning_review_hook",
 ]
 
 
