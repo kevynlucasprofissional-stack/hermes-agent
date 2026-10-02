@@ -7,6 +7,7 @@ non-autoregressive decisions on bounded closed-schema question sets.
 from __future__ import annotations
 
 import logging
+import math
 import threading
 import time
 from typing import Any, Dict, List, Optional
@@ -19,7 +20,7 @@ from workstation.system1.contracts import (
     compute_candidate_set_hash,
     compute_state_hash,
 )
-from workstation.system1.provenance import verify_laya_provenance
+from workstation.system1.provenance import verify_laya_provenance, get_laya_provenance
 from workstation.system1.receipts import DecisionReceipt, persist_decision_receipt
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,9 @@ class LayaDecisionProvider:
         self._router_lock = threading.Lock()
 
         # Enforce provenance on initialization
-        self.provenance = verify_laya_provenance()
+        verify_laya_provenance()
+        self.provenance = get_laya_provenance(model=model, device=self.device,
+            calibration_id=self.calibration_policy.calibration_id)
 
         if auto_preload:
             self._ensure_router()
@@ -125,25 +128,32 @@ class LayaDecisionProvider:
             answers: Dict[str, Any] = {}
             probabilities: Dict[str, Dict[str, float]] = {}
             confidence: Dict[str, float] = {}
+            calibrated_confidences: Dict[str, float] = {}
             abstentions: List[str] = []
 
-            for q_id in request.questions:
-                q_res = raw_output.get(q_id, {})
-                if isinstance(q_res, dict):
-                    ans = q_res.get("answer")
-                    conf = float(q_res.get("confidence", 0.0))
-                    probs = q_res.get("probabilities", {})
-                else:
-                    ans = q_res
-                    conf = 0.5
-                    probs = {}
+            for q_id, question in request.questions.items():
+                q_res = raw_output.get("answers", {}).get(q_id, {})
+                kind = question.get("type", "choice")
+                ans = q_res.get(kind) if q_res.get("type", kind) == kind else None
+                conf = float(q_res.get("answer_confidence", q_res.get("confidence", 0.0)))
+                if not math.isfinite(conf) or not 0 <= conf <= 1:
+                    conf = 0.0
+                probs = q_res.get("probabilities", {})
+                valid = ans is not None and kind in ("choice", "score", "noul")
+                if kind == "choice":
+                    valid = valid and ans in question.get("criteria", {})
+                elif kind in ("score", "noul"):
+                    upper = len(question.get("criteria", [])) - 1 if kind == "score" else 1
+                    valid = valid and isinstance(ans, (float, int)) and math.isfinite(ans) and 0 <= ans <= upper
+                if "answer_confidence" in q_res:
+                    calibrated_confidences[q_id] = conf
 
                 answers[q_id] = ans
                 confidence[q_id] = conf
                 probabilities[q_id] = probs
 
                 # Check neutral choices
-                if ans in (NeutralChoice.ABSTAIN.value, NeutralChoice.NO_MATCH.value):
+                if not valid or ans in (NeutralChoice.ABSTAIN.value, NeutralChoice.NO_MATCH.value):
                     abstentions.append(q_id)
                 elif not self.calibration_policy.evaluate_confidence(
                     q_id, conf, model=target_model, language=effective_lang, risk_class=request.risk_class
@@ -157,9 +167,13 @@ class LayaDecisionProvider:
                 answers=answers,
                 probabilities=probabilities,
                 confidence=confidence,
+                calibrated_confidences=calibrated_confidences,
                 abstentions=abstentions,
                 provider="laya",
                 model=target_model,
+                model_revision=self.provenance.checkpoint_revision,
+                schema_id=request.schema_id,
+                request_hash=request.request_hash(),
                 calibration_id=self.calibration_policy.calibration_id,
                 latency_ms=latency_ms,
                 fallback_recommended=fallback_rec,
@@ -172,6 +186,10 @@ class LayaDecisionProvider:
             # 5. Persist durable DecisionReceipt
             receipt = DecisionReceipt(
                 request_ref=request.state_ref or compute_state_hash(request.minimal_state),
+                request_hash=request.request_hash(),
+                domain=request.domain,
+                schema_id=request.schema_id,
+                state_digest=compute_state_hash(request.minimal_state),
                 result_ref=f"res_{request.request_id}",
                 task_id=request.task_id,
                 run_id=request.run_id,
@@ -184,10 +202,17 @@ class LayaDecisionProvider:
                 calibration_id=self.calibration_policy.calibration_id,
                 question_schema_version=request.question_schema_version,
                 confidence=confidence,
+                calibrated_confidences=calibrated_confidences,
+                laya_version=self.provenance.laya_version,
+                laya_source_sha=self.provenance.laya_source_sha,
+                model_revision=self.provenance.checkpoint_revision,
+                details={"probabilities": probabilities, "abstentions": abstentions,
+                    "candidate_set_hash": request.candidate_set_hash or compute_candidate_set_hash(request.candidate_sets),
+                    "provenance": self.provenance.to_dict()},
                 answers=answers,
                 latency_ms=latency_ms,
             )
-            persist_decision_receipt(receipt, self.artifact_store)
+            result.details["receipt_ref"] = persist_decision_receipt(receipt, self.artifact_store)
 
             return result
 
