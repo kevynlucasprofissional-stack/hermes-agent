@@ -27,6 +27,7 @@ Before changing Workstation code, read these documents in order:
 3. [`ADAPTIVE_EXECUTION_COMPILATION.md`](ADAPTIVE_EXECUTION_COMPILATION.md) — implemented execution-policy correction for bounded novelty/drift.
 4. [`PROGRESSIVE_OPERATIONAL_COMPILATION.md`](PROGRESSIVE_OPERATIONAL_COMPILATION.md) — implemented deterministic Operational Capability Runtime and the role of `work_execute`.
 5. [`EXPERIENCE_COMPILER.md`](EXPERIENCE_COMPILER.md) — implemented Experience Compiler: TransitionSamples/VOTs, segmentation, parameterization, causal validation and trust-aware promotion.
+   - **Active System-1 experiment:** [`LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md) — direct Laya Decision Plane, dual-rate learning, resumable stale-run authority, outcome telemetry and secondary git-subtree upstream.
 6. [`VERIFIED_OPERATIONAL_CONTROL_PLANE.md`](VERIFIED_OPERATIONAL_CONTROL_PLANE.md) — implemented CP0–CP9 baseline: immutable OperationIntent, Capability Router/typechecker, certificates, Await/Trigger, reasoning handoff and evaluation contracts.
 7. [`HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md`](HIERARCHICAL_OPERATIONAL_LEARNING_2026-09-18.md) — hierarchical VOT -> Capability -> composite -> workflow -> Await/Event -> reasoning-boundary architecture; PR #32 is a component baseline and H-075 keeps end-to-end corrective integration open.
    - Companion: [`IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md`](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md) — **active corrective architecture** for RunClosureProof, run-scoped adaptive-to-compiled handoff, Artifact-to-Browser payloads, exception-only reasoning re-entry and Trello-shaped dogfood.
@@ -54,6 +55,7 @@ changing or reviewing that lane:
 - [`OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md`](OPERATIONAL_AUTHORITY_AND_EFFECT_SAFETY_2026-09-28.md) — ControlIntent, refusal atomicity, pre/post effect verification and derived Effect Ledger.
 - [`IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md`](IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md) — identity vocabulary, ownership projection, cross-tenant falsification and allowlist-first MCP environments.
 - [`LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md`](LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md) — progress watchdog, circuit breakers, capability health, typed operational failures and Cost per Verified Outcome.
+- [`LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md) — active branch-gated System-1 provider, DecisionReceipts, progressive/retrospective learning and second upstream policy.
 
 These documents extend existing owners and gates. They do not authorize parallel stores,
 a second control plane, a second scheduler or bypass of H-080/H-079/H-078.
