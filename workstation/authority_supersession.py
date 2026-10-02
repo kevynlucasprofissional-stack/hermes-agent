@@ -86,7 +86,7 @@ def classify_run_authority(
     status = str(getattr(live_task, "status", "")).lower()
     current_run = str(getattr(live_task, "current_run_id", "")) if getattr(live_task, "current_run_id", None) is not None else None
 
-    if policy_revocation:
+    if policy_revocation or status == "policy_revoked":
         return AuthoritySuperseded(
             task_id=task_id,
             stale_run_id=str(pinned_run_id),
@@ -207,6 +207,8 @@ def resume_superseded_work(
             f"Cannot resume task {superseded_record.task_id}: termination kind is "
             f"{superseded_record.termination_kind.value} (continuation not allowed)"
         )
+    if superseded_record.termination_kind != AuthorityTerminationKind.SUPERSEDED or new_run_id != superseded_record.current_run_id:
+        raise PermissionError("Cannot resume outside the canonical superseding run")
 
     store = artifact_store or ArtifactStore()
     if not superseded_record.pending_items_ref:

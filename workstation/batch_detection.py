@@ -183,7 +183,7 @@ def prepare_mutation(agent, name, args):
                     pending_items=[],
                     termination_kind=auth_eval.termination_kind,
                 )
-                raise RuntimeError('stale_task_run: mutation authority no longer belongs to this run')
+                raise RuntimeError('AUTHORITY_SUPERSEDED: continue pending work in canonical run' if auth_eval.continuation_allowed else auth_eval.termination_kind.value)
         finally:
             conn.close()
     from workstation.artifacts import ArtifactStore

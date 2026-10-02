@@ -97,9 +97,12 @@ def get_laya_provenance(
         try:
             from urllib.parse import urlparse, unquote
             from urllib.request import url2pathname
-            direct = json.loads(metadata.distribution("laya").read_text("direct_url.json") or "{}")
+            distribution = metadata.distribution("laya")
+            direct = json.loads(distribution.read_text("direct_url.json") or "{}")
             url = urlparse(direct.get("url", ""))
-            is_vendored = url.scheme == "file" and Path(url2pathname(unquote(url.path))).resolve() == EXPECTED_SUBTREE_DIR.resolve()
+            is_vendored = (url.scheme == "file"
+                and Path(url2pathname(unquote(url.path))).resolve() == EXPECTED_SUBTREE_DIR.resolve()
+                and Path(distribution.locate_file("laya/__init__.py")).resolve() == source_path)
         except (metadata.PackageNotFoundError, ValueError, TypeError):
             is_vendored = False
     verified = matches(EXPECTED_SUBTREE_DIR) and matches(package_root) and manifest["revision"] == locked_sha

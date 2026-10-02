@@ -900,6 +900,41 @@ class DurableTaskStore:
             conn.execute("UPDATE work_plans SET metadata=? WHERE id=? OR task_id=?", (json.dumps(metadata), plan_id, plan_id))
             conn.commit()
 
+    def adopt_superseded_plan(self, plan_id: str, *, canonical_task_id: str, new_run_id: str, checkpoint: dict) -> None:
+        """Transfer pending lineage only after a canonical, atomic authority recheck."""
+        with self._lock, self.get_connection() as conn:
+            task = kanban_db.get_task(conn, canonical_task_id)
+            plan = self.get_plan(plan_id)
+            if not task or str(task.current_run_id) != new_run_id or task.status != "running":
+                raise PermissionError("canonical_run_not_resumable")
+            if checkpoint.get("termination_kind") != "SUPERSEDED" or not checkpoint.get("continuation_allowed"):
+                raise PermissionError("termination_not_resumable")
+            if plan.run_id != checkpoint.get("stale_run_id"):
+                raise PermissionError("supersession_lineage_changed")
+            meta = {**plan.metadata, "run_id": new_run_id, "canonical_run_id": new_run_id,
+                    "supersession": checkpoint, "fenced_run_ids": [*plan.metadata.get("fenced_run_ids", []), plan.run_id]}
+            changed = conn.execute("UPDATE work_plans SET run_id=?, metadata=?, status='running' WHERE id=? AND run_id=? AND EXISTS (SELECT 1 FROM tasks WHERE id=? AND current_run_id=? AND status='running')",
+                         (new_run_id, json.dumps(meta), plan.id, plan.run_id, canonical_task_id, new_run_id))
+            if changed.rowcount != 1:
+                raise PermissionError("canonical_run_changed_during_adoption")
+            for item in self.get_work_items(plan.id):
+                if item.status == WorkItemStatus.COMPLETED:
+                    continue
+                cp = dict(item.checkpoints)
+                cp["authority_lineage"] = {"previous_run_id": item.run_id, "run_id": new_run_id,
+                                          "checkpoint_ref": checkpoint.get("checkpoint_ref")}
+                # Keep every dispatch/result checkpoint. Clear only the supersession
+                # wrapper, which the batch runner would otherwise replay as raw output.
+                reason = item.validation_result.get("reason")
+                if reason in ("AUTHORITY_SUPERSEDED", "stale_task_run") or outstanding_dispatch_checkpoints(cp):
+                    for key in ("persist", "normalize", "validate"):
+                        cp.pop(key, None)
+                    conn.execute("UPDATE work_items SET status='pending', attempts=0, raw_output_ref=NULL, normalized_output_ref=NULL, validation_result='{}', error=NULL, last_error=NULL, run_id=?, checkpoints=? WHERE id=?",
+                                 (new_run_id, json.dumps(cp), item.id))
+                else:
+                    conn.execute("UPDATE work_items SET run_id=?, checkpoints=? WHERE id=?", (new_run_id, json.dumps(cp), item.id))
+            conn.commit()
+
     def record_evidence(self, item_id: str, ref: str) -> None:
         with self._lock, self.get_connection() as conn:
             conn.execute("UPDATE work_items SET evidence_refs=? WHERE id=?",
