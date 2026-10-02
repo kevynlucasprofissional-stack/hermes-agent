@@ -36,7 +36,6 @@ class LayaDecisionProvider:
         auto_preload: bool = False,
         calibration_policy: Optional[CalibrationPolicy] = None,
         artifact_store: Optional[ArtifactStore] = None,
-        strict_provenance: bool = True,
     ):
         self.model = model
         self.device = device or "cpu"
@@ -47,7 +46,7 @@ class LayaDecisionProvider:
         self._router_lock = threading.Lock()
 
         # Enforce provenance on initialization
-        self.provenance = verify_laya_provenance(strict=strict_provenance)
+        self.provenance = verify_laya_provenance()
 
         if auto_preload:
             self._ensure_router()

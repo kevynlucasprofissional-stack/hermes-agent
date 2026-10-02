@@ -324,6 +324,7 @@ vertex = ["google-auth==2.55.1"]
 azure-identity = ["azure-identity==1.25.3"]
 # Workstation / System-1 Laya decision engine (optional extra)
 system1-laya = [
+  "laya==0.3.23",
   "torch==2.14.1",
   "transformers==5.18.0",
   "safetensors==0.8.0",
@@ -712,3 +713,6 @@ select = ["PLW1514", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC251"]
 # Legacy blocking spawn sites in platform adapters, pending their own fixes.
 "plugins/platforms/whatsapp/adapter.py" = ["ASYNC220", "ASYNC221"]
 "plugins/platforms/photon/adapter.py" = ["ASYNC220"]
+
+[tool.uv.sources]
+laya = { path = "workstation/third_party/laya", editable = false }

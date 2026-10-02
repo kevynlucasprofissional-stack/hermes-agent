@@ -90,7 +90,7 @@ def install_workstation_adapter(agent: Optional[Any] = None) -> None:
         from agent.system1_decision import register_system1_decision_provider
         from workstation.system1.laya_provider import LayaDecisionProvider
         try:
-            _laya_provider = LayaDecisionProvider(strict_provenance=False)
+            _laya_provider = LayaDecisionProvider()
             register_system1_decision_provider(_laya_provider)
         except Exception as _sys1_err:
             logger.warning("Could not register LayaDecisionProvider: %s", _sys1_err)

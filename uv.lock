@@ -1995,6 +1995,7 @@ supermemory = [
 ]
 system1-laya = [
     { name = "huggingface-hub" },
+    { name = "laya" },
     { name = "safetensors" },
     { name = "torch" },
     { name = "transformers" },
@@ -2067,6 +2068,7 @@ wecom = [
 ]
 workstation-laya = [
     { name = "huggingface-hub" },
+    { name = "laya" },
     { name = "safetensors" },
     { name = "torch" },
     { name = "transformers" },
@@ -2155,6 +2157,7 @@ requires-dist = [
     { name = "huggingface-hub", marker = "extra == 'system1-laya'", specifier = "==1.33.0" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "lark-oapi", marker = "extra == 'feishu'", specifier = "==1.6.8" },
+    { name = "laya", marker = "extra == 'system1-laya'", directory = "workstation/third_party/laya" },
     { name = "markdown", specifier = "==3.10.2" },
     { name = "mautrix", extras = ["encryption"], marker = "extra == 'matrix'", specifier = "==0.21.1" },
     { name = "mcp", marker = "extra == 'computer-use'", specifier = "==2.0.0" },
@@ -2604,6 +2607,43 @@ dependencies = [
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/ad/1ab04db5d549ad1a7a2cd33682b1c38dee1d65019cb24fd7a23270e6337d/lark_oapi-1.6.8-py3-none-any.whl", hash = "sha256:9b443a5d47a7d204dd42dc40896c8b75087cc35788e45c48c140806d7df7e5e8", size = 7798300, upload-time = "2026-06-02T07:40:05.492Z" },
 ]
+
+[[package]]
+name = "laya"
+version = "0.3.23"
+source = { directory = "workstation/third_party/laya" }
+dependencies = [
+    { name = "huggingface-hub" },
+    { name = "numpy" },
+    { name = "safetensors" },
+    { name = "torch" },
+    { name = "transformers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crewai", marker = "extra == 'crewai'", specifier = ">=0.28.0" },
+    { name = "fastapi", marker = "extra == 'serve'", specifier = ">=0.110.0" },
+    { name = "huggingface-hub", specifier = ">=0.20.0" },
+    { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=0.2.0" },
+    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.2.0" },
+    { name = "langgraph", marker = "extra == 'langchain'", specifier = ">=0.1.0" },
+    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.1.0" },
+    { name = "llama-index-core", marker = "extra == 'llamaindex'", specifier = ">=0.10.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2.0" },
+    { name = "numpy", specifier = ">=1.20.0" },
+    { name = "onnx", marker = "extra == 'onnx'" },
+    { name = "onnxruntime", marker = "extra == 'onnx'" },
+    { name = "onnxscript", marker = "extra == 'onnx'" },
+    { name = "pydantic", marker = "extra == 'structured'", specifier = ">=2.0.0" },
+    { name = "python-multipart", marker = "extra == 'serve'", specifier = ">=0.0.9" },
+    { name = "safetensors", specifier = ">=0.4.0" },
+    { name = "tilelang", marker = "extra == 'fast'", specifier = ">=0.1.14" },
+    { name = "torch", specifier = ">=2.0.0" },
+    { name = "transformers", specifier = ">=4.48.0" },
+    { name = "uvicorn", marker = "extra == 'serve'", specifier = ">=0.27.0" },
+]
+provides-extras = ["serve", "fast", "mcp", "structured", "onnx", "langchain", "langgraph", "llamaindex", "crewai"]
 
 [[package]]
 name = "markdown"

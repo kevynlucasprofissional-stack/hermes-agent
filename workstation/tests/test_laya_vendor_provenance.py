@@ -24,7 +24,7 @@ def test_laya_vendor_provenance_success():
     prov = get_laya_provenance()
     assert prov.provider == "laya"
     assert prov.is_vendored is True
-    assert "workstation/third_party/laya" in prov.source_path.replace("\\", "/")
+    assert prov.source_bytes_verified
     assert prov.laya_version == "0.3.23"
     assert prov.lock_sha == "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c"
 
@@ -67,3 +67,27 @@ def test_laya_vendor_provenance_rejects_version_mismatch():
 
         with pytest.raises(RuntimeError, match="Version mismatch"):
             verify_laya_provenance(strict=True)
+
+
+def test_external_module_injection_is_rejected(monkeypatch, tmp_path):
+    from types import ModuleType
+    rogue = ModuleType("laya")
+    rogue.__file__ = str(tmp_path / "laya" / "__init__.py")
+    rogue.__version__ = "0.3.23"
+    monkeypatch.setitem(sys.modules, "laya", rogue)
+    with pytest.raises(RuntimeError, match="provenance violation"):
+        verify_laya_provenance()
+
+
+def test_changed_imported_bytes_are_rejected(monkeypatch, tmp_path):
+    import shutil
+    from types import ModuleType
+    from workstation.system1.provenance import EXPECTED_SUBTREE_DIR
+    shutil.copytree(EXPECTED_SUBTREE_DIR / "laya", tmp_path / "laya")
+    (tmp_path / "laya" / "router.py").write_text("# changed runtime")
+    module = ModuleType("laya")
+    module.__file__ = str(tmp_path / "laya" / "__init__.py")
+    module.__version__ = "0.3.23"
+    monkeypatch.setitem(sys.modules, "laya", module)
+    with pytest.raises(RuntimeError, match="provenance violation"):
+        verify_laya_provenance()
