@@ -101,7 +101,7 @@ jobs:
       - name: Prepare Workstation validation dependencies
         shell: pwsh
         run: |
-          & .venv\Scripts\python.exe -m pip install -e ".[dev]"
+          & .venv\Scripts\python.exe -m pip install -e ".[dev,anthropic]"
           if ($LASTEXITCODE -ne 0) {
             throw "Could not install the Workstation validation dependencies."
           }
@@ -138,7 +138,7 @@ jobs:
           & .venv\Scripts\python.exe -m workstation.release_qualification `
             --root . `
             --python .venv\Scripts\python.exe `
-            --timeout 900 `
+            --timeout 1800 `
             --clean-install-evidence "${{ steps.clean_machine_evidence.outputs.path }}" `
             --report "$env:RUNNER_TEMP\hermes-release-qualification.json"
           if ($LASTEXITCODE -ne 0) {

@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import {
   BROWSER_TASK_STATE_VERSION,
+  type BrowserOwnerReceipt,
   type BrowserTaskPersistence,
   type BrowserTaskSnapshot,
   normalizeBrowserTaskSnapshot
@@ -57,6 +58,7 @@ export interface BrowserSessionStateSnapshot {
   activeTabId: string | null
   tabs: BrowserSessionTab[]
   browserTasks: BrowserTaskSnapshot
+  receipts?: Record<string, BrowserOwnerReceipt>
 }
 
 type BrowserSessionStateFileSystem = Pick<
@@ -394,12 +396,29 @@ export function normalizeBrowserSessionState(value: unknown): BrowserSessionStat
     requestedActiveTabId = rawActiveTabId.trim()
   }
 
+  const receipts: Record<string, BrowserOwnerReceipt> = {}
+  const rawObj = raw as { receipts?: unknown }
+
+  if (rawObj.receipts && typeof rawObj.receipts === 'object') {
+    for (const [key, val] of Object.entries(rawObj.receipts as Record<string, unknown>)) {
+      if (
+        val &&
+        typeof val === 'object' &&
+        typeof (val as BrowserOwnerReceipt).operationId === 'string' &&
+        typeof (val as BrowserOwnerReceipt).taskId === 'string'
+      ) {
+        receipts[key] = val as BrowserOwnerReceipt
+      }
+    }
+  }
+
   return {
     version: BROWSER_SESSION_STATE_VERSION,
     savedAt: raw.savedAt,
     activeTabId: requestedActiveTabId && tabIds.has(requestedActiveTabId) ? requestedActiveTabId : null,
     tabs,
-    browserTasks
+    browserTasks,
+    receipts: Object.keys(receipts).length > 0 ? receipts : undefined
   }
 }
 
@@ -410,7 +429,8 @@ function cloneSnapshot(snapshot: BrowserSessionStateSnapshot): BrowserSessionSta
     browserTasks: {
       ...snapshot.browserTasks,
       tasks: snapshot.browserTasks.tasks.map(task => ({ ...task }))
-    }
+    },
+    receipts: snapshot.receipts ? { ...snapshot.receipts } : undefined
   }
 }
 
@@ -478,14 +498,23 @@ export class BrowserSessionStateFilePersistence {
     return cloneSnapshot(this.cached)
   }
 
-  saveSession(tabs: BrowserSessionTab[], activeTabId: string | null): BrowserSessionStateSnapshot {
+  saveSession(
+    tabs: BrowserSessionTab[],
+    activeTabId: string | null,
+    receipts?: Record<string, BrowserOwnerReceipt>
+  ): BrowserSessionStateSnapshot {
     const current = this.currentOrEmpty()
+    const mergedReceipts = {
+      ...(current.receipts ?? {}),
+      ...(receipts ?? {})
+    }
 
     return this.save({
       ...current,
       savedAt: this.now().toISOString(),
       activeTabId,
-      tabs
+      tabs,
+      receipts: Object.keys(mergedReceipts).length > 0 ? mergedReceipts : undefined
     })
   }
 

@@ -27,6 +27,33 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def outstanding_dispatch_checkpoints(checkpoints: Dict[str, Any]) -> List[str]:
+    """Steps of one work item that crossed a mutable I/O boundary without a proved result.
+
+    This is the durable definition of "an effect may exist and nobody has proved
+    what happened": a ``<step>_dispatch`` checkpoint carrying a mutation identity
+    whose ``<step>_meta`` never received a ``result_ref``. The resume guard, the
+    reasoning handoff's ``safe_to_resume``, the operational ledger and the
+    pre-reasoning boundary all need that same answer, so it is computed once,
+    here, from the only source of truth (the canonical DB).
+
+    Read checkpoints never match: a mutation identity is only recorded for
+    write effects.
+    """
+    outstanding = []
+    for key in checkpoints:
+        if not key.endswith("_dispatch"):
+            continue
+        dispatch_meta = checkpoints.get(key + "_meta") or {}
+        if not isinstance(dispatch_meta, dict) or not dispatch_meta.get("mutation_identity"):
+            continue
+        step_meta = checkpoints.get(key[: -len("_dispatch")] + "_meta") or {}
+        if isinstance(step_meta, dict) and step_meta.get("result_ref"):
+            continue
+        outstanding.append(key[: -len("_dispatch")])
+    return outstanding
+
+
 class AtomicPersistenceViolation(RuntimeError):
     """Raised when an operation attempts to complete without verified persistence and validation."""
 
@@ -585,9 +612,8 @@ class DurableTaskStore:
             cp = json.loads(row[1] or '{}')
             if json.loads(row[2] or '{}').get('reason') != 'unexpected_state':
                 return
-            for key in cp:
-                if key.endswith('_dispatch') and cp.get(key + '_meta', {}).get('mutation_identity') and not cp.get(key.removesuffix('_dispatch') + '_meta', {}).get('result_ref'):
-                    raise ValueError('uncertain_mutation_requires_review')
+            if outstanding_dispatch_checkpoints(cp):
+                raise ValueError('uncertain_mutation_requires_review')
             for key in ('persist', 'normalize', 'validate'):
                 cp.pop(key, None)
             conn.execute("UPDATE work_items SET status = ?, raw_output_ref = NULL, normalized_output_ref = NULL, validation_result = '{}', checkpoints = ? WHERE id = ?",
@@ -879,6 +905,20 @@ class DurableTaskStore:
             conn.execute("UPDATE work_items SET evidence_refs=? WHERE id=?",
                          (json.dumps([{"artifact_ref": ref}]), item_id))
 
+    def outstanding_uncertain_mutations(self, plan_id: str) -> List[Dict[str, Any]]:
+        """Mutations of a plan that were dispatched and never proved or resolved.
+
+        The caller decides what uncertainty means (reconcile, hand off, refuse);
+        this only reports it from the canonical DB, with the identity a
+        reconciliation needs to look the effect up.
+        """
+        outstanding = []
+        for item in self.get_work_items(plan_id):
+            for step in outstanding_dispatch_checkpoints(item.checkpoints):
+                identity = dict((item.checkpoints.get(step + "_dispatch_meta") or {}).get("mutation_identity") or {})
+                outstanding.append({**identity, "item_id": item.id, "step": step, "status": "uncertain"})
+        return outstanding
+
     def mutation_records(self, task_id: str) -> List[Dict[str, Any]]:
         records = []
         for item in self.get_work_items(task_id):
@@ -941,7 +981,6 @@ class DurableTaskStore:
             ledger["canary"] = {"required": False, "verified": ready,
                                 "status": "recipe_preflight_verified" if ready else "pending_preflight"}
         if graph:
-            from tools.effects import READ_EFFECTS, tool_effect
             refs = sorted({i.normalized_output_ref for i in items if i.normalized_output_ref} | {
                 meta["result_ref"] for i in items for key, meta in i.checkpoints.items()
                 if key.endswith("_meta") and isinstance(meta, dict) and meta.get("result_ref")})
@@ -951,9 +990,8 @@ class DurableTaskStore:
                 done = sum(i.status == WorkItemStatus.COMPLETED for i in group)
                 failed = sum(i.status == WorkItemStatus.FAILED for i in group)
                 review = sum(i in exceptions for i in group)
-                uncertain = sum(i.validation_result.get("reason") == "uncertain_mutation_requires_review" or
-                    any(k.endswith("_dispatch") and not i.checkpoints.get(k.removesuffix("_dispatch") + "_meta", {}).get("result_ref")
-                        and tool_effect(graph[phase][int(k.split("_")[1])]["tool"]) not in READ_EFFECTS for k in i.checkpoints)
+                uncertain = sum(i.validation_result.get("reason") == "uncertain_mutation_requires_review"
+                    or bool(outstanding_dispatch_checkpoints(i.checkpoints))
                     for i in group if i.status != WorkItemStatus.COMPLETED)
                 if phase == "fan_out":
                     ledger["items"] = {"completed": done, "total": len(group), "pending": len(group)-done-review,

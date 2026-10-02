@@ -72,16 +72,19 @@ test('truncation really frees the file, and an append-mode writer restarts at 0'
     const handle = fs.openSync(file, 'a')
 
     try {
-      fs.ftruncateSync(handle, LOG_MAX_BYTES + 1) // Grow without writing GBs.
+      fs.writeSync(handle, 'old log data')
 
       assert.equal(
         reclaimActiveLogIfOversized(file, {
-          size: f => fs.statSync(f).size,
+          // The planner sees an oversized active log; the physical fixture
+          // stays small so Windows can truncate a file with an open writer.
+          size: f => (fs.statSync(f).size > 0 ? LOG_MAX_BYTES + 1 : 0),
           truncate: f => fs.truncateSync(f, 0)
         }),
         true
       )
 
+      assert.equal(fs.statSync(file).size, 0)
       fs.writeSync(handle, 'FATAL:after\n')
       assert.equal(fs.readFileSync(file, 'utf8'), 'FATAL:after\n')
     } finally {

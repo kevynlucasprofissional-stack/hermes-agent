@@ -576,11 +576,11 @@ export async function setupPackagedApp(): Promise<PackagedAppFixture> {
     HERMES_DESKTOP_E2E_HEADLESS: '1',
   })
 
-  // Clear dev-server + hermes-root overrides — the packaged binary
-  // should use its own bundled renderer, not the dev checkout.
+  // Clear dev-server overrides — the packaged binary should use its own
+  // bundled renderer, not the dev checkout. HERMES_DESKTOP_HERMES_ROOT is
+  // retained so the packaged app can resolve the local Python backend.
   delete (env as Record<string, string | undefined>).HERMES_DESKTOP_DEV_SERVER
   delete (env as Record<string, string | undefined>).HERMES_DESKTOP_HERMES
-  delete (env as Record<string, string | undefined>).HERMES_DESKTOP_HERMES_ROOT
 
   const app = await _electron.launch({
     executablePath: PACKAGED_BINARY_PATH,

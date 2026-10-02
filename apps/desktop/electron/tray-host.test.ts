@@ -7,6 +7,8 @@ vi.mock('dbus-native', () => ({ createClient }))
 
 import { watchLinuxTrayHost } from './tray-host'
 
+const linuxTest = test.skipIf(process.platform !== 'linux')
+
 function bus(hostRegistered: boolean) {
   const connection = Object.assign(new EventEmitter(), { stream: { destroy: vi.fn() } })
   const invoke = vi.fn(async () => ({ signature: 'b', value: hostRegistered }))
@@ -22,7 +24,7 @@ function bus(hostRegistered: boolean) {
   return instance
 }
 
-test('a registered host is required, and losing its owner reports loss exactly once', async () => {
+linuxTest('a registered host is required, and losing its owner reports loss exactly once', async () => {
   const instance = bus(true)
   const lost = vi.fn()
   const dispose = await watchLinuxTrayHost(lost)
@@ -40,7 +42,7 @@ test('a registered host is required, and losing its owner reports loss exactly o
   dispose()
 })
 
-test('a missing host and a failed query reject without leaving an open bus connection', async () => {
+linuxTest('a missing host and a failed query reject without leaving an open bus connection', async () => {
   const lost = vi.fn()
   const absent = bus(false)
   await expect(watchLinuxTrayHost(lost)).rejects.toThrow('No system tray host')

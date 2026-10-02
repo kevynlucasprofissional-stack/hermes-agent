@@ -326,9 +326,13 @@ def _notify_aux_progress() -> None:
     _tick_hook(_aux_progress, "progress")
 
 
-def _notify_aux_dispatch() -> None:
+def _notify_aux_dispatch(purpose: str | None = None) -> None:
     """Record an actual provider dispatch without claiming response progress."""
     _tick_hook(_aux_dispatch, "dispatch")
+    from agent.runtime_events import notify_runtime_event
+    notify_runtime_event("provider_called", {
+        "purpose": str(purpose or "other_aux"), "status": "dispatched", "auxiliary": True,
+    })
 
 
 def _notify_aux_timing_response() -> None:
@@ -603,7 +607,7 @@ _CODEX_SPARK_COMPACTION_THRESHOLD = 0.70
 
 
 def _is_codex_gpt54_or_gpt55(model: Optional[str], provider: Optional[str] = None) -> bool:
-    """True for gpt-5.4/5.5/5.6, gpt-6 Astra (and the Daybreak Sol alias) on the Codex OAuth route only.
+    """True for gpt-5.4/5.5/5.6, gpt-6 Sol/Terra/Luna, gpt-6 Astra (and the Daybreak Sol alias) on the Codex OAuth route only.
 
     Other routes expose a larger window for the same slug and keep the user's threshold.
     Prefix-matched so ``-pro`` and dated snapshots track every 272K-capped family; ``-900k``
@@ -620,7 +624,7 @@ def _is_codex_gpt54_or_gpt55(model: Optional[str], provider: Optional[str] = Non
         return "900k" not in bare
     return bare == "gpt-daybreak-blue-latest" or any(
         bare == fam or bare.startswith(fam + "-") or bare.startswith(fam + ".")
-        for fam in ("gpt-5.4", "gpt-5.5", "gpt-5.6"))
+        for fam in ("gpt-5.4", "gpt-5.5", "gpt-5.6", "gpt-6-sol", "gpt-6-terra", "gpt-6-luna"))
 
 
 def _codex_route_bare_model(model: Optional[str], provider: Optional[str]) -> Optional[str]:
@@ -6912,7 +6916,7 @@ def _create_with_progress_once(
     error is surfaced to the normal recovery chains instead.
     """
     kwargs = bypass_chat_sdk_request_transform(kwargs, client)
-    _notify_aux_dispatch()
+    _notify_aux_dispatch(task)
     # Dispatch alone is not forward progress: a 401/retry/fallback dispatch must not
     # reset the compression inactivity fence, or a zero-output attempt runs to the
     # total ceiling instead of idling out (#114938). Progress ticks only for
@@ -6935,7 +6939,7 @@ def _create_with_progress_once(
         # request reproduces the real error for the except-chains.
         logger.debug("Auxiliary %s: streamed request failed (%s); retrying non-streaming",
                      task or "call", exc)
-        _notify_aux_dispatch()
+        _notify_aux_dispatch(task)
         response = client.chat.completions.create(**kwargs)
         _notify_aux_provider_response()
         return response
@@ -7141,7 +7145,7 @@ async def _acreate_with_progress(
     """Async :func:`_create_with_progress`: stream + re-aggregate (ticking the hook per substantive
     chunk) when a progress hook is active or the provider is stream-only; plain create otherwise."""
     kwargs = bypass_chat_sdk_request_transform(kwargs, client)
-    _notify_aux_dispatch()
+    _notify_aux_dispatch(task)
     # Same contract as the sync twin (#114938): dispatch alone is not progress.
     if (not _aux_progress_active() and not force_stream) or _async_client_streams_internally(client):
         response = await client.chat.completions.create(**kwargs)
@@ -7160,7 +7164,7 @@ async def _acreate_with_progress(
             raise
         logger.debug("Auxiliary %s: streamed async request failed (%s); retrying non-streaming",
                      task or "call", exc)
-        _notify_aux_dispatch()
+        _notify_aux_dispatch(task)
         response = await client.chat.completions.create(**kwargs)
         _notify_aux_provider_response()
         return response

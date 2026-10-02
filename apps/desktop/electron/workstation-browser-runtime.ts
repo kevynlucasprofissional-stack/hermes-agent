@@ -46,6 +46,7 @@ import {
 } from './workstation-browser-session-state'
 import {
   type BrowserHumanControlLease,
+  type BrowserOwnerReceipt,
   type BrowserTask,
   BrowserTaskLifecycle,
   type BrowserTaskSeed
@@ -367,6 +368,8 @@ interface BrowserControlRequest {
   kanban_card_id?: unknown
   card_id?: unknown
   run_id?: unknown
+  operation_id?: unknown
+  call_key?: unknown
 }
 
 interface PageInventory {
@@ -1114,6 +1117,7 @@ export class WorkstationBrowserRuntime {
   private pendingSessionTabs = new Map<string, BrowserSessionTab>()
   private restoredTabOrder: string[] = []
   private restoredLogicalActiveTabId: string | null = null
+  private readonly lastReceipts = new Map<string, BrowserOwnerReceipt>()
 
   constructor(browserSessionState: BrowserSessionStateFilePersistence | null = null) {
     this.browserSessionState = browserSessionState
@@ -2132,6 +2136,8 @@ export class WorkstationBrowserRuntime {
     const sessionHost = controllerSessionIdentity(request.session_id)
     const kanbanCardId = controllerBoundedIdentity(request.kanban_card_id ?? request.card_id, 'kanban card identity')
     const runId = controllerBoundedIdentity(request.run_id, 'run identity')
+    const operationId = controllerBoundedIdentity(request.operation_id, 'operation identity')
+    const callKey = typeof request.call_key === 'string' && request.call_key.trim() ? request.call_key.trim() : null
 
     if (!action.startsWith('browser_')) {
       throw workstationControllerFault('INVALID_ARGUMENT', 'unsupported_action')
@@ -2199,7 +2205,35 @@ export class WorkstationBrowserRuntime {
         // Notification is best-effort.
       }
 
-      return this.snapshotForEntry(entry, false)
+      let receipt: BrowserOwnerReceipt | undefined
+      if (entry) {
+        const opId = operationId ?? `op_${action}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+        const rawReceipt: BrowserOwnerReceipt = {
+          operationId: opId,
+          taskId,
+          runId: runId ?? '',
+          browserTaskId: taskId,
+          tabId: entry.id,
+          revision: 0,
+          action,
+          safeUrl: entry.safeUrl,
+          executedAt: new Date().toISOString()
+        }
+        const updatedTask = this.taskLifecycle().recordReceipt(taskId, rawReceipt)
+        receipt = updatedTask.lastReceipt
+        if (receipt) {
+          this.lastReceipts.set(taskId, receipt)
+        }
+        this.persistBrowserSessionState()
+      }
+
+      const snap = await this.snapshotForEntry(entry, false)
+      return {
+        ...snap,
+        ...(operationId ? { operation_id: operationId } : {}),
+        ...(callKey ? { call_key: callKey } : {}),
+        ...(receipt ? { receipt } : {})
+      }
     }
 
     let entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
@@ -3779,7 +3813,7 @@ export class WorkstationBrowserRuntime {
         logicalActiveTabId ??
         (this.activeTabId && tabs.some(tab => tab.id === this.activeTabId) ? this.activeTabId : null)
 
-      this.browserSessionState.saveSession(tabs, activeTabId)
+      this.browserSessionState.saveSession(tabs, activeTabId, Object.fromEntries(this.lastReceipts))
     } catch (error) {
       this.lastError = `BrowserSessionState persistence failed: ${error instanceof Error ? error.message : String(error)}`
     }

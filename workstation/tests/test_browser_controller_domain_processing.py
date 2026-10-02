@@ -12,7 +12,7 @@ def test_extract_items_processing_stays_at_workstation_controller(monkeypatch):
         return '{"artifact_ref":"artifact://items"}'
 
     monkeypatch.setattr(
-        "workstation.integrations.hermes.browser_controller._process_extracted_items_durably",
+        "workstation.integrations.hermes.browser_controller.process_extracted_items_durably",
         process,
     )
     controller = object.__new__(WorkstationBrowserController)

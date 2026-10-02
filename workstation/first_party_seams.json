@@ -60,6 +60,26 @@
             "unrelated live exchange preserved"
           ],
           "sunset_condition": "remove direct seam after shadow projection parity"
+        },
+        {
+          "id": "SEAM-OPERATIONAL-RESOLUTION",
+          "symbol_or_concern": "pre-reasoning operational resolution boundary",
+          "semantic_owner": "generic operational-resolution lifecycle -> workstation/integrations/hermes operational provider",
+          "current_behavior": "Calls registered operational resolution providers after preflight and before provider call; terminal outcomes (SATISFIED/EXECUTED/WAIT/HANDOFF) close the turn without spending a reasoning round.",
+          "required_ordering": "After trusted turn/preflight admission and immediately before provider call.",
+          "disposition": "UPSTREAM_ABSTRACT",
+          "replacement": "generic operational_resolution provider registry + Workstation first-party provider",
+          "parity_tests": [
+            "already satisfied goal bypasses LLM",
+            "promoted capability EXECUTE with exact-once dispatch and VERIFIED verification",
+            "no match/insufficient intent reaches provider",
+            "raw text cannot synthesize executable intent",
+            "invalid/quarantined capability fails safe",
+            "uncertain mutation fails safe",
+            "verifier failure fails safe",
+            "canonical finalization preserved"
+          ],
+          "sunset_condition": "generic boundary call site removed after Workstation provider proves timing parity"
         }
       ],
       "current_direct_imports": 0
@@ -604,6 +624,25 @@
           "sunset_condition": "remove Workstation-specific preview routing after UI parity"
         }
       ]
+    },
+    {
+      "id": "FPS-RUNTIME-TELEMETRY-001",
+      "path": "agent/runtime_events.py; agent/turn_api_call.py; agent/auxiliary_client.py",
+      "disposition": "UPSTREAM_ABSTRACT",
+      "target": "generic content-free runtime event observer boundary",
+      "rationale": "Provider dispatch is owned by generic Hermes while Workstation locally projects structural telemetry; a generic observer preserves ownership and keeps Workstation imports out of core.",
+      "concerns": [{
+        "id": "SEAM-RUNTIME-TELEMETRY",
+        "symbol_or_concern": "provider_called structural observation",
+        "semantic_owner": "generic runtime observer registry -> workstation/integrations/hermes/telemetry",
+        "current_behavior": "Reports one content-free event per real main or auxiliary provider dispatch without requests, messages, prompts, or responses.",
+        "required_ordering": "At provider dispatch completion/error for main calls and at actual auxiliary dispatch.",
+        "disposition": "UPSTREAM_ABSTRACT",
+        "replacement": "generic runtime_events observer registry",
+        "parity_tests": ["no Workstation import in agent runtime", "provider observation is fail-open", "main and auxiliary provider calls remain distinguishable"],
+        "sunset_condition": "Upstream adopts an equivalent content-free runtime observation boundary"
+      }],
+      "current_direct_imports": 0
     }
   ],
   "operating_policy": {

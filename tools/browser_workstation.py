@@ -23,6 +23,8 @@ import socket
 import sys
 import threading
 import time
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 from urllib.error import HTTPError, URLError
@@ -221,6 +223,101 @@ def workstation_browser_task_state_path() -> Path:
     if override:
         return Path(override).expanduser().resolve()
     return _workstation_home() / "Runtime" / "browser-tasks.json"
+
+
+def read_native_browser_session_state(
+    task_id: str,
+    session_id: str,
+    run_id: str,
+    expected_url: str,
+    *,
+    expected_operation_id: Optional[str] = None,
+    require_owner_receipt: bool = False,
+) -> dict:
+    """Read Electron's persisted, safe BrowserTask projection after a navigation."""
+    path = _workstation_home() / "Runtime" / "browser-session.json"
+    raw_bytes = path.read_bytes()
+    if len(raw_bytes) > 1_000_000:
+        raise ValueError("BrowserSessionState exceeds readback budget")
+    state = json.loads(raw_bytes)
+    if not isinstance(state, dict) or state.get("version") != 1:
+        raise ValueError("BrowserSessionState version is not admissible")
+    tasks = state.get("browserTasks")
+    if not isinstance(tasks, dict) or tasks.get("version") != 1 or not isinstance(tasks.get("tasks"), list):
+        raise ValueError("BrowserTask projection is invalid")
+    matches = [task for task in tasks["tasks"] if isinstance(task, dict) and task.get("taskId") == task_id]
+    if len(matches) != 1:
+        raise ValueError("BrowserTask identity is missing or ambiguous")
+    task = matches[0]
+    if not run_id or not task.get("runId") or str(task["runId"]) != str(run_id) or task.get("sessionHost") != session_id:
+        raise ValueError("BrowserTask session or run binding drifted or run_id is missing")
+    last_receipt = task.get("lastReceipt")
+    if last_receipt:
+        if not isinstance(last_receipt, dict) or str(last_receipt.get("runId", "")) != str(run_id):
+            raise ValueError(f"BrowserTask receipt runId mismatch: run binding drifted, expected {run_id}, got {last_receipt.get('runId') if isinstance(last_receipt, dict) else last_receipt}")
+    if require_owner_receipt:
+        if not last_receipt or not isinstance(last_receipt, dict):
+            raise ValueError("BrowserTask owner receipt is missing or invalid")
+        if expected_operation_id is not None and str(last_receipt.get("operationId") or "") != str(expected_operation_id):
+            raise ValueError(f"BrowserTask receipt operationId mismatch: expected {expected_operation_id}, got {last_receipt.get('operationId')}")
+        if str(last_receipt.get("taskId") or "") != str(task_id):
+            raise ValueError(f"BrowserTask receipt taskId mismatch: expected {task_id}, got {last_receipt.get('taskId')}")
+        if str(last_receipt.get("runId") or "") != str(run_id):
+            raise ValueError(f"BrowserTask receipt runId mismatch: expected {run_id}, got {last_receipt.get('runId')}")
+        if str(last_receipt.get("browserTaskId") or "") != str(task.get("taskId", task_id)):
+            raise ValueError(f"BrowserTask receipt browserTaskId mismatch: expected {task.get('taskId', task_id)}, got {last_receipt.get('browserTaskId')}")
+        task_rev = task.get("revision")
+        receipt_rev = last_receipt.get("revision")
+        if not isinstance(task_rev, int) or not isinstance(receipt_rev, int) or receipt_rev != task_rev:
+            raise ValueError(f"BrowserTask receipt revision mismatch or invalid: receipt={receipt_rev}, task={task_rev}")
+        if str(last_receipt.get("action") or "") != "browser_navigate":
+            raise ValueError(f"BrowserTask receipt action mismatch: expected browser_navigate, got {last_receipt.get('action')}")
+    if task.get("status") not in {"visible", "hidden", "parked"}:
+        raise ValueError("BrowserTask status is invalid")
+    tabs = state.get("tabs")
+    if not isinstance(tabs, list):
+        raise ValueError("BrowserSessionState tabs are invalid")
+    owned = [tab for tab in tabs if isinstance(tab, dict) and tab.get("browserTaskId") == task_id]
+    if len(owned) != 1:
+        raise ValueError("BrowserTask tab identity is missing or ambiguous")
+    tab = owned[0]
+    if require_owner_receipt:
+        if str(last_receipt.get("tabId") or "") != str(tab.get("id") or ""):
+            raise ValueError(f"BrowserTask receipt tabId mismatch: expected {tab.get('id')}, got {last_receipt.get('tabId')}")
+    actual = urlsplit(str(tab.get("safeUrl") or ""))
+    expected = urlsplit(expected_url)
+    if (actual.scheme not in {"http", "https"} or actual.username or actual.password
+            or actual.query or actual.fragment or not actual.hostname
+            or (actual.scheme, actual.hostname, actual.path or "/")
+            != (expected.scheme, expected.hostname, expected.path or "/")):
+        raise ValueError("BrowserTask safe URL does not match the navigation goal")
+    if require_owner_receipt:
+        receipt_url = urlsplit(str(last_receipt.get("safeUrl") or ""))
+        if (receipt_url.scheme, receipt_url.hostname, receipt_url.path or "/") != (expected.scheme, expected.hostname, expected.path or "/") or (receipt_url.scheme, receipt_url.hostname, receipt_url.path or "/") != (actual.scheme, actual.hostname, actual.path or "/"):
+            raise ValueError(f"BrowserTask receipt safeUrl does not match target URL: receipt={last_receipt.get('safeUrl')}, expected={expected_url}")
+        if last_receipt.get("executedAt") and state.get("savedAt"):
+            try:
+                exec_at = datetime.fromisoformat(str(last_receipt["executedAt"]).replace("Z", "+00:00"))
+                saved_at = datetime.fromisoformat(str(state["savedAt"]).replace("Z", "+00:00"))
+                if (exec_at - saved_at).total_seconds() > 2.0:
+                    raise ValueError("BrowserTask receipt executedAt is temporally after savedAt")
+            except (ValueError, TypeError) as err:
+                if isinstance(err, ValueError) and "temporally after savedAt" in str(err):
+                    raise
+    if tab.get("recoveryState") != "live" or tab.get("recoveryReason") is not None:
+        raise ValueError("BrowserTask tab is not live")
+    if not isinstance(state.get("savedAt"), str) or not state["savedAt"]:
+        raise ValueError("BrowserSessionState has no persistence timestamp")
+    return {
+        "task_id": task_id, "session_id": session_id, "run_id": str(run_id),
+        "browser_task_id": task_id, "tab_id": tab.get("id"),
+        "url": tab["safeUrl"], "host": actual.hostname,
+        "page_family": actual.path or "/", "recovery_state": tab["recoveryState"],
+        "browser_task_status": task["status"], "saved_at": state["savedAt"],
+        "revision": task.get("revision", 0),
+        "last_receipt": task.get("lastReceipt"),
+        "operation_id": last_receipt.get("operationId") if last_receipt else None,
+    }
 
 
 def _canonical_browser_task_binding(task_id: Optional[str], session_id: Optional[str]) -> str:
@@ -623,6 +720,7 @@ def _dispatch(
     session_id: Optional[str] = None,
     kanban_card_id: Optional[str] = None,
     run_id: Optional[str] = None,
+    operation_id: Optional[str] = None,
 ) -> str:
     if action == "browser_navigate":
         _validate_navigation(args)
@@ -641,6 +739,44 @@ def _dispatch(
         pass
     card_id = (kanban_card_id or session_card_id or os.environ.get("HERMES_KANBAN_TASK") or "").strip() or None
     rid = (run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
+
+    if not card_id and task_id:
+        card_id = str(task_id).strip() or None
+
+    if not card_id and session_id:
+        try:
+            from hermes_cli import kanban_db
+            from hermes_cli.kanban_db_connect import connect
+            conn = connect()
+            try:
+                tasks = kanban_db.list_tasks(conn, status=None)
+                active = [t for t in tasks if t.session_id == session_id and t.status not in {'done', 'cancelled'}]
+                if len(active) == 1:
+                    card_id = active[0].id
+                    if not rid and active[0].current_run_id:
+                        rid = str(active[0].current_run_id)
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+    if card_id and not rid:
+        try:
+            from hermes_cli import kanban_db
+            from hermes_cli.kanban_db_connect import connect
+            conn = connect()
+            try:
+                ktask = kanban_db.get_task(conn, card_id)
+                if ktask and ktask.current_run_id:
+                    rid = str(ktask.current_run_id)
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+    if card_id and not task_id:
+        key = card_id
+
     if card_id and rid:
         from hermes_cli import kanban_db
         from hermes_cli.kanban_db_connect import connect
@@ -654,18 +790,23 @@ def _dispatch(
                     recommended_action='RECONCILE_BINDING')
         finally:
             conn.close()
+
+    clean_args = dict(args)
+    op_id = operation_id or clean_args.pop("operation_id", None) or os.environ.get("HERMES_OPERATION_ID") or f"op_{action}_{uuid.uuid4().hex[:12]}"
+    args.pop("operation_id", None)
+    from workstation.batch_detection import call_key
     payload: Dict[str, Any] = {
         "action": action,
-        "arguments": dict(args),
+        "arguments": clean_args,
         "task_id": key,
         "session_id": session_id,
+        "operation_id": op_id,
+        "call_key": call_key(action, clean_args),
     }
     if card_id:
         payload["kanban_card_id"] = card_id
     if rid:
         payload["run_id"] = rid
-    from workstation.batch_detection import call_key
-    payload['operation_id'] = call_key(action, args)
     response = _request_json(
         "POST",
         "/v1/action",
@@ -702,6 +843,7 @@ def workstation_routed_browser_handler(
     session_id: Optional[str] = None,
     kanban_card_id: Optional[str] = None,
     run_id: Optional[str] = None,
+    operation_id: Optional[str] = None,
 ) -> Any:
     """Route one ``browser_*`` call to internal Chromium or the legacy lane."""
     from workstation.task_compiler import active_constraints, durable_execution_active
@@ -752,4 +894,5 @@ def workstation_routed_browser_handler(
     return _dispatch(
         action, args, task_id=task_id, session_id=session_id,
         kanban_card_id=kanban_card_id, run_id=run_id,
+        operation_id=operation_id,
     )

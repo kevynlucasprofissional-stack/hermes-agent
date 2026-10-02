@@ -9,7 +9,8 @@ from .models import (SemanticState, StateDelta, TransitionSample, Operation, Ver
 from workstation.execution_policy import EvidenceStrength, semantic_target_family
 
 _BROWSER_FIELDS = {'pr_state', 'mergeable', 'merge_control_available', 'authenticated',
-                   'ready', 'wall_detected', 'cookie_banner_visible', 'modal_visible', 'value'}
+                   'ready', 'wall_detected', 'cookie_banner_visible', 'modal_visible', 'value',
+                   'recovery_state'}
 _FS_FIELDS = {'exists', 'kind', 'size', 'hash', 'sha256', 'basename', 'extension', 'is_file', 'is_dir'}
 _PROCESS_FIELDS = {'process_state', 'exit_code', 'stdout_contract', 'stderr_contract'}
 
@@ -30,6 +31,8 @@ def abstract_state(route, data, artifact_ref=None):
     predicates = {k: data[k] for k in sorted(fields & data.keys())
                   if isinstance(data[k], (str, int, float, bool)) or data[k] is None}
     if route == 'native_browser':
+        if data.get('readiness') == 'stable':
+            predicates['ready'] = True
         parsed = urlsplit(data.get('url', ''))
         if parsed.scheme in {'http', 'https'} and parsed.hostname:
             predicates.update(host=parsed.hostname,
@@ -61,6 +64,8 @@ def sample_from_trace(trace, *, before=None, after=None, verification=None, prov
     outcome = trace.get('outcome', 'uncertain')
     if outcome == 'executed_unverified':
         outcome = 'uncertain'
+    elif outcome not in {o.value for o in TransitionOutcome}:
+        outcome = 'failed'
     args = normalized(trace.get('arguments', {}))
     raw_result_ref = trace.get('after_state_ref')  # Reference to the stored raw result
     return TransitionSample(state_before=before, state_after=after,

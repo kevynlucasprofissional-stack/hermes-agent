@@ -499,3 +499,13 @@ effect evidence; `tools/effects.py` separates method/channel capability evidence
 `tools/browser_tool.py` reuses structured extraction for Workstation inspection.
 Canonical compiler/store checkpoints own persistence and restart behavior.
 See `context/READONLY_DURABLE_PREFLIGHT.md` and `test_readonly_preflight.py`.
+
+## Operational telemetry generic observation seam (2026-09-23)
+
+`agent/runtime_events.py` adds one content-free, fail-open observer registry.
+`agent/turn_api_call.py` reports main-provider status/duration and the existing
+`agent/auxiliary_client.py` dispatch hook reports auxiliary purpose. Generic
+core imports no Workstation code; `workstation/integrations/hermes/telemetry.py`
+owns the local SQLite projection. No prompts, messages, responses, URLs, DOM or
+credentials cross this boundary. Classified as `SEAM-RUNTIME-TELEMETRY` /
+`UPSTREAM_ABSTRACT` and recorded as UPINT-005 through UPINT-007.

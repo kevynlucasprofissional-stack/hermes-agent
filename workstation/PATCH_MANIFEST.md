@@ -375,3 +375,12 @@ Latest promoted evidence:
 - broad Desktop platform/Electron: **126 files / 1,761 tests passed, 5 skipped**;
 - the prior KI-006 Windows path/permission/SSH/WSL/locale failure class is closed
   by HW-018 without disabling or deleting coverage.
+
+## Operational telemetry plane (2026-09-23)
+
+The Workstation adapter installs a local-only, rebuildable SQLite telemetry
+projection. Generic Hermes changes are limited to the content-free
+`agent/runtime_events.py` observer registry and notification calls at the main
+and existing auxiliary provider dispatch boundaries. Analytics ownership,
+privacy filtering, retention, queries and lifecycle projection remain under
+`workstation/`; telemetry is fail-open and never authorizes product execution.

@@ -988,7 +988,13 @@ class TaskCompiler:
         from workstation.control_plane.router import CapabilityRouter
         router = getattr(self, "router", None) or CapabilityRouter(registry, composition_engine=CompositionEngine(registry))
 
-        decision = router.route(intent, semantic_state, authority)
+        # Runtime truth the caller already observed — outstanding uncertainty,
+        # baseline state — is offered to the router rather than decided here. The
+        # router owns reconciliation gating; a caller that observes nothing passes
+        # nothing and routing behaves exactly as before.
+        runtime_state = request.get("runtime_state")
+        decision = router.route(intent, semantic_state, authority,
+                                runtime_state=runtime_state if isinstance(runtime_state, dict) else None)
         try:
             self.metrics_collector.on_routing_decision(decision)
         except Exception:
@@ -1394,7 +1400,7 @@ class TaskCompiler:
             'capability_pins': self.store.get_plan(plan.id).metadata['capability_pins'],
             'durable_store': self.store, 'durable_item_id': item.id, 'primitive_admission': admit,
         }
-        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'resource_id', 'resource_version', 'operation_id', 'expected_task_id', 'expected_run_id'):
+        for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'observer_args', 'observed_predicates', 'resource_id', 'resource_version', 'operation_id', 'expected_task_id', 'expected_run_id', 'expected_operation_id'):
             if k in request:
                 exec_context[k] = request[k]
         result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner, context=exec_context)

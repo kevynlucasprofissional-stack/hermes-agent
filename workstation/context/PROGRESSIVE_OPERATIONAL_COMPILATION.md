@@ -16,6 +16,250 @@ Success criteria for this workload:
 
 Canonical protocol: [REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md](REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md).
 
+## 2026-09-23 Phase 1/2 measurement implementation
+
+The compiled path emits non-authoritative events for execution, dispatch ACK,
+canonical verification, accepted outcome and Experience promotion. The minimal
+projector reuses `ORAMetrics` and `VOLCMetrics`; missing values remain `None`.
+
+## 2026-09-23 Operational Telemetry — measurement contract for progressive compilation
+
+Progressive Operational Compilation is not complete as a product thesis merely because a candidate can be compiled and reused in a fixture. It must become empirically measurable over time.
+
+Canonical architecture:
+[OPERATIONAL_TELEMETRY.md](OPERATIONAL_TELEMETRY.md).
+
+The telemetry plane must allow the system to derive, from observed product events:
+
+```text
+verified Experience volume
+-> candidate conversion
+-> verifier validation
+-> replay validation
+-> promotion
+-> deterministic reuse
+-> reused + VERIFIED
+-> drift/quarantine
+```
+
+and the cost trajectory:
+
+```text
+reasoned verified outcomes
+vs deterministic verified outcomes
+vs provider calls
+vs tokens
+vs wall time
+vs tool calls
+```
+
+### Measurement invariants
+
+- ORA/VOLC are derived from real captured facts; they do not become authority.
+- unknown denominators remain `None`;
+- provider-zero is only meaningful for an eligible verified outcome;
+- reuse success requires canonical verification, not merely route selection;
+- false reuse includes deterministic invocation followed by FAILED/INCONCLUSIVE verification;
+- promotion count without subsequent successful reuse is not sufficient evidence of useful learning;
+- Experience funnel metrics must preserve capability family/version lineage;
+- telemetry failure cannot block or alter operational execution.
+
+### Product acceptance consequence
+
+After H-080B.2 causal closure, H-080B.3 should produce a real telemetry trace for:
+
+```text
+adaptive run A
+-> adaptive run B
+-> candidate
+-> validation
+-> replay
+-> promotion
+-> typed-intent deterministic reuse
+-> VERIFIED
+-> COMMITTED
+-> provider 0
+```
+
+The telemetry trace is not the proof itself; canonical owners remain the proof. It is the queryable projection that lets us analyze the proof and compare future runs.
+
+### Future shadow evaluation
+
+After actual-event lineage is trustworthy, use `ShadowRouter` to measure missed deterministic opportunities without dispatching mutations. Later Laya SHADOW output can be evaluated against the same canonical router/outcome telemetry.
+
+
+## 2026-09-23 deep audit after lifecycle coordinator implementation
+
+Progressive Operational Compilation remains architecturally sound, but its competence-admission loop is **not product-closed yet**.
+
+The current branch now has:
+- candidate compilation;
+- `ExperienceValidationPromotionCoordinator`;
+- Browser owner receipts/revisions;
+- semantic trace slicing;
+- controlled replay/promotion components;
+- provider-zero reuse after a capability is promoted.
+
+What is still missing is the truth-preserving product bridge.
+
+### Invariant 1 — no self-certified verifier truth
+
+The competence-admission loop may not turn:
+
+`candidate.learning_metadata["effects"]`
+
+into a positive receipt merely by writing those values to an artifact and marking `passed=True`.
+
+Likewise, a negative-control description is not evidence that the verifier discriminated it.
+
+Validation truth must come from the canonical verifier/owner path.
+
+### Invariant 2 — product ownership means normal-runtime wiring
+
+H-080B.2 is not closed until the normal `accept_run -> mine` path schedules/adjudicates candidate validation and promotion without a fixture explicitly calling the coordinator.
+
+### Invariant 3 — Browser causality is owner receipt + enforced binding
+
+Promotion-grade Browser evidence requires both:
+- owner-issued receipt/state revision;
+- verifier-side proof that receipt identity matches the expected operation/task/run/BrowserTask/tab/revision/action/URL.
+
+### Invariant 4 — restart safety is durable
+
+A process-local lock may protect concurrent code, but lifecycle progress must be recoverable and idempotent through existing persistent owners.
+
+### Engineering discipline
+
+Do not broaden this corrective lane into general cleanup. Preserve accepted router/certificate/dispatcher/kernel/capability architecture. After these causal/product blockers are closed and exact-head gates are green, move to H-080B.3 rather than continuing to polish H-080B.2 indefinitely.
+
+
+## 2026-09-23 H-080B product-lifecycle closure semantics
+
+The first native-browser H-080B vertical changes the interpretation of "end-to-end closed."
+
+A fixture can prove that the existing pieces compose causally without proving that the product owns the lifecycle automatically. The canonical distinction is now:
+
+```text
+candidate can be validated/promoted in an integrated test
+!=
+normal product runtime owns candidate validation/promotion
+```
+
+Progressive Operational Compilation therefore has two separate loops:
+
+```text
+ADAPTIVE EXECUTION LOOP
+unknown work
+-> Reasoner
+-> real effect
+-> canonical evidence
+-> verified Experience
+-> candidate OperationalCapability
+
+COMPETENCE ADMISSION LOOP
+candidate
+-> verifier validation
+-> counterfactual/negative sensitivity
+-> controlled replay / causal validation
+-> ExperiencePromotionPolicy
+-> PROMOTED OperationalCapability
+-> future certified deterministic reuse
+```
+
+The second loop is part of the product architecture, not test scaffolding.
+
+### Lifecycle owner
+
+A Workstation-owned coordinator may orchestrate the competence-admission loop, but all truth continues to live in existing owners:
+- ExperienceCompiler;
+- causal replay/SafeEnvironment;
+- VerificationContract and domain-owner observers;
+- ExperiencePromotionPolicy;
+- OperationalCapabilityRegistry;
+- ArtifactStore / ExecutionJournal;
+- CapabilityRouter / certificates / dispatcher / kernel for later execution.
+
+The coordinator has no authority to weaken gates. Failure/unavailability leaves the capability unpromoted.
+
+### Browser evidence rule
+
+For Browser-learned capabilities, the preferred promotion-grade transition proof is owner-issued:
+```text
+operation_id
++ task_id
++ exact non-null run_id
++ BrowserTask/tab identity
++ owner state revision
++ post-effect semantic readback
+```
+
+The owner receipt establishes causation; semantic readback establishes the observed postcondition. Neither authorizes execution by itself.
+
+### Trace rule
+
+The reusable unit is the causal operational slice, not literal trace length. One relevant mutable action may be surrounded by bounded read-only observations. Additional mutation or unresolved uncertainty blocks promotion.
+
+### Milestone decomposition
+
+```text
+H-080B.1 verified Experience admission / candidate
+H-080B.2 product-owned validation/replay/promotion
+H-080B.3 native packaged qualification + dogfood
+H-081    optional System-1 candidate acceleration
+```
+
+Laya remains outside the authority chain. It may later reduce search cost; it cannot decide correctness, authority or promotion.
+
+
+## 2026-09-23 H-080B bounded native-browser proof
+
+Commit `6d8806b868` closes the first hermetic path from adaptive normal-turn native navigation to owner-persisted post-effect evidence, `verified_completed`, accepted verified transition, two-run compilation, validated verifier, controlled replay, policy admission and a promoted `OperationalCapability`. The future normal turn starts with a durable typed `OperationIntent`, routes through the existing certificate/dispatcher/kernel/broker/browser path and ends `VERIFIED`/accepted/`COMMITTED` after one physical navigation and zero provider calls. The verifier uses BrowserTask local host/path/recovery state and makes no login or external server claim. No Laya classifier or generated script executor was added. Branch CI and production GUI qualification remain open.
+
+## 2026-09-23 real-use audit — H-080A implementation strong; H-080B evidence bridge is the next causal gap
+
+The previous production-path blockers in this document have been materially addressed in PR #45: bounded production authority, real dispatcher parity, real post-effect verifier evidence, structured EXECUTE/certificate/VERIFIED/COMMITTED assertions and provider-0 success/failure behavior now have direct tests.
+
+Do not read the older H-080A audit below as the current implementation state.
+
+Exact-head promotion is nevertheless **not green** at this snapshot because current Workstation/Windows release workflows are red. See:
+[engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md](engineering-journal/h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+The more important product discovery is H-080B:
+
+```text
+production adaptive capture: ACTIVE
+verified Experience acceptance from observed browser sessions: NOT PROVEN
+real product candidate compilation: NOT PROVEN
+real product learned promotion: NOT PROVEN
+future normal-turn reuse of learned capability: NOT PROVEN
+```
+
+The H-080B fix is not “compile more traces”. The runtime already captures traces. It must turn successful real operations into **truthful verified semantic transitions** that the existing conservative compiler is allowed to learn from.
+
+First target should be a bounded native-browser local-state capability, preserving the existing Browser routing authority. A successful navigation may be verified against Workstation-owned browser state (host/URL, BrowserTask/tab binding, readiness) without pretending that a third-party external resource was persistently mutated.
+
+Canonical H-080B vertical:
+
+```text
+novel normal turn
+-> native Browser effect
+-> authoritative goal-aligned post-effect readback
+-> canonical VERIFIED completion
+-> accepted Experience sample
+-> candidate
+-> independent compatible run(s)
+-> controlled replay + verifier validation
+-> PROMOTED OperationalCapability
+-> future normal turn with an already-established typed OperationIntent
+-> pre-provider Operational Resolution
+-> CapabilityRouter proof
+-> native Browser exact-once execution
+-> VERIFIED / COMMITTED
+-> provider calls = 0
+```
+
+No parallel LearnedScript/BrowserSkill execution plane is allowed. `OperationalCapability` remains the executable abstraction. The first H-080B proof does not need to recognize fresh natural-language paraphrases; it may start from an already-established typed OperationIntent. Laya remains deferred until this loop is proven; then it may shortlist candidates for fresh intent recognition only.
+
 ## 2026-09-22 production-path audit — H-080A control plane works, production authority/dispatch proof still open
 
 The deterministic Capability Runtime and Experience Compiler substrate remain implemented. The pre-reasoning integration on `integration/upstream-20260922-71a2fe39-h0793` has improved beyond the first published-branch audit:

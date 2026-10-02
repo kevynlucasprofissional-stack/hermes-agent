@@ -29,6 +29,14 @@ class WorkstationConfig:
     def lan_requires_auth(self) -> bool:
         return bool(self.raw.get("lan", {}).get("require_auth", True))
 
+    @property
+    def telemetry_enabled(self) -> bool:
+        return bool(self.raw.get("telemetry", {}).get("enabled", True))
+
+    @property
+    def telemetry_max_events(self) -> int:
+        return int(self.raw.get("telemetry", {}).get("max_events", 250_000))
+
 
 def load_workstation_config(path: Path | str = DEFAULT_PATH) -> WorkstationConfig:
     target = Path(path)

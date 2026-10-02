@@ -1,6 +1,5 @@
 # CURRENT — Workstation Engineering Journal
 
-
 ## H-081 — Laya direct System-1 / resumable authority / learning-loop experiment (2026-10-02)
 
 **Classification:** ARCHITECTURAL DECISION ACCEPTED / IMPLEMENTATION OPEN / ISOLATED-BRANCH EXPERIMENT AUTHORIZED.
@@ -31,7 +30,225 @@ Reject/roll back if the lane weakens Router/Policy/Verifier authority, duplicate
 
 Canonical: [`../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
 
+## Operational Telemetry Phase 1/2 candidate — 2026-09-23
 
+Hypothesis: owner facts can be projected without affecting authority. Result:
+implemented model, fail-open/SQLite sinks, privacy/bounds, query/projector,
+provider seam and owner instrumentation. Evidence: telemetry 5/5; focused
+integration 31/31; owners 123/123; real H-080B funnel 1/1; seam audit green.
+Classification: locally green; exact-head CI and H-080B.3 remain open.
+
+## H-080B.2 Causal Closure and Product Wiring Verified — 2026-09-23
+
+Status: **H-080A ACCEPTED / H-080B.1 & H-080B.2 CLOSED & EMPIRICALLY VERIFIED / H-080B.3 READY / LAYA DEFERRED**
+
+All blockers A through H have been causally resolved and verified:
+1. **Pre-I/O Canonical Operation Identity (Blockers A & E):**
+   - Established before mutating steps in `OperationalKernel.execute_capability`.
+   - Pop-isolated from semantic `args`/`call_key` in `tools/browser_workstation.py`.
+2. **Conflict Detection (Blocker B):**
+   - Divergence between caller `_current_operation_id` and owner `lastReceipt.operationId` flagged in `workstation/procedure_trace.py` (`operation_id_conflict=True`, `outcome="identity_conflict"`, `replayable=False`).
+3. **Owner Receipt Strict Enforcement (Blockers C & D, KI-023):**
+   - `read_native_browser_session_state` checks `expected_operation_id` and `require_owner_receipt=True`, verifying `operationId`, `taskId`, `runId`, `browserTaskId`, `tabId`, monotonic integer `revision`, action `"browser_navigate"`, URL equivalence, and `executedAt <= savedAt`.
+   - Verified across a 9-permutation falsification matrix.
+4. **Elimination of Self-Certified Verification (Blocker F, KI-022):**
+   - Fake `passed=True` generator removed from `lifecycle.py`.
+   - Added `ValidationEnvironmentProvider` for product/test DI. If empirical verifier evidence is missing, candidate fails closed (`held_as_candidate / verifier_receipts_unavailable`).
+5. **Product Wiring & Idempotent Restart Safety (Blockers G & H, KI-022):**
+   - `ExperienceValidationPromotionCoordinator` wired into normal product runtime in `workstation/kanban.py::complete_task_with_report` after `compiler.mine()`.
+   - Multi-process restart safety persisted into `candidate.learning_metadata["promotion_lifecycle"]` (`CANDIDATE`, `VALIDATION_PENDING`, `VERIFIER_VALIDATED`, `REPLAY_VALIDATED`, `PROMOTED`).
+   - Verified via `test_product_owned_completion_mines_and_promotes_candidate` and `test_promotion_lifecycle_restart_and_idempotency`.
+
+Test summary:
+- `workstation/tests/test_h080b_native_browser_experience_loop.py`: 25 passed.
+- Related suites: 91 passed.
+- Seam audit: 14 classified direct core seams, 0 unclassified, 0 budget regressions.
+- apps/desktop: clean typecheck (code 0).
+
+## Operational Telemetry Plane — 2026-09-23
+
+Canonical detailed record:
+[operational-telemetry-plane-2026-09-23.md](operational-telemetry-plane-2026-09-23.md).
+
+Canonical architecture:
+[../OPERATIONAL_TELEMETRY.md](../OPERATIONAL_TELEMETRY.md).
+
+Decision:
+the next observability layer is a **non-authoritative rebuildable projection** over existing product owners.
+
+Existing `workstation/control_plane/metrics.py` already supplies ORA, VOLC, failure-attribution and ShadowRouter semantics. The missing layer is durable event capture correlated by canonical task/run/operation lineage.
+
+Sequencing:
+
+```text
+finish H-080B.2 causal hardening
+-> Telemetry Phase 1 event backbone
+-> H-080B Experience funnel instrumentation
+-> H-080B.3 real Electron proof emitting telemetry
+-> ORA/VOLC metric projection
+-> ShadowRouter / oververification analytics
+-> dashboards
+-> Laya SHADOW
+```
+
+Telemetry never authorizes, verifies, promotes, blocks, retries or mutates. Product execution must continue if telemetry fails.
+
+Priority measurement targets:
+- verified outcome rate;
+- ORA ratio;
+- LLM calls per verified outcome;
+- provider-zero verified rate;
+- deterministic reuse success / false-reuse;
+- uncertain mutation;
+- Experience funnel;
+- runs/time-to-competence;
+- drift/quarantine;
+- avoidable reasoning;
+- post-goal work/oververification.
+
+Privacy default is structural telemetry only; no prompt/response/DOM/form/credential/file-content duplication.
+
+## H-080B post-implementation deep audit — 2026-09-23
+
+Audited implementation head:
+`workstation/h080b-native-browser-experience-loop@60d47e8c0426b84b36ea3a5304111f7997bbe8e9`
+
+Base:
+`integration/upstream-20260922-71a2fe39-h0793@72d5e688509078f8f6aaa6ba0b6bdc609cf40ed3`
+
+The latest implementation is retained as useful progress, but the prior claim that H-080B.2 is CLOSED is retracted.
+
+Accepted:
+- H-080A/control-plane architecture remains strong and should not be redesigned;
+- OperationalCapability remains the single learned executable abstraction;
+- Browser owner receipts/revisions, strict run binding and semantic trace slicing are useful additions;
+- the coordinator is the correct orchestration direction;
+- provider-zero reuse after genuine promotion remains proven in the hermetic path.
+
+Blockers:
+
+1. **Self-certified verifier receipts.**
+   `ExperienceValidationPromotionCoordinator` can create positive/negative receipts with `passed=True` without an actual canonical verifier observation. Production must instead consume empirical owner-controlled `VerificationEvidence` / `evaluate_verification()` results. If unavailable, hold the candidate.
+
+2. **No product wiring.**
+   Normal runtime still ends after `accept_run -> mine -> candidate`. The coordinator is not called by the normal product lifecycle. Direct fixture invocation does not close H-080B.2.
+
+3. **Owner receipt not enforced end-to-end.**
+   Electron emits a receipt, but promotion-grade Python readback does not yet prove operation/task/BrowserTask/tab/revision/action/URL identity against the expected operation before projecting verifier evidence.
+
+4. **Restart ownership is incomplete.**
+   `threading.Lock()` is process-local. Lifecycle progress must be durable/idempotent through existing registry/artifact/journal owners.
+
+Canonical classification:
+
+```text
+H-080A   ACCEPTED / DO NOT REDESIGN
+H-080B.1 LOCALLY PROVEN / PROMOTION-GRADE RECEIPT ENFORCEMENT OPEN
+H-080B.2 ORCHESTRATOR IMPLEMENTED / PRODUCT WIRING + EMPIRICAL VALIDATION OPEN
+H-080B.3 OPEN
+H-081    DEFERRED
+```
+
+Corrective scope is deliberately narrow. Do not block on read-only whitelist elegance, coordinator API polish, broad-exception cleanup or duplicate receipt projection unless they falsify the acceptance contract.
+
+Next:
+`receipt enforcement -> empirical validation -> normal-runtime wiring + durable lifecycle -> exact-head gates -> H-080B.3`.
+
+Canonical detailed record:
+[h080b-product-lifecycle-closure-2026-09-23.md](h080b-product-lifecycle-closure-2026-09-23.md).
+
+
+
+## H-080B product lifecycle closure audit — 2026-09-23
+
+Canonical detailed record:
+[h080b-product-lifecycle-closure-2026-09-23.md](h080b-product-lifecycle-closure-2026-09-23.md).
+
+The Codex H-080B vertical is accepted as a strong hermetic causal proof, but its meaning is narrowed: it proves the existing pieces can form the loop; it does not prove that normal product runtime automatically owns verifier validation, controlled replay and promotion.
+
+Current Git truth at this entry:
+- PR #45: open at `c23fe2233450b47d6d90ec9785376327e533bdef`; Workstation CI green; Windows workflow still in progress.
+- PR #46: draft at `769002547428fa882ca1e5248387821482c70cd9`; still based on `72cfa4b389...`.
+- PR #46 vs current PR #45: diverged, 2 ahead / 1 behind, merge-base `72cfa4b389...`.
+
+Canonical decomposition:
+```text
+H-080B.1 verified Experience admission -> candidate        LOCALLY PROVEN
+H-080B.2 automatic validation/replay/promotion lifecycle  OPEN
+H-080B.3 real Electron/package/dogfood qualification      OPEN
+H-081    Laya/System-1 shadow                              DEFERRED
+```
+
+Next implementation is constrained to:
+1. reconcile PR #46 onto the promoted/current H-080A baseline;
+2. add owner-issued Browser operation receipt/state revision + strict learnable run binding;
+3. replace literal single-trace cardinality with one mutation + bounded read-only observations;
+4. productize candidate validation/replay/promotion through a small coordinator over existing owners;
+5. prove the vertical with real Electron against an isolated local server;
+6. dogfood full automatic promotion and future provider-0 reuse.
+
+No new executable ontology, database, authority plane, generated-script executor or Laya production routing is authorized in this lane.
+
+
+## H-080B first native-browser vertical — 2026-09-23
+
+Implementation: `workstation/h080b-native-browser-experience-loop@6d8806b868`, based on P0 `72cfa4b389`, frozen upstream `71a2fe399bbd7a219c71f9d9fca2b313b01f2057`. H-080B hermetic proof: normal Run A native route/accepted Experience; two compatible accepted run IDs; candidate `experience_bcc0974be58c73cf04a0b436@1.0.0`, semantic fingerprint `4bc13bdf68ea16aa4bb43d811045c7749a10e4e0c80f2c587849eb8597e6c141`, compatibility fingerprint `bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2`; validated browser-local readback verifier; positive replay and wrong-host negative control; promotion admitted; future normal Run C EXECUTE, nonempty certificate, exactly one native physical action, VERIFIED/accepted/COMMITTED, provider 0. Focused regression 122 passed; strict seam audit passed with 14 classified and no budget growth. P0 PR #45 exact-head contracts 779 passed but Windows aggregate red; branch CI/native packaged qualification pending. Laya DEFERRED.
+
+## H-080B real-use audit — 2026-09-23
+
+Detailed canonical audit:
+[h080b-real-use-experience-loop-audit-2026-09-23.md](h080b-real-use-experience-loop-audit-2026-09-23.md).
+
+New evidence changes the next-work priority:
+- PR #45 implements the important H-080A causal path, but current exact-head CI is red and must be qualified truthfully;
+- real native-browser conversations demonstrate route-selection and over-verification waste;
+- production Experience capture is active, but real samples remain uncertain/inconclusive and have not produced a learned promoted capability;
+- next feature work is one bounded browser-native H-080B capture -> verify -> compile -> validate -> promote -> future provider-0 vertical proof;
+- Laya stays deferred until that causal loop works without it.
+
+## H-080A — Production-path closure qualified locally (2026-09-23)
+
+**Status:** CODE COMPLETE / LOCAL QUALIFICATION GREEN / EXACT-HEAD CI PENDING.
+H-080B (Experience feedback loop) remains OPEN as a separate sub-lane.
+
+Branch: `integration/upstream-20260922-71a2fe39-h0793`. Frozen pin unchanged:
+`71a2fe399bbd7a219c71f9d9fca2b313b01f2057`.
+
+### What closed each audit blocker
+
+- **Authority (A):** new `workstation/integrations/hermes/effect_authority.py`
+  derives a LOCAL_MUTATION ceiling from trusted ingress (envelope +
+  canonical task/session binding). `_dispatch_intent` sets
+  `compiler.trusted_authority` from it. TaskCompiler authority monkeypatch
+  removed from all release E2E. Pinned by
+  `workstation/tests/test_operational_effect_authority.py` (13 tests).
+- **Real dispatch (B):** E001 split into E001F (filesystem verified success
+  through the kernel's real `fs_write` + `fs_read` readback) and E001D
+  (real `workstation_durable_dispatch` → `execute_tool_calls_sequential` →
+  real `todo_list` → real `TodoStore`, exactly once, spies only).
+- **Causal asserts (C):** `OperationalResolution.details` now carries
+  capability id, certificate hash, verification status/accepted and dispatch
+  status; E001F/E003VF assert them directly plus real filesystem state.
+  `TaskCompiler._execute_route` also forwards `observer_args`,
+  `observed_predicates`, `expected_operation_id` (observation config).
+- **Scratch (D):** `test_zz_scratch_route_fixture.py` absorbed and removed.
+- **Pre-seeded evidence (E):** objectives carry only observation
+  configuration; the kernel's real observer produces post-effect evidence.
+- **Metrics:** generic counters distinguish
+  executed/satisfied/wait/handoff/continue_reasoning; unknowns stay `None`.
+
+### Qualification receipts (this head, local)
+
+- focused H-080 (boundary 17 + provider 10 + e2e 10 + authority 13): green;
+- Browser focused (extract/controller/broker/extension-router): green;
+- strict seam audit: 0 unclassified, 0 budget regressions;
+- core integration check: green;
+- todo tool owner tests: green;
+- full `workstation/tests`: 2 pre-existing failures unrelated to this lane
+  (missing optional `anthropic` package; stale `MockRouterWait` signature in
+  the await-telemetry test) — separate lanes, not H-080A regressions.
+
+Remaining before promotion: final upstream drift classification, PR, exact-head CI.
 ## H-080 — Production-path audit after E001/E003V repairs (2026-09-22)
 
 **Status:** ARCHITECTURE ACCEPTED / CONTROL-PLANE E2E IMPROVED / PRODUCTION-PATH QUALIFICATION BLOCKED.
@@ -368,7 +585,7 @@ Canonical:
 
 ## H-077.1 — Post-merge truthful-core qualification closure — 2026-09-19
 
-**Status:** IMPLEMENTATION COMPLETE / QUALIFIED.  
+**Status:** IMPLEMENTATION COMPLETE / QUALIFIED.
 **Audit baseline:** `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`.
 
 Resolved and verified:
@@ -385,10 +602,10 @@ Canonical:
 
 ## H-077 — Architectural falsification / external validity / post-H-076 residual audit (2026-09-19)
 
-**Status:** IMPLEMENTATION COMPLETE / EXACT-HEAD QUALIFICATION PENDING.  
+**Status:** IMPLEMENTATION COMPLETE / EXACT-HEAD QUALIFICATION PENDING.
 **Audit baseline:** `main@92a3acb51e87af85a9f380ee04d2cf47d7900ca5`.
 
-**Hypothesis:** PR #36 fully qualified H-077.  
+**Hypothesis:** PR #36 fully qualified H-077.
 **Result:** refuted as a full qualification claim; core implementation retained.
 
 Reproduced evidence:

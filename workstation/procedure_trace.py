@@ -2,6 +2,7 @@
 import re
 import json
 import uuid
+from datetime import datetime, timezone
 from tools.effects import tool_effect
 from workstation.recipes import sanitize, digest
 from workstation.routing import canonical_route_for_tool
@@ -66,31 +67,81 @@ def record_trace(agent, name, args, raw, *, duration_ms=None):
     is_console = name in {'browser_console', 'console'} or arguments.get('action') == 'console'
     trace_action = 'opaque_adaptive_execution' if is_console else name.removeprefix('browser_')
     trace_replayable = False if is_console else (not any(k in args for k in _TRANSIENT) or bool(arguments.get('semantic_anchor')))
+    caller_op_id = (
+        getattr(agent, '_current_operation_id', None)
+        or (args.get('operation_id') if isinstance(args, dict) else None)
+    )
+    owner_op_id = None
+    if isinstance(decoded, dict):
+        owner_op_id = decoded.get('operation_id') or (decoded.get('receipt') or {}).get('operationId')
+
+    has_conflict = False
+    if caller_op_id and owner_op_id and str(caller_op_id) != str(owner_op_id):
+        has_conflict = True
+        canonical_op_id = str(owner_op_id)
+    elif owner_op_id:
+        canonical_op_id = str(owner_op_id)
+    elif caller_op_id:
+        canonical_op_id = str(caller_op_id)
+    else:
+        canonical_op_id = 'observation_' + uuid.uuid4().hex
+
+    initial_outcome = 'failed' if classify_tool_failure(name, raw if isinstance(raw, str) else json.dumps(raw))[0] else 'executed_unverified'
+    outcome = 'identity_conflict' if has_conflict else initial_outcome
+    replayable = False if has_conflict else trace_replayable
+
     record = {'tool': name, 'action': trace_action,
         'execution_class': 'opaque_adaptive_execution' if is_console else 'semantic',
         'route': canonical_route_for_tool(name, runtime=selected_runtime), 'operation_fingerprint': op_fp,
         'semantic_fingerprint': sem_fp,
         'arguments': arguments, 'semantic_anchor': arguments.get('semantic_anchor'),
         'before_state_ref': before_ref, 'after_state_ref': output.ref,
-        'outcome': 'failed' if classify_tool_failure(name, raw if isinstance(raw, str) else json.dumps(raw))[0] else 'executed_unverified',
+        'outcome': outcome,
         'effect': tool_effect(name, args=arguments).value, 'duration_ms': duration_ms,
         'task_id': getattr(agent, '_canonical_work_task_id', None),
         'run_id': getattr(agent, '_canonical_work_run_id', None),
-        'operation_id': getattr(agent, '_current_operation_id', None) or 'observation_' + uuid.uuid4().hex,
+        'operation_id': canonical_op_id,
+        'operation_id_conflict': has_conflict,
+        'caller_operation_id': str(caller_op_id) if caller_op_id else None,
+        'owner_operation_id': str(owner_op_id) if owner_op_id else None,
         'operation_index': len(traces),
+        'captured_at': datetime.now(timezone.utc).isoformat(),
         'scope': scope,
         'runtime': decoded.get('runtime', route) if isinstance(decoded, dict) else route,
         'provider_usage': sanitize(getattr(agent, '_current_provider_usage', None)),
-        'replayable': trace_replayable}
+        'replayable': replayable}
     if len(traces) >= 64:
         agent._work_procedure_trace_truncated = True
         return
     traces.append(record)
     agent._work_procedure_trace = traces
     from workstation.experience_compiler.state_abstraction import abstract_state, sample_from_trace
+    provenance = None
+    if (name == 'browser_navigate' and route == 'native_browser'
+            and record['task_id'] and record['run_id'] and record['outcome'] == 'executed_unverified'):
+        from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope, authority_covers
+        from workstation.contracts import MessageOrigin
+        from workstation.experience_compiler.models import AuthorityOrigin, Provenance
+        from workstation.integrations.hermes.effect_authority import trusted_effect_authority_from_agent
+
+        authority = trusted_effect_authority_from_agent(agent, agent.session_id)
+        envelope = getattr(agent, '_message_envelope', None)
+        required = AuthorityScope(level=AuthorityLevel.LOCAL_MUTATION,
+            allowed_actions={'browser_navigate'}, allowed_resources={'native_browser'})
+        if authority_covers(authority, required) and envelope is not None:
+            origin = AuthorityOrigin.USER if envelope.origin == MessageOrigin.HUMAN else AuthorityOrigin.SYSTEM
+            grant = {'task_id': record['task_id'], 'run_id': str(record['run_id']),
+                     'session_id': agent.session_id, 'authority_origin': origin.value,
+                     'authority_scope': required.to_dict()}
+            authority_ref = artifacts.store(owner, 'trace_authority_' + digest(grant) + '.json',
+                                            grant, schema='hermes.trace_authority.v1').ref
+            provenance = Provenance(task_id=record['task_id'], run_id=str(record['run_id']),
+                operation_id=record['operation_id'], runtime=record['runtime'],
+                authority_origin=origin, trust_class='trusted_runtime',
+                authority_ref=authority_ref, authority_scope=required.to_dict())
     sample = sample_from_trace(record,
         before=abstract_state(route, before_data, before_ref),
-        after=abstract_state(route, decoded, output.ref))
+        after=abstract_state(route, decoded, output.ref), provenance=provenance)
     sample.provenance.operation_index = record['operation_index']
     sample_ref = artifacts.store(owner, 'transition_' + digest(sample.to_dict()) + '.json', sample.to_dict(),
         schema='hermes.transition_sample.v1')

@@ -21,7 +21,7 @@ test('on linux, fatal Chromium output lands in a file under the Hermes logs dir'
   const logFile = switches.get('log-file')
 
   assert.ok(logFile)
-  assert.equal(path.dirname(logFile), '/home/u/.hermes/logs')
+  assert.equal(path.posix.dirname(logFile.replaceAll('\\', '/')), '/home/u/.hermes/logs')
   // FATAL (3) must survive the level filter; anything stricter would drop it.
   assert.ok(Number(switches.get('log-level')) <= 3)
   assert.equal(plan.crashReporter.uploadToServer, false)
@@ -81,5 +81,5 @@ test('the Chromium log is bounded before Chromium appends to it', () => {
 
   // Electron opens an explicit --log-file with APPEND_TO_OLD_LOG_FILE, so the
   // file it is about to append to is exactly the one that must be reclaimed.
-  assert.deepEqual(reclaimed, [path.join('/home/u/.hermes/logs', CHROMIUM_LOG_FILENAME)])
+  assert.deepEqual(reclaimed.map(file => file.replaceAll('\\', '/')), [path.posix.join('/home/u/.hermes/logs', CHROMIUM_LOG_FILENAME)])
 })
