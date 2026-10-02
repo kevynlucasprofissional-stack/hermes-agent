@@ -155,12 +155,22 @@ class VOLCMetrics:
             return None
         return self.tokens_cost_usd / self.verified_outcomes
 
+    @property
+    def tokens_per_verified_outcome(self) -> float | None:
+        return self.tokens_per_outcome
+
+    @property
+    def cost_per_verified_outcome(self) -> float | None:
+        return self.cost_usd_per_outcome
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         d["llm_calls_per_outcome"] = self.llm_calls_per_outcome
         d["tokens_per_outcome"] = self.tokens_per_outcome
         d["tool_calls_per_outcome"] = self.tool_calls_per_outcome
         d["cost_usd_per_outcome"] = self.cost_usd_per_outcome
+        d["tokens_per_verified_outcome"] = self.tokens_per_verified_outcome
+        d["cost_per_verified_outcome"] = self.cost_per_verified_outcome
         return d
 
 
@@ -240,6 +250,37 @@ class ORAMetrics:
     amortized_tokens_saved: int | None = None
     amortized_cost_usd_saved: float | None = None
 
+    # System-1 and execution governance counters
+    system1_calls: int = 0
+    system1_successful_decisions: int = 0
+    system1_abstentions: int = 0
+    system1_fallbacks: int = 0
+    system1_errors: int = 0
+    system1_disagreements: int = 0
+    system2_wake_count: int = 0
+    stale_task_run_count: int = 0
+    authority_superseded_count: int = 0
+    compiled_capability_hits: int = 0
+    pending_items_before: int = 0
+    pending_items_after: int = 0
+
+    tokens_consumed: int = 0
+    total_cost_usd: float | None = None
+
+    @property
+    def tokens_per_verified_outcome(self) -> float | None:
+        verified = self.verified_transitions_deterministic + self.verified_transitions_reasoned
+        if not verified or not self.tokens_consumed:
+            return None
+        return self.tokens_consumed / verified
+
+    @property
+    def cost_per_verified_outcome(self) -> float | None:
+        verified = self.verified_transitions_deterministic + self.verified_transitions_reasoned
+        if not verified or self.total_cost_usd is None:
+            return None
+        return self.total_cost_usd / verified
+
     @property
     def ora_ratio(self) -> float | None:
         """Ratio of verified transitions executed deterministically without LLM."""
@@ -275,6 +316,37 @@ class ORAMetrics:
         r_str = reason.value if isinstance(reason, WakeReason) else str(reason)
         self.wake_reasons[r_str] = self.wake_reasons.get(r_str, 0) + 1
         self.llm_wake_count += 1
+        self.system2_wake_count += 1
+
+    def record_system1_call(
+        self,
+        *,
+        success: bool = True,
+        abstained: bool = False,
+        fallback: bool = False,
+        error: bool = False,
+        disagreement: bool = False,
+    ) -> None:
+        self.system1_calls += 1
+        if success:
+            self.system1_successful_decisions += 1
+        if abstained:
+            self.system1_abstentions += 1
+        if fallback:
+            self.system1_fallbacks += 1
+        if error:
+            self.system1_errors += 1
+        if disagreement:
+            self.system1_disagreements += 1
+
+    def record_authority_superseded(self) -> None:
+        self.authority_superseded_count += 1
+
+    def record_stale_task_run(self) -> None:
+        self.stale_task_run_count += 1
+
+    def record_compiled_capability_hit(self) -> None:
+        self.compiled_capability_hits += 1
 
     deterministic_routes_selected: int = 0
 
@@ -332,6 +404,8 @@ class ORAMetrics:
         d["composite_reuse_rate"] = self.composite_reuse_rate
         d["wait_non_residency_rate"] = self.wait_non_residency_rate
         d["wake_llm_rate"] = self.wake_llm_rate
+        d["tokens_per_verified_outcome"] = self.tokens_per_verified_outcome
+        d["cost_per_verified_outcome"] = self.cost_per_verified_outcome
         return d
 
 
@@ -395,4 +469,30 @@ class ORAMetricsCollector:
 
     def on_model_inadequacy(self, reason: str = "model_inadequacy_non_discriminable_outcome") -> None:
         self.metrics.record_model_inadequacy(reason)
+
+    def on_system1_call(
+        self,
+        *,
+        success: bool = True,
+        abstained: bool = False,
+        fallback: bool = False,
+        error: bool = False,
+        disagreement: bool = False,
+    ) -> None:
+        self.metrics.record_system1_call(
+            success=success,
+            abstained=abstained,
+            fallback=fallback,
+            error=error,
+            disagreement=disagreement,
+        )
+
+    def on_authority_superseded(self) -> None:
+        self.metrics.record_authority_superseded()
+
+    def on_stale_task_run(self) -> None:
+        self.metrics.record_stale_task_run()
+
+    def on_compiled_capability_hit(self) -> None:
+        self.metrics.record_compiled_capability_hit()
 

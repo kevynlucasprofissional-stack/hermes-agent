@@ -202,6 +202,8 @@ class ReasoningDecision(RoutingDecision):
     attention_packet: Any = None
     requires_reconciliation: bool = False
     reason: str = ""
+    ambiguity_kind: str = "none"
+    needs_system2: bool = True
 
 
 def revalidate_certificate(
@@ -385,6 +387,37 @@ class CapabilityRouter:
             # Fall back to all promoted capabilities in registry
             candidates = self.registry.list_capabilities(lifecycle=CapabilityLifecycle.PROMOTED)
 
+        # 3.1 System-1 Candidate Ranking
+        if len(candidates) > 1:
+            try:
+                from agent.system1_decision import decide_system1, DecisionRequest
+                from workstation.system1.schemas import build_candidate_ranking_schema
+                from workstation.system1.contracts import NeutralChoice
+
+                candidate_ids = [c.id for c in candidates]
+                ranking_schema = build_candidate_ranking_schema(candidate_ids)
+                s1_req = DecisionRequest(
+                    domain="control_plane.router",
+                    schema_id="candidate_ranking",
+                    questions=ranking_schema,
+                    state={
+                        "objective": operation_intent.metadata.get("objective") or operation_intent.target,
+                        "target": operation_intent.target,
+                        "candidates": candidate_ids[:20],
+                    },
+                    context={"run_id": run_id, "operation_id": operation_id},
+                )
+                s1_res = decide_system1(s1_req)
+                if s1_res and s1_res.provider != "deterministic_fallback":
+                    preferred = s1_res.decisions.get("preferred_candidate")
+                    if preferred and preferred not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
+                        matched = [c for c in candidates if c.id == preferred]
+                        rest = [c for c in candidates if c.id != preferred]
+                        if matched:
+                            candidates = matched + rest
+            except Exception:
+                pass
+
         authority_shortfalls: list[tuple[OperationalCapability, AuthorityScope]] = []
 
         for cap in candidates:
@@ -558,11 +591,61 @@ class CapabilityRouter:
         if runtime_state.get("await_condition"):
             return WaitDecision(await_condition=runtime_state["await_condition"])
 
-        # 7. Unresolved semantic choice -> WAKE_LLM
+        # 7. Unresolved semantic choice -> System-1 reasoning gap check before WAKE_LLM
+        ambiguity_kind = "novel_strategy"
+        needs_system2 = True
+        try:
+            from agent.system1_decision import decide_system1, DecisionRequest
+            from workstation.system1.schemas import (
+                AMBIGUITY_KIND_QUESTION,
+                NEEDS_SYSTEM2_QUESTION,
+                KNOWN_RECOVERY_PATH_QUESTION,
+            )
+            from workstation.system1.contracts import NeutralChoice
+
+            s1_req = DecisionRequest(
+                domain="control_plane.router",
+                schema_id="reasoning_gap",
+                questions={
+                    "ambiguity_kind": AMBIGUITY_KIND_QUESTION,
+                    "needs_system2": NEEDS_SYSTEM2_QUESTION,
+                    "known_recovery_path": KNOWN_RECOVERY_PATH_QUESTION,
+                },
+                state={
+                    "target": operation_intent.target,
+                    "goal": operation_intent.goal.to_dict() if hasattr(operation_intent.goal, "to_dict") else str(operation_intent.goal),
+                    "authority_shortfalls": len(authority_shortfalls),
+                    "has_candidates": len(candidates) > 0,
+                    "runtime_state": {k: str(v) for k, v in runtime_state.items() if k != "baseline_state"},
+                },
+                context={"run_id": run_id, "operation_id": operation_id},
+            )
+            s1_res = decide_system1(s1_req)
+            if s1_res and s1_res.provider != "deterministic_fallback":
+                ak = s1_res.decisions.get("ambiguity_kind")
+                if ak and ak not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
+                    ambiguity_kind = ak
+                ns2_raw = s1_res.decisions.get("needs_system2")
+                if ns2_raw == "no":
+                    needs_system2 = False
+                elif ns2_raw == "yes":
+                    needs_system2 = True
+
+                recovery = s1_res.decisions.get("known_recovery_path")
+                if not needs_system2 and recovery == "reprobe_state":
+                    return WaitDecision(
+                        await_condition={"type": "reprobe_state", "target": operation_intent.target},
+                        reason="System-1 identified reprobe_state recovery path without requiring System-2",
+                    )
+        except Exception:
+            pass
+
         return ReasoningDecision(
             reason="no_certifiable_capability_found",
             open_condition={
                 "target": operation_intent.target,
-                "goal": operation_intent.goal.to_dict(),
+                "goal": operation_intent.goal.to_dict() if hasattr(operation_intent.goal, "to_dict") else str(operation_intent.goal),
             },
+            ambiguity_kind=ambiguity_kind,
+            needs_system2=needs_system2,
         )
