@@ -1,5 +1,32 @@
 # Workstation Known Issues
 
+## KI-024 — H-081 Laya branch is not production-qualified [OPEN — P0/P1]
+
+Post-implementation audit of
+`workstation/laya-direct-system1@736be5b9cebc8ffcb1c02a084a4bdba3755a5074`
+retracted the branch-local qualification claim while preserving the architecture.
+
+Open blockers:
+- real Laya 0.3.23 response parsing is incompatible with the current adapter;
+- supported packaging does not yet prove `import laya` resolves from the approved subtree,
+  and runtime registration is not fail-closed on provenance;
+- `AUTHORITY_SUPERSEDED` checkpoint helpers are not wired to a normal-runtime
+  adopt/resume/reconcile continuation path;
+- `needs_system2=False` does not generally prevent TaskCompiler from returning
+  `WAKE_LLM`;
+- LearningReview completion cannot be used as `VERIFIED_SUCCESS` without canonical
+  verifier evidence;
+- progressive durable TransitionSample/System-1 dataset capture is not closed;
+- DecisionReceipt/provenance and System-1/authority telemetry are not fully linked to
+  canonical owner observations;
+- H-079 refresh/classification, real-provider dogfood and exact-head CI remain open.
+
+Do not weaken Router/Policy/Verifier, ExperiencePromotionPolicy, uncertain-mutation
+reconciliation or cancellation/revocation semantics to close this issue.
+
+Canonical audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
 ## KI-023 — Browser owner receipt enforced as causal proof [RESOLVED IN H-080B.2]
 
 Resolved in H-080B.2:

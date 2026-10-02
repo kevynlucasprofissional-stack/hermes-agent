@@ -1,8 +1,40 @@
 # Laya Direct System-1 Integration — 2026-10-02
 
-**Status:** APPROVED EXPERIMENTAL IMPLEMENTATION / BRANCH-GATED  
+**Status:** ARCHITECTURE APPROVED / BRANCH IMPLEMENTATION AUDITED / REMEDIATION REQUIRED / NOT QUALIFIED  
 **Reviewed Laya pin:** `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` — Laya 0.3.23, Apache-2.0, Python >=3.10.  
 **Scope:** Hermes Agent + Hermes Workstation reasoning amortization, TaskRun continuity, outcome telemetry, Experience Compiler feedback, self-improvement review and secondary Laya upstream.
+
+
+## 2026-10-02 post-implementation audit — qualification reopened
+
+The first implementation pass preserved the intended authority architecture but did not
+close the real-provider/runtime/learning proof. Audited implementation head:
+`workstation/laya-direct-system1@736be5b9cebc8ffcb1c02a084a4bdba3755a5074`
+against `main@e4d079f005ba6b324316e70bb4f9915460f555aa`.
+
+The following are merge blockers, not optional polish:
+
+1. fix the Laya 0.3.23 response adapter to read typed values from
+   `result["answers"][qid]` rather than a generic top-level `answer`;
+2. make supported Hermes installation import the approved vendored Laya and enforce
+   fail-closed provenance when that provider is expected;
+3. connect typed authority supersession to real TaskRun adoption/resume/reconciliation,
+   eliminating the product dead end rather than merely checkpointing it;
+4. make `needs_system2=False` capable of selecting an admitted deterministic recovery or
+   continuation without waking the LLM;
+5. forbid background-review completion from becoming positive training truth without
+   canonical verifier evidence;
+6. implement progressive durable TransitionSample/dataset capture through existing owners;
+7. complete DecisionReceipt/provenance/downstream linkage and derive System-1 economics from
+   observed owner events;
+8. run H-079 preflight, affected regressions, real-Laya dogfood, long-run resume proof and
+   exact-head CI before promotion.
+
+Focused FakeSystem1/unit tests demonstrate useful contracts but are not evidence that the
+real Laya provider is active or that the end-to-end learning/continuation loops are closed.
+
+Canonical detailed audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
 
 ## Decision
 

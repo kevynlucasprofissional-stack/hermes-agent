@@ -2,25 +2,63 @@
 
 ## Laya como System-1 ativo + continuidade de runs — 2026-10-02
 
-A análise de runs longas muda a política anterior. `stale_task_run: mutation authority no longer belongs to this run` foi isolado como perda de lease/lineage de TaskRun, não como simples teto de chamadas: uma nova run no mesmo ambiente continuou executando. O fence contra a run stale permanece; o dead end deve virar checkpoint + handoff/resume quando a autoridade do usuário continua válida.
+**Estado após auditoria:** a direção arquitetural permanece aceita; o branch
+`workstation/laya-direct-system1` ainda **não está qualificado para merge**.
 
-Token/tool-call count isolado também deixa de ser proxy de desperdício. A unidade econômica passa a ser **Cost per Verified Outcome** e progresso verificado. Circuit breakers devem mirar custo crescente sem nova evidência/efeito, estado equivalente repetido e reconstrução sem avanço.
+A análise de runs longas continua válida: `stale_task_run: mutation authority no longer
+belongs to this run` representa perda de lease/lineage da TaskRun, não simples teto de
+chamadas. O fence da run stale deve permanecer estrito, mas o produto precisa transformar
+supersession legítima em checkpoint + adoção pela run canônica atual + reconciliação de
+efeitos incertos + continuação do trabalho ainda não confirmado. O branch atual só fecha
+a primeira metade dessa ideia: checkpoint/helper existe, continuação end-to-end ainda não.
 
-A arquitetura intelectual passa a ser:
+A arquitetura intelectual continua:
 
 ```text
 DETERMINISTIC -> SYSTEM 1 / LAYA -> SYSTEM 2 / LLM -> DETERMINISTIC PROOF/EXECUTION/VERIFICATION
 ```
 
-Laya é ativo em branch experimental, não um shadow permanente. Ele pode influenciar decisões reais dentro de candidate sets válidos, com abstention/fallback, mas não cria authority, certificate, verification, causal truth ou promotion. O core conhece `System1DecisionProvider`; Laya é a primeira implementação.
+Mas "Laya ativo" agora tem uma definição empírica obrigatória. FakeSystem1 ou um seam
+registrado não bastam. Um Laya real precisa ser importado da fonte vendorizada aprovada,
+interpretar corretamente o contrato `Router.predict()`, influenciar uma decisão fechada
+real e ainda atravessar Router/Policy/Verifier sem ganhar autoridade. Hoje o adapter lê a
+forma de resposta errada do Laya 0.3.23 e o packaging não prova que o subtree seja a fonte
+efetivamente importada; portanto a atividade real do provider continua aberta.
 
-Experience Compiler passa a ter dois ritmos: samples observacionais/progressivos durante a run e a barreira accepted/verified para promoção. O background self-improvement deve emitir `LearningReview` estruturado para skill curation, Experience Compiler, eval corpus, diagnostics e dataset System-1.
+`needs_system2=False` também só é inteligência útil quando muda a execução: uma decisão
+admitida e conhecida deve resolver deterministicamente sem `WAKE_LLM`. Se o runtime
+acorda o LLM de qualquer maneira, houve classificação, não amortização.
 
-Laya terá upstream secundário pinado por `git subtree` em `workstation/third_party/laya`; Hermes upstream principal continua H-079. Pin inicial revisado: `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c`, Laya 0.3.23, Apache-2.0.
+Token/tool-call count isolado não é proxy de desperdício. A unidade econômica permanece
+**Cost per Verified Outcome** e progresso verificado. Métricas de System-1 só contam como
+verdade operacional quando derivadas de eventos dos owners reais; campos/counters não
+alimentados não são evidência.
 
-Canônico: [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+Experience Compiler mantém dois ritmos:
 
-> **Hermes deve gastar System-2 para descobrir o que ainda não sabe; decisões fechadas já conhecidas devem migrar para System-1 e capacidades verificadas, sem reduzir autoridade, prova ou completude.**
+```text
+durante a run -> OBSERVED / FAILED / INTERRUPTED / AUTHORITY_SUPERSEDED
+outcome aceito -> VERIFIED evidence -> replay/causal validation -> promotion
+```
+
+O background self-improvement pode propor exemplos e diagnósticos, mas
+`LearningReview.status == success` nunca equivale a `VERIFIED_SUCCESS`. Labels positivos
+para System-1 exigem evidência de verifier compatível e lineage real de task/run/operation.
+Dataset em memória no adapter não fecha o learning loop; capture e dataset precisam ser
+duráveis e atribuíveis aos owners existentes.
+
+Laya permanece upstream secundário pinado por git subtree em
+`workstation/third_party/laya`; Hermes upstream principal continua H-079. O pin de pesquisa
+continua `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` / Laya 0.3.23 / Apache-2.0, mas
+provenance deve verificar a fonte realmente importada e não apenas repetir o valor do lock.
+
+Canônico de arquitetura:
+[LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+
+Canônico de auditoria/qualificação:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
+> **Hermes deve gastar System-2 para descobrir o que ainda não sabe; decisões fechadas já conhecidas devem migrar para System-1 e capacidades verificadas. Isso só conta como competência quando o caminho real executa, verifica e mede essa economia sem reduzir autoridade, prova ou completude.**
 
 
 ## External-reference audit becomes a self-improvement dogfood objective — 2026-09-23

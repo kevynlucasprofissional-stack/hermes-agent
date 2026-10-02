@@ -2,23 +2,32 @@
 
 ## HW-033 — Laya direct System-1 integration and dual upstream governance (2026-10-02)
 
-**Status:** IMPLEMENTED AND QUALIFIED ON BRANCH `workstation/laya-direct-system1`.
+**Status:** **IMPLEMENTATION PARTIAL / POST-IMPLEMENTATION AUDIT OPEN / NOT QUALIFIED** on branch `workstation/laya-direct-system1`.
 
-1. **Secondary Upstream Pinned:**
-   - Adopted `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` (Laya 0.3.23, Apache-2.0).
-   - Vendored via `git subtree --squash` at `workstation/third_party/laya`.
-   - Verified strict provenance in `workstation/system1/provenance.py` and `workstation/components.lock.json`.
-2. **Generic Core Seams:**
-   - Added `agent/system1_decision.py` generic decision seam (`DecisionRequest`, `DecisionResult`, `decide_system1`).
-   - Added `agent/background_review.py` generic `LearningReview` dataclass and hook registry.
-   - Zero Workstation or Laya dependencies introduced in core `agent/`.
-3. **P0 TaskRun Authority Supersession:**
-   - Replaced `stale_task_run` dead-end with `workstation/authority_supersession.py`.
-   - Strict write-fencing; checkpointing; continuation restores unconfirmed items only; uncertain mutations flagged for reconciliation.
-4. **Active Control Plane Influence:**
-   - `workstation/control_plane/router.py`: candidate reordering and System-1 reasoning gap check before `WAKE_LLM`.
-   - Safe deterministic resolution via `WaitDecision` on known recovery paths.
-   - Strictly fail-closed: Router/Policy/Verifier authority cannot be bypassed by System-1.
+Accepted delta:
+1. Laya `0.3.23@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` is present as a
+   secondary vendored git subtree and recorded in `components.lock.json`.
+2. Generic core seams were added for System-1 decisions and LearningReview without
+   introducing direct Workstation/Laya imports into generic core.
+3. Router-level System-1 candidate ordering is subordinate to the existing
+   contract/authority/policy/verifier proof chain.
+4. Typed authority-supersession/checkpoint machinery exists and preserves stale-run
+   write fencing.
+
+Qualification blockers:
+- real Laya output is parsed with the wrong payload contract;
+- root packaging does not prove the approved subtree is the actual `import laya` source,
+  and provider registration is not fail-closed on provenance;
+- production execution still surfaces `stale_task_run` rather than adopting/resuming
+  pending work in the canonical run;
+- `needs_system2=False` does not generally close to a non-LLM runtime action;
+- learning labels/progressive capture are not yet verifier-grounded and durable end to end;
+- receipt provenance and System-1 economics are incompletely linked to observed owners;
+- H-079 refresh, dogfood and exact-head CI remain open.
+
+Canonical audit:
+[context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
 
 ## HW-032 — H-080 abstraction accepted; production authority/dispatch qualification remains open (2026-09-22)
 

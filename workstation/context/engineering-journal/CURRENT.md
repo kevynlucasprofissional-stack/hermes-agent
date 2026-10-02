@@ -2,41 +2,64 @@
 
 ## H-081 — Laya direct System-1 / resumable authority / learning-loop experiment (2026-10-02)
 
-**Classification:** ARCHITECTURAL DECISION IMPLEMENTED / QUALIFIED ON ISOLATED BRANCH `workstation/laya-direct-system1`.
+**Classification:** **ARCHITECTURE ACCEPTED / IMPLEMENTATION SCAFFOLD LOCALLY TESTED / REMEDIATION REQUIRED / NOT QUALIFIED** on `workstation/laya-direct-system1`.
 
-**Evidence basis:** 2026-10-02 long-run failure review, current Workstation TaskRun/Experience Compiler/background-review implementation, `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c`, and full test execution (36/36 passed).
+**Audited implementation head:** `736be5b9cebc8ffcb1c02a084a4bdba3755a5074` against `main@e4d079f005ba6b324316e70bb4f9915460f555aa` (9 ahead / 0 behind at audit).
 
-### Implemented Architecture & Artifacts
-1. **Subtree Import & Provenance Verification:**
-   - Imported `NandhaKishorM/laya` at commit `4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` (v0.3.23, Apache-2.0) via `git subtree` at `workstation/third_party/laya`.
-   - Updated `workstation/components.lock.json` with vendored component details and license classification.
-   - Enforced strict provenance in `workstation/system1/provenance.py` rejecting global/unapproved imports.
-   - Suite: `workstation/tests/test_laya_vendor_provenance.py` (3/3 passed).
-2. **Generic Core Seam (`agent/system1_decision.py`):**
-   - Core agent depends only on generic `DecisionRequest`, `DecisionResult`, `register_system1_decision_provider`, `decide_system1`.
-   - Zero dependencies on Workstation or Laya in `agent/`.
-   - Suite: `workstation/tests/test_system1_contracts.py` (3/3 passed).
-3. **P0 TaskRun Authority Supersession (`workstation/authority_supersession.py`):**
-   - Replaced unrecoverable `stale_task_run` dead-end with typed `AUTHORITY_SUPERSEDED` continuation.
-   - Strict write-fencing prevents stale runs from mutating state. Completed work is checkpointed to `ArtifactStore`.
-   - Continuation restores only unconfirmed items into the new canonical run; uncertain mutations require explicit reconciliation.
-   - Suite: `workstation/tests/test_taskrun_authority_supersession.py` (3/3 passed).
-4. **Active Execution Influence in Control Plane (`workstation/control_plane/router.py`):**
-   - Router queries System-1 to rank candidates when `len(candidates) > 1`. Preferred candidate is verified and proven first.
-   - System-1 classifies reasoning gaps (`ambiguity_kind`, `needs_system2`, `known_recovery_path`) before `WAKE_LLM`.
-   - Known recovery paths (e.g. `reprobe_state`) resolve deterministically with `WaitDecision`, avoiding token waste.
-   - Suites: `workstation/tests/test_system1_capability_routing.py` (3/3 passed), `workstation/tests/test_system1_reasoning_handoff.py` (2/2 passed).
-5. **Safety Invariants Enforced (`workstation/tests/test_system1_safety.py`):**
-   - System-1 has ZERO authority to mint certificates, grant permissions, or self-verify mutations.
-   - A 99.99% confident destructive candidate without required authority produces `HumanDecision` (no dispatch).
-   - Suite: `workstation/tests/test_system1_safety.py` (2/2 passed).
-6. **Telemetry & Dual-Rate Learning Loop:**
-   - Extended `ORAMetrics` and `VOLCMetrics` in `workstation/control_plane/metrics.py` with System-1 counters, `tokens_per_verified_outcome`, `cost_per_verified_outcome`.
-   - Added generic `LearningReview` dataclass and hook registry in `agent/background_review.py`.
-   - Wired `System1DatasetBuilder` in `workstation/integrations/hermes/adapter.py` to ingest reviews and generate versioned, task-split Laya dataset partitions.
-   - Core seam audit: `python workstation/scripts/audit_hermes_seams.py --strict` -> 14 classified, 0 unclassified, 0 regressions.
+The earlier branch-local wording **"ARCHITECTURAL DECISION IMPLEMENTED / QUALIFIED"**
+and **"full test execution (36/36)"** is retracted. The 36 passing tests are focused
+local evidence for contracts/safety/helpers; they are not full Workstation qualification,
+real-Laya dogfood, exact-head CI, or proof that the end-to-end learning/continuation
+loops are closed.
 
-Canonical: [`../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+### Accepted architecture
+
+- pinned Laya git subtree and secondary-upstream governance;
+- generic `agent/system1_decision.py` seam with no Laya dependency in generic core;
+- System-1 may rank/classify bounded choices but cannot grant authority, mint certificates,
+  verify effects or promote capabilities;
+- Router/Policy/Verifier proof order remains authoritative;
+- typed TaskRun supersession/checkpointing is the right recovery abstraction;
+- Cost per Verified Outcome and dual-rate learning remain the target economics/learning model.
+
+### Audit blockers
+
+1. **P0 real provider contract:** `LayaDecisionProvider` parses `Router.predict()` as
+   top-level `raw_output[q_id]["answer"]`, while vendored Laya 0.3.23 returns typed
+   `result["answers"][qid]` payloads. Fake providers therefore do not prove real Laya influence.
+2. **P0 packaging/provenance:** root extras install dependencies but do not prove supported
+   `import laya` resolves from the subtree; adapter currently constructs the provider with
+   non-strict provenance.
+3. **P0 authority continuity:** stale runs are checkpointed, but normal runtime still
+   returns/raises `stale_task_run`; no product path proves adoption/resume into the current run.
+4. **P0/P1 System-2 closure:** Router can record `needs_system2=False`, but TaskCompiler
+   still wakes the LLM for a remaining `ReasoningDecision` except narrow `reprobe_state`.
+5. **P0 learning truth:** background-review success is not verifier evidence and must never
+   become `VERIFIED_SUCCESS` training truth by itself.
+6. **P1 dual-rate loop:** dataset/review scaffolding exists, but progressive durable
+   TransitionSample capture and closed dataset flow are not proven.
+7. **P1 reproducibility/telemetry:** DecisionReceipts and counters exist, but provenance,
+   candidate/state hashes, downstream refs and owner-event metric wiring are incomplete.
+8. **Process:** H-079 refresh/classification and exact-head CI/dogfood remain open; the
+   audited head had no GitHub workflow/status evidence and no PR.
+
+### Required closure order
+
+```text
+vendored packaging/provenance
+-> real Laya parser + realistic/live contract test
+-> production AUTHORITY_SUPERSEDED adopt/resume/reconcile
+-> deterministic needs_system2=False closure
+-> verifier-grounded learning labels
+-> progressive durable Experience/System-1 dataset
+-> complete receipts + observed telemetry
+-> H-079 -> regressions -> dogfood -> exact-head CI -> final drift
+```
+
+Do not merge H-081 or restore a QUALIFIED label before every merge gate in the audit is met.
+
+Canonical design: [`../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](../LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).  
+Canonical post-implementation audit: [`../LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md`](../LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
 
 ## Operational Telemetry Phase 1/2 candidate — 2026-09-23
 
