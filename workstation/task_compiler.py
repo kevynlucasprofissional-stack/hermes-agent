@@ -488,9 +488,11 @@ class TaskCompiler:
         if caller_run is not None and str(caller_run) != metadata['canonical_run_id']:
             return {"status": "AUTHORITY_SUPERSEDED", "code": "AUTHORITY_SUPERSEDED", "plan_id": durable_id,
                     "continuation_run_id": metadata['canonical_run_id'], "dispatched": False}
+        if plan and plan.status == "cancelled":
+            return {"status": "CANCELLED", "dispatched": False, "plan_id": plan.id}
         if plan and plan.run_id and plan.run_id != metadata['canonical_run_id'] and canonical:
             from workstation.authority_supersession import classify_run_authority, checkpoint_superseded_execution
-            classification = classify_run_authority(canonical, plan.run_id)
+            classification = classify_run_authority(canonical, plan.run_id, connection=conn)
             items = self.store.get_work_items(plan.id)
             record = checkpoint_superseded_execution(canonical.id, plan.run_id, classification.current_run_id,
                 [{"item_id": i.id, "result_ref": i.normalized_output_ref} for i in items if i.status.value == "completed"],
@@ -692,7 +694,8 @@ class TaskCompiler:
                         classify_run_authority,
                         checkpoint_superseded_execution,
                     )
-                    auth_eval = classify_run_authority(live_task, pinned_run)
+                    auth_eval = classify_run_authority(live_task, pinned_run, connection=self.store.get_connection(),
+                        plan_status=self.store.get_plan(item.plan_id).status)
                     if auth_eval is not None:
                         all_items = self.store.get_work_items(item.plan_id)
                         pending_items = [
@@ -1456,9 +1459,11 @@ class TaskCompiler:
         plan = self.store.get_plan(request.get('_capability_plan_id') or identity)
         if plan and plan.session_id != session_id:
             raise ValueError('Capability plan belongs to another conversation')
+        if plan and plan.status == "cancelled":
+            return {"status": "CANCELLED", "dispatched": False, "plan_id": plan.id}
         if plan and plan.run_id != run_id:
             from workstation.authority_supersession import classify_run_authority, checkpoint_superseded_execution
-            classification = classify_run_authority(canonical, plan.run_id)
+            classification = classify_run_authority(canonical, plan.run_id, connection=conn)
             items = self.store.get_work_items(plan.id)
             record = checkpoint_superseded_execution(owner, plan.run_id, run_id,
                 [{"item_id": i.id, "result_ref": i.normalized_output_ref} for i in items if i.status.value == "completed"],
@@ -1500,7 +1505,8 @@ class TaskCompiler:
                     classify_run_authority,
                     checkpoint_superseded_execution,
                 )
-                auth_eval = classify_run_authority(live, plan.run_id)
+                auth_eval = classify_run_authority(live, plan.run_id, connection=self.store.get_connection(),
+                    plan_status=self.store.get_plan(plan.id).status)
                 if auth_eval is not None:
                     all_items = self.store.get_work_items(plan.id)
                     pending_items = [

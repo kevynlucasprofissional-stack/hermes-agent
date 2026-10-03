@@ -67,6 +67,8 @@ def classify_run_authority(
     live_task: Any,
     pinned_run_id: str,
     policy_revocation: bool = False,
+    connection=None,
+    plan_status=None,
 ) -> Optional[AuthoritySuperseded]:
     """Examine live Kanban task state vs pinned run ID to determine authority status.
 
@@ -85,6 +87,23 @@ def classify_run_authority(
     task_id = str(getattr(live_task, "id", ""))
     status = str(getattr(live_task, "status", "")).lower()
     current_run = str(getattr(live_task, "current_run_id", "")) if getattr(live_task, "current_run_id", None) is not None else None
+
+    if connection is not None and pinned_run_id is not None:
+        from hermes_cli import kanban_db
+        run = kanban_db.get_run(connection, int(pinned_run_id))
+        if run is None or run.task_id != task_id:
+            policy_revocation = True
+        else:
+            causes = {str(run.outcome or "").upper(), str(run.status or "").upper(),
+                      str((run.metadata or {}).get("termination_kind", "")).upper()}
+            for cause, mapped in (("POLICY_REVOKED", "policy_revoked"), ("REVOKED_BY_USER", "revoked"),
+                                  ("CANCELLED", "cancelled")):
+                if cause in causes:
+                    status = mapped
+                    break
+
+    if plan_status == "cancelled":
+        status = "cancelled"
 
     if policy_revocation or status == "policy_revoked":
         return AuthoritySuperseded(
@@ -116,13 +135,13 @@ def classify_run_authority(
             details={"reason": "authority_revoked_by_user"},
         )
 
-    if current_run and str(current_run) != str(pinned_run_id):
+    if pinned_run_id is not None and current_run != str(pinned_run_id):
         return AuthoritySuperseded(
             task_id=task_id,
             stale_run_id=str(pinned_run_id),
             current_run_id=current_run,
             termination_kind=AuthorityTerminationKind.SUPERSEDED,
-            continuation_allowed=True,
+            continuation_allowed=bool(current_run),
             details={"reason": "canonical_run_replaced"},
         )
 

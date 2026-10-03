@@ -173,7 +173,7 @@ def prepare_mutation(agent, name, args):
                 classify_run_authority,
                 checkpoint_superseded_execution,
             )
-            auth_eval = classify_run_authority(task, run_id)
+            auth_eval = classify_run_authority(task, run_id, connection=conn)
             if auth_eval is not None:
                 checkpoint_superseded_execution(
                     task_id=task_id,

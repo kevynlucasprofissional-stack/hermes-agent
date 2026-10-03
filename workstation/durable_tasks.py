@@ -905,16 +905,22 @@ class DurableTaskStore:
         with self._lock, self.get_connection() as conn:
             task = kanban_db.get_task(conn, canonical_task_id)
             plan = self.get_plan(plan_id)
+            if plan.status == "cancelled":
+                raise PermissionError("cancelled_plan_not_resumable")
             if not task or str(task.current_run_id) != new_run_id or task.status != "running":
                 raise PermissionError("canonical_run_not_resumable")
+            from workstation.authority_supersession import classify_run_authority
+            authority = classify_run_authority(task, plan.run_id, connection=conn)
+            if authority is None or not authority.continuation_allowed:
+                raise PermissionError("source_run_not_resumable")
             if checkpoint.get("termination_kind") != "SUPERSEDED" or not checkpoint.get("continuation_allowed"):
                 raise PermissionError("termination_not_resumable")
             if plan.run_id != checkpoint.get("stale_run_id"):
                 raise PermissionError("supersession_lineage_changed")
             meta = {**plan.metadata, "run_id": new_run_id, "canonical_run_id": new_run_id,
                     "supersession": checkpoint, "fenced_run_ids": [*plan.metadata.get("fenced_run_ids", []), plan.run_id]}
-            changed = conn.execute("UPDATE work_plans SET run_id=?, metadata=?, status='running' WHERE id=? AND run_id=? AND EXISTS (SELECT 1 FROM tasks WHERE id=? AND current_run_id=? AND status='running')",
-                         (new_run_id, json.dumps(meta), plan.id, plan.run_id, canonical_task_id, new_run_id))
+            changed = conn.execute("UPDATE work_plans SET run_id=?, metadata=?, status='running' WHERE id=? AND run_id=? AND status!='cancelled' AND EXISTS (SELECT 1 FROM tasks WHERE id=? AND current_run_id=? AND status='running') AND EXISTS (SELECT 1 FROM task_runs WHERE id=? AND task_id=? AND UPPER(COALESCE(outcome,'')) NOT IN ('CANCELLED','REVOKED_BY_USER','POLICY_REVOKED') AND UPPER(status) NOT IN ('CANCELLED','REVOKED_BY_USER','POLICY_REVOKED') AND UPPER(COALESCE(json_extract(metadata,'$.termination_kind'),'')) NOT IN ('CANCELLED','REVOKED_BY_USER','POLICY_REVOKED'))",
+                         (new_run_id, json.dumps(meta), plan.id, plan.run_id, canonical_task_id, new_run_id, plan.run_id, canonical_task_id))
             if changed.rowcount != 1:
                 raise PermissionError("canonical_run_changed_during_adoption")
             for item in self.get_work_items(plan.id):
