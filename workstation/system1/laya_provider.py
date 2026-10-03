@@ -230,3 +230,11 @@ class LayaDecisionProvider:
             probabilities=result.probabilities, abstentions=result.abstentions, answers=result.answers,
             latency_ms=result.latency_ms, details={"provenance": self.provenance.to_dict()})
         result.details["receipt_ref"] = persist_decision_receipt(receipt, self.artifact_store)
+        from agent.runtime_events import notify_runtime_event
+        notify_runtime_event("system1_completed", {"request_id": request.request_id,
+            "task_id": request.task_id or None, "run_id": request.run_id or None,
+            "operation_id": request.operation_id or None, "provider": "laya", "model": result.model,
+            "duration_ms": result.latency_ms, "abstained": bool(result.abstentions),
+            "fallback": result.fallback_recommended, "error": "error" in result.details,
+            "successful": not result.fallback_recommended and not result.is_abstained(),
+            "receipt_ref": result.details["receipt_ref"]})

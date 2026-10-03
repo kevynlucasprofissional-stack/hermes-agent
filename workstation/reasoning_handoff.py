@@ -114,6 +114,10 @@ def needs_reasoning(artifacts, owner, *, completed_until, expected, observed,
                      'safe_to_resume': bool(safe_to_resume)})
     from workstation.recipes import digest
     ref = artifacts.store(owner, 'reasoning_' + digest(body) + '.json', body)
+    from workstation.telemetry import TelemetryEventType, emit_event
+    emit_event(TelemetryEventType.LLM_WOKEN, source_owner="workstation.reasoning_handoff",
+        task_id=owner, run_id=(context or {}).get("run_id"), operation_id=(context or {}).get("operation_id"),
+        status="WAKE_LLM", evidence_refs=(ref.ref,), dedupe_key="reasoning:" + ref.ref)
     return {'status': 'NEEDS_REASONING', 'completed_until': completed_until,
             'expected': 'See state_ref for the unresolved contract',
             'observed': 'Runtime requires semantic adaptation or reconciliation',

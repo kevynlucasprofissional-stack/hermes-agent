@@ -350,13 +350,6 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
                    payload={"certificate_hash": result.get("certificate_hash"),
                             "intent_family": result.get("intent_family"),
                             "target_family": result.get("target_family")})
-        if decision == "WAKE_LLM":
-            emit_event(TelemetryEventType.LLM_WOKEN,
-                       source_owner="workstation.operational_resolution",
-                       session_id=str(getattr(context, "session_id", "") or ""),
-                       task_id=task.id,
-                       run_id=str(task.current_run_id) if task.current_run_id is not None else None,
-                       status="WAKE_LLM", reason_code=str(result.get("reason") or "unspecified"))
 
     outcome, text = _outcome_for(result)
     if outcome is None:

@@ -57,6 +57,11 @@ def resolve_reprobe(compiler, intent, task_id, session_id):
         return None
     ref = compiler.artifacts.store(task_id, "known_reprobe_verification.json", verdict.to_dict(),
         schema="workstation.verification_result.v1")
+    from workstation.telemetry import TelemetryEventType, emit_event
+    emit_event(TelemetryEventType.VERIFICATION_COMPLETED, source_owner="workstation.known_recovery_verifier",
+        task_id=task_id, run_id=getattr(compiler, "canonical_run_id", None), operation_id=intent.id,
+        route="deterministic", status=verdict.status.value, evidence_refs=(ref.ref,),
+        dedupe_key=f"reprobe-verification:{task_id}:{getattr(compiler, 'canonical_run_id', None)}:{intent.id}")
     return {"success": True, "routing_decision": "SATISFIED", "resolution": "REPROBE",
         "semantic_state": state, "verification_result": verdict.to_dict(), "verification_ref": ref.ref,
         "system2_calls": 0, "session_id": session_id}

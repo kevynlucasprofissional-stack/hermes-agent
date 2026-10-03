@@ -129,7 +129,7 @@ class VOLCMetrics:
 
     verified_outcomes: int
     llm_calls: int = 0
-    tokens: int = 0
+    tokens: int | None = None
     cpu_seconds: float = 0.0
     wall_time_seconds: float = 0.0
     tool_calls: int = 0
@@ -143,7 +143,7 @@ class VOLCMetrics:
 
     @property
     def tokens_per_outcome(self) -> float | None:
-        return self.tokens / self.verified_outcomes if self.verified_outcomes else None
+        return self.tokens / self.verified_outcomes if self.verified_outcomes and self.tokens is not None else None
 
     @property
     def tool_calls_per_outcome(self) -> float | None:
@@ -177,7 +177,7 @@ class VOLCMetrics:
 def calculate_volc(
     verified_outcomes: int,
     llm_calls: int = 0,
-    tokens: int = 0,
+    tokens: int | None = None,
     cpu_seconds: float = 0.0,
     wall_time_seconds: float = 0.0,
     tool_calls: int = 0,

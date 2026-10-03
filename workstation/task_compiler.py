@@ -1397,6 +1397,8 @@ class TaskCompiler:
             else decision.attention_packet
         )
         context_payload = {
+            "run_id": getattr(self, "canonical_run_id", None) or _canonical_caller_run.get(),
+            "operation_id": request.get("operation_id") or intent.id,
             "intent_id": intent.id,
             "open_condition": open_cond,
             "attention_packet": attention,

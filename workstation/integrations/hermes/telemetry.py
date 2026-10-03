@@ -24,6 +24,14 @@ def install_workstation_telemetry():
 
 
 def _observe_runtime_event(event_name: str, metadata: dict) -> None:
+    if event_name == "system1_completed":
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.SYSTEM1_COMPLETED, source_owner="workstation.system1.provider",
+            task_id=metadata.get("task_id"), run_id=metadata.get("run_id"), operation_id=metadata.get("operation_id"),
+            duration_ms=metadata.get("duration_ms"), evidence_refs=(metadata["receipt_ref"],),
+            dedupe_key="system1:" + metadata["request_id"],
+            payload={key: metadata.get(key) for key in ("provider", "model", "abstained", "fallback", "error", "successful")})
+        return
     if event_name != "provider_called":
         return
     from workstation.telemetry import TelemetryEventType, emit_event
@@ -33,6 +41,7 @@ def _observe_runtime_event(event_name: str, metadata: dict) -> None:
                turn_id=metadata.get("turn_id"), duration_ms=metadata.get("duration_ms"),
                provider_calls=1, input_tokens=metadata.get("input_tokens"),
                output_tokens=metadata.get("output_tokens"), status=metadata.get("status"),
+               cost_usd=metadata.get("cost_usd"),
                dedupe_key=f"provider:{api_request_id}" if api_request_id else None,
                payload={"api_request_id": api_request_id, "provider": metadata.get("provider"),
                         "model": metadata.get("model"), "purpose": metadata.get("purpose"),

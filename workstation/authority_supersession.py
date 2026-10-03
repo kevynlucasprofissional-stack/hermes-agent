@@ -179,6 +179,13 @@ def checkpoint_superseded_execution(
         uncertain_effects=uncertain_list,
         continuation_allowed=continuation_ok,
     )
+    if continuation_ok:
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.AUTHORITY_SUPERSEDED, source_owner="workstation.taskrun_authority",
+            task_id=task_id, run_id=str(stale_run_id), status="SUPERSEDED",
+            dedupe_key=f"supersession:{task_id}:{stale_run_id}:{current_run_id}",
+            evidence_refs=(chk_ref.ref, pend_ref.ref), payload={"current_run_id": current_run_id,
+                "pending_count": len(pending_items), "uncertain_count": len(uncertain_list)})
 
     # Also persist the AuthoritySuperseded event
     store.store(
