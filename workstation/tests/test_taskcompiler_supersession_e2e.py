@@ -86,6 +86,23 @@ def test_uncertain_readback_failure_never_redispatches(runtime):
     assert compiler.store.outstanding_uncertain_mutations(first["plan_id"])
 
 
+def test_adoption_does_not_lend_authority_to_running_old_worker(runtime):
+    compiler, conn, task, request = runtime
+    writes = []
+    def dispatch(name, args, *_):
+        if name == "test_readback":
+            return {"id": args["id"]}
+        writes.append(args["id"])
+        if args["id"] == 0:
+            conn.execute("UPDATE tasks SET current_run_id=102 WHERE id=?", (task,))
+            conn.execute("UPDATE work_plans SET run_id='102'")
+            conn.commit()
+        return {"ok": True}
+    result = compiler.execute(request, task_id=task, session_id="session", dispatch=dispatch)
+    assert writes == [0]
+    assert result["completed"] == 1
+
+
 @pytest.mark.parametrize("status", ["cancelled", "revoked", "policy_revoked"])
 def test_compiler_nonresumable_termination(runtime, status):
     compiler, conn, task, request = runtime

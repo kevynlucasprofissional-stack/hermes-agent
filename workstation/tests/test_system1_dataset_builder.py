@@ -12,6 +12,7 @@ def test_artifact_reconstruction_and_task_split_without_positive_self_certificat
     before = builder.export_partitions()
     restored = System1DatasetBuilder(artifact_store=ArtifactStore(tmp_path))
     assert restored.export_partitions() == before
+
     assert not before["train"] and not before["validation"] and not before["held_out"]
     assert len(before["proposals"]) == 2
     assert restored._determine_split("t") == builder._determine_split("t")
@@ -19,3 +20,17 @@ def test_artifact_reconstruction_and_task_split_without_positive_self_certificat
     paths = restored.write_to_disk(tmp_path / "export")
     assert paths["proposals"].read_text().count("\n") == 2
     assert System1DatasetBuilder(artifact_store=store).export_partitions() == before
+
+
+def test_progressive_counterevidence_survives_terminal_observation_and_restart(tmp_path):
+    store = ArtifactStore(tmp_path)
+    builder = System1DatasetBuilder(artifact_store=store)
+    for run, status in (("a", "UNCERTAIN"), ("a", "VERIFIED_SUCCESS"), ("b", "AUTHORITY_SUPERSEDED")):
+        builder.add_progress_sample("t", run, "op", "progress", {"password": "canary-secret"},
+            {"done": True}, {}, "progressing", status)
+    restored = System1DatasetBuilder(artifact_store=ArtifactStore(tmp_path))
+    exported = restored.export_partitions()
+    assert len(exported["counterevidence"]) == 2
+    assert len(exported["proposals"]) == 1
+    assert "canary-secret" not in __import__("json").dumps(exported)
+    assert len(restored._samples) == 3

@@ -89,12 +89,19 @@ class System1DatasetBuilder:
                         continue
                     body = json.loads(path.read_text(encoding="utf-8"))
                     sample = DatasetSample(**body)
-                    found[sample.sample_id] = sample
+                    old = found.get(sample.sample_id)
+                    strength = lambda s: (s.created_at, bool(s.provenance.get("canonical_verifier_grounded")))
+                    if old is None or strength(sample) > strength(old):
+                        found[sample.sample_id] = sample
         self._samples = list(found.values())
         return len(self._samples)
 
     def _persist_sample(self, sample):
-        from workstation.recipes import digest
+        from workstation.recipes import digest, sanitize
+        sample.state = sanitize(sample.state)
+        sample.questions = sanitize(sample.questions)
+        sample.expected_answers = sanitize(sample.expected_answers)
+        sample.provenance = sanitize(sample.provenance)
         body = asdict(sample)
         self.artifacts.store(sample.task_id or "system1_proposals", "system1_sample_" + digest(body) + ".json",
             body, schema="hermes.system1_dataset_sample.v1")
@@ -142,7 +149,7 @@ class System1DatasetBuilder:
 
         questions = build_candidate_ranking_schema(candidate_capabilities)
         sample = DatasetSample(
-            sample_id=f"cap_{task_id}_{operation_id}",
+            sample_id="cap_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, verification_status, state, chosen_capability], sort_keys=True).encode()).hexdigest()[:24],
             task_id=task_id,
             run_id=run_id,
             operation_id=operation_id,
@@ -177,7 +184,7 @@ class System1DatasetBuilder:
 
         questions = STANDARD_SCHEMAS["progress_class"]
         sample = DatasetSample(
-            sample_id=f"prog_{task_id}_{operation_id}",
+            sample_id="prog_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, verification_status, before_state, after_state, delta], sort_keys=True).encode()).hexdigest()[:24],
             task_id=task_id,
             run_id=run_id,
             operation_id=operation_id,
@@ -217,7 +224,7 @@ class System1DatasetBuilder:
             **STANDARD_SCHEMAS["needs_system2"],
         }
         sample = DatasetSample(
-            sample_id=f"gap_{task_id}_{operation_id}",
+            sample_id="gap_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, state, ambiguity_kind, needs_system2], sort_keys=True).encode()).hexdigest()[:24],
             task_id=task_id,
             run_id=run_id,
             operation_id=operation_id,
@@ -255,7 +262,7 @@ class System1DatasetBuilder:
                 [invocation["capability_id"]] if verified else ["NO_MATCH"],
                 invocation["capability_id"] if verified else "NO_MATCH",
                 verification_status="VERIFIED_SUCCESS" if verified else "FAILED" if getattr(review, "status", "") == "error" else "UNVERIFIED_REVIEW", persist=False)
-            sample.sample_id = "review_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, idx, refs, action], sort_keys=True, default=str).encode()).hexdigest()[:24]
+            sample.sample_id = "review_" + hashlib.sha256(json.dumps([task_id, run_id, operation_id, idx, refs, action, sample.verification_status], sort_keys=True, default=str).encode()).hexdigest()[:24]
             sample.provenance.update(source="LearningReview", source_refs=list(refs), action_shape=type(act).__name__,
                 review_status=getattr(review, "status", ""), canonical_verifier_grounded=verified,
                 evidence_refs=invocation["verification_evidence_refs"] if verified else [])
@@ -306,7 +313,7 @@ class System1DatasetBuilder:
             "proposals": [],
             "counterevidence": [],
         }
-        for sample in self._samples:
+        for sample in sorted(self._samples, key=lambda value: value.sample_id):
             eligible = (sample.verification_status == "VERIFIED_SUCCESS" and sample.task_id and sample.run_id
                 and sample.operation_id and sample.provenance.get("canonical_verifier_grounded")
                 and self._verified_invocation(sample.provenance.get("source_refs", []), sample.task_id, sample.run_id, sample.operation_id))

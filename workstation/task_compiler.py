@@ -505,6 +505,8 @@ class TaskCompiler:
             self.store.adopt_superseded_plan(plan.id, canonical_task_id=canonical.id,
                 new_run_id=str(caller_run), checkpoint=record.to_dict())
             plan = self.store.get_plan(plan.id)
+        # A concurrent adoption must never lend the new run's authority to this worker.
+        execution_run_id = plan.run_id if plan else metadata['canonical_run_id']
         metadata["session_id"] = session_id
         from workstation.journal import execution_provenance
         metadata.update(execution_provenance())
@@ -640,15 +642,21 @@ class TaskCompiler:
                         bindings[phase if phase != "fan_out" else "steps"][step["id"]] = bindings["steps"][step["id"]]
                     continue
                 if current.checkpoints.get(f"step_{index}_dispatch") and tool_effect(step["tool"]) not in READ_EFFECTS:
+                    if not self.store.get_plan(item.plan_id).metadata.get("supersession", {}).get("continuation_allowed"):
+                        return {"valid": False, "code": "uncertain_mutation_requires_review", "results": results}
                     # Reconcile by the already-admitted independent readback, never
                     # by reissuing the uncertain mutation or accepting prediction.
                     reconcilers = [v for v in phase_steps[index + 1:] if step.get("id") in v.get("verifies", []) and tool_effect(v["tool"]) in READ_EFFECTS]
                     for verifier in reconcilers:
-                        read_args = _bind(verifier.get("args", {}), payload, bindings)
+                        try:
+                            read_args = _bind(verifier.get("args", {}), payload, bindings)
+                            expected_readback = _bind(verifier["expect"], payload, bindings)
+                        except ValueError:
+                            continue  # A lost response cannot supply a readback target binding.
                         require_browser_scope(read_args, scope)
                         observed = dispatch(verifier["tool"], read_args, task_id, f"{item.id}_{index}_reconcile")
                         metrics["tool_calls"] += 1
-                        if _validate(observed, _bind(verifier["expect"], payload, bindings)):
+                        if _validate(observed, expected_readback):
                             evidence = content_reference(self.artifacts, durable_id, blob_references(self.artifacts, durable_id, observed))
                             self.store.update_item_checkpoint(item.id, f"step_{index}", metadata={"result_ref": evidence["artifact_ref"], "reconciled": True})
                             results.append(evidence)
@@ -679,7 +687,7 @@ class TaskCompiler:
                 effect, contract = tool_contract(step["tool"])
                 if effect in WRITE_EFFECTS and metadata['canonical_task_id']:
                     live_task = kanban_db.get_task(self.store.get_connection(), metadata['canonical_task_id'])
-                    pinned_run = self.store.get_plan(item.plan_id).run_id
+                    pinned_run = execution_run_id
                     from workstation.authority_supersession import (
                         classify_run_authority,
                         checkpoint_superseded_execution,
@@ -720,7 +728,7 @@ class TaskCompiler:
                     return {"valid": False, "code": "uncertain_mutation_requires_review", "results": results}
                 identity_record = mutation_identity(step["tool"], args,
                     task_id=metadata.get("canonical_task_id") or task_id,
-                    run_id=self.store.get_plan(item.plan_id).run_id) if effect in WRITE_EFFECTS else None
+                    run_id=execution_run_id) if effect in WRITE_EFFECTS else None
                 if identity_record:
                     identity_record.update({"status": "uncertain", "persisted": None, "verifier_status": "pending"})
                 self.store.update_item_checkpoint(item.id, f"step_{index}_dispatch", metadata={"mutation_identity": identity_record})
