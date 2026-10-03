@@ -538,3 +538,17 @@ core imports no Workstation code; `workstation/integrations/hermes/telemetry.py`
 owns the local SQLite projection. No prompts, messages, responses, URLs, DOM or
 credentials cross this boundary. Classified as `SEAM-RUNTIME-TELEMETRY` /
 `UPSTREAM_ABSTRACT` and recorded as UPINT-005 through UPINT-007.
+
+
+## 2026-10-02 corrective closure below the original findings
+
+**P0-A through P0-E and P1-A through P1-C: CLOSED LOCALLY WITH RUNTIME EVIDENCE.**
+**Exact-head CI: PENDING; H-081 remains NOT QUALIFIED until that run is green.**
+
+[H-081 closure evidence](qualification/H081_CLOSURE_2026-10-02.md) records the supported install, real checkpoint decision (confidence 0.9703),
+39 focused passing proofs, complete Workstation regression, canonical supersession and
+uncertain readback, verifier-grounded learning, durable reconstruction, receipts and
+actual owner events. The audit above is preserved as the record of the original defects.
+H-079 was refreshed/classified against `46904a3b467f62616f5b3ee247adce30b1b277a0`
+(7,336 upstream-only commits; material file overlap); the original adopted pin remains
+immutable. This evidence does not claim latest-upstream alignment or authorize a main merge.

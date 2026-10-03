@@ -1,5 +1,19 @@
 # Current State
 
+## 2026-10-02 — H-081 corrective runtime closure
+
+**LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
+Supported vendored Laya install, real checkpoint bounded influence, immutable stale-run
+fencing with canonical adoption/readback, verified no-System2 reprobe, verifier-grounded
+labels, durable progressive samples/reconstructible dataset, receipts and owner telemetry
+are proven locally. Final focused dogfood: **39 passed including live**, plus full
+Workstation regression and adjacent owner/core gates. H-079 material drift is classified;
+no new upstream pin or main merge was performed. CI remains the external qualification gate.
+See [H-081 closure evidence](../qualification/H081_CLOSURE_2026-10-02.md) for exact scope, counts and reproducer.
+
+The following audit/state entries are historical; their local P0/P1 findings are
+superseded by that closure evidence, while release/promotion scope remains bounded.
+
 ## 2026-10-02 H-081 Laya direct System-1 — POST-IMPLEMENTATION AUDIT / NOT QUALIFIED
 
 Audited branch `workstation/laya-direct-system1` at

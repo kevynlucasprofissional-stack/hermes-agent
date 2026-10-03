@@ -174,9 +174,10 @@ The strategic map treats the following as active truth, not historical footnotes
   completion, event, evidence and effect boundary;
 - product-level release evidence remains narrower than some contract-layer claims and must
   never be inferred from unit/contract success alone;
-- H-081/Laya branch qualification is OPEN: real-provider parsing/packaging, runtime
-  supersession continuation, verifier-grounded learning, progressive durable capture,
-  observed telemetry, H-079 refresh, dogfood and exact-head CI remain required.
+- H-081/Laya corrective runtime gates are proven locally, including real checkpoint
+  influence, canonical continuation/readback, no-System2 recovery and durable learning.
+  H-079 drift is classified and dogfood passed; exact-head CI remains the qualification
+  gate. See [closure evidence](qualification/H081_CLOSURE_2026-10-02.md).
 
 Use [context/CURRENT_STATE.md](context/CURRENT_STATE.md),
 [context/KNOWN_ISSUES.md](context/KNOWN_ISSUES.md) and the active Engineering Journal for
