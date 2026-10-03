@@ -1,0 +1,25 @@
+[
+  {
+    "operation_id": "8277d24693fda8cebc75c02a8154f5ec3238c51cce0543704b431bb7454d5c3c",
+    "task_id": "t_f61ff851",
+    "run_id": "101",
+    "tool": "test_write",
+    "tool_effect": "MUTATION",
+    "effect": "unknown_mutation",
+    "scope": "unknown",
+    "external": null,
+    "provider": null,
+    "field": null,
+    "target_kind": "unknown",
+    "target_identifier": 0,
+    "operation_semantic": "test_write",
+    "timestamp": "2026-10-02T23:44:53.835136+00:00",
+    "status": "semantically_observed",
+    "persisted": false,
+    "verifier_status": "verified",
+    "evidence_ref": "artifact://tasks/work_46113bb47f84b7e6b2a7c93e7074e262e67bced922099239dd645bf73f29b21b/fcb23ed4c9bff562155fe997a4b0b689c7ebd881bee6c7526d7718a0908e5731.data",
+    "evidence_strength": 0,
+    "verification_evidence_ref": "artifact://tasks/work_46113bb47f84b7e6b2a7c93e7074e262e67bced922099239dd645bf73f29b21b/fcb23ed4c9bff562155fe997a4b0b689c7ebd881bee6c7526d7718a0908e5731.data",
+    "item_id": "plan_54bd5a2bb605_0001"
+  }
+]

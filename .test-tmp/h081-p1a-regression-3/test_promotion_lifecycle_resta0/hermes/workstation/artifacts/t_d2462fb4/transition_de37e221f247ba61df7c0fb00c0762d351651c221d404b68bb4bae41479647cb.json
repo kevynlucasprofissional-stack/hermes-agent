@@ -1,0 +1,94 @@
+{
+  "delta": {
+    "added": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "ready": true,
+      "url": "https://example.test/guide",
+      "wall_detected": false
+    },
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "MUTATION",
+    "operation_family": "browser_navigate",
+    "parameters": {
+      "url": "https://example.test/guide"
+    },
+    "primitive": "browser_navigate",
+    "scope": {
+      "host": "example.test",
+      "path_family": "/guide"
+    },
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "user",
+    "authority_ref": "artifact://tasks/t_d2462fb4/trace_authority_f23aa50966751eeb7860c0271e59dac7dc11d80eaa28f66b5ddbed37bcabf234.json",
+    "authority_scope": {
+      "allowed_actions": [
+        "browser_navigate"
+      ],
+      "allowed_resources": [
+        "native_browser"
+      ],
+      "channels": [],
+      "level": 1
+    },
+    "operation_id": "op-test-canonical",
+    "operation_index": 0,
+    "run_id": "1",
+    "runtime": "electron-chromium",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": "t_d2462fb4",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": "artifact://tasks/t_d2462fb4/trace_result_97059bd8b7d213c648e3197be86792f81aecab3d23ae7fd9ef93cc59fe0fc51d.json",
+  "sample_id": "transition_2b39e21ed940b2287ae33f37",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/t_d2462fb4/trace_result_97059bd8b7d213c648e3197be86792f81aecab3d23ae7fd9ef93cc59fe0fc51d.json",
+    "semantic_predicates": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "ready": true,
+      "url": "https://example.test/guide",
+      "wall_detected": false
+    }
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "cap_delete_all_files@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "cap_delete_all_files",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Capability cap_delete_all_files",
+    "ref": "artifact://tasks/operational_capabilities/cap_delete_all_files_1.0.0_67fb17ef308d9d58.json",
+    "route": "atomic",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "67fb17ef308d9d58e746244051376677472f1139cfc8d01ce0b8e2baeeacae6f",
+    "superseded_by": "",
+    "updated_at": "2026-10-03T00:19:40.353308+00:00",
+    "version": "1.0.0"
+  },
+  "cap_read_existing_file@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "cap_read_existing_file",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Capability cap_read_existing_file",
+    "ref": "artifact://tasks/operational_capabilities/cap_read_existing_file_1.0.0_d9a75c82b371bfef.json",
+    "route": "atomic",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "d9a75c82b371bfef23da3d1d5121a0b387e2cb4a0c30fdb66a3c58c889490c14",
+    "superseded_by": "",
+    "updated_at": "2026-10-03T00:19:40.358310+00:00",
+    "version": "1.0.0"
+  }
+}

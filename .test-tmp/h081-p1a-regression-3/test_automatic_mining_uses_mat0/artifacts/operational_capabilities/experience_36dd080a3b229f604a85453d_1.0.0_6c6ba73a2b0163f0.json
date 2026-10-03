@@ -1,0 +1,204 @@
+{
+  "id": "experience_36dd080a3b229f604a85453d",
+  "name": "Verified browser_click",
+  "version": "1.0.0",
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "output_schema": {},
+  "effect": "state_mutation",
+  "route": "native_browser",
+  "scope": {
+    "host": "github.com"
+  },
+  "preconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "mergeable",
+      "expected": true
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "ready",
+      "expected": false
+    }
+  ],
+  "postconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "ready",
+      "expected": true
+    }
+  ],
+  "verifier_contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "ready"
+    ],
+    "effect_classes": [
+      "state_mutation"
+    ],
+    "observer": "owner_readback",
+    "source_kind": "unknown",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "CANDIDATE",
+    "validation_evidence_refs": [
+      "artifact://proof"
+    ],
+    "validation_receipts": [],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "a1eb411d40e144805327f917b670bb0d44c2c207d19a2ad51641b85fd6101d47"
+  },
+  "dependencies": [],
+  "implementation": {
+    "steps": [
+      {
+        "args": {
+          "anchor": {
+            "type": "testid",
+            "value": "commit"
+          }
+        },
+        "id": "learned_0",
+        "primitive": "browser_click",
+        "verifier": true
+      }
+    ]
+  },
+  "lifecycle": "discovered",
+  "provenance": {
+    "source": "experience_compiler",
+    "origins": [
+      {
+        "task_id": "task",
+        "run_id": "r1",
+        "operation_id": "browser_click",
+        "runtime": "electron-chromium",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": "artifact://tasks/task/transition_fa289aa278639ee1a425a600_64447cc92ee59d78aace6efe.json",
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r2",
+        "operation_id": "browser_click",
+        "runtime": "electron-chromium",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": "artifact://tasks/task/transition_91f07a32484c4a7a0ad7a167_29db3628bfb22f967f50def2.json",
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r3",
+        "operation_id": "browser_click",
+        "runtime": "electron-chromium",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": "artifact://tasks/task/transition_a63f12ba076935d4047561d1_c0f3b47774f4f4e44897beec.json",
+        "authority_ref": null,
+        "authority_scope": null
+      }
+    ]
+  },
+  "semantic_fingerprint": "df08c4d8c09393a1fafa3a4c90fb35278426bdfa63daf927047aa2395ff273fe",
+  "compatibility_fingerprint": "36dd080a3b229f604a85453d8ce1d9b0899cc28916ae6646725e62af63c0ed64",
+  "validation_evidence": [],
+  "success_count": 0,
+  "failure_count": 0,
+  "drift_state": "healthy",
+  "savings": {},
+  "created_at": "2026-10-02T23:58:49.732655+00:00",
+  "updated_at": "2026-10-02T23:58:49.732655+00:00",
+  "causal_grade": 2,
+  "trust_class": "trusted_runtime",
+  "taint": [],
+  "source_trace_refs": [
+    "artifact://proof",
+    "artifact://tasks/task/transition_91f07a32484c4a7a0ad7a167_29db3628bfb22f967f50def2.json",
+    "artifact://tasks/task/transition_a63f12ba076935d4047561d1_c0f3b47774f4f4e44897beec.json",
+    "artifact://tasks/task/transition_fa289aa278639ee1a425a600_64447cc92ee59d78aace6efe.json"
+  ],
+  "promotion_policy_version": "",
+  "learning_metadata": {
+    "effects": {
+      "ready": true
+    },
+    "preconditions": {
+      "mergeable": true,
+      "ready": false
+    },
+    "relations": [],
+    "bindings": [
+      {},
+      {}
+    ],
+    "semantic_closure": true,
+    "parameterization_quality": true,
+    "evidence_strength": 2,
+    "run_ids": [
+      "r1",
+      "r2"
+    ],
+    "authority_origins": [
+      "user"
+    ],
+    "provenance_complete": true,
+    "utility": 2752,
+    "drift_rate": 0.3333333333333333,
+    "unresolved_counterexamples": 0,
+    "model_inadequacy_detected": false,
+    "model_inadequacy_reason": "",
+    "node_classes": [
+      "core"
+    ],
+    "sample_refs": [
+      "transition_fa289aa278639ee1a425a600",
+      "transition_91f07a32484c4a7a0ad7a167",
+      "transition_a63f12ba076935d4047561d1"
+    ],
+    "verifier_fingerprint": "a1eb411d40e144805327f917b670bb0d44c2c207d19a2ad51641b85fd6101d47",
+    "verifier_lifecycle": "CANDIDATE",
+    "operation_families": [
+      "merge_pr"
+    ],
+    "target_families": [
+      "browser_click"
+    ]
+  },
+  "formal_contract": null,
+  "family_id": "",
+  "alias_of": "",
+  "superseded_by": ""
+}

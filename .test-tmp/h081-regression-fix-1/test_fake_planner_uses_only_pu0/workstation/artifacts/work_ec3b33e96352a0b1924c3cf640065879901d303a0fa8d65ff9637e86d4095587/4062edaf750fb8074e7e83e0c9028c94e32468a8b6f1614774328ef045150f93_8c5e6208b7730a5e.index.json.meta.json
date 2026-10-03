@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93_8c5e6208b7730a5e.index.json",
+  "name": "4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93_8c5e6208b7730a5e.index.json",
+  "task_id": "work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_fake_planner_uses_only_pu0\\workstation\\artifacts\\work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587\\4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93_8c5e6208b7730a5e.index.json",
+  "size_bytes": 218,
+  "sha256": "085f57efb809cee1bf5726f4d0893f52eb7c5e10e5102b49159512734871a714",
+  "schema": null,
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:27.404722+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

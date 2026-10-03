@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/system1_sample_f068a64e9646ca6fce86e213e076a4ddafe01dbeb212210308cc6370815ff38f.json",
+  "name": "system1_sample_f068a64e9646ca6fce86e213e076a4ddafe01dbeb212210308cc6370815ff38f.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-dataset-final-1\\test_progressive_countereviden0\\t\\system1_sample_f068a64e9646ca6fce86e213e076a4ddafe01dbeb212210308cc6370815ff38f.json",
+  "size_bytes": 1206,
+  "sha256": "e734f53f90bedb1462efff0f91a8582e01a3101a4911f21f0b2b0b06026c3597",
+  "schema": "hermes.system1_dataset_sample.v1",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:31:31.416948+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

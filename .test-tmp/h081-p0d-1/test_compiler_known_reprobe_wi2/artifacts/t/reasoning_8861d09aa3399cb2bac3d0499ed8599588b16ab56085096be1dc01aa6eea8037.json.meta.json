@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/reasoning_8861d09aa3399cb2bac3d0499ed8599588b16ab56085096be1dc01aa6eea8037.json",
+  "name": "reasoning_8861d09aa3399cb2bac3d0499ed8599588b16ab56085096be1dc01aa6eea8037.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0d-1\\test_compiler_known_reprobe_wi2\\artifacts\\t\\reasoning_8861d09aa3399cb2bac3d0499ed8599588b16ab56085096be1dc01aa6eea8037.json",
+  "size_bytes": 326,
+  "sha256": "9cb4356bdd0c2210a1d67b1c299ebe72ca09fe0ea1459409a642ca9e60859ce8",
+  "schema": null,
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:49:25.536228+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

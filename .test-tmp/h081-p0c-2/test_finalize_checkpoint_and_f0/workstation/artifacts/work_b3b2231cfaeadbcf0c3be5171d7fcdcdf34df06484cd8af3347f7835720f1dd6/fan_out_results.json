@@ -1,0 +1,14 @@
+[
+  {
+    "item_id": "plan_f7f6455008cd_0002",
+    "result_ref": "artifact://tasks/work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6/norm_item_0002.json"
+  },
+  {
+    "item_id": "plan_f7f6455008cd_0003",
+    "result_ref": "artifact://tasks/work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6/norm_item_0003.json"
+  },
+  {
+    "item_id": "plan_f7f6455008cd_0004",
+    "result_ref": "artifact://tasks/work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6/norm_item_0004.json"
+  }
+]

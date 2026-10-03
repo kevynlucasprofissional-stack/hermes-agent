@@ -1,0 +1,63 @@
+{
+  "task_id": "work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38",
+  "plan_id": "plan_5b8ec2f2cbca",
+  "total": 3,
+  "success": 1,
+  "retry_success": 0,
+  "failed": 2,
+  "suspect": 0,
+  "anomalies": [
+    {
+      "item_id": "plan_5b8ec2f2cbca_0002",
+      "index": 2,
+      "input": {
+        "id": 1,
+        "_work_phase": "fan_out"
+      },
+      "reason": "Execution error: 'WorkItem' object has no attribute 'state'",
+      "status": "failed"
+    },
+    {
+      "item_id": "plan_5b8ec2f2cbca_0003",
+      "index": 3,
+      "input": {
+        "id": 2,
+        "_work_phase": "fan_out"
+      },
+      "reason": "Execution error: 'WorkItem' object has no attribute 'state'",
+      "status": "failed"
+    }
+  ],
+  "needs_reasoning": 2,
+  "completed": 1,
+  "status": "needs_reasoning",
+  "duration_seconds": 0.05,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_5b8ec2f2cbca_0001",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38/norm_item_0001.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_5b8ec2f2cbca_0002",
+      "status": "failed",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    },
+    {
+      "item_id": "plan_5b8ec2f2cbca_0003",
+      "status": "failed",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    }
+  ]
+}

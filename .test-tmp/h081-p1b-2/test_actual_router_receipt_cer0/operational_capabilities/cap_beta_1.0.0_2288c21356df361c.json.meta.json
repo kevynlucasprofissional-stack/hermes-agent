@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/cap_beta_1.0.0_2288c21356df361c.json",
+  "name": "cap_beta_1.0.0_2288c21356df361c.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1b-2\\test_actual_router_receipt_cer0\\operational_capabilities\\cap_beta_1.0.0_2288c21356df361c.json",
+  "size_bytes": 2653,
+  "sha256": "9c2e9d44d858935155fb4a032b98e639f966f3a0e5125f98892d24e81a2091bb",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:02:58.163164+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

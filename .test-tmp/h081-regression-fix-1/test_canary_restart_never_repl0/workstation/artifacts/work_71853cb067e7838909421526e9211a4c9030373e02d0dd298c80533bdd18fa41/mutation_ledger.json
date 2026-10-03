@@ -1,0 +1,22 @@
+[
+  {
+    "operation_id": "c99ab7a7ed5ae49407dea1033e699fbc6ffd8c85e16d239bdcd1bcd2dd658393",
+    "task_id": "task",
+    "run_id": null,
+    "tool": "fake_create",
+    "tool_effect": "MUTATION",
+    "effect": "unknown_mutation",
+    "scope": "unknown",
+    "external": null,
+    "provider": null,
+    "field": null,
+    "target_kind": "unknown",
+    "target_identifier": 0,
+    "operation_semantic": "fake_create",
+    "timestamp": "2026-10-03T00:17:53.562161+00:00",
+    "status": "uncertain",
+    "persisted": null,
+    "verifier_status": "pending",
+    "item_id": "plan_4e079bb93847_0002"
+  }
+]

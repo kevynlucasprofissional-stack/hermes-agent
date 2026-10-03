@@ -1,0 +1,20 @@
+{
+  "large_read@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "large_read",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Large fixture read",
+    "ref": "artifact://tasks/operational_capabilities/large_read_1.0.0_5b003e95a97721d5.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "5b003e95a97721d517090b3746f4c27e7283cde1d780334504c5287fb576fa24",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:42.201774+00:00",
+    "version": "1.0.0"
+  }
+}

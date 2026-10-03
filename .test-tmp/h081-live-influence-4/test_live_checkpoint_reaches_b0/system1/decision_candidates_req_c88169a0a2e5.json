@@ -1,0 +1,10 @@
+{
+  "q": {
+    "type": "choice",
+    "instructions": "Choose the matching word: beta",
+    "criteria": {
+      "cap_alpha": "alpha",
+      "cap_beta": "beta"
+    }
+  }
+}

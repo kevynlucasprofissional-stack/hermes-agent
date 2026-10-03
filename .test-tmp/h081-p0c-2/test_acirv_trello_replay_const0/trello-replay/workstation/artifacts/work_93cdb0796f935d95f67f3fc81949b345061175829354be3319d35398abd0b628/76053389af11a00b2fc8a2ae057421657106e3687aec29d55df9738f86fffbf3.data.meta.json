@@ -1,0 +1,13 @@
+{
+  "ref": "artifact://tasks/work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628/76053389af11a00b2fc8a2ae057421657106e3687aec29d55df9738f86fffbf3.data",
+  "name": "76053389af11a00b2fc8a2ae057421657106e3687aec29d55df9738f86fffbf3.data",
+  "task_id": "work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_acirv_trello_replay_const0\\trello-replay\\workstation\\artifacts\\work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628\\76053389af11a00b2fc8a2ae057421657106e3687aec29d55df9738f86fffbf3.data",
+  "size_bytes": 40,
+  "sha256": "76053389af11a00b2fc8a2ae057421657106e3687aec29d55df9738f86fffbf3",
+  "schema": "tool_result",
+  "summary": {},
+  "created_at": "2026-10-02T23:45:29.261046+00:00",
+  "media_type": "application/octet-stream",
+  "encoding": null
+}

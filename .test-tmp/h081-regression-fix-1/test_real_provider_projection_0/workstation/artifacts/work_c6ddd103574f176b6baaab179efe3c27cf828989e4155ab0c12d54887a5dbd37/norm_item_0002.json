@@ -1,0 +1,26 @@
+{
+  "valid": false,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/173a1f71d649ed09529214752f3eef5f1d73e9b30f7940d315e9020837612319.data",
+      "verified": true
+    },
+    {
+      "artifact_ref": "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/a22d48ca3776be5318c9a8721bb3a37b3535e12ffd80eeeee1ca3c679684e306.data",
+      "verified": false
+    }
+  ],
+  "code": "unexpected_state",
+  "systemic_failure": {
+    "tool": "fake_verify",
+    "step_id": "verify",
+    "failure_code": "unexpected_state",
+    "verifier": "verify",
+    "procedure_fingerprint": "bcba6bd7f81acee336d5151ff2081a0e8063a85c1a97cee362ab802ef10aac3b",
+    "capability_fingerprint": "bcba6bd7f81acee336d5151ff2081a0e8063a85c1a97cee362ab802ef10aac3b",
+    "target_shape": {
+      "id": "int",
+      "_work_phase": "str"
+    }
+  }
+}

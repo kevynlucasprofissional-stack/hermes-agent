@@ -1,0 +1,310 @@
+{
+  "id": "experience_216b125211a8cf389dac2911",
+  "name": "Verified fs_stat",
+  "version": "1.0.0",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "format": "path"
+      },
+      "path2": {
+        "type": "string",
+        "format": "path"
+      }
+    },
+    "required": [
+      "path",
+      "path2"
+    ],
+    "additionalProperties": false
+  },
+  "output_schema": {},
+  "effect": "state_mutation",
+  "route": "filesystem",
+  "scope": {
+    "base_dir": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0"
+  },
+  "preconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "exists",
+      "expected": false
+    }
+  ],
+  "postconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "exists",
+      "expected": true
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "kind",
+      "expected": "file"
+    }
+  ],
+  "verifier_contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "kind",
+      "exists"
+    ],
+    "effect_classes": [],
+    "observer": "fixture.owner.readback",
+    "source_kind": "test_fixture",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [
+      "trusted_runtime"
+    ],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "VALIDATED",
+    "validation_evidence_refs": [],
+    "validation_receipts": [
+      {
+        "kind": "positive_replay",
+        "passed": true,
+        "phase": "validation",
+        "evidence_ref": "positive"
+      },
+      {
+        "kind": "negative_control",
+        "passed": true,
+        "phase": "validation",
+        "evidence_ref": "negative"
+      }
+    ],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "fbfbc11cff97b7bb5d9d2ff500e43205fc59712661ff93f5c70a0f8de36fb179"
+  },
+  "dependencies": [],
+  "implementation": {
+    "steps": [
+      {
+        "args": {
+          "content": "hello",
+          "path": "$inputs.path"
+        },
+        "id": "learned_0",
+        "primitive": "fs_write"
+      },
+      {
+        "args": {
+          "path": "$inputs.path2"
+        },
+        "id": "learned_1",
+        "primitive": "fs_stat",
+        "verifier": true
+      }
+    ]
+  },
+  "lifecycle": "promoted",
+  "provenance": {
+    "source": "experience_compiler",
+    "origins": [
+      {
+        "task_id": "task",
+        "run_id": "r1",
+        "operation_id": "fs_write",
+        "runtime": "local_filesystem",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r1",
+        "operation_id": "fs_stat",
+        "runtime": "local_filesystem",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r2",
+        "operation_id": "fs_write",
+        "runtime": "local_filesystem",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r2",
+        "operation_id": "fs_stat",
+        "runtime": "local_filesystem",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      }
+    ]
+  },
+  "semantic_fingerprint": "22b74cf1ef8b760db83b0ceda40d183d49028200d85e8f5f9e2205f2ae533c74",
+  "compatibility_fingerprint": "216b125211a8cf389dac29111a9788baae55989214d6effaa3318a514499aa99",
+  "validation_evidence": [
+    {
+      "kind": "controlled_replay",
+      "environment": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "predicates": {
+          "basename": "replay.txt",
+          "exists": true,
+          "extension": ".txt",
+          "hash": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          "kind": "file",
+          "size": 5
+        },
+        "evidence_strength": 2,
+        "evidence_refs": [
+          "artifact://local-readback"
+        ],
+        "verification_result": {
+          "status": "VERIFIED",
+          "verifier_fingerprint": "fbfbc11cff97b7bb5d9d2ff500e43205fc59712661ff93f5c70a0f8de36fb179",
+          "evidence_refs": [
+            "artifact://readback"
+          ],
+          "covered_predicates": [
+            "kind",
+            "exists"
+          ],
+          "freshness_satisfied": true,
+          "relation_satisfied": true,
+          "source_admissible": true,
+          "fault_domain_admissible": true,
+          "transition_proven": true,
+          "reason": "verified",
+          "evaluated_at": "",
+          "accepted": true
+        }
+      },
+      "compatibility_fingerprint": "216b125211a8cf389dac29111a9788baae55989214d6effaa3318a514499aa99"
+    }
+  ],
+  "success_count": 0,
+  "failure_count": 0,
+  "drift_state": "healthy",
+  "savings": {},
+  "created_at": "2026-10-02T23:57:40.846156+00:00",
+  "updated_at": "2026-10-02T23:57:40.949693+00:00",
+  "causal_grade": 3,
+  "trust_class": "trusted_runtime",
+  "taint": [],
+  "source_trace_refs": [
+    "artifact://proof"
+  ],
+  "promotion_policy_version": "experience-v1",
+  "learning_metadata": {
+    "effects": {
+      "kind": "file",
+      "exists": true
+    },
+    "preconditions": {
+      "exists": false
+    },
+    "relations": [
+      {
+        "relation": "equal",
+        "left": "path",
+        "right": "path2"
+      },
+      {
+        "relation": "basename_equal",
+        "left": "path",
+        "right": "path2"
+      },
+      {
+        "relation": "extension_equal",
+        "left": "path",
+        "right": "path2"
+      }
+    ],
+    "bindings": [
+      {
+        "path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0\\a.txt",
+        "path2": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0\\a.txt"
+      },
+      {
+        "path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0\\b.txt",
+        "path2": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0\\b.txt"
+      }
+    ],
+    "semantic_closure": true,
+    "parameterization_quality": true,
+    "evidence_strength": 2,
+    "run_ids": [
+      "r1",
+      "r2"
+    ],
+    "authority_origins": [
+      "user"
+    ],
+    "provenance_complete": true,
+    "utility": 7646,
+    "drift_rate": 0.0,
+    "unresolved_counterexamples": 0,
+    "model_inadequacy_detected": false,
+    "model_inadequacy_reason": "",
+    "node_classes": [
+      "core",
+      "core"
+    ],
+    "sample_refs": [
+      "transition_55f39d3e186589307423450e",
+      "transition_d21e8e0af310c839665635de",
+      "transition_c73986aadcce9a4938263af9",
+      "transition_403cd91e14c75d1905c5ee48"
+    ],
+    "verifier_fingerprint": "fbfbc11cff97b7bb5d9d2ff500e43205fc59712661ff93f5c70a0f8de36fb179",
+    "verifier_lifecycle": "VALIDATED",
+    "operation_families": [
+      "merge_pr"
+    ],
+    "target_families": [
+      "fs_stat",
+      "fs_write"
+    ]
+  },
+  "formal_contract": null,
+  "family_id": "",
+  "alias_of": "",
+  "superseded_by": ""
+}

@@ -1,0 +1,46 @@
+{
+  "sample_id": "invocation_inv_6f8dc09c86dc4ba9",
+  "task_id": "t_a7feecd9",
+  "run_id": "4",
+  "operation_id": "controlled-native-navigation",
+  "task_phase": "execution",
+  "objective": "Canonical capability outcome",
+  "state": {
+    "objective": "Canonical capability outcome",
+    "state": {},
+    "candidates": [
+      "experience_bcc0974be58c73cf04a0b436"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Select the best candidate capability for the objective and state.",
+      "criteria": {
+        "experience_bcc0974be58c73cf04a0b436": "Candidate capability: experience_bcc0974be58c73cf04a0b436",
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "experience_bcc0974be58c73cf04a0b436"
+  },
+  "confidence_target": 1.0,
+  "split": "train",
+  "verification_status": "VERIFIED_SUCCESS",
+  "provenance": {
+    "task_id": "t_a7feecd9",
+    "run_id": "4",
+    "operation_id": "controlled-native-navigation",
+    "source": "OperationalKernel",
+    "source_refs": [
+      "artifact://tasks/t_a7feecd9/invocation_inv_6f8dc09c86dc4ba9.json"
+    ],
+    "evidence_refs": [
+      "artifact://tasks/t_a7feecd9/learned_browser_readback_1cf4026812b3b2b84433cea0142d1cd2f922d16a321b8a628cfa0907585f03df.json"
+    ],
+    "canonical_verifier_grounded": true
+  },
+  "created_at": "2026-10-02T23:59:04.111470+00:00"
+}

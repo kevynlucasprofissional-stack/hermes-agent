@@ -1,0 +1,68 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "tool.trello_resolve_list",
+    "dependencies": {},
+    "effect_class": "unknown",
+    "operation_family": "",
+    "parameters": {},
+    "primitive": "trello_resolve_list",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "observed",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "plan_1aea0cc77cd9_0001_1",
+    "operation_index": null,
+    "run_id": "2",
+    "runtime": "",
+    "sample_ref": null,
+    "source": "progressive_owner",
+    "taint": [],
+    "task_id": "t_3b2dabe3",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": null,
+  "sample_id": "transition_4a464a6884d6f816cb91ba2b",
+  "state_after": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

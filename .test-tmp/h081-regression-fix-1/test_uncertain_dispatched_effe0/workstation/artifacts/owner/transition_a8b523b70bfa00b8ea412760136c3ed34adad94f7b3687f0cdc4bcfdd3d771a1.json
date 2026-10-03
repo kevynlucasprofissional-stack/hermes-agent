@@ -1,0 +1,70 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "fake_cards.ui",
+    "dependencies": {},
+    "effect_class": "MUTATION",
+    "operation_family": "incident_ui",
+    "parameters": {
+      "id": "1"
+    },
+    "primitive": "incident_ui",
+    "scope": {},
+    "target_family": "fake_cards.card",
+    "target_instance": {}
+  },
+  "outcome": "failed",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "observation_3617e1f717404ce0971b8a4fac007fdc",
+    "operation_index": 1,
+    "run_id": null,
+    "runtime": "fake_cards.ui",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": null,
+    "trust_class": "runtime_observation"
+  },
+  "raw_result_ref": "artifact://tasks/owner/trace_result_4e7f649637a350846c4ebd55734da57d39bde05fade2153d4e287724c7cf87a1.json",
+  "sample_id": "transition_2dcda71acda6ea4705f8779b",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_4e7f649637a350846c4ebd55734da57d39bde05fade2153d4e287724c7cf87a1.json",
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_4e7f649637a350846c4ebd55734da57d39bde05fade2153d4e287724c7cf87a1.json",
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

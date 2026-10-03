@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_455c78e8/transition_5d022e38924404307394a9a9_b4cf6bb1b5bf9eaa93dbddd0.json",
+  "name": "transition_5d022e38924404307394a9a9_b4cf6bb1b5bf9eaa93dbddd0.json",
+  "task_id": "t_455c78e8",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\t_455c78e8\\transition_5d022e38924404307394a9a9_b4cf6bb1b5bf9eaa93dbddd0.json",
+  "size_bytes": 1630,
+  "sha256": "681005daa9102616d62339a6cc6c0b9df4a5b90d46432858889d36863326eba0",
+  "schema": "hermes.transition_sample.v1",
+  "summary": {
+    "item_count": 10,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:18.152797+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

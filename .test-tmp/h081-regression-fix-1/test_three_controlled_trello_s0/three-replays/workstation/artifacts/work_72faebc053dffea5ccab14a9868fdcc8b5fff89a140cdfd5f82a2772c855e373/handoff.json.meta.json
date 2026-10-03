@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373/handoff.json",
+  "name": "handoff.json",
+  "task_id": "work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373\\handoff.json",
+  "size_bytes": 1964,
+  "sha256": "355f7aee5a9a449fe522fff8539234af2e90d30d70b51a14665188c07e03cede",
+  "schema": "durable_handoff_v1",
+  "summary": {
+    "item_count": 16,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:11.805459+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

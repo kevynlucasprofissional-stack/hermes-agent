@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/experience_bfdc376f6b72a665b66951ec_1.0.0_485de0e41545ff7f.json",
+  "name": "experience_bfdc376f6b72a665b66951ec_1.0.0_485de0e41545ff7f.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_process_abstraction_and_c0\\artifacts\\operational_capabilities\\experience_bfdc376f6b72a665b66951ec_1.0.0_485de0e41545ff7f.json",
+  "size_bytes": 6027,
+  "sha256": "84e945e7d9794c038eed4d3aa0f2b1eca61f3d97e7375605e36ab46101f7908b",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:41.304844+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

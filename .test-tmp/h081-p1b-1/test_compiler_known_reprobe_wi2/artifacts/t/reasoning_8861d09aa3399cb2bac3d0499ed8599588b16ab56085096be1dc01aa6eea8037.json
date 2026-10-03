@@ -1,0 +1,13 @@
+{
+  "completed_until": null,
+  "expected": "Executable capability match",
+  "observed": "known_recovery_unavailable",
+  "context": {
+    "intent_id": "i",
+    "open_condition": null,
+    "attention_packet": null,
+    "requires_reconciliation": false,
+    "reason": "known_recovery_unavailable"
+  },
+  "safe_to_resume": false
+}

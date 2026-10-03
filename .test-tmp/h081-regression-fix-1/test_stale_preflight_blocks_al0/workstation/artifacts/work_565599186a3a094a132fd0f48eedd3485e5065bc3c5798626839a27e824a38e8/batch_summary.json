@@ -1,0 +1,67 @@
+{
+  "task_id": "work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8",
+  "plan_id": "plan_877cd18e8640",
+  "total": 4,
+  "success": 1,
+  "retry_success": 0,
+  "failed": 0,
+  "suspect": 1,
+  "anomalies": [
+    {
+      "item_id": "plan_877cd18e8640_0002",
+      "index": 2,
+      "input": {
+        "id": 20,
+        "_work_phase": "fan_out"
+      },
+      "reason": "recipe_stale",
+      "issues": [],
+      "raw_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/raw_item_0002.json",
+      "norm_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/norm_item_0002.json",
+      "status": "invalid"
+    }
+  ],
+  "needs_reasoning": 1,
+  "completed": 1,
+  "status": "needs_reasoning",
+  "duration_seconds": 0.08,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_877cd18e8640_0001",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/norm_item_0001.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_877cd18e8640_0002",
+      "status": "blocked",
+      "raw_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/raw_item_0002.json",
+      "result_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/norm_item_0002.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/norm_item_0002.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_877cd18e8640_0003",
+      "status": "pending",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    },
+    {
+      "item_id": "plan_877cd18e8640_0004",
+      "status": "pending",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    }
+  ]
+}

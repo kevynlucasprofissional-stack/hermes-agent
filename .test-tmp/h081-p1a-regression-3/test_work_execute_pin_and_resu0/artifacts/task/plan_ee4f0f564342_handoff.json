@@ -1,0 +1,36 @@
+{
+  "status": "COMPLETED",
+  "task_id": "task",
+  "capability_id": "read",
+  "capability_version": "1.0.0",
+  "output": {
+    "exists": true,
+    "path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_work_execute_pin_and_resu0",
+    "is_file": false,
+    "is_dir": true,
+    "size": 4096,
+    "mtime": 1790985528.640629
+  },
+  "savings": {},
+  "verification": {
+    "accepted": false,
+    "source": "none"
+  },
+  "verification_result": {
+    "status": "INCONCLUSIVE",
+    "verifier_fingerprint": "deeffcf8d0865ba4e4e97d7e19e53703d68bac03a0b4c911b71183e41af2ce2d",
+    "evidence_refs": [],
+    "covered_predicates": [],
+    "freshness_satisfied": false,
+    "relation_satisfied": false,
+    "source_admissible": false,
+    "fault_domain_admissible": false,
+    "transition_proven": false,
+    "reason": "verifier_not_validated,observer_unknown,source_unknown",
+    "evaluated_at": "2026-10-02T23:58:48.709781+00:00",
+    "accepted": false
+  },
+  "metrics": {
+    "executor_llm_calls": 0
+  }
+}

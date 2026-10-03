@@ -1,0 +1,28 @@
+{
+  "task_id": "work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587",
+  "plan_id": "plan_a595f29d3ef5",
+  "total": 1,
+  "success": 1,
+  "retry_success": 0,
+  "failed": 0,
+  "suspect": 0,
+  "anomalies": [],
+  "needs_reasoning": 0,
+  "completed": 1,
+  "status": "completed",
+  "duration_seconds": 0.05,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_a595f29d3ef5_0001",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/norm_item_0001.json"
+        }
+      ]
+    }
+  ]
+}

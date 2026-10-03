@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/cap_exec_f4383897bb7655ae95a049de/objective.json",
+  "name": "objective.json",
+  "task_id": "cap_exec_f4383897bb7655ae95a049de",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_capability_work_execute_k0\\artifacts\\cap_exec_f4383897bb7655ae95a049de\\objective.json",
+  "size_bytes": 35,
+  "sha256": "cccb5ce43eb2e82b5d4b201254e4132c5602a7762a391eb154323d8ebb5ae20c",
+  "schema": null,
+  "summary": {
+    "item_count": 1,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:49.980161+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

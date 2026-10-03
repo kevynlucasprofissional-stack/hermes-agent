@@ -1,0 +1,63 @@
+{
+  "task_id": "work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37",
+  "plan_id": "plan_d901786c4d5c",
+  "objective_ref": "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/objective.json",
+  "phase": "fan_out",
+  "constraints": {
+    "forbidden_routes": []
+  },
+  "recipe": {
+    "recipe_id": "fake.cards.v1",
+    "status": "UNVERIFIED",
+    "fingerprint": "bcba6bd7f81acee336d5151ff2081a0e8063a85c1a97cee362ab802ef10aac3b"
+  },
+  "canary": {
+    "item_id": "plan_d901786c4d5c_0002",
+    "verified": false,
+    "status": "failed"
+  },
+  "setup": {
+    "completed": 1,
+    "total": 1,
+    "pending": 0,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "items": {
+    "completed": 0,
+    "total": 12,
+    "pending": 11,
+    "needs_reasoning": 1,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "finalize": {
+    "completed": 0,
+    "total": 1,
+    "pending": 1,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "next_action": "review_exceptions",
+  "blockers": [
+    {
+      "item_id": "plan_d901786c4d5c_0002",
+      "status": "blocked",
+      "code": "unexpected_state",
+      "evidence_ref": "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/norm_item_0002.json"
+    }
+  ],
+  "blocker_count": 1,
+  "artifact_refs": [
+    "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/173a1f71d649ed09529214752f3eef5f1d73e9b30f7940d315e9020837612319.data",
+    "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/6bc0da1f42f96fc37b8bd7ed20ba57606d2a0da5cda2b135c7854fbdc985b8a3.data",
+    "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/6c6a685c422208f98e9474f65e13111f5b36d78dd7d8de62c13c2321513f7e17.data"
+  ],
+  "artifact_count": 5,
+  "latest_verified_state": {
+    "completed_items": 0,
+    "canary_verified": false
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "experience_2d39bdf09e41f03e4cf00800@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "2d39bdf09e41f03e4cf0080015e3c3167745b432268a9d10def798551b51e880",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "experience_2d39bdf09e41f03e4cf00800",
+    "immutable_contract": null,
+    "lifecycle": "discovered",
+    "name": "Verified process_observe",
+    "ref": "artifact://tasks/operational_capabilities/experience_2d39bdf09e41f03e4cf00800_1.0.0_c55ee45b7f053f5b.json",
+    "route": "composite",
+    "scope": {
+      "backends": {
+        "filesystem": {
+          "base_dir": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_process_abstraction_and_c0"
+        },
+        "host_process": {
+          "contract": "fixture-process"
+        }
+      }
+    },
+    "semantic_fingerprint": "89fc3f1f7a98cacb957a5f6f8e2f14a4e56ecfdcbdd766ff906a4ae3e2513542",
+    "sha256": "c55ee45b7f053f5bec7189caa8f4c652fa95b20e831a4cdc35236da66f54b609",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:41.211822+00:00",
+    "version": "1.0.0"
+  },
+  "experience_bfdc376f6b72a665b66951ec@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "bfdc376f6b72a665b66951ec14f685c8e35fa9d630f78d1e3779cf04b2e07af6",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "experience_bfdc376f6b72a665b66951ec",
+    "immutable_contract": "04aa339d5113f8b00485b72c6d60b353c039a3bb97037a412a54d40cb5d4c5e7",
+    "lifecycle": "promoted",
+    "name": "Verified process_observe",
+    "ref": "artifact://tasks/operational_capabilities/experience_bfdc376f6b72a665b66951ec_1.0.0_3390181b328faf16.json",
+    "route": "composite",
+    "scope": {
+      "backends": {
+        "filesystem": {
+          "base_dir": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_process_abstraction_and_c0"
+        },
+        "host_process": {
+          "contract": "fixture-process"
+        }
+      }
+    },
+    "semantic_fingerprint": "89fc3f1f7a98cacb957a5f6f8e2f14a4e56ecfdcbdd766ff906a4ae3e2513542",
+    "sha256": "3390181b328faf169831a96d49c18ee4ef67a071a50bdb0ba2e7078c71d9c8f3",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:41.666030+00:00",
+    "version": "1.0.0"
+  }
+}

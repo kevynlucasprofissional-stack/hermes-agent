@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41/metrics.json",
+  "name": "metrics.json",
+  "task_id": "work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_telemetry_cached_and_unca0\\workstation\\artifacts\\work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41\\metrics.json",
+  "size_bytes": 1617,
+  "sha256": "51179837afe48745821d15ffee52c2691bb0bea3ed27e91bb12834511a7c475f",
+  "schema": null,
+  "summary": {
+    "item_count": 50,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:18:08.927055+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

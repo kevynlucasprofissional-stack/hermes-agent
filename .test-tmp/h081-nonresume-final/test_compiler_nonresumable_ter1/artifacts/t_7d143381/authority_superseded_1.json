@@ -1,0 +1,12 @@
+{
+  "task_id": "t_7d143381",
+  "stale_run_id": "1",
+  "current_run_id": "2",
+  "termination_kind": "REVOKED_BY_USER",
+  "checkpoint_ref": "artifact://tasks/t_7d143381/checkpoint_superseded_1.json",
+  "pending_items_ref": "artifact://tasks/t_7d143381/pending_work_1_to_2.json",
+  "uncertain_effects": [],
+  "continuation_allowed": false,
+  "created_at": "2026-10-03T00:53:24.916893+00:00",
+  "details": {}
+}

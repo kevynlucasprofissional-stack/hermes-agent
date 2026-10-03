@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/recipes/1c78df342a0e4bab527a1002a5b2bb0768e5f712caed696eb5c8068a9f5b07d7.json",
+  "name": "1c78df342a0e4bab527a1002a5b2bb0768e5f712caed696eb5c8068a9f5b07d7.json",
+  "task_id": "recipes",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_acirv_trello_replay_const0\\trello-replay\\workstation\\artifacts\\recipes\\1c78df342a0e4bab527a1002a5b2bb0768e5f712caed696eb5c8068a9f5b07d7.json",
+  "size_bytes": 2698,
+  "sha256": "58c4ea41aec8284d8dd58af7f16c5d01f0fd0eb7ad3e9ff5a86b17833d189520",
+  "schema": "verified_recipe_v1",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:45:32.736782+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

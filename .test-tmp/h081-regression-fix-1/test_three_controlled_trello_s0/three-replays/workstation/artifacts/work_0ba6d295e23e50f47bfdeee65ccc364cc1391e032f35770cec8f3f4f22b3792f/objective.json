@@ -1,0 +1,155 @@
+{
+  "operation_key": "acirv-trello-stale",
+  "recipe_key": "acirv.trello.cards.v1",
+  "items": [
+    {
+      "index": 12
+    },
+    {
+      "index": 13
+    },
+    {
+      "index": 14
+    },
+    {
+      "index": 15
+    },
+    {
+      "index": 16
+    },
+    {
+      "index": 17
+    },
+    {
+      "index": 18
+    },
+    {
+      "index": 19
+    },
+    {
+      "index": 20
+    },
+    {
+      "index": 21
+    },
+    {
+      "index": 22
+    },
+    {
+      "index": 23
+    }
+  ],
+  "setup_steps": [
+    {
+      "id": "board",
+      "tool": "trello_resolve_board",
+      "args": {
+        "name": "ACIRV"
+      },
+      "depends_on": []
+    },
+    {
+      "id": "list",
+      "tool": "trello_resolve_list",
+      "args": {
+        "board": "$setup.board.board_id"
+      },
+      "depends_on": [
+        "board"
+      ]
+    },
+    {
+      "id": "existing",
+      "tool": "trello_find_existing",
+      "args": {
+        "list": "$setup.list.list_id"
+      },
+      "depends_on": [
+        "list"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "schema",
+      "tool": "tool_describe",
+      "args": {
+        "name": "trello_create_card"
+      },
+      "depends_on": []
+    },
+    {
+      "id": "template",
+      "depends_on": [
+        "schema"
+      ],
+      "tool": "read_file",
+      "args": {
+        "path": "template.md"
+      }
+    },
+    {
+      "id": "create",
+      "depends_on": [
+        "existing",
+        "list",
+        "template"
+      ],
+      "tool": "trello_create_card",
+      "args": {
+        "list": "$setup.list.list_id",
+        "index": "$item.index"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "verify",
+      "tool": "trello_get_card",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "card": "$steps.create.card_id"
+      },
+      "expect": {
+        "persisted": true,
+        "card_id": "$steps.create.card_id"
+      },
+      "depends_on": [
+        "create"
+      ]
+    }
+  ],
+  "finalize_steps": [
+    {
+      "id": "collect",
+      "depends_on": [
+        "verify"
+      ],
+      "tool": "trello_collect_results",
+      "args": {
+        "items": "$items_ref"
+      }
+    }
+  ],
+  "recipe_scope": {
+    "route": "tool.trello_create_card",
+    "host": "trello.test",
+    "path_family": "/c/:card"
+  },
+  "preflight": [
+    {
+      "tool": "trello_capabilities",
+      "args": {},
+      "expect": {
+        "description_testid": "description-content-area"
+      }
+    }
+  ],
+  "mutation_target": null,
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

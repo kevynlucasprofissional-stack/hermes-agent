@@ -1,0 +1,46 @@
+{
+  "sample_id": "invocation_inv_cfbf8bd6c8644bec",
+  "task_id": "t_b5c82944",
+  "run_id": "5",
+  "operation_id": "h080b-reuse",
+  "task_phase": "execution",
+  "objective": "Canonical capability outcome",
+  "state": {
+    "objective": "Canonical capability outcome",
+    "state": {},
+    "candidates": [
+      "experience_bcc0974be58c73cf04a0b436"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Select the best candidate capability for the objective and state.",
+      "criteria": {
+        "experience_bcc0974be58c73cf04a0b436": "Candidate capability: experience_bcc0974be58c73cf04a0b436",
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "experience_bcc0974be58c73cf04a0b436"
+  },
+  "confidence_target": 1.0,
+  "split": "held_out",
+  "verification_status": "VERIFIED_SUCCESS",
+  "provenance": {
+    "task_id": "t_b5c82944",
+    "run_id": "5",
+    "operation_id": "h080b-reuse",
+    "source": "OperationalKernel",
+    "source_refs": [
+      "artifact://tasks/t_b5c82944/invocation_inv_cfbf8bd6c8644bec.json"
+    ],
+    "evidence_refs": [
+      "artifact://tasks/t_b5c82944/learned_browser_readback_558e9a50517cab86e5c703898b165780d8bf19eaf9929a8666640b94223ba8ab.json"
+    ],
+    "canonical_verifier_grounded": true
+  },
+  "created_at": "2026-10-02T23:57:57.823022+00:00"
+}

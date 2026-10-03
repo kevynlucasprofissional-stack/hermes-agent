@@ -1,0 +1,13 @@
+{
+  "ref": "artifact://tasks/work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76/8bdb06307592967797b0c78afb9141157a03a586c9ecf50a79518bfee4ec7dd9.data",
+  "name": "8bdb06307592967797b0c78afb9141157a03a586c9ecf50a79518bfee4ec7dd9.data",
+  "task_id": "work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_readback_can_map_differen0\\workstation\\artifacts\\work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76\\8bdb06307592967797b0c78afb9141157a03a586c9ecf50a79518bfee4ec7dd9.data",
+  "size_bytes": 35,
+  "sha256": "8bdb06307592967797b0c78afb9141157a03a586c9ecf50a79518bfee4ec7dd9",
+  "schema": "tool_result",
+  "summary": {},
+  "created_at": "2026-10-03T00:17:47.377738+00:00",
+  "media_type": "application/octet-stream",
+  "encoding": null
+}

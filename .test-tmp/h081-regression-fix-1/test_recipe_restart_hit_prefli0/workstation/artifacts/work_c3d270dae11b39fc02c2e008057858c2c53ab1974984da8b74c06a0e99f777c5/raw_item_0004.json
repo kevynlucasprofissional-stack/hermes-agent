@@ -1,0 +1,13 @@
+{
+  "valid": true,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_c3d270dae11b39fc02c2e008057858c2c53ab1974984da8b74c06a0e99f777c5/a8599ad4a3a3ce0488de6059e551a24e84e76f5138e2b4f0cd4d34127c2bb552.data",
+      "verified": true
+    },
+    {
+      "artifact_ref": "artifact://tasks/work_c3d270dae11b39fc02c2e008057858c2c53ab1974984da8b74c06a0e99f777c5/13bae5bae412a422bea1ae2afe202ff44ef44de4e5d6702ab992c8a2ae09817a.data",
+      "verified": true
+    }
+  ]
+}

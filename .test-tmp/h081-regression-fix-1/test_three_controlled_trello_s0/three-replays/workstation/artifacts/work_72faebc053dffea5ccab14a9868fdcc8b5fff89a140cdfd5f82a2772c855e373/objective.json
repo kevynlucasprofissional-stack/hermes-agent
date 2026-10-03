@@ -1,0 +1,143 @@
+{
+  "operation_key": "acirv-trello-broken",
+  "recipe_key": "acirv.trello.cards.v1",
+  "recipe_scope": {
+    "route": "tool.trello_create_card",
+    "host": "trello.test",
+    "path_family": "/c/:card"
+  },
+  "preflight": [
+    {
+      "tool": "trello_capabilities",
+      "args": {},
+      "expect": {
+        "description_testid": "description-content-area"
+      }
+    }
+  ],
+  "title": "ACIRV 12 cards",
+  "items": [
+    {
+      "index": 0
+    },
+    {
+      "index": 1
+    },
+    {
+      "index": 2
+    },
+    {
+      "index": 3
+    },
+    {
+      "index": 4
+    },
+    {
+      "index": 5
+    },
+    {
+      "index": 6
+    },
+    {
+      "index": 7
+    },
+    {
+      "index": 8
+    },
+    {
+      "index": 9
+    },
+    {
+      "index": 10
+    },
+    {
+      "index": 11
+    }
+  ],
+  "setup_steps": [
+    {
+      "id": "board",
+      "tool": "trello_resolve_board",
+      "args": {
+        "name": "ACIRV"
+      }
+    },
+    {
+      "id": "list",
+      "tool": "trello_resolve_list",
+      "args": {
+        "board": "$setup.board.board_id"
+      }
+    },
+    {
+      "id": "existing",
+      "tool": "trello_find_existing",
+      "args": {
+        "list": "$setup.list.list_id"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "schema",
+      "tool": "tool_describe",
+      "args": {
+        "name": "trello_create_card"
+      }
+    },
+    {
+      "id": "template",
+      "depends_on": [
+        "schema"
+      ],
+      "tool": "read_file",
+      "args": {
+        "path": "template.md"
+      }
+    },
+    {
+      "id": "create",
+      "depends_on": [
+        "template",
+        "existing"
+      ],
+      "tool": "trello_create_card",
+      "args": {
+        "list": "$setup.list.list_id",
+        "index": "$item.index"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "verify",
+      "tool": "trello_get_card",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "card": "$steps.create.card_id"
+      },
+      "expect": {
+        "persisted": true,
+        "card_id": "$steps.create.card_id"
+      }
+    }
+  ],
+  "finalize_steps": [
+    {
+      "id": "collect",
+      "depends_on": [
+        "verify"
+      ],
+      "tool": "trello_collect_results",
+      "args": {
+        "items": "$items_ref"
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

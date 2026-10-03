@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/verified.json",
+  "name": "verified.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-dataset-final-2\\test_actual_router_receipt_cer0\\t\\verified.json",
+  "size_bytes": 26,
+  "sha256": "795905325bd919824f1ebc9644e976fac82ef1351d6d67a75d5f91b632f65c7b",
+  "schema": null,
+  "summary": {
+    "item_count": 1,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:32:07.772161+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

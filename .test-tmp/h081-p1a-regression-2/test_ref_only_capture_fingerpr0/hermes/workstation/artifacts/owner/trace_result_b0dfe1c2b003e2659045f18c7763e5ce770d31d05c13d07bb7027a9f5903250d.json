@@ -1,0 +1,11 @@
+{
+  "runtime": "electron-chromium",
+  "elements": [
+    {
+      "ref": "@e42",
+      "testid": "merge",
+      "role": "button",
+      "name": "Merge"
+    }
+  ]
+}

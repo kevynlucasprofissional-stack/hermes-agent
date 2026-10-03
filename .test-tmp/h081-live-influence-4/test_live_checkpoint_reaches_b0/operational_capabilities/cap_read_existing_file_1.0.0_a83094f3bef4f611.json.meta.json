@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/cap_read_existing_file_1.0.0_a83094f3bef4f611.json",
+  "name": "cap_read_existing_file_1.0.0_a83094f3bef4f611.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-influence-4\\test_live_checkpoint_reaches_b0\\operational_capabilities\\cap_read_existing_file_1.0.0_a83094f3bef4f611.json",
+  "size_bytes": 2681,
+  "sha256": "0edc7be680ff0e4480e2217db77be37b6c7b0b5983da8fd7da7fd78b1a41ecb2",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:17:31.430063+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

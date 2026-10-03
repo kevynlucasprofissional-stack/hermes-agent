@@ -1,0 +1,10 @@
+{
+  "task_id": "t_af253c68",
+  "stale_run_id": "101",
+  "results": [
+    {
+      "item_id": "plan_5d08c771ffd6_0001",
+      "result_ref": "artifact://tasks/work_e570bb5972297791c1f16d4a8bb73b19d8cf4d3a3a2dcbf14744bdf5b7c4cf46/norm_item_0001.json"
+    }
+  ]
+}

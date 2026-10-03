@@ -1,0 +1,6 @@
+{
+  "preferred_candidate": [
+    "cap_delete_all_files",
+    "cap_read_existing_file"
+  ]
+}

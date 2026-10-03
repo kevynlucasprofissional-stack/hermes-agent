@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_27eca846/wrong_host_validation.json",
+  "name": "wrong_host_validation.json",
+  "task_id": "t_27eca846",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_real_browser_readback_val0\\hermes\\workstation\\artifacts\\t_27eca846\\wrong_host_validation.json",
+  "size_bytes": 98,
+  "sha256": "3ba8e9927dae3405e5ddc907e603486b9636367110a55d50778d60c3e9eead8e",
+  "schema": null,
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:56.653137+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

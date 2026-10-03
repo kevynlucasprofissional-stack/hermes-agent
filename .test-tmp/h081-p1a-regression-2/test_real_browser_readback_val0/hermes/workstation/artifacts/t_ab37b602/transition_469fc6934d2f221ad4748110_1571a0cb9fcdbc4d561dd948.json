@@ -1,0 +1,68 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "unknown",
+    "operation_family": "",
+    "parameters": {},
+    "primitive": "experience_bcc0974be58c73cf04a0b436",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "controlled-native-navigation",
+    "operation_index": null,
+    "run_id": "4",
+    "runtime": "",
+    "sample_ref": null,
+    "source": "progressive_owner",
+    "taint": [],
+    "task_id": "t_ab37b602",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": null,
+  "sample_id": "transition_469fc6934d2f221ad4748110",
+  "state_after": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

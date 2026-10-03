@@ -1,0 +1,37 @@
+{
+  "request_id": "req_018434a960f5",
+  "answers": {
+    "q": "B"
+  },
+  "decisions": {
+    "q": "B"
+  },
+  "probabilities": {
+    "q": {
+      "B": 0.99,
+      "A": 0.01
+    }
+  },
+  "confidence": {
+    "q": 0.99
+  },
+  "confidences": {
+    "q": 0.99
+  },
+  "calibrated_confidences": {
+    "q": 0.99
+  },
+  "abstentions": [],
+  "provider": "laya",
+  "model": "multilingual",
+  "model_revision": null,
+  "calibration_id": "calib-v1-20261002",
+  "schema_id": "s",
+  "request_hash": "6c8601bdbc7248124aca7dfc69eeb69cb18f25df8264eaaa1f4843847c0306d2",
+  "latency_ms": 0.004700001227320172,
+  "fallback_recommended": false,
+  "details": {
+    "routing": {},
+    "usage": {}
+  }
+}

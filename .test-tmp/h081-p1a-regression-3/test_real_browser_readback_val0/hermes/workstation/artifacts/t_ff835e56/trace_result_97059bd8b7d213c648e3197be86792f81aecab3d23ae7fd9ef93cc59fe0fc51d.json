@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "runtime": "electron-chromium",
+  "url": "https://example.test/guide",
+  "operation_id": "op-test-canonical",
+  "readiness": "stable",
+  "wall_detected": false
+}

@@ -1,0 +1,45 @@
+{
+  "sample_id": "review_a9efa62c537e149f5ae4136f",
+  "task_id": "t",
+  "run_id": "r",
+  "operation_id": "op",
+  "task_phase": "execution",
+  "objective": "Learning review proposal",
+  "state": {
+    "objective": "Learning review proposal",
+    "state": {},
+    "candidates": [
+      "NO_MATCH"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Which capability should handle the request in objective?",
+      "criteria": {
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "NO_MATCH"
+  },
+  "confidence_target": 1.0,
+  "split": "train",
+  "verification_status": "FAILED",
+  "provenance": {
+    "task_id": "t",
+    "run_id": "r",
+    "operation_id": "op",
+    "source": "LearningReview",
+    "source_refs": [
+      "artifact://tasks/t/invocation_test.json"
+    ],
+    "action_shape": "str",
+    "review_status": "error",
+    "canonical_verifier_grounded": false,
+    "evidence_refs": []
+  },
+  "created_at": "2026-10-03T00:31:31.824027+00:00"
+}

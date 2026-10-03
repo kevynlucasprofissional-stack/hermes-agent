@@ -1,0 +1,99 @@
+{
+  "operation_key": "twelve-descriptions",
+  "items": [
+    {
+      "id": "0",
+      "description": "Description 0"
+    },
+    {
+      "id": "1",
+      "description": "Description 1"
+    },
+    {
+      "id": "2",
+      "description": "Description 2"
+    },
+    {
+      "id": "3",
+      "description": "Description 3"
+    },
+    {
+      "id": "4",
+      "description": "Description 4"
+    },
+    {
+      "id": "5",
+      "description": "Description 5"
+    },
+    {
+      "id": "6",
+      "description": "Description 6"
+    },
+    {
+      "id": "7",
+      "description": "Description 7"
+    },
+    {
+      "id": "8",
+      "description": "Description 8"
+    },
+    {
+      "id": "9",
+      "description": "Description 9"
+    },
+    {
+      "id": "10",
+      "description": "Description 10"
+    },
+    {
+      "id": "11",
+      "description": "Description 11"
+    }
+  ],
+  "mutation_target": {
+    "scope": "external",
+    "provider": "fake_cards",
+    "kind": "card",
+    "field": "description"
+  },
+  "constraints": {
+    "forbidden_routes": [],
+    "mutation_forbidden_routes": [
+      "fake_cards.api"
+    ]
+  },
+  "setup_steps": [
+    {
+      "id": "inspect",
+      "tool": "incident_inspect",
+      "args": {}
+    }
+  ],
+  "steps": [
+    {
+      "id": "write",
+      "tool": "incident_ui",
+      "args": {
+        "id": "$item.id",
+        "description": "$item.description",
+        "selector": "$setup.inspect.selector"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "readback",
+      "tool": "incident_get",
+      "args": {
+        "id": "$item.id"
+      },
+      "verifies": [
+        "write"
+      ],
+      "expect": {
+        "description": "$item.description"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "handoffs": [
+    {
+      "handoff_id": "handoff-099643c4842f4f7491de132d39dacc54",
+      "task_id": "browser-task",
+      "session_id": "session",
+      "reason": "captcha_required",
+      "scope": {
+        "plan_id": "plan_0c48dc0f75ca",
+        "work_item_id": "plan_0c48dc0f75ca_0001"
+      },
+      "status": "ready",
+      "requested_at": "2026-10-03T00:54:32.803744+00:00",
+      "resumed_at": "2026-10-03T00:54:32.872722+00:00",
+      "returned_by": "user"
+    }
+  ]
+}

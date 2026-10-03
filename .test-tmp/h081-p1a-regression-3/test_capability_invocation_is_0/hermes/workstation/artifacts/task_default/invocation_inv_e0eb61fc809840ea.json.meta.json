@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/task_default/invocation_inv_e0eb61fc809840ea.json",
+  "name": "invocation_inv_e0eb61fc809840ea.json",
+  "task_id": "task_default",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_capability_invocation_is_0\\hermes\\workstation\\artifacts\\task_default\\invocation_inv_e0eb61fc809840ea.json",
+  "size_bytes": 846,
+  "sha256": "e4689fcfbc4f0b8bc016aff65cd93758ce91e2ecd0f5e6edf74841bd466220d9",
+  "schema": "hermes.capability_invocation.v1",
+  "summary": {
+    "item_count": 21,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:50.158201+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

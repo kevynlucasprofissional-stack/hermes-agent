@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_3d7814a62a452a87301d634bb75dd931a7523fac2e126a9c8162266a4b644251/metrics.json",
+  "name": "metrics.json",
+  "task_id": "work_3d7814a62a452a87301d634bb75dd931a7523fac2e126a9c8162266a4b644251",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_dynamic_fan_out_blocks_th0\\workstation\\artifacts\\work_3d7814a62a452a87301d634bb75dd931a7523fac2e126a9c8162266a4b644251\\metrics.json",
+  "size_bytes": 1432,
+  "sha256": "18606a678144c2f734371094a08e95adab6aaa05229135b95a4589dc1d4b08b9",
+  "schema": null,
+  "summary": {
+    "item_count": 48,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:45:18.887317+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

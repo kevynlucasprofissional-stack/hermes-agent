@@ -1,0 +1,12 @@
+{
+  "valid": false,
+  "code": "recipe_stale",
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_565599186a3a094a132fd0f48eedd3485e5065bc3c5798626839a27e824a38e8/91b810f479e239e969d031d9b0dc41985c7b2ec106cf200f733b9f2ac2192b4b.data",
+      "content_hash": "91b810f479e239e969d031d9b0dc41985c7b2ec106cf200f733b9f2ac2192b4b",
+      "size_bytes": 20,
+      "cache_hit": false
+    }
+  ]
+}

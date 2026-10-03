@@ -1,0 +1,33 @@
+{
+  "operation_key": "records-v1",
+  "items": [
+    {
+      "id": 0
+    }
+  ],
+  "steps": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "$item.id"
+      }
+    }
+  ],
+  "preflight": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "readiness"
+      },
+      "expect": {
+        "url": "https://example.com/card"
+      },
+      "readiness": {
+        "path": "/card"
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/20261002_204518_d38a69/trace_ffb85e8c44a1d9f8a5fa1651df0112a4fd7de208e9ca0ec3867faade61533f97.json",
+  "name": "trace_ffb85e8c44a1d9f8a5fa1651df0112a4fd7de208e9ca0ec3867faade61533f97.json",
+  "task_id": "20261002_204518_d38a69",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_dynamic_fan_out_blocks_th0\\workstation\\artifacts\\20261002_204518_d38a69\\trace_ffb85e8c44a1d9f8a5fa1651df0112a4fd7de208e9ca0ec3867faade61533f97.json",
+  "size_bytes": 1237,
+  "sha256": "02d3270f31119c6f2e3b2a4ef0b844dd98844384df06c83f9d8afe05213c9c9b",
+  "schema": null,
+  "summary": {
+    "item_count": 26,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:45:18.455001+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_cff65d0eb0d59b3bbf71a08897c2973e7a2aabf377bbfcf0c6f159cfa58b7432/reasoning_a4af8ea469d46f75f87d47e3fd6bbfe7194b721486c9e1a83eadc401bba316d8.json",
+  "name": "reasoning_a4af8ea469d46f75f87d47e3fd6bbfe7194b721486c9e1a83eadc401bba316d8.json",
+  "task_id": "work_cff65d0eb0d59b3bbf71a08897c2973e7a2aabf377bbfcf0c6f159cfa58b7432",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_compiler_nonresumable_ter1\\artifacts\\work_cff65d0eb0d59b3bbf71a08897c2973e7a2aabf377bbfcf0c6f159cfa58b7432\\reasoning_a4af8ea469d46f75f87d47e3fd6bbfe7194b721486c9e1a83eadc401bba316d8.json",
+  "size_bytes": 478,
+  "sha256": "1b57b0e264f4c837b49d529252746833fd1ec0447620f3015d9d3e359427c374",
+  "schema": null,
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:44:53.755610+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

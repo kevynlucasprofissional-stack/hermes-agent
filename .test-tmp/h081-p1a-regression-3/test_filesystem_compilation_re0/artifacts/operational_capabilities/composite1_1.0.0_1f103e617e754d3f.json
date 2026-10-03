@@ -1,0 +1,46 @@
+{
+  "id": "composite1",
+  "name": "Reuse",
+  "version": "1.0.0",
+  "input_schema": {},
+  "output_schema": {},
+  "effect": "state_mutation",
+  "route": "composite",
+  "scope": {},
+  "preconditions": [],
+  "postconditions": [],
+  "verifier_contract": {},
+  "dependencies": [
+    {
+      "capability_id": "experience_131652c2423c384e934c341b",
+      "version_constraint": "1.0.0",
+      "input_mappings": {
+        "path": "$inputs.path",
+        "path2": "$inputs.path"
+      },
+      "output_alias": null
+    }
+  ],
+  "implementation": {},
+  "lifecycle": "promoted",
+  "provenance": {},
+  "semantic_fingerprint": "",
+  "compatibility_fingerprint": "",
+  "validation_evidence": [],
+  "success_count": 0,
+  "failure_count": 0,
+  "drift_state": "healthy",
+  "savings": {},
+  "created_at": "2026-10-02T23:58:48.903984+00:00",
+  "updated_at": "2026-10-02T23:58:48.964982+00:00",
+  "causal_grade": 0,
+  "trust_class": "manually_managed",
+  "taint": [],
+  "source_trace_refs": [],
+  "promotion_policy_version": "",
+  "learning_metadata": {},
+  "formal_contract": null,
+  "family_id": "",
+  "alias_of": "",
+  "superseded_by": ""
+}

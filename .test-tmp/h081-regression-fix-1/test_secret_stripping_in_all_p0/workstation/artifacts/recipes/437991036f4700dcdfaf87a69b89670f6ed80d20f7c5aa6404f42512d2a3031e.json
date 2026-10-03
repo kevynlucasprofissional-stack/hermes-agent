@@ -1,0 +1,14 @@
+{
+  "status": "VERIFIED",
+  "scope": {},
+  "graph": {
+    "args": {
+      "nested": [
+        {}
+      ],
+      "encoded": "{}"
+    }
+  },
+  "recipe_id": "sanitized",
+  "schema_version": 1
+}

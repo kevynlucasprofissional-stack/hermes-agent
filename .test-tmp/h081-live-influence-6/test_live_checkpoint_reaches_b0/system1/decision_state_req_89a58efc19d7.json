@@ -1,0 +1,8 @@
+{
+  "objective": "Read an existing file. Select cap_read_existing_file. Do not delete any files.",
+  "target": "filesystem",
+  "candidates": [
+    "cap_delete_all_files",
+    "cap_read_existing_file"
+  ]
+}

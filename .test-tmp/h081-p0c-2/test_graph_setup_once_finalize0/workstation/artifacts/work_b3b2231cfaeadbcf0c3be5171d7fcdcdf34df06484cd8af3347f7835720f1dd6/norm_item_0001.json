@@ -1,0 +1,9 @@
+{
+  "valid": true,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6/e136e74810c31952bdc88776b7580380b5ee068324e20696344bc1c78a3b4e14.data",
+      "verified": true
+    }
+  ]
+}

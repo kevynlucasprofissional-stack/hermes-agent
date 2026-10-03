@@ -1,0 +1,34 @@
+{
+  "request_id": "req_2afda127111c",
+  "answers": {
+    "preferred_candidate": "cap_beta"
+  },
+  "decisions": {
+    "preferred_candidate": "cap_beta"
+  },
+  "probabilities": {
+    "preferred_candidate": {}
+  },
+  "confidence": {
+    "preferred_candidate": 0.99
+  },
+  "confidences": {
+    "preferred_candidate": 0.99
+  },
+  "calibrated_confidences": {
+    "preferred_candidate": 0.99
+  },
+  "abstentions": [],
+  "provider": "laya",
+  "model": "multilingual",
+  "model_revision": null,
+  "calibration_id": "calib-v1-20261002",
+  "schema_id": "candidate_ranking",
+  "request_hash": "8c4b43b15139fd926693929b01cce8c22cc29eba80b094c45b9eb17768bdd544",
+  "latency_ms": 0.0037999998312443495,
+  "fallback_recommended": false,
+  "details": {
+    "routing": {},
+    "usage": {}
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "completed_until": null,
+  "expected": "decided, compatible executable contract",
+  "observed": "Mutation fake_create requires an explicit result verifier",
+  "context": {
+    "phase": "admission",
+    "dispatched": false
+  },
+  "safe_to_resume": false
+}

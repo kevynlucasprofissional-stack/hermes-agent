@@ -1,0 +1,17 @@
+{
+  "completed_until": null,
+  "expected": {
+    "ok": true
+  },
+  "observed": {
+    "result_ref": "artifact://tasks/work_7c95afbeb12359636e30ab3f634731f1c211261f2c1ed8aac0a8669cf68d0e01/raw_item_0001.json",
+    "reason": "unexpected_state"
+  },
+  "context": {
+    "item_id": "plan_6a93c3f902c5_0001",
+    "phase": "fan_out",
+    "failed_index": 0,
+    "recipe_fingerprint": "434eb5a3501fb55202d529ef85dcfa430219106c0eaac6bde9cd9f28032f7f1c"
+  },
+  "safe_to_resume": true
+}

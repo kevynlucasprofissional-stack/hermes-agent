@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_3a5b1ac7/pending_work_101_to_102.json",
+  "name": "pending_work_101_to_102.json",
+  "task_id": "t_3a5b1ac7",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_compiler_nonresumable_ter0\\artifacts\\t_3a5b1ac7\\pending_work_101_to_102.json",
+  "size_bytes": 345,
+  "sha256": "c64b9d0aa9771ec8ec2fca75f3e62f5eb01c9aa89a51892de6a46b6c3bd64347",
+  "schema": "workstation.pending_work.v1",
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:20.017323+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

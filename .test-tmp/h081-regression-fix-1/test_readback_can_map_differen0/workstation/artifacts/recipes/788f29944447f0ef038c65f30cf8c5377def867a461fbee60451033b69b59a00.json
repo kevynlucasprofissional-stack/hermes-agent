@@ -1,0 +1,77 @@
+{
+  "operation_signature": "325754f5e83f64add25026c301c4bc4996ef02f16e6a776ec6242bf8fedc192c",
+  "scope": {
+    "route": "tool.incident_ui"
+  },
+  "graph": {
+    "setup": [
+      {
+        "id": "inspect",
+        "tool": "incident_inspect",
+        "args": {},
+        "depends_on": []
+      }
+    ],
+    "fan_out": [
+      {
+        "id": "write",
+        "tool": "incident_ui",
+        "args": {
+          "id": "$item.id",
+          "description": "$item.description",
+          "selector": "$setup.inspect.selector"
+        },
+        "expect": {
+          "ok": true
+        },
+        "depends_on": [
+          "inspect"
+        ]
+      },
+      {
+        "id": "readback",
+        "tool": "incident_get",
+        "args": {
+          "id": "$item.id"
+        },
+        "verifies": [
+          "write"
+        ],
+        "expect": {
+          "data.text": "$item.description"
+        },
+        "readback": {
+          "field": "description",
+          "path": "data.text"
+        },
+        "depends_on": [
+          "write"
+        ]
+      }
+    ],
+    "finalize": []
+  },
+  "mutation_target": {
+    "scope": "external",
+    "provider": "fake_cards",
+    "kind": "card",
+    "field": "description"
+  },
+  "verification": {
+    "verifier_step_ids": [
+      "readback"
+    ]
+  },
+  "preflight": [],
+  "fingerprint": "e7362eebb57ec7be1c027f64aa4256890d8d97e9a02dde3ed816ebef28d29fc7",
+  "status": "VERIFIED",
+  "verified_at": "2026-10-03T00:17:47.994917+00:00",
+  "version": 1,
+  "previous_fingerprint": null,
+  "stats": {
+    "successes": 1,
+    "failures": 0
+  },
+  "recipe_id": "auto.e7362eebb57ec7be1c027f64aa4256890d8d97e9a02dde3ed816ebef28d29fc7",
+  "schema_version": 1
+}

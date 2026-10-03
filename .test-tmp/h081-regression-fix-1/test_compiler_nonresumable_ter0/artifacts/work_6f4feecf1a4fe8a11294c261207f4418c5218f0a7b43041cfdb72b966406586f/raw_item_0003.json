@@ -1,0 +1,17 @@
+{
+  "valid": false,
+  "code": "AUTHORITY_SUPERSEDED",
+  "authority_superseded": {
+    "task_id": "t_e1b928b2",
+    "stale_run_id": "101",
+    "current_run_id": "102",
+    "termination_kind": "SUPERSEDED",
+    "checkpoint_ref": "artifact://tasks/t_e1b928b2/checkpoint_superseded_101.json",
+    "pending_items_ref": "artifact://tasks/t_e1b928b2/pending_work_101_to_102.json",
+    "uncertain_effects": [],
+    "continuation_allowed": true,
+    "created_at": "2026-10-03T00:20:28.277878+00:00",
+    "details": {}
+  },
+  "results": []
+}

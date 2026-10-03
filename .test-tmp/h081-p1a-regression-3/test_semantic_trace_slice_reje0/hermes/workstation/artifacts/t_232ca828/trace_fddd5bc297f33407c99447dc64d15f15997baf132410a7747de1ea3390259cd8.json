@@ -1,0 +1,33 @@
+{
+  "tool": "browser_navigate",
+  "action": "navigate",
+  "execution_class": "semantic",
+  "route": "native_browser",
+  "operation_fingerprint": "a6d2661559feddfe393cdc20d2d64a7a12b96ad82795ad9cbb9062c63db0ffb4",
+  "semantic_fingerprint": null,
+  "arguments": {
+    "url": "https://example.test/second"
+  },
+  "semantic_anchor": null,
+  "before_state_ref": "artifact://tasks/t_232ca828/trace_result_97059bd8b7d213c648e3197be86792f81aecab3d23ae7fd9ef93cc59fe0fc51d.json",
+  "after_state_ref": "artifact://tasks/t_232ca828/trace_result_786a518f34f3aaa1316bbce5963f41ceceb4d0885f53774c9a0addb765c1c755.json",
+  "outcome": "identity_conflict",
+  "effect": "MUTATION",
+  "duration_ms": null,
+  "task_id": "t_232ca828",
+  "run_id": "1",
+  "operation_id": "op-test-second",
+  "operation_id_conflict": true,
+  "caller_operation_id": "op-test-canonical",
+  "owner_operation_id": "op-test-second",
+  "operation_index": 1,
+  "captured_at": "2026-10-02T23:59:06.517176+00:00",
+  "scope": {
+    "host": "example.test",
+    "path_family": "/second"
+  },
+  "runtime": "electron-chromium",
+  "provider_usage": null,
+  "replayable": false,
+  "transition_ref": "artifact://tasks/t_232ca828/transition_282ca0f79ca91529a32a0d030bac3f453c90520c9950ff9d520d56f9a3e23023.json"
+}

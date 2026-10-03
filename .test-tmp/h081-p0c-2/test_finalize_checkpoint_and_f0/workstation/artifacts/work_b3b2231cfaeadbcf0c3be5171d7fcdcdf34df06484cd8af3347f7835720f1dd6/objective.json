@@ -1,0 +1,75 @@
+{
+  "operation_key": "graph",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    },
+    {
+      "id": 2
+    }
+  ],
+  "setup_steps": [
+    {
+      "id": "resolve_board",
+      "tool": "trello_search_board",
+      "args": {
+        "name": "ACIRV"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "create",
+      "tool": "trello_create_card",
+      "args": {
+        "board": "$setup.resolve_board.board_id",
+        "id": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "verify",
+      "tool": "trello_verify_card",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "id": "$item.id"
+      }
+    }
+  ],
+  "finalize_steps": [
+    {
+      "id": "update_parent",
+      "depends_on": [
+        "create"
+      ],
+      "tool": "trello_create_card",
+      "args": {
+        "parent": true
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "summary",
+      "depends_on": [
+        "update_parent"
+      ],
+      "tool": "trello_search_cards",
+      "args": {}
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

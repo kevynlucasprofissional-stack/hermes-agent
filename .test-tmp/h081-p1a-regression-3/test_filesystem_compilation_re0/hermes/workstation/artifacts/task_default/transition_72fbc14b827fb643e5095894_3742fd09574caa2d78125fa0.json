@@ -1,0 +1,77 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "filesystem",
+    "dependencies": {},
+    "effect_class": "unknown",
+    "operation_family": "",
+    "parameters": {},
+    "primitive": "experience_131652c2423c384e934c341b",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "op_experience_131652c2423c384e934c341b_e6d4b1ed",
+    "operation_index": null,
+    "run_id": "run_default",
+    "runtime": "",
+    "sample_ref": null,
+    "source": "progressive_owner",
+    "taint": [],
+    "task_id": "task_default",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": null,
+  "sample_id": "transition_72fbc14b827fb643e5095894",
+  "state_after": {
+    "artifact_ref": null,
+    "semantic_predicates": {
+      "basename": "replay.txt",
+      "exists": true,
+      "extension": ".txt",
+      "hash": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+      "kind": "file",
+      "size": 5
+    }
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [
+      "observation:experience_131652c2423c384e934c341b:1.0.0"
+    ],
+    "evidence_strength": 2,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "fixture.owner.readback",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "test_fixture",
+    "status": "INCONCLUSIVE",
+    "trust_class": "trusted_runtime",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": "fbfbc11cff97b7bb5d9d2ff500e43205fc59712661ff93f5c70a0f8de36fb179"
+  }
+}

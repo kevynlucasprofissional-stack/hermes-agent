@@ -1,0 +1,100 @@
+{
+  "operation_key": "new",
+  "recipe_key": "fake.cards.v1",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    },
+    {
+      "id": 2
+    },
+    {
+      "id": 3
+    },
+    {
+      "id": 4
+    },
+    {
+      "id": 5
+    },
+    {
+      "id": 6
+    },
+    {
+      "id": 7
+    },
+    {
+      "id": 8
+    },
+    {
+      "id": 9
+    },
+    {
+      "id": 10
+    },
+    {
+      "id": 11
+    }
+  ],
+  "recipe_scope": {
+    "route": "tool.fake_create",
+    "host": "example.test",
+    "path_family": "/cards/:card"
+  },
+  "preflight": [
+    {
+      "tool": "fake_preflight",
+      "args": {},
+      "expect": {
+        "capability": "v1"
+      }
+    }
+  ],
+  "setup_steps": [
+    {
+      "id": "setup",
+      "tool": "fake_setup",
+      "args": {}
+    }
+  ],
+  "steps": [
+    {
+      "id": "create",
+      "tool": "fake_create",
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "verify",
+      "tool": "fake_verify",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "id": "$steps.create.id"
+      },
+      "expect": {
+        "persisted": true
+      }
+    }
+  ],
+  "finalize_steps": [
+    {
+      "id": "finish",
+      "tool": "fake_setup",
+      "args": {
+        "results": "$items_ref"
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

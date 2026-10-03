@@ -1,0 +1,88 @@
+{
+  "operation_signature": "a95ae9b0eedc74fa328e104030df253d035dd37d0f27cb119661e77d0665c16e",
+  "scope": {
+    "route": "tool.trello_create_card"
+  },
+  "graph": {
+    "setup": [
+      {
+        "id": "resolve_board",
+        "tool": "trello_search_board",
+        "args": {
+          "name": "ACIRV"
+        },
+        "depends_on": []
+      },
+      {
+        "id": "second",
+        "depends_on": [
+          "resolve_board"
+        ],
+        "tool": "trello_list_columns",
+        "args": {}
+      }
+    ],
+    "fan_out": [
+      {
+        "id": "create",
+        "tool": "trello_create_card",
+        "args": {
+          "board": "$setup.resolve_board.board_id",
+          "id": "$item.id"
+        },
+        "expect": {
+          "ok": true
+        },
+        "depends_on": [
+          "resolve_board"
+        ]
+      },
+      {
+        "id": "verify",
+        "tool": "trello_verify_card",
+        "verifies": [
+          "create"
+        ],
+        "args": {
+          "id": "$item.id"
+        },
+        "expect": {
+          "id": "$item.id"
+        },
+        "depends_on": [
+          "create"
+        ]
+      }
+    ],
+    "finalize": [
+      {
+        "id": "summary",
+        "depends_on": [
+          "create"
+        ],
+        "tool": "trello_search_cards",
+        "args": {
+          "results": "$items_ref"
+        }
+      }
+    ]
+  },
+  "mutation_target": null,
+  "verification": {
+    "verifier_step_ids": [
+      "verify"
+    ]
+  },
+  "preflight": [],
+  "fingerprint": "1b0845533a2dcb3c2402b72f404a7d974311021f8d97ec75bb38c633846c18fc",
+  "status": "VERIFIED",
+  "verified_at": "2026-10-02T23:45:07.593700+00:00",
+  "version": 1,
+  "previous_fingerprint": null,
+  "stats": {
+    "successes": 1,
+    "failures": 0
+  },
+  "recipe_id": "auto.1b0845533a2dcb3c2402b72f404a7d974311021f8d97ec75bb38c633846c18fc",
+  "schema_version": 1
+}

@@ -1,0 +1,101 @@
+{
+  "delta": {
+    "added": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "recovery_state": "live",
+      "url": "https://example.test/guide"
+    },
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "MUTATION",
+    "operation_family": "browser_navigate",
+    "parameters": {
+      "url": "https://example.test/guide"
+    },
+    "primitive": "browser_navigate",
+    "scope": {
+      "host": "example.test",
+      "path_family": "/guide"
+    },
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "verified_success",
+  "provenance": {
+    "authority_origin": "user",
+    "authority_ref": "artifact://tasks/t_cc65d2ad/trace_authority_4223d4b1192b54334dca97ae0babf6d365e1a4572e5509f5335c6fec49e12ff6.json",
+    "authority_scope": {
+      "allowed_actions": [
+        "browser_navigate"
+      ],
+      "allowed_resources": [
+        "native_browser"
+      ],
+      "channels": [],
+      "level": 1
+    },
+    "operation_id": "op-test-canonical",
+    "operation_index": 0,
+    "run_id": "2",
+    "runtime": "electron-chromium",
+    "sample_ref": "artifact://tasks/t_cc65d2ad/transition_53d86b04ddc1c8dad1be0d347a3d7dea6308f28f6c7623cf7da8bdcbe511a89d.json",
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": "t_cc65d2ad",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": "artifact://tasks/t_cc65d2ad/trace_result_97059bd8b7d213c648e3197be86792f81aecab3d23ae7fd9ef93cc59fe0fc51d.json",
+  "sample_id": "transition_9edf281d0b942d255a3c1818",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/t_cc65d2ad/browser_readback_1f9a2e7e9269cd513982a7dac176324f09e19e9f984fabee797f043d7661cc2c.json",
+    "semantic_predicates": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "recovery_state": "live",
+      "url": "https://example.test/guide"
+    }
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [
+      "artifact://tasks/t_cc65d2ad/browser_readback_1f9a2e7e9269cd513982a7dac176324f09e19e9f984fabee797f043d7661cc2c.json"
+    ],
+    "evidence_strength": 2,
+    "extractor_path": "",
+    "observed_at": "2026-10-02T23:57:56.380447+00:00",
+    "observer": "workstation.browser_session_state",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {
+      "resource_id": "browser_task:t_cc65d2ad:tab:tab-native"
+    },
+    "resource_version": "",
+    "source_kind": "browser_local_persistence",
+    "status": "VERIFIED",
+    "trust_class": "trusted_runtime",
+    "validation_receipts": [],
+    "verified_predicates": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "recovery_state": "live",
+      "url": "https://example.test/guide"
+    },
+    "verifier": "native_browser_session_state",
+    "verifier_fingerprint": ""
+  }
+}

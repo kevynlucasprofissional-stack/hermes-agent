@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37/handoff.json",
+  "name": "handoff.json",
+  "task_id": "work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_real_provider_projection_0\\workstation\\artifacts\\work_c6ddd103574f176b6baaab179efe3c27cf828989e4155ab0c12d54887a5dbd37\\handoff.json",
+  "size_bytes": 1956,
+  "sha256": "fbe29e586ba0b7318651947e922d02160047aa8f168a8bc7ec6aea4dafb154d7",
+  "schema": "durable_handoff_v1",
+  "summary": {
+    "item_count": 16,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:10.126017+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

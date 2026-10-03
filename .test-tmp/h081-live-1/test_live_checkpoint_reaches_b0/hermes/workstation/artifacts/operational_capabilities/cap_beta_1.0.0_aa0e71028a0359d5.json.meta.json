@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/cap_beta_1.0.0_aa0e71028a0359d5.json",
+  "name": "cap_beta_1.0.0_aa0e71028a0359d5.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-1\\test_live_checkpoint_reaches_b0\\hermes\\workstation\\artifacts\\operational_capabilities\\cap_beta_1.0.0_aa0e71028a0359d5.json",
+  "size_bytes": 2653,
+  "sha256": "e658c22a01160f57a372bb48aa71a64f3277853b7974823609a749166c5bcc16",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:11:57.099301+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

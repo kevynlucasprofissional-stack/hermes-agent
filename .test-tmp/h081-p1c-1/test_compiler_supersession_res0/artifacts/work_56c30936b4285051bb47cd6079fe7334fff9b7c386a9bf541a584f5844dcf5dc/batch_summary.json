@@ -1,0 +1,50 @@
+{
+  "task_id": "work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc",
+  "plan_id": "plan_1d6c3625e817",
+  "total": 3,
+  "success": 3,
+  "retry_success": 0,
+  "failed": 0,
+  "suspect": 0,
+  "anomalies": [],
+  "needs_reasoning": 0,
+  "completed": 3,
+  "status": "completed",
+  "duration_seconds": 0.03,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_1d6c3625e817_0001",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/norm_item_0001.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_1d6c3625e817_0002",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/raw_item_0002.json",
+      "result_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/norm_item_0002.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/norm_item_0002.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_1d6c3625e817_0003",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/raw_item_0003.json",
+      "result_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/norm_item_0003.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_56c30936b4285051bb47cd6079fe7334fff9b7c386a9bf541a584f5844dcf5dc/norm_item_0003.json"
+        }
+      ]
+    }
+  ]
+}

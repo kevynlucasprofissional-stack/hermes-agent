@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_7e0e7cdc/checkpoint_superseded_1.json",
+  "name": "checkpoint_superseded_1.json",
+  "task_id": "t_7e0e7cdc",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-nonresume-final\\test_old_run_termination_survi1\\artifacts\\t_7e0e7cdc\\checkpoint_superseded_1.json",
+  "size_bytes": 69,
+  "sha256": "e7b92fa4bf749f669a9de459ec63fd313cc021ae661c94212852d5a744530e6b",
+  "schema": "workstation.superseded_checkpoint.v1",
+  "summary": {
+    "item_count": 3,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:53:26.923894+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

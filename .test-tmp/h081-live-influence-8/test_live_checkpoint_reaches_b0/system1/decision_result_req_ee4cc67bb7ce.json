@@ -1,0 +1,52 @@
+{
+  "request_id": "req_ee4cc67bb7ce",
+  "answers": {
+    "preferred_candidate": "read_file"
+  },
+  "decisions": {
+    "preferred_candidate": "read_file"
+  },
+  "probabilities": {
+    "preferred_candidate": {
+      "read_file": 0.9703,
+      "send_email": 0.0249,
+      "NO_MATCH": 0.0034,
+      "ABSTAIN": 0.0014
+    }
+  },
+  "confidence": {
+    "preferred_candidate": 0.9703
+  },
+  "confidences": {
+    "preferred_candidate": 0.9703
+  },
+  "calibrated_confidences": {
+    "preferred_candidate": 0.9703
+  },
+  "abstentions": [],
+  "provider": "laya",
+  "model": "multilingual",
+  "model_revision": "55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851",
+  "calibration_id": "calib-v1-20261002",
+  "schema_id": "candidate_ranking",
+  "request_hash": "0cad7a188bcecb5136c8643d71ed2ae86cf33e80c6b35caf11f7b21e0be69d4b",
+  "latency_ms": 225.65440000107628,
+  "fallback_recommended": false,
+  "details": {
+    "routing": {
+      "model": "multilingual",
+      "repo": "convaiinnovations/laya/multilingual",
+      "reason": "explicit model='multilingual'",
+      "detection": null,
+      "workflow": null
+    },
+    "usage": {
+      "input_tokens": 92,
+      "output_tokens": 0,
+      "state_tokens": 31,
+      "state_tokens_dropped": 0,
+      "truncated": false,
+      "truncated_questions": []
+    }
+  }
+}

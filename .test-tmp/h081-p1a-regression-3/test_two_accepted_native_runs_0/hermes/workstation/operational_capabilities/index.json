@@ -1,0 +1,23 @@
+{
+  "experience_bcc0974be58c73cf04a0b436@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2",
+    "drift_state": "healthy",
+    "family_id": "browser_navigate:native_browser",
+    "id": "experience_bcc0974be58c73cf04a0b436",
+    "immutable_contract": null,
+    "lifecycle": "discovered",
+    "name": "Verified browser_navigate",
+    "ref": "artifact://tasks/operational_capabilities/experience_bcc0974be58c73cf04a0b436_1.0.0_3bd1fd2d0390204e.json",
+    "route": "native_browser",
+    "scope": {
+      "host": "example.test",
+      "path_family": "/guide"
+    },
+    "semantic_fingerprint": "4bc13bdf68ea16aa4bb43d811045c7749a10e4e0c80f2c587849eb8597e6c141",
+    "sha256": "3bd1fd2d0390204ecc22056ac56c07f60c64923d40a63c6272f2a59b97bbb116",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:52.251085+00:00",
+    "version": "1.0.0"
+  }
+}

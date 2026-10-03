@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_7c95afbeb12359636e30ab3f634731f1c211261f2c1ed8aac0a8669cf68d0e01/25b421baca3e9c5a46f6530febee952b8c151a1716fd4a33bcd4b590a208db60_7566055935cd09a6.index.json",
+  "name": "25b421baca3e9c5a46f6530febee952b8c151a1716fd4a33bcd4b590a208db60_7566055935cd09a6.index.json",
+  "task_id": "work_7c95afbeb12359636e30ab3f634731f1c211261f2c1ed8aac0a8669cf68d0e01",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-nonresume-affected\\test_100_items_no_llm_and_refe0\\artifacts\\work_7c95afbeb12359636e30ab3f634731f1c211261f2c1ed8aac0a8669cf68d0e01\\25b421baca3e9c5a46f6530febee952b8c151a1716fd4a33bcd4b590a208db60_7566055935cd09a6.index.json",
+  "size_bytes": 213,
+  "sha256": "7b40e2f37ba5bc7b95405f5c82daf662c52fbc18f795a67e07f8ff8431acdde8",
+  "schema": null,
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:54:32.064656+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

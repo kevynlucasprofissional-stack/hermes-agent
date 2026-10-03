@@ -1,0 +1,34 @@
+{
+  "task_id": "t_501fd41b",
+  "stale_run_id": "1",
+  "current_run_id": "2",
+  "termination_kind": "POLICY_REVOKED",
+  "checkpoint_ref": "artifact://tasks/t_501fd41b/checkpoint_superseded_1.json",
+  "pending_items_ref": "artifact://tasks/t_501fd41b/pending_work_1_to_2.json",
+  "uncertain_effects": [
+    {
+      "operation_id": "8277d24693fda8cebc75c02a8154f5ec3238c51cce0543704b431bb7454d5c3c",
+      "task_id": "t_501fd41b",
+      "run_id": "1",
+      "tool": "test_write",
+      "tool_effect": "MUTATION",
+      "effect": "unknown_mutation",
+      "scope": "unknown",
+      "external": null,
+      "provider": null,
+      "field": null,
+      "target_kind": "unknown",
+      "target_identifier": 0,
+      "operation_semantic": "test_write",
+      "timestamp": "2026-10-03T00:53:27.618129+00:00",
+      "status": "uncertain",
+      "persisted": null,
+      "verifier_status": "pending",
+      "item_id": "plan_1c5e14f1e136_0001",
+      "step": "step_0"
+    }
+  ],
+  "continuation_allowed": false,
+  "created_at": "2026-10-03T00:53:27.746798+00:00",
+  "details": {}
+}

@@ -1,0 +1,222 @@
+{
+  "id": "experience_2d39bdf09e41f03e4cf00800",
+  "name": "Verified process_observe",
+  "version": "1.0.0",
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "output_schema": {},
+  "effect": "read_only",
+  "route": "composite",
+  "scope": {
+    "backends": {
+      "filesystem": {
+        "base_dir": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_process_abstraction_and_c0"
+      },
+      "host_process": {
+        "contract": "fixture-process"
+      }
+    }
+  },
+  "preconditions": [],
+  "postconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "exit_code",
+      "expected": 0
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "process_state",
+      "expected": "exited"
+    }
+  ],
+  "verifier_contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "exit_code",
+      "process_state"
+    ],
+    "effect_classes": [
+      "read_only"
+    ],
+    "observer": "owner_readback",
+    "source_kind": "unknown",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "CANDIDATE",
+    "validation_evidence_refs": [
+      "artifact://proof"
+    ],
+    "validation_receipts": [],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "57a0af573e5928a710e4922c70a84bd36cc4a30c746ce8d58bddc24cbb4c582a"
+  },
+  "dependencies": [],
+  "implementation": {
+    "steps": [
+      {
+        "args": {
+          "path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_process_abstraction_and_c0"
+        },
+        "id": "learned_0",
+        "primitive": "fs_stat"
+      },
+      {
+        "args": {
+          "contract": "fixture-process"
+        },
+        "id": "learned_1",
+        "primitive": "process_observe",
+        "verifier": true
+      }
+    ]
+  },
+  "lifecycle": "discovered",
+  "provenance": {
+    "source": "experience_compiler",
+    "origins": [
+      {
+        "task_id": "task",
+        "run_id": "r1",
+        "operation_id": "fs_stat",
+        "runtime": "local_filesystem",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r1",
+        "operation_id": "process_observe",
+        "runtime": "local_process",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r2",
+        "operation_id": "fs_stat",
+        "runtime": "local_filesystem",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      },
+      {
+        "task_id": "task",
+        "run_id": "r2",
+        "operation_id": "process_observe",
+        "runtime": "local_process",
+        "source": "fixture",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": null,
+        "sample_ref": null,
+        "authority_ref": null,
+        "authority_scope": null
+      }
+    ]
+  },
+  "semantic_fingerprint": "89fc3f1f7a98cacb957a5f6f8e2f14a4e56ecfdcbdd766ff906a4ae3e2513542",
+  "compatibility_fingerprint": "2d39bdf09e41f03e4cf0080015e3c3167745b432268a9d10def798551b51e880",
+  "validation_evidence": [],
+  "success_count": 0,
+  "failure_count": 0,
+  "drift_state": "healthy",
+  "savings": {},
+  "created_at": "2026-10-02T23:57:41.174821+00:00",
+  "updated_at": "2026-10-02T23:57:41.174821+00:00",
+  "causal_grade": 1,
+  "trust_class": "trusted_runtime",
+  "taint": [],
+  "source_trace_refs": [
+    "artifact://proof"
+  ],
+  "promotion_policy_version": "",
+  "learning_metadata": {
+    "effects": {
+      "exit_code": 0,
+      "process_state": "exited"
+    },
+    "preconditions": {},
+    "relations": [],
+    "bindings": [
+      {},
+      {}
+    ],
+    "semantic_closure": true,
+    "parameterization_quality": true,
+    "evidence_strength": 2,
+    "run_ids": [
+      "r1",
+      "r2"
+    ],
+    "authority_origins": [
+      "user"
+    ],
+    "provenance_complete": true,
+    "utility": 5752,
+    "drift_rate": 0.0,
+    "unresolved_counterexamples": 0,
+    "model_inadequacy_detected": false,
+    "model_inadequacy_reason": "",
+    "node_classes": [
+      "core",
+      "core"
+    ],
+    "sample_refs": [
+      "transition_2cdab5be5f6ce420b2e434be",
+      "transition_cf108963e3929a26fe422113",
+      "transition_22f73384d8e58d8c34177a4d",
+      "transition_ceadbee91eb998b104d7f3b1"
+    ],
+    "verifier_fingerprint": "57a0af573e5928a710e4922c70a84bd36cc4a30c746ce8d58bddc24cbb4c582a",
+    "verifier_lifecycle": "CANDIDATE",
+    "operation_families": [
+      "merge_pr"
+    ],
+    "target_families": [
+      "fs_stat",
+      "process_observe"
+    ]
+  },
+  "formal_contract": null,
+  "family_id": "",
+  "alias_of": "",
+  "superseded_by": ""
+}

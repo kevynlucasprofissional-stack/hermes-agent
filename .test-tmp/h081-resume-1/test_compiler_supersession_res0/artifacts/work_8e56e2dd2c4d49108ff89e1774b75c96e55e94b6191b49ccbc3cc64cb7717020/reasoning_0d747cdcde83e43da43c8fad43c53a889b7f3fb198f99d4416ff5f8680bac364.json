@@ -1,0 +1,17 @@
+{
+  "completed_until": null,
+  "expected": {
+    "ok": true
+  },
+  "observed": {
+    "result_ref": null,
+    "reason": null
+  },
+  "context": {
+    "item_id": "plan_c98e357d6295_0003",
+    "phase": "fan_out",
+    "failed_index": 0,
+    "recipe_fingerprint": "734c3ba62cb66e6310dc866a99447db625937982b1c2339c2bc920edfaa492ad"
+  },
+  "safe_to_resume": false
+}

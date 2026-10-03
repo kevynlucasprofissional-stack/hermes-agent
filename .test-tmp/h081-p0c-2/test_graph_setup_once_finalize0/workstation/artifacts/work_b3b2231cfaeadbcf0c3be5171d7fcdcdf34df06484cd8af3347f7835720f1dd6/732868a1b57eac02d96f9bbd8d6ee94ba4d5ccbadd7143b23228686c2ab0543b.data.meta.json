@@ -1,0 +1,13 @@
+{
+  "ref": "artifact://tasks/work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6/732868a1b57eac02d96f9bbd8d6ee94ba4d5ccbadd7143b23228686c2ab0543b.data",
+  "name": "732868a1b57eac02d96f9bbd8d6ee94ba4d5ccbadd7143b23228686c2ab0543b.data",
+  "task_id": "work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_graph_setup_once_finalize0\\workstation\\artifacts\\work_b3b2231cfaeadbcf0c3be5171d7fcdcdf34df06484cd8af3347f7835720f1dd6\\732868a1b57eac02d96f9bbd8d6ee94ba4d5ccbadd7143b23228686c2ab0543b.data",
+  "size_bytes": 10,
+  "sha256": "732868a1b57eac02d96f9bbd8d6ee94ba4d5ccbadd7143b23228686c2ab0543b",
+  "schema": "tool_result",
+  "summary": {},
+  "created_at": "2026-10-02T23:44:58.335009+00:00",
+  "media_type": "application/octet-stream",
+  "encoding": null
+}

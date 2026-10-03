@@ -1,0 +1,13 @@
+{
+  "ref": "artifact://tasks/owner/a03a849e587f1da290fe76b77fcbcef24cc5d26f80702b776c353ee24716cc4a.data",
+  "name": "a03a849e587f1da290fe76b77fcbcef24cc5d26f80702b776c353ee24716cc4a.data",
+  "task_id": "owner",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_mutation_channel_constrai0\\workstation\\artifacts\\owner\\a03a849e587f1da290fe76b77fcbcef24cc5d26f80702b776c353ee24716cc4a.data",
+  "size_bytes": 41,
+  "sha256": "a03a849e587f1da290fe76b77fcbcef24cc5d26f80702b776c353ee24716cc4a",
+  "schema": "tool_result",
+  "summary": {},
+  "created_at": "2026-10-03T00:17:49.697027+00:00",
+  "media_type": "application/octet-stream",
+  "encoding": null
+}

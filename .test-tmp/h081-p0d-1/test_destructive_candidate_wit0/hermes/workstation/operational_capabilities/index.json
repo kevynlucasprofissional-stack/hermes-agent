@@ -1,0 +1,20 @@
+{
+  "db.drop_users_table@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "db.drop_users_table",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Drop Users Table",
+    "ref": "artifact://tasks/operational_capabilities/db.drop_users_table_1.0.0_7dd5e8597531da92.json",
+    "route": "atomic",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "7dd5e8597531da92ae965830ce438ac30c14f1586cf530209fbb0cfbfbcfdd03",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:49:25.603324+00:00",
+    "version": "1.0.0"
+  }
+}

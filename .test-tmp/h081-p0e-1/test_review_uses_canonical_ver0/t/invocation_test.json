@@ -1,0 +1,16 @@
+{
+  "task_id": "t",
+  "run_id": "r",
+  "operation_id": "op",
+  "capability_id": "approved-cap",
+  "verified": true,
+  "verifier_status": "VERIFIED",
+  "verifier_fingerprint": "b35dcb29a618d2c704c3f7b2260068d1d636f11d108ec72c7657a12d7728c3a6",
+  "freshness_satisfied": true,
+  "covered_predicates": [
+    "17eb70a9090d3c23c7cec8d007990195a6c06f442d545d8709d02d8cd1320811"
+  ],
+  "verification_evidence_refs": [
+    "artifact://tasks/t/readback.json"
+  ]
+}

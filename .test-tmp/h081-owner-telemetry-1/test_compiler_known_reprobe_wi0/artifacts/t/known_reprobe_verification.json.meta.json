@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/known_reprobe_verification.json",
+  "name": "known_reprobe_verification.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_compiler_known_reprobe_wi0\\artifacts\\t\\known_reprobe_verification.json",
+  "size_bytes": 517,
+  "sha256": "ebe64780c96d7fec475521ce74a5de0967ef0761191bd4fbbd7332e74e368249",
+  "schema": "workstation.verification_result.v1",
+  "summary": {
+    "item_count": 12,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:18.940130+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

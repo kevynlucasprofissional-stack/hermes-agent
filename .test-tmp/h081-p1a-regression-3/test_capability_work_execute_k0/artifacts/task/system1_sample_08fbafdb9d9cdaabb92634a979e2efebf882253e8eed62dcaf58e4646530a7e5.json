@@ -1,0 +1,44 @@
+{
+  "sample_id": "invocation_inv_dee82926f7e74e9d",
+  "task_id": "task",
+  "run_id": "run_default",
+  "operation_id": "op_large_read_eea7e059",
+  "task_phase": "execution",
+  "objective": "Canonical capability outcome",
+  "state": {
+    "objective": "Canonical capability outcome",
+    "state": {},
+    "candidates": [
+      "large_read"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Select the best candidate capability for the objective and state.",
+      "criteria": {
+        "large_read": "Candidate capability: large_read",
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "large_read"
+  },
+  "confidence_target": 1.0,
+  "split": "held_out",
+  "verification_status": "UNCERTAIN",
+  "provenance": {
+    "task_id": "task",
+    "run_id": "run_default",
+    "operation_id": "op_large_read_eea7e059",
+    "source": "OperationalKernel",
+    "source_refs": [
+      "artifact://tasks/task/invocation_inv_dee82926f7e74e9d.json"
+    ],
+    "evidence_refs": [],
+    "canonical_verifier_grounded": false
+  },
+  "created_at": "2026-10-02T23:58:50.102187+00:00"
+}

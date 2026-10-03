@@ -1,0 +1,20 @@
+{
+  "learned@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "compatible_exact",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "learned",
+    "immutable_contract": "4139ba8fbc5ab5a4166fa0658cd84e58a32fce6b9f40513b2ddbcdeb5afd86f7",
+    "lifecycle": "promoted",
+    "name": "Learned write",
+    "ref": "artifact://tasks/operational_capabilities/learned_1.0.0_ab0f7e47b9da0bf4.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "sem_exact",
+    "sha256": "ab0f7e47b9da0bf401d99005bed44045309d69d41d2f4ead0074d72ce9aed55e",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:48.152564+00:00",
+    "version": "1.0.0"
+  }
+}

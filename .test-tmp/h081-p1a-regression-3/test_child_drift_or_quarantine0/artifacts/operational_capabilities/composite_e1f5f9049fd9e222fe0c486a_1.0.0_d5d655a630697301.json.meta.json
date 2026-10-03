@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/composite_e1f5f9049fd9e222fe0c486a_1.0.0_d5d655a630697301.json",
+  "name": "composite_e1f5f9049fd9e222fe0c486a_1.0.0_d5d655a630697301.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_child_drift_or_quarantine0\\artifacts\\operational_capabilities\\composite_e1f5f9049fd9e222fe0c486a_1.0.0_d5d655a630697301.json",
+  "size_bytes": 1786,
+  "sha256": "93e4876c4760649d69d567358724ca336c51799ed8da2a19c792b2529d454942",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:50.382436+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

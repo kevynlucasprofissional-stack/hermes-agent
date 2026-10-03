@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_56a8b1633073ddffe5c09b8b68e1762d125f3891ec69e26fc9980928d5211475/reasoning_327e524375c3795ad5b37515bf319b18b6d6dece944dc4ecc0b16bf334266144.json",
+  "name": "reasoning_327e524375c3795ad5b37515bf319b18b6d6dece944dc4ecc0b16bf334266144.json",
+  "task_id": "work_56a8b1633073ddffe5c09b8b68e1762d125f3891ec69e26fc9980928d5211475",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_uncertain_readback_failur0\\artifacts\\work_56a8b1633073ddffe5c09b8b68e1762d125f3891ec69e26fc9980928d5211475\\reasoning_327e524375c3795ad5b37515bf319b18b6d6dece944dc4ecc0b16bf334266144.json",
+  "size_bytes": 489,
+  "sha256": "7a178f3553b51fa96de36cb16ecf8dfca1a152d7f4266c82998e1a8a26e90e93",
+  "schema": null,
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:27.874087+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

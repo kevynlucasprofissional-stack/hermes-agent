@@ -1,0 +1,346 @@
+{
+  "id": "experience_bcc0974be58c73cf04a0b436",
+  "name": "Verified browser_navigate",
+  "version": "1.0.0",
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "output_schema": {},
+  "effect": "state_mutation",
+  "route": "native_browser",
+  "scope": {
+    "host": "example.test",
+    "path_family": "/guide"
+  },
+  "preconditions": [],
+  "postconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "host",
+      "expected": "example.test"
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "page_family",
+      "expected": "/guide"
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "recovery_state",
+      "expected": "live"
+    }
+  ],
+  "verifier_contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+      "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc",
+      "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de"
+    ],
+    "effect_classes": [
+      "state_mutation"
+    ],
+    "observer": "workstation.browser_session_state",
+    "source_kind": "browser_local_persistence",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [
+      "trusted_runtime"
+    ],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": true,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "VALIDATED",
+    "validation_evidence_refs": [
+      "artifact://tasks/t_e1a7c2c4/auto_val_auto-pos-op.json"
+    ],
+    "validation_receipts": [
+      {
+        "kind": "positive_replay",
+        "phase": "validation",
+        "passed": true,
+        "evidence_ref": "artifact://tasks/t_e1a7c2c4/auto_val_auto-pos-op.json"
+      },
+      {
+        "kind": "negative_control",
+        "phase": "validation",
+        "passed": true,
+        "evidence_ref": ""
+      }
+    ],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": true,
+    "fingerprint": "d4c6c1bbdd4cd06087ecd6dd88bd581ca0ff48c350563081f64193d8b23eae5a"
+  },
+  "dependencies": [],
+  "implementation": {
+    "steps": [
+      {
+        "args": {
+          "url": "https://example.test/guide"
+        },
+        "id": "learned_0",
+        "primitive": "browser_navigate",
+        "verifier": true
+      }
+    ]
+  },
+  "lifecycle": "discovered",
+  "provenance": {
+    "source": "experience_compiler",
+    "origins": [
+      {
+        "task_id": "t_8b9324ca",
+        "run_id": "1",
+        "operation_id": "op-test-canonical",
+        "runtime": "electron-chromium",
+        "source": "adaptive_trace",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": 0,
+        "sample_ref": "artifact://tasks/t_8b9324ca/transition_ae0b5315ca327d20ea6f5edd_5a89de3dfed3ca0fa1b99bf5.json",
+        "authority_ref": "artifact://tasks/t_8b9324ca/trace_authority_2858043980793e42c9ea5434ed341762d79b646a76802ad1930aa2874d38ccff.json",
+        "authority_scope": {
+          "allowed_actions": [
+            "browser_navigate"
+          ],
+          "allowed_resources": [
+            "native_browser"
+          ],
+          "channels": [],
+          "level": 1
+        }
+      }
+    ]
+  },
+  "semantic_fingerprint": "4bc13bdf68ea16aa4bb43d811045c7749a10e4e0c80f2c587849eb8597e6c141",
+  "compatibility_fingerprint": "bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2",
+  "validation_evidence": [
+    {
+      "kind": "controlled_replay",
+      "environment": "isolated-experience_bcc0974be58c73cf04a0b436",
+      "passed": true,
+      "result": {
+        "passed": true,
+        "predicates": {
+          "host": "example.test",
+          "page_family": "/guide",
+          "recovery_state": "live",
+          "url": "https://example.test/guide"
+        },
+        "evidence_strength": 2,
+        "evidence_refs": [
+          "artifact://tasks/t_07db12e7/learned_browser_readback_2ce2f85ffbad38fd7077d6a3824104346f3f90250889c60e384d83c52daaa3ea.json"
+        ],
+        "verification_result": {
+          "status": "VERIFIED",
+          "verifier_fingerprint": "d4c6c1bbdd4cd06087ecd6dd88bd581ca0ff48c350563081f64193d8b23eae5a",
+          "evidence_refs": [
+            "artifact://tasks/t_07db12e7/learned_browser_readback_2ce2f85ffbad38fd7077d6a3824104346f3f90250889c60e384d83c52daaa3ea.json"
+          ],
+          "covered_predicates": [
+            "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de",
+            "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+            "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc"
+          ],
+          "freshness_satisfied": true,
+          "relation_satisfied": true,
+          "source_admissible": true,
+          "fault_domain_admissible": true,
+          "transition_proven": true,
+          "reason": "verified",
+          "evaluated_at": "2026-10-02T23:59:09.874273+00:00",
+          "accepted": true
+        }
+      },
+      "compatibility_fingerprint": "bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2"
+    }
+  ],
+  "success_count": 0,
+  "failure_count": 0,
+  "drift_state": "healthy",
+  "savings": {},
+  "created_at": "2026-10-02T23:59:09.603337+00:00",
+  "updated_at": "2026-10-02T23:59:09.911277+00:00",
+  "causal_grade": 3,
+  "trust_class": "trusted_runtime",
+  "taint": [],
+  "source_trace_refs": [
+    "artifact://tasks/t_8b9324ca/browser_readback_7680e6088a7256bac539a40a0c9038c6a7d5e598b3fdffb9da7598b83e216ef1.json",
+    "artifact://tasks/t_8b9324ca/transition_ae0b5315ca327d20ea6f5edd_5a89de3dfed3ca0fa1b99bf5.json",
+    "artifact://tasks/t_e1a7c2c4/transition_c59405633d2c376c32cb84fa_21d74ec0a6b2e3386482c567.json"
+  ],
+  "promotion_policy_version": "",
+  "learning_metadata": {
+    "effects": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "recovery_state": "live"
+    },
+    "preconditions": {},
+    "relations": [],
+    "bindings": [
+      {}
+    ],
+    "semantic_closure": true,
+    "parameterization_quality": true,
+    "evidence_strength": 2,
+    "run_ids": [
+      "1",
+      "2"
+    ],
+    "authority_origins": [
+      "user"
+    ],
+    "provenance_complete": true,
+    "utility": 2084,
+    "drift_rate": 0.0,
+    "unresolved_counterexamples": 0,
+    "model_inadequacy_detected": false,
+    "model_inadequacy_reason": "",
+    "node_classes": [
+      "core"
+    ],
+    "sample_refs": [
+      "transition_ae0b5315ca327d20ea6f5edd",
+      "transition_c59405633d2c376c32cb84fa"
+    ],
+    "verifier_fingerprint": "d4c6c1bbdd4cd06087ecd6dd88bd581ca0ff48c350563081f64193d8b23eae5a",
+    "verifier_lifecycle": "VALIDATED",
+    "operation_families": [
+      "browser_navigate"
+    ],
+    "target_families": [],
+    "promotion_lifecycle": {
+      "version": "h080b2-v1",
+      "state": "PROMOTED",
+      "validation_evidence_refs": [
+        "artifact://tasks/t_e1a7c2c4/auto_val_auto-pos-op.json"
+      ],
+      "replay_evidence_refs": [],
+      "updated_at": "2026-10-02T23:59:09.911277+00:00"
+    },
+    "verifier_validation_reasons": [],
+    "pair_digest": "621b43f9a5a622153d4b2fa24ed65900329871041eecca2b12ea59640fdfe4a4"
+  },
+  "formal_contract": {
+    "operation_family": "browser_navigate",
+    "target_family": "native_browser",
+    "typed_preconditions": [],
+    "typed_postconditions": [
+      {
+        "type": "EQ",
+        "path": "host",
+        "value": "example.test"
+      },
+      {
+        "type": "EQ",
+        "path": "page_family",
+        "value": "/guide"
+      },
+      {
+        "type": "EQ",
+        "path": "recovery_state",
+        "value": "live"
+      }
+    ],
+    "effect_footprint": [
+      {
+        "kind": "SET",
+        "path": "host",
+        "value": "example.test"
+      },
+      {
+        "kind": "SET",
+        "path": "page_family",
+        "value": "/guide"
+      },
+      {
+        "kind": "SET",
+        "path": "recovery_state",
+        "value": "live"
+      }
+    ],
+    "authority_required": {
+      "level": 1,
+      "allowed_actions": [
+        "browser_navigate"
+      ],
+      "allowed_resources": [
+        "native_browser"
+      ],
+      "channels": []
+    },
+    "preserves": [],
+    "verifier": {
+      "schema_version": "1.0.0",
+      "covered_predicates": [
+        "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+        "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc",
+        "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de"
+      ],
+      "effect_classes": [
+        "state_mutation"
+      ],
+      "observer": "workstation.browser_session_state",
+      "source_kind": "browser_local_persistence",
+      "resource_binding": {},
+      "extractor_path": "",
+      "relation": "EXACT",
+      "relation_parameters": {},
+      "canonicalizer_id": "",
+      "canonicalizer_version": "",
+      "minimum_evidence": 2,
+      "allowed_trust": [
+        "trusted_runtime"
+      ],
+      "mutation_failure_domains": [],
+      "allowed_observer_failure_domains": [],
+      "require_distinct_failure_domain": false,
+      "temporal_basis": "none",
+      "max_age_seconds": null,
+      "require_read_after_write": true,
+      "settling_policy": {},
+      "disagreement_policy": "conflict",
+      "lifecycle": "VALIDATED",
+      "validation_evidence_refs": [
+        "artifact://tasks/t_e1a7c2c4/auto_val_auto-pos-op.json"
+      ],
+      "validation_receipts": [
+        {
+          "kind": "positive_replay",
+          "phase": "validation",
+          "passed": true,
+          "evidence_ref": "artifact://tasks/t_e1a7c2c4/auto_val_auto-pos-op.json"
+        },
+        {
+          "kind": "negative_control",
+          "phase": "validation",
+          "passed": true,
+          "evidence_ref": ""
+        }
+      ],
+      "ack_is_terminal_evidence": false,
+      "transition_claim": true,
+      "fingerprint": "d4c6c1bbdd4cd06087ecd6dd88bd581ca0ff48c350563081f64193d8b23eae5a"
+    },
+    "event_contract": null
+  },
+  "family_id": "browser_navigate:native_browser",
+  "alias_of": "",
+  "superseded_by": ""
+}

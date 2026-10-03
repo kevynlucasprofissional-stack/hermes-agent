@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/decision_state_req_2afda127111c.json",
+  "name": "decision_state_req_2afda127111c.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-dataset-final-2\\test_actual_router_receipt_cer0\\t\\decision_state_req_2afda127111c.json",
+  "size_bytes": 112,
+  "sha256": "db1c5ecf59f5b18110154d25b7d8aacfd0a98431be76754d7365ec85d17a7712",
+  "schema": "system1.minimal_state.v1",
+  "summary": {
+    "item_count": 3,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:32:07.753174+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

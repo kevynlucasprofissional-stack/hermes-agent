@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/cap.step2_1.0.0_b8166adfc038cf46.json",
+  "name": "cap.step2_1.0.0_b8166adfc038cf46.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_promoted_composite_preser0\\artifacts\\operational_capabilities\\cap.step2_1.0.0_b8166adfc038cf46.json",
+  "size_bytes": 959,
+  "sha256": "0ba32c56eb7ed69b630c7d30cd8b1bedce59924200e35579a675a7edaa54d22f",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:50.315438+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/db.drop_users_table_1.0.0_7645150fd75b9b05.json",
+  "name": "db.drop_users_table_1.0.0_7645150fd75b9b05.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1b-1\\test_destructive_candidate_wit0\\hermes\\workstation\\artifacts\\operational_capabilities\\db.drop_users_table_1.0.0_7645150fd75b9b05.json",
+  "size_bytes": 2687,
+  "sha256": "de83f3a4df4d68276fc5ce21f81477fcb6f8585c30a1bc677054fcb5131f642a",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:01:41.381637+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

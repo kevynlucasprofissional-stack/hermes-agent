@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/decision_state_req_f9e1cffaa433.json",
+  "name": "decision_state_req_f9e1cffaa433.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-influence-2\\test_typed_contract_and_calibr0\\t\\decision_state_req_f9e1cffaa433.json",
+  "size_bytes": 2,
+  "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "schema": "system1.minimal_state.v1",
+  "summary": {
+    "item_count": 0,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:14:29.540889+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

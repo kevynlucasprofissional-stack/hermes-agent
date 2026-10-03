@@ -1,0 +1,22 @@
+{
+  "experience_326006909efff602b089bf7f@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "326006909efff602b089bf7f81ae17c827bae3bd172cd7ab4b8b6c2dfaefc4f1",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "experience_326006909efff602b089bf7f",
+    "immutable_contract": "f54dc10b8d202d63960fe47aaa2a88350e225a268041fa7610108a7832275fa1",
+    "lifecycle": "promoted",
+    "name": "Verified browser_snapshot",
+    "ref": "artifact://tasks/operational_capabilities/experience_326006909efff602b089bf7f_1.0.0_4f2ef908bc966291.json",
+    "route": "native_browser",
+    "scope": {
+      "host": "github.com"
+    },
+    "semantic_fingerprint": "0d63922e431ad8bfc6893f7eef67c61df521e044feb54921c2d54c0b4994fc0a",
+    "sha256": "4f2ef908bc9662912c2f26aa9bdbfee713d53300c215f32849fa59a292c404a1",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:48.550855+00:00",
+    "version": "1.0.0"
+  }
+}

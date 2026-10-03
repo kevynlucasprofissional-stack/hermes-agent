@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa/batch_summary.json",
+  "name": "batch_summary.json",
+  "task_id": "work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-1\\test_durable_regression_benchm0\\artifacts\\work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa\\batch_summary.json",
+  "size_bytes": 53738,
+  "sha256": "ce8a475d82d32238d97da3352e86a8e9a5e6b79645cfbfec8303701c6b31fba5",
+  "schema": "batch_run_summary",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:41:45.879805+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

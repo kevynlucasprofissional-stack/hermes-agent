@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_24eca07a/pending_work_1_to_2.json",
+  "name": "pending_work_1_to_2.json",
+  "task_id": "t_24eca07a",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-nonresume-cas\\test_uncertain_readback_failur0\\artifacts\\t_24eca07a\\pending_work_1_to_2.json",
+  "size_bytes": 1111,
+  "sha256": "e465d052efbf7b4cac916cb5604059dbbfbcca86b1066afe35c1b7c516ebcc77",
+  "schema": "workstation.pending_work.v1",
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:55:03.218488+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

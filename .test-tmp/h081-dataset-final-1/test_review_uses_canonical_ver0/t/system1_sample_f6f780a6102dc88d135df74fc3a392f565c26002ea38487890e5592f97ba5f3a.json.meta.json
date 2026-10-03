@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/system1_sample_f6f780a6102dc88d135df74fc3a392f565c26002ea38487890e5592f97ba5f3a.json",
+  "name": "system1_sample_f6f780a6102dc88d135df74fc3a392f565c26002ea38487890e5592f97ba5f3a.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-dataset-final-1\\test_review_uses_canonical_ver0\\t\\system1_sample_f6f780a6102dc88d135df74fc3a392f565c26002ea38487890e5592f97ba5f3a.json",
+  "size_bytes": 1284,
+  "sha256": "404dfb02819d122f69affe6483eb9f67f6d963225df4e9066f846a85ddcef662",
+  "schema": "hermes.system1_dataset_sample.v1",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:31:31.798028+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

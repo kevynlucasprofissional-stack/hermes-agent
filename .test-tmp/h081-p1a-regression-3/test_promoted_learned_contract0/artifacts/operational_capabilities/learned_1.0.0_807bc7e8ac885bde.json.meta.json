@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/learned_1.0.0_807bc7e8ac885bde.json",
+  "name": "learned_1.0.0_807bc7e8ac885bde.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_promoted_learned_contract0\\artifacts\\operational_capabilities\\learned_1.0.0_807bc7e8ac885bde.json",
+  "size_bytes": 3462,
+  "sha256": "01dc05c353694e898f3c82689d10164f17e32df6f6de13e84996fe395f954d85",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:48.148563+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

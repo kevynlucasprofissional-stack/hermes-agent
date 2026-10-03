@@ -1,0 +1,23 @@
+{
+  "operation_id": "5420e7a51da3a58f4f86274532715c9a03f2247d9a176d4c963970ef80a0e22b",
+  "task_id": null,
+  "run_id": null,
+  "tool": "write_file",
+  "tool_effect": "MUTATION",
+  "effect": "local_mutation",
+  "scope": "local",
+  "external": false,
+  "provider": null,
+  "field": null,
+  "target_kind": "file",
+  "target_identifier": "scratch/3.json",
+  "operation_semantic": "write_file",
+  "timestamp": "2026-10-03T00:17:49.776686+00:00",
+  "evidence_ref": "artifact://tasks/owner/4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93.data",
+  "verifier_status": "not_verified",
+  "persisted": null,
+  "status": "executed_unverified",
+  "operation_fingerprint": "sem_op_154c9259d00621d4ff31f960",
+  "semantic_fingerprint": "sem_op_154c9259d00621d4ff31f960",
+  "structural_signature": "c92b189809a1956a3cb05224ee7a6790d1ea1bda6d4e7158564d0fddf9331dfd"
+}

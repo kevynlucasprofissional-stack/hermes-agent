@@ -1,0 +1,56 @@
+{
+  "task_id": "work_46d6d45a23f523fd68e915fbffb48f55e5b3a9b23e83ee33d9e5c49be85bcea3",
+  "plan_id": "plan_7e1d2414af92",
+  "total": 3,
+  "success": 0,
+  "retry_success": 0,
+  "failed": 0,
+  "suspect": 1,
+  "anomalies": [
+    {
+      "item_id": "plan_7e1d2414af92_0001",
+      "index": 1,
+      "input": {
+        "id": 0,
+        "_work_phase": "fan_out"
+      },
+      "reason": "mutation_failed_requires_review",
+      "issues": [],
+      "raw_ref": "artifact://tasks/work_46d6d45a23f523fd68e915fbffb48f55e5b3a9b23e83ee33d9e5c49be85bcea3/raw_item_0001.json",
+      "norm_ref": "artifact://tasks/work_46d6d45a23f523fd68e915fbffb48f55e5b3a9b23e83ee33d9e5c49be85bcea3/norm_item_0001.json",
+      "status": "invalid"
+    }
+  ],
+  "needs_reasoning": 1,
+  "completed": 0,
+  "status": "needs_reasoning",
+  "duration_seconds": 0.01,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_7e1d2414af92_0001",
+      "status": "blocked",
+      "raw_ref": "artifact://tasks/work_46d6d45a23f523fd68e915fbffb48f55e5b3a9b23e83ee33d9e5c49be85bcea3/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_46d6d45a23f523fd68e915fbffb48f55e5b3a9b23e83ee33d9e5c49be85bcea3/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_46d6d45a23f523fd68e915fbffb48f55e5b3a9b23e83ee33d9e5c49be85bcea3/norm_item_0001.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_7e1d2414af92_0002",
+      "status": "pending",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    },
+    {
+      "item_id": "plan_7e1d2414af92_0003",
+      "status": "pending",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    }
+  ]
+}

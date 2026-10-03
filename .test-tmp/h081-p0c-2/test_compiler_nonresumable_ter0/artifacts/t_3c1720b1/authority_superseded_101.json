@@ -1,0 +1,12 @@
+{
+  "task_id": "t_3c1720b1",
+  "stale_run_id": "101",
+  "current_run_id": "102",
+  "termination_kind": "CANCELLED",
+  "checkpoint_ref": "artifact://tasks/t_3c1720b1/checkpoint_superseded_101.json",
+  "pending_items_ref": "artifact://tasks/t_3c1720b1/pending_work_101_to_102.json",
+  "uncertain_effects": [],
+  "continuation_allowed": false,
+  "created_at": "2026-10-02T23:44:53.638246+00:00",
+  "details": {}
+}

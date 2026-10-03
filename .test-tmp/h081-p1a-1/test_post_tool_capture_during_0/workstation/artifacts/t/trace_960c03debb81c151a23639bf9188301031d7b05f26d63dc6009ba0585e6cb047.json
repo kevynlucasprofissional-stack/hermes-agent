@@ -1,0 +1,30 @@
+{
+  "tool": "read_file",
+  "action": "read_file",
+  "execution_class": "semantic",
+  "route": "tool.read_file",
+  "operation_fingerprint": "sem_op_f073ddf037211fd8cfa14110",
+  "semantic_fingerprint": "sem_op_f073ddf037211fd8cfa14110",
+  "arguments": {
+    "path": "file"
+  },
+  "semantic_anchor": null,
+  "before_state_ref": null,
+  "after_state_ref": "artifact://tasks/t/trace_result_0979783ac6a8581fe7e4883459ca72b8aaec555308052bfc3d1fe7da822d7f42.json",
+  "outcome": "executed_unverified",
+  "effect": "PURE_READ",
+  "duration_ms": 10.0,
+  "task_id": "t",
+  "run_id": "r",
+  "operation_id": "op",
+  "operation_id_conflict": false,
+  "caller_operation_id": "op",
+  "owner_operation_id": null,
+  "operation_index": 0,
+  "captured_at": "2026-10-02T23:56:56.556326+00:00",
+  "scope": {},
+  "runtime": "tool.read_file",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/t/transition_3bda7241aceebb68fd671ed30b48ea4397ba9301eb071120fabba7ec8b1c87d7.json"
+}

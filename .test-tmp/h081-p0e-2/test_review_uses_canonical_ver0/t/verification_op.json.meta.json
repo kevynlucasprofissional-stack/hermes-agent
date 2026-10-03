@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/verification_op.json",
+  "name": "verification_op.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0e-2\\test_review_uses_canonical_ver0\\t\\verification_op.json",
+  "size_bytes": 2420,
+  "sha256": "69413a04bb0ab71459d90686c51bbb29c162873fe91472c73df975b7db67585f",
+  "schema": "hermes.canonical_verification.v1",
+  "summary": {
+    "item_count": 7,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:53:03.047729+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

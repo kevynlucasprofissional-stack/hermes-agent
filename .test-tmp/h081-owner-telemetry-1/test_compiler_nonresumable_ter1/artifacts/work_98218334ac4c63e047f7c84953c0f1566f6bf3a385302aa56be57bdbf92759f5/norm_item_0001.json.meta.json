@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_98218334ac4c63e047f7c84953c0f1566f6bf3a385302aa56be57bdbf92759f5/norm_item_0001.json",
+  "name": "norm_item_0001.json",
+  "task_id": "work_98218334ac4c63e047f7c84953c0f1566f6bf3a385302aa56be57bdbf92759f5",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_compiler_nonresumable_ter1\\artifacts\\work_98218334ac4c63e047f7c84953c0f1566f6bf3a385302aa56be57bdbf92759f5\\norm_item_0001.json",
+  "size_bytes": 474,
+  "sha256": "913086dcec1062cc4c654201c25482840e5dd27184ed58886297b1e8f20cfb34",
+  "schema": "normalized_batch_output",
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:20.143849+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

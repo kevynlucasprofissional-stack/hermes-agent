@@ -1,0 +1,46 @@
+{
+  "sample_id": "invocation_inv_23699198b12541e3",
+  "task_id": "t_5ea748bf",
+  "run_id": "4",
+  "operation_id": "coord-replay-4",
+  "task_phase": "execution",
+  "objective": "Canonical capability outcome",
+  "state": {
+    "objective": "Canonical capability outcome",
+    "state": {},
+    "candidates": [
+      "experience_bcc0974be58c73cf04a0b436"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Select the best candidate capability for the objective and state.",
+      "criteria": {
+        "experience_bcc0974be58c73cf04a0b436": "Candidate capability: experience_bcc0974be58c73cf04a0b436",
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "experience_bcc0974be58c73cf04a0b436"
+  },
+  "confidence_target": 1.0,
+  "split": "train",
+  "verification_status": "VERIFIED_SUCCESS",
+  "provenance": {
+    "task_id": "t_5ea748bf",
+    "run_id": "4",
+    "operation_id": "coord-replay-4",
+    "source": "OperationalKernel",
+    "source_refs": [
+      "artifact://tasks/t_5ea748bf/invocation_inv_23699198b12541e3.json"
+    ],
+    "evidence_refs": [
+      "artifact://tasks/t_5ea748bf/learned_browser_readback_00ecc8dd22c6baa203aa643e941c18863d1cb153a101e4b3a0a3ed71717c548d.json"
+    ],
+    "canonical_verifier_grounded": true
+  },
+  "created_at": "2026-10-02T23:58:00.518396+00:00"
+}

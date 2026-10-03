@@ -1,0 +1,21 @@
+{
+  "valid": false,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_7c95afbeb12359636e30ab3f634731f1c211261f2c1ed8aac0a8669cf68d0e01/4608b778befdf9f31695903e10a56bdfcb4b175a32185e76cecbfc12c2055cf3.data",
+      "verified": false
+    }
+  ],
+  "code": "unexpected_state",
+  "systemic_failure": {
+    "tool": "read_file",
+    "step_id": "0",
+    "failure_code": "unexpected_state",
+    "verifier": "0",
+    "procedure_fingerprint": "434eb5a3501fb55202d529ef85dcfa430219106c0eaac6bde9cd9f28032f7f1c",
+    "capability_fingerprint": "434eb5a3501fb55202d529ef85dcfa430219106c0eaac6bde9cd9f28032f7f1c",
+    "target_shape": {
+      "id": "int"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "ref": "artifact://tasks/system1/decision_receipt_dec_6eb11f3b2ea3.json",
+  "name": "decision_receipt_dec_6eb11f3b2ea3.json",
+  "task_id": "system1",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-influence-4\\test_wrong_old_format_and_unbo0\\system1\\decision_receipt_dec_6eb11f3b2ea3.json",
+  "size_bytes": 2272,
+  "sha256": "ee8f13583b3f4d4764999a81c99e4a72fc73205aa285b65901343744bddec08c",
+  "schema": "system1.decision_receipt.v1",
+  "summary": {
+    "provider": "laya",
+    "influence_mode": "fallback",
+    "fallback_taken": true,
+    "selected_candidate": null,
+    "latency_ms": 0.004399998942972161
+  },
+  "created_at": "2026-10-03T00:17:31.365546+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

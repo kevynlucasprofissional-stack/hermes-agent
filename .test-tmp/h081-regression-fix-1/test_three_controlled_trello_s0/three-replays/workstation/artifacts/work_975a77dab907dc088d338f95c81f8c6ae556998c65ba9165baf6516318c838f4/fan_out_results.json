@@ -1,0 +1,50 @@
+[
+  {
+    "item_id": "plan_8202c88d69b3_0002",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0002.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0003",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0003.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0004",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0004.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0005",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0005.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0006",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0006.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0007",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0007.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0008",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0008.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0009",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0009.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0010",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0010.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0011",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0011.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0012",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0012.json"
+  },
+  {
+    "item_id": "plan_8202c88d69b3_0013",
+    "result_ref": "artifact://tasks/work_975a77dab907dc088d338f95c81f8c6ae556998c65ba9165baf6516318c838f4/norm_item_0013.json"
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_789e43d74af1d12cbd49852ee065c218e1e8edb68aa2e03f083653417efa8323/mutation_ledger.json",
+  "name": "mutation_ledger.json",
+  "task_id": "work_789e43d74af1d12cbd49852ee065c218e1e8edb68aa2e03f083653417efa8323",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-race-2\\test_compiler_nonresumable_ter1\\artifacts\\work_789e43d74af1d12cbd49852ee065c218e1e8edb68aa2e03f083653417efa8323\\mutation_ledger.json",
+  "size_bytes": 1017,
+  "sha256": "10c20835c5bdaffc69a60ba2a8140c0bcde285b1763f42e191a2a7a8f216f724",
+  "schema": null,
+  "summary": {
+    "item_count": 1,
+    "type": "list"
+  },
+  "created_at": "2026-10-03T00:13:28.259543+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_857a94d1/transition_75d7f0bfd5c052068901ee03_f7484be5d2b4b19146847c0a.json",
+  "name": "transition_75d7f0bfd5c052068901ee03_f7484be5d2b4b19146847c0a.json",
+  "task_id": "t_857a94d1",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_compiler_supersession_res0\\artifacts\\t_857a94d1\\transition_75d7f0bfd5c052068901ee03_f7484be5d2b4b19146847c0a.json",
+  "size_bytes": 1649,
+  "sha256": "e6f843462401171b5d57864f68de80eff39d1eecacd9248aa841a2ccfd1e080e",
+  "schema": "hermes.transition_sample.v1",
+  "summary": {
+    "item_count": 10,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:19.337221+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

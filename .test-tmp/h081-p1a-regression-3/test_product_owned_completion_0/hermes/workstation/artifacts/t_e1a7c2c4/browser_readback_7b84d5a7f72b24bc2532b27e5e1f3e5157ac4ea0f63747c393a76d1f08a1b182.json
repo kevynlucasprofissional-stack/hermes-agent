@@ -1,0 +1,42 @@
+{
+  "task_id": "t_e1a7c2c4",
+  "session_id": "h080b-session",
+  "run_id": "2",
+  "browser_task_id": "t_e1a7c2c4",
+  "tab_id": "tab-native",
+  "url": "https://example.test/guide",
+  "host": "example.test",
+  "page_family": "/guide",
+  "recovery_state": "live",
+  "browser_task_status": "hidden",
+  "saved_at": "2026-10-02T23:59:09.638917+00:00",
+  "revision": 1,
+  "last_receipt": {
+    "operationId": "op-test-canonical",
+    "taskId": "t_e1a7c2c4",
+    "runId": "2",
+    "browserTaskId": "t_e1a7c2c4",
+    "tabId": "tab-native",
+    "revision": 1,
+    "action": "browser_navigate",
+    "safeUrl": "https://example.test/guide",
+    "executedAt": "2026-10-02T23:59:09.638917+00:00"
+  },
+  "operation_id": "op-test-canonical",
+  "observer": "workstation.browser_session_state",
+  "source_kind": "browser_local_persistence",
+  "trust_class": "trusted_runtime",
+  "evidence_strength": 2,
+  "resource_id": "browser_task:t_e1a7c2c4:tab:tab-native",
+  "resource_version": "1",
+  "observed_at": "2026-10-02T23:59:09.638917+00:00",
+  "read_after_write": true,
+  "covered_predicates": [
+    "host",
+    "url",
+    "page_family",
+    "recovery_state"
+  ],
+  "raw_result_ref": "artifact://tasks/t_e1a7c2c4/trace_result_97059bd8b7d213c648e3197be86792f81aecab3d23ae7fd9ef93cc59fe0fc51d.json",
+  "transition_ref": "artifact://tasks/t_e1a7c2c4/transition_f994f359a38fafec306f81315cf8ed7722d5d002873ced28f35d9d38e9c92901.json"
+}

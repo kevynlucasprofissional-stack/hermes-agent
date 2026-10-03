@@ -1,0 +1,77 @@
+{
+  "operation_key": "hit",
+  "recipe_key": "fake.cards.v1",
+  "items": [
+    {
+      "id": 50
+    },
+    {
+      "id": 51
+    }
+  ],
+  "setup_steps": [
+    {
+      "id": "setup",
+      "tool": "fake_setup",
+      "args": {},
+      "depends_on": []
+    }
+  ],
+  "steps": [
+    {
+      "id": "create",
+      "tool": "fake_create",
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      },
+      "depends_on": []
+    },
+    {
+      "id": "verify",
+      "tool": "fake_verify",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "id": "$steps.create.id"
+      },
+      "expect": {
+        "persisted": true
+      },
+      "depends_on": [
+        "create"
+      ]
+    }
+  ],
+  "finalize_steps": [
+    {
+      "id": "finish",
+      "tool": "fake_setup",
+      "args": {
+        "results": "$items_ref"
+      },
+      "depends_on": []
+    }
+  ],
+  "recipe_scope": {
+    "route": "tool.fake_create",
+    "host": "example.test",
+    "path_family": "/cards/:card"
+  },
+  "preflight": [
+    {
+      "tool": "fake_preflight",
+      "args": {},
+      "expect": {
+        "capability": "v1"
+      }
+    }
+  ],
+  "mutation_target": null,
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "task_id": "task_default",
+  "run_id": "run_default",
+  "operation_id": "op_experience_abd4d5ad1981ce4c5f33dfeb_58f4757a",
+  "contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "cookie_banner_visible",
+      "ready"
+    ],
+    "effect_classes": [
+      "read_only",
+      "state_mutation"
+    ],
+    "observer": "owner_readback",
+    "source_kind": "unknown",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "CANDIDATE",
+    "validation_evidence_refs": [
+      "artifact://proof"
+    ],
+    "validation_receipts": [],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "3c010fa7b9054167cf2bd2c94d5fc56e3f66228a57904760bc0822d411ad399c"
+  },
+  "expected": {
+    "cookie_banner_visible": false,
+    "host": "example.com",
+    "page_family": "/flow",
+    "ready": true,
+    "url": "https://example.com/flow"
+  },
+  "evidence": [
+    {
+      "evidence_id": "observation:experience_abd4d5ad1981ce4c5f33dfeb:1.0.0",
+      "observer": "legacy_raw_observer",
+      "source_kind": "browser_dom",
+      "value": {
+        "cookie_banner_visible": false,
+        "host": "example.com",
+        "page_family": "/flow",
+        "ready": true,
+        "url": "https://example.com/flow"
+      },
+      "evidence_strength": 1,
+      "trust_class": "untrusted",
+      "observer_failure_domain": "browser_renderer",
+      "resource_id": "",
+      "resource_version": "",
+      "observed_at": "2026-10-02T23:58:49.904153+00:00",
+      "read_after_write": false,
+      "covered_predicates": [],
+      "artifact_ref": "",
+      "verifier_fingerprint": "",
+      "task_id": "task_default",
+      "run_id": "run_default",
+      "operation_id": "op_experience_abd4d5ad1981ce4c5f33dfeb_58f4757a"
+    }
+  ],
+  "result": {
+    "status": "INCONCLUSIVE",
+    "verifier_fingerprint": "3c010fa7b9054167cf2bd2c94d5fc56e3f66228a57904760bc0822d411ad399c",
+    "evidence_refs": [
+      "observation:experience_abd4d5ad1981ce4c5f33dfeb:1.0.0"
+    ],
+    "covered_predicates": [],
+    "freshness_satisfied": false,
+    "relation_satisfied": false,
+    "source_admissible": false,
+    "fault_domain_admissible": false,
+    "transition_proven": false,
+    "reason": "verifier_not_validated,source_unknown",
+    "evaluated_at": "2026-10-02T23:58:49.904153+00:00",
+    "accepted": false
+  },
+  "mutation_failure_domains": [],
+  "mutation_observed_at": ""
+}

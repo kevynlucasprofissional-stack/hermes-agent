@@ -1,0 +1,16 @@
+{
+  "task_id": "t_66874a59",
+  "stale_run_id": "101",
+  "current_run_id": "102",
+  "pending_items": [
+    {
+      "item_id": "plan_0d2215ae961b_0002",
+      "operation_id": "op_plan_0d2215ae961b_0002"
+    },
+    {
+      "item_id": "plan_0d2215ae961b_0003",
+      "operation_id": "op_plan_0d2215ae961b_0003"
+    }
+  ],
+  "uncertain_effects": []
+}

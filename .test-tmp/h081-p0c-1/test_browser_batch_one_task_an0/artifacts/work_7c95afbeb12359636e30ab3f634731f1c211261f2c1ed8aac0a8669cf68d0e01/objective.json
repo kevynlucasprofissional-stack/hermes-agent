@@ -1,0 +1,70 @@
+{
+  "operation_key": "records-v1",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    },
+    {
+      "id": 2
+    },
+    {
+      "id": 3
+    },
+    {
+      "id": 4
+    },
+    {
+      "id": 5
+    },
+    {
+      "id": 6
+    },
+    {
+      "id": 7
+    },
+    {
+      "id": 8
+    },
+    {
+      "id": 9
+    },
+    {
+      "id": 10
+    },
+    {
+      "id": 11
+    }
+  ],
+  "steps": [
+    {
+      "tool": "browser_type",
+      "args": {
+        "text": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "tool": "browser_snapshot",
+      "verifies": [
+        "fan_out_0"
+      ],
+      "args": {},
+      "expect": {
+        "done": true
+      },
+      "wait": {
+        "interval_seconds": 0,
+        "max_polls": 2
+      }
+    }
+  ],
+  "kind": "prompt_queue",
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

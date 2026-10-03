@@ -1,0 +1,20 @@
+{
+  "file.clean_and_delete_backup@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "file.clean_and_delete_backup",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Clean and delete backup",
+    "ref": "artifact://tasks/operational_capabilities/file.clean_and_delete_backup_1.0.0_467371b29240086d.json",
+    "route": "atomic",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "467371b29240086d49e345a740b1b90a8e603938492f44c96c7b66a71e0676a7",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:49:25.613405+00:00",
+    "version": "1.0.0"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "task_id": "capture",
+  "plan_id": "plan_370f496910d4",
+  "total": 1,
+  "success": 0,
+  "retry_success": 1,
+  "failed": 0,
+  "suspect": 0,
+  "anomalies": [],
+  "needs_reasoning": 0,
+  "completed": 1,
+  "status": "completed",
+  "duration_seconds": 0.08,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_370f496910d4_0001",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/capture/raw_item_0001.json",
+      "result_ref": "artifact://tasks/capture/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/capture/norm_item_0001.json"
+        }
+      ]
+    }
+  ]
+}

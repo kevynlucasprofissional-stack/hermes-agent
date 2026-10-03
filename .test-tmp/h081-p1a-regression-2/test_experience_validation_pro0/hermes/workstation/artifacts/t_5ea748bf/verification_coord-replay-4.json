@@ -1,0 +1,113 @@
+{
+  "task_id": "t_5ea748bf",
+  "run_id": "4",
+  "operation_id": "coord-replay-4",
+  "contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+      "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc",
+      "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de"
+    ],
+    "effect_classes": [
+      "state_mutation"
+    ],
+    "observer": "workstation.browser_session_state",
+    "source_kind": "browser_local_persistence",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [
+      "trusted_runtime"
+    ],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": true,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "VALIDATED",
+    "validation_evidence_refs": [
+      "artifact://tasks/t_03af0543/val_coord-pos-op.json"
+    ],
+    "validation_receipts": [
+      {
+        "kind": "positive_replay",
+        "phase": "validation",
+        "passed": true,
+        "evidence_ref": "artifact://tasks/t_03af0543/val_coord-pos-op.json"
+      },
+      {
+        "kind": "negative_control",
+        "phase": "validation",
+        "passed": true,
+        "evidence_ref": ""
+      }
+    ],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": true,
+    "fingerprint": "dba444b38fd49352e1065dd3f83a2b0d1f94bc793d16f6b9482290c1b9ff272f"
+  },
+  "expected": {
+    "host": "example.test",
+    "page_family": "/guide",
+    "recovery_state": "live"
+  },
+  "evidence": [
+    {
+      "evidence_id": "browser_session:coord-replay-4",
+      "observer": "workstation.browser_session_state",
+      "source_kind": "browser_local_persistence",
+      "value": {
+        "host": "example.test",
+        "page_family": "/guide",
+        "recovery_state": "live"
+      },
+      "evidence_strength": 2,
+      "trust_class": "trusted_runtime",
+      "observer_failure_domain": "browser_session_persistence",
+      "resource_id": "browser_task:t_5ea748bf:tab:tab-native",
+      "resource_version": "1",
+      "observed_at": "2026-10-02T23:58:00.490395+00:00",
+      "read_after_write": true,
+      "covered_predicates": [
+        "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+        "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc",
+        "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de"
+      ],
+      "artifact_ref": "artifact://tasks/t_5ea748bf/learned_browser_readback_00ecc8dd22c6baa203aa643e941c18863d1cb153a101e4b3a0a3ed71717c548d.json",
+      "verifier_fingerprint": "",
+      "task_id": "t_5ea748bf",
+      "run_id": "4",
+      "operation_id": "coord-replay-4"
+    }
+  ],
+  "result": {
+    "status": "VERIFIED",
+    "verifier_fingerprint": "dba444b38fd49352e1065dd3f83a2b0d1f94bc793d16f6b9482290c1b9ff272f",
+    "evidence_refs": [
+      "artifact://tasks/t_5ea748bf/learned_browser_readback_00ecc8dd22c6baa203aa643e941c18863d1cb153a101e4b3a0a3ed71717c548d.json"
+    ],
+    "covered_predicates": [
+      "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de",
+      "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+      "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc"
+    ],
+    "freshness_satisfied": true,
+    "relation_satisfied": true,
+    "source_admissible": true,
+    "fault_domain_admissible": true,
+    "transition_proven": true,
+    "reason": "verified",
+    "evaluated_at": "2026-10-02T23:58:00.498394+00:00",
+    "accepted": true
+  },
+  "mutation_failure_domains": [],
+  "mutation_observed_at": ""
+}

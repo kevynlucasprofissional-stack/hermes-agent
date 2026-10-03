@@ -1,0 +1,38 @@
+{
+  "read_file@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "read_file",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Capability read_file",
+    "ref": "artifact://tasks/operational_capabilities/read_file_1.0.0_bc2e24d64cd552e7.json",
+    "route": "atomic",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "bc2e24d64cd552e763f16211fd2b14c310d68ae9402969dcc7db206051de1e2a",
+    "superseded_by": "",
+    "updated_at": "2026-10-03T00:22:25.526290+00:00",
+    "version": "1.0.0"
+  },
+  "send_email@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "send_email",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Capability send_email",
+    "ref": "artifact://tasks/operational_capabilities/send_email_1.0.0_bd4e55dd84cca8a0.json",
+    "route": "atomic",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "bd4e55dd84cca8a05333b6e3cd2ea36cde3a5edf5080485beb42a10c5a37469c",
+    "superseded_by": "",
+    "updated_at": "2026-10-03T00:22:25.521313+00:00",
+    "version": "1.0.0"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "valid": false,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373/8f50e192097d461f9e5cb0bf766cec17349f6b028c1b8f855778e7842e9f3fb8.data",
+      "verified": true
+    },
+    {
+      "artifact_ref": "artifact://tasks/work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373/8613b37ca7012c4f8a5f3ab89618fbc0b8bd305939ca9d45f2fdfccdf498bb73.data",
+      "verified": true
+    },
+    {
+      "artifact_ref": "artifact://tasks/work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373/1e97f49a70c4517bbd52540d8acfb4ad4ecb6cd68264c22f2d194012a7b184b8.data",
+      "verified": true
+    },
+    {
+      "artifact_ref": "artifact://tasks/work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373/04e27f4378d4cae8d52272bc8fb93bfbe7bd0c686267ed5ed525620990f6a8c1.data",
+      "verified": false
+    }
+  ],
+  "code": "unexpected_state",
+  "systemic_failure": {
+    "tool": "trello_get_card",
+    "step_id": "verify",
+    "failure_code": "unexpected_state",
+    "verifier": "verify",
+    "procedure_fingerprint": "0852907dfa765c78c9af19144f1d6d2183f7b3b9e35288210818bbb16c1d341f",
+    "capability_fingerprint": "0852907dfa765c78c9af19144f1d6d2183f7b3b9e35288210818bbb16c1d341f",
+    "target_shape": {
+      "index": "int",
+      "_work_phase": "str"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "valid": false,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa/1f898bc4b4a32231c963c6cb99d1d5aa3f802f8b73db4d287bdfbd5f667f601f.data",
+      "verified": false
+    }
+  ],
+  "code": "unexpected_state",
+  "systemic_failure": {
+    "tool": "browser_snapshot",
+    "step_id": "0",
+    "failure_code": "unexpected_state",
+    "verifier": "0",
+    "procedure_fingerprint": "67dcc7a50fe78575b55259d84b73688535500dc39179045ad47c9f255c97abb2",
+    "capability_fingerprint": "67dcc7a50fe78575b55259d84b73688535500dc39179045ad47c9f255c97abb2",
+    "target_shape": {
+      "index": "int"
+    }
+  }
+}

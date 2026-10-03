@@ -1,0 +1,22 @@
+{
+  "experience_abd4d5ad1981ce4c5f33dfeb@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "abd4d5ad1981ce4c5f33dfeba0e16fe54ab67eaff65e86c2107b70e9ff6d8726",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "experience_abd4d5ad1981ce4c5f33dfeb",
+    "immutable_contract": null,
+    "lifecycle": "discovered",
+    "name": "Verified browser_snapshot",
+    "ref": "artifact://tasks/operational_capabilities/experience_abd4d5ad1981ce4c5f33dfeb_1.0.0_a7c1dbcdd7cd8d18.json",
+    "route": "native_browser",
+    "scope": {
+      "host": "example.com"
+    },
+    "semantic_fingerprint": "fd00775fd3fa402f92e2c4070f2d0f31c3dd0970d9f46f1bae1457ae5a0da0f8",
+    "sha256": "a7c1dbcdd7cd8d18a3f76fbdf624ac60e6b2f2a65ac562d7d0cd9c64d4862eb7",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:49.811631+00:00",
+    "version": "1.0.0"
+  }
+}

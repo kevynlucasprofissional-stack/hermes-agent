@@ -1,0 +1,31 @@
+{
+  "authority_scope": null,
+  "capability_id": "experience_abd4d5ad1981ce4c5f33dfeb",
+  "capability_version": "1.0.0",
+  "covered_predicates": [],
+  "delta": {},
+  "freshness_satisfied": false,
+  "inputs": {},
+  "invocation_id": "inv_e896004d79574b22",
+  "operation_id": "op_experience_abd4d5ad1981ce4c5f33dfeb_98587e86",
+  "run_id": "run_default",
+  "state_after": {
+    "cookie_banner_visible": false,
+    "host": "example.com",
+    "page_family": "/flow",
+    "ready": true,
+    "url": "https://example.com/flow"
+  },
+  "state_before": {},
+  "status": "ACKNOWLEDGED",
+  "task_id": "task_default",
+  "verification_evidence_refs": [
+    "observation:experience_abd4d5ad1981ce4c5f33dfeb:1.0.0"
+  ],
+  "verification_reason": "verifier_not_validated,source_unknown",
+  "verification_record_ref": "artifact://tasks/task_default/verification_op_experience_abd4d5ad1981ce4c5f33dfeb_98587e86.json",
+  "verified": false,
+  "verifier_fingerprint": "3c010fa7b9054167cf2bd2c94d5fc56e3f66228a57904760bc0822d411ad399c",
+  "verifier_status": "INCONCLUSIVE",
+  "timestamp": 1790985462.0301
+}

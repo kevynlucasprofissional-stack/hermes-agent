@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/task_default/system1_sample_72f33790149f989dbe7006be1a94b1a594420d2a910ff0028e66af6e63e0ed6e.json",
+  "name": "system1_sample_72f33790149f989dbe7006be1a94b1a594420d2a910ff0028e66af6e63e0ed6e.json",
+  "task_id": "task_default",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_learned_browser_replay_is0\\hermes\\workstation\\artifacts\\task_default\\system1_sample_72f33790149f989dbe7006be1a94b1a594420d2a910ff0028e66af6e63e0ed6e.json",
+  "size_bytes": 1514,
+  "sha256": "1ebda46440e1f6deadab3cf95f0da8e0ee4a71143ed825175734e419d0d4624b",
+  "schema": "hermes.system1_dataset_sample.v1",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:48.573866+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

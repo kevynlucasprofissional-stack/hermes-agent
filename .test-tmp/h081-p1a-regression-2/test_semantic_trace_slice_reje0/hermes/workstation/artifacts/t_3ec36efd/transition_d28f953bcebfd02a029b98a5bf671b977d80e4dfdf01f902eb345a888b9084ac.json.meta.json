@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_3ec36efd/transition_d28f953bcebfd02a029b98a5bf671b977d80e4dfdf01f902eb345a888b9084ac.json",
+  "name": "transition_d28f953bcebfd02a029b98a5bf671b977d80e4dfdf01f902eb345a888b9084ac.json",
+  "task_id": "t_3ec36efd",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_semantic_trace_slice_reje0\\hermes\\workstation\\artifacts\\t_3ec36efd\\transition_d28f953bcebfd02a029b98a5bf671b977d80e4dfdf01f902eb345a888b9084ac.json",
+  "size_bytes": 2555,
+  "sha256": "0af883d0262f6af0f44732449eecbb3e546a0988d2eb64d9ab2e164e92a4d760",
+  "schema": "hermes.transition_sample.v1",
+  "summary": {
+    "item_count": 10,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:59.098706+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

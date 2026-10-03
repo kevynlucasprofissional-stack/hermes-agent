@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_5ea748bf/verification_coord-replay-4.json",
+  "name": "verification_coord-replay-4.json",
+  "task_id": "t_5ea748bf",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_experience_validation_pro0\\hermes\\workstation\\artifacts\\t_5ea748bf\\verification_coord-replay-4.json",
+  "size_bytes": 3892,
+  "sha256": "55cc04d91bd088255950f4905c662b45e7ab690a5a9d13d9249f24040b4a41d8",
+  "schema": "hermes.canonical_verification.v1",
+  "summary": {
+    "item_count": 9,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:00.504409+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,76 @@
+{
+  "delta": {
+    "added": {
+      "host": "example.com",
+      "page_family": "/form",
+      "url": "https://example.com/form"
+    },
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "PURE_READ",
+    "operation_family": "browser_snapshot",
+    "parameters": {},
+    "primitive": "browser_snapshot",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "observed",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "observation_7e627b0b66db434d85d5900c333b85f5",
+    "operation_index": 0,
+    "run_id": null,
+    "runtime": "electron-chromium",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": null,
+    "trust_class": "runtime_observation"
+  },
+  "raw_result_ref": "artifact://tasks/owner/trace_result_8f5c6a546d82f2692df3745db080ca4996e5ec96df927455930ec30a47ee6644.json",
+  "sample_id": "transition_dc177f09a8c4ebb170987645",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_8f5c6a546d82f2692df3745db080ca4996e5ec96df927455930ec30a47ee6644.json",
+    "semantic_predicates": {
+      "host": "example.com",
+      "page_family": "/form",
+      "url": "https://example.com/form"
+    }
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 1,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

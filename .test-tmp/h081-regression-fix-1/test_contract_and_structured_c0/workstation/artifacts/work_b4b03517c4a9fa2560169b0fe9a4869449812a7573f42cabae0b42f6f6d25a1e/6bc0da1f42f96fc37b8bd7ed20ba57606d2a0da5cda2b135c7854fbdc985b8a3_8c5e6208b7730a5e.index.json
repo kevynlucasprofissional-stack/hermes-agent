@@ -1,0 +1,6 @@
+{
+  "source": {
+    "path": "a.txt"
+  },
+  "content_ref": "artifact://tasks/work_b4b03517c4a9fa2560169b0fe9a4869449812a7573f42cabae0b42f6f6d25a1e/6bc0da1f42f96fc37b8bd7ed20ba57606d2a0da5cda2b135c7854fbdc985b8a3.data"
+}

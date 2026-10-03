@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/owner/trace_b41824b57b06ac2e1973fe96acdd1d93661c317ecbd9c5a6b1f47b117c3196c5.json",
+  "name": "trace_b41824b57b06ac2e1973fe96acdd1d93661c317ecbd9c5a6b1f47b117c3196c5.json",
+  "task_id": "owner",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_historical_seven_effects_0\\workstation\\artifacts\\owner\\trace_b41824b57b06ac2e1973fe96acdd1d93661c317ecbd9c5a6b1f47b117c3196c5.json",
+  "size_bytes": 1157,
+  "sha256": "fad26a428f3ff1b74ceb124d5ef8296de1f51cc3650342bc69c3dc9f9eaa9fe2",
+  "schema": null,
+  "summary": {
+    "item_count": 26,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:17:49.773687+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373/mutation_ledger.json",
+  "name": "mutation_ledger.json",
+  "task_id": "work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\work_72faebc053dffea5ccab14a9868fdcc8b5fff89a140cdfd5f82a2772c855e373\\mutation_ledger.json",
+  "size_bytes": 809,
+  "sha256": "2e1eed1eb247f0de8927ded7a945ccc61cba58904141870d5e64bb5ac13db0be",
+  "schema": null,
+  "summary": {
+    "item_count": 1,
+    "type": "list"
+  },
+  "created_at": "2026-10-03T00:20:11.509346+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

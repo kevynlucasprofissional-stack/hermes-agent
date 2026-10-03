@@ -1,0 +1,42 @@
+{
+  "operation_key": "resume",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    },
+    {
+      "id": 2
+    }
+  ],
+  "steps": [
+    {
+      "id": "write",
+      "tool": "test_write",
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "readback",
+      "tool": "test_readback",
+      "verifies": [
+        "write"
+      ],
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "id": "$item.id"
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

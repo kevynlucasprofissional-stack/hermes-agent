@@ -1,0 +1,20 @@
+{
+  "completed_until": null,
+  "expected": "Executable capability match",
+  "observed": "no_certifiable_capability_found",
+  "context": {
+    "intent_id": "i",
+    "open_condition": {
+      "target": "service",
+      "goal": {
+        "type": "EQ",
+        "path": "service.online",
+        "value": true
+      }
+    },
+    "attention_packet": null,
+    "requires_reconciliation": false,
+    "reason": "no_certifiable_capability_found"
+  },
+  "safe_to_resume": false
+}

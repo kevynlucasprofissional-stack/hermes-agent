@@ -1,0 +1,43 @@
+{
+  "operation_key": "records-v1",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    },
+    {
+      "id": 2
+    }
+  ],
+  "steps": [
+    {
+      "tool": "browser_type",
+      "args": {
+        "text": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "tool": "browser_snapshot",
+      "verifies": [
+        "fan_out_0"
+      ],
+      "args": {},
+      "expect": {
+        "done": true
+      },
+      "wait": {
+        "interval_seconds": 0,
+        "max_polls": 3
+      }
+    }
+  ],
+  "kind": "prompt_queue",
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

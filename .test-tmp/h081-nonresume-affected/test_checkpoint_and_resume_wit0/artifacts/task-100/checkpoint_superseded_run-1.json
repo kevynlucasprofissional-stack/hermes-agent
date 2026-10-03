@@ -1,0 +1,11 @@
+{
+  "task_id": "task-100",
+  "stale_run_id": "run-1",
+  "results": [
+    {
+      "item_id": "item_1",
+      "status": "COMMITTED",
+      "result": "done"
+    }
+  ]
+}

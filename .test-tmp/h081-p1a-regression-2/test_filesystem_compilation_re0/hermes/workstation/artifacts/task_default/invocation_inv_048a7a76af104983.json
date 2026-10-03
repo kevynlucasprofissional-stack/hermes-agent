@@ -1,0 +1,25 @@
+{
+  "authority_scope": null,
+  "capability_id": "composite2",
+  "capability_version": "1.0.0",
+  "covered_predicates": [],
+  "delta": {},
+  "freshness_satisfied": false,
+  "inputs": {
+    "path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0\\composite2.txt"
+  },
+  "invocation_id": "inv_048a7a76af104983",
+  "operation_id": "op_composite2_03ad2539",
+  "run_id": "run_default",
+  "state_after": {},
+  "state_before": {},
+  "status": "ACKNOWLEDGED",
+  "task_id": "task_default",
+  "verification_evidence_refs": [],
+  "verification_reason": "verifier_not_validated,observer_unknown,source_unknown",
+  "verification_record_ref": "artifact://tasks/task_default/verification_op_composite2_03ad2539.json",
+  "verified": false,
+  "verifier_fingerprint": "deeffcf8d0865ba4e4e97d7e19e53703d68bac03a0b4c911b71183e41af2ce2d",
+  "verifier_status": "INCONCLUSIVE",
+  "timestamp": 1790985461.121768
+}

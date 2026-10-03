@@ -1,0 +1,18 @@
+{
+  "status": "VERIFIED",
+  "verifier_fingerprint": "a6d5f192290005445aeb16eba1304bc813883d4af06409fe4d6472eb83c50f7e",
+  "evidence_refs": [
+    "owner:read"
+  ],
+  "covered_predicates": [
+    "47a4bb600789953805738673287dd18783e39f5af5a0b695c934a95ecdbe2802"
+  ],
+  "freshness_satisfied": true,
+  "relation_satisfied": true,
+  "source_admissible": true,
+  "fault_domain_admissible": true,
+  "transition_proven": true,
+  "reason": "verified",
+  "evaluated_at": "2026-10-02T23:49:25.432527+00:00",
+  "accepted": true
+}

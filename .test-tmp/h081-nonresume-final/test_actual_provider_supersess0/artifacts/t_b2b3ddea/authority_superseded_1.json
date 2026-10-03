@@ -1,0 +1,34 @@
+{
+  "task_id": "t_b2b3ddea",
+  "stale_run_id": "1",
+  "current_run_id": "2",
+  "termination_kind": "SUPERSEDED",
+  "checkpoint_ref": "artifact://tasks/t_b2b3ddea/checkpoint_superseded_1.json",
+  "pending_items_ref": "artifact://tasks/t_b2b3ddea/pending_work_1_to_2.json",
+  "uncertain_effects": [
+    {
+      "operation_id": "08f33adc7247a3b06b3b6f7ac8dc26dce896dcb63c053a7f74ebac71fd1305dd",
+      "task_id": "t_b2b3ddea",
+      "run_id": "1",
+      "tool": "test_write",
+      "tool_effect": "MUTATION",
+      "effect": "unknown_mutation",
+      "scope": "unknown",
+      "external": null,
+      "provider": null,
+      "field": null,
+      "target_kind": "unknown",
+      "target_identifier": 1,
+      "operation_semantic": "test_write",
+      "timestamp": "2026-10-03T00:53:29.133012+00:00",
+      "status": "uncertain",
+      "persisted": null,
+      "verifier_status": "pending",
+      "item_id": "plan_f89c692c9dd9_0002",
+      "step": "step_0"
+    }
+  ],
+  "continuation_allowed": true,
+  "created_at": "2026-10-03T00:53:29.216864+00:00",
+  "details": {}
+}

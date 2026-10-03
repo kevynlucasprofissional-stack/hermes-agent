@@ -1,0 +1,83 @@
+{
+  "operation_signature": "592d96b998f5f996c4dcba7bae2220e0f670912611454fd7ee8ed1cc3d610263",
+  "scope": {
+    "route": "tool.fake_create",
+    "host": "example.test",
+    "path_family": "/cards/:card"
+  },
+  "graph": {
+    "setup": [
+      {
+        "id": "setup",
+        "tool": "fake_setup",
+        "args": {},
+        "depends_on": []
+      }
+    ],
+    "fan_out": [
+      {
+        "id": "create",
+        "tool": "fake_create",
+        "args": {
+          "id": "$item.id"
+        },
+        "expect": {
+          "ok": true
+        },
+        "depends_on": []
+      },
+      {
+        "id": "verify",
+        "tool": "fake_verify",
+        "verifies": [
+          "create"
+        ],
+        "args": {
+          "id": "$steps.create.id"
+        },
+        "expect": {
+          "persisted": true
+        },
+        "depends_on": [
+          "create"
+        ]
+      }
+    ],
+    "finalize": [
+      {
+        "id": "finish",
+        "tool": "fake_setup",
+        "args": {
+          "results": "$items_ref"
+        },
+        "depends_on": []
+      }
+    ]
+  },
+  "mutation_target": null,
+  "verification": {
+    "verifier_step_ids": [
+      "verify"
+    ]
+  },
+  "preflight": [
+    {
+      "tool": "fake_preflight",
+      "args": {},
+      "expect": {
+        "capability": "v1"
+      }
+    }
+  ],
+  "fingerprint": "bcba6bd7f81acee336d5151ff2081a0e8063a85c1a97cee362ab802ef10aac3b",
+  "status": "VERIFIED",
+  "verified_at": "2026-10-03T00:18:04.368143+00:00",
+  "version": 1,
+  "previous_fingerprint": null,
+  "stats": {
+    "successes": 1,
+    "failures": 0
+  },
+  "recipe_id": "fake.cards.v1",
+  "schema_version": 1
+}

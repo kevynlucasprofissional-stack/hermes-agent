@@ -1,0 +1,27 @@
+{
+  "valid": false,
+  "results": [
+    {
+      "artifact_ref": "artifact://tasks/work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76/fca297bddd1285b25abf5ac40c435ad516f8e0adae43126e5eb40ab35035a8a2.data",
+      "verified": true
+    },
+    {
+      "artifact_ref": "artifact://tasks/work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76/a03a849e587f1da290fe76b77fcbcef24cc5d26f80702b776c353ee24716cc4a.data",
+      "verified": false
+    }
+  ],
+  "code": "unexpected_state",
+  "systemic_failure": {
+    "tool": "incident_get",
+    "step_id": "readback",
+    "failure_code": "unexpected_state",
+    "verifier": "readback",
+    "procedure_fingerprint": "5fb1f1542cb7d139c7ad50bd70ebf61af285bbe265ec09827b967179a1c06116",
+    "capability_fingerprint": "5fb1f1542cb7d139c7ad50bd70ebf61af285bbe265ec09827b967179a1c06116",
+    "target_shape": {
+      "id": "str",
+      "description": "str",
+      "_work_phase": "str"
+    }
+  }
+}

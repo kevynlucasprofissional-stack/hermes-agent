@@ -1,0 +1,75 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "unknown",
+    "operation_family": "",
+    "parameters": {},
+    "primitive": "experience_bcc0974be58c73cf04a0b436",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "verified_success",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "coord-replay-4",
+    "operation_index": null,
+    "run_id": "4",
+    "runtime": "",
+    "sample_ref": null,
+    "source": "progressive_owner",
+    "taint": [],
+    "task_id": "t_5ea748bf",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": null,
+  "sample_id": "transition_f3144f89e023e7d639f03b94",
+  "state_after": {
+    "artifact_ref": null,
+    "semantic_predicates": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "recovery_state": "live",
+      "url": "https://example.test/guide"
+    }
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [
+      "artifact://tasks/t_5ea748bf/learned_browser_readback_00ecc8dd22c6baa203aa643e941c18863d1cb153a101e4b3a0a3ed71717c548d.json"
+    ],
+    "evidence_strength": 2,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "workstation.browser_session_state",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "browser_local_persistence",
+    "status": "VERIFIED",
+    "trust_class": "trusted_runtime",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": "dba444b38fd49352e1065dd3f83a2b0d1f94bc793d16f6b9482290c1b9ff272f"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_712364dc/invocation_inv_bd48acf3c5274e2c.json",
+  "name": "invocation_inv_bd48acf3c5274e2c.json",
+  "task_id": "t_712364dc",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_product_owned_completion_0\\hermes\\workstation\\artifacts\\t_712364dc\\invocation_inv_bd48acf3c5274e2c.json",
+  "size_bytes": 1226,
+  "sha256": "464aa01eeb708b99d148421e1c6fcc8919e66d348f3bd4c9a0e30b796256b425",
+  "schema": "hermes.capability_invocation.v1",
+  "summary": {
+    "item_count": 21,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:02.562622+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

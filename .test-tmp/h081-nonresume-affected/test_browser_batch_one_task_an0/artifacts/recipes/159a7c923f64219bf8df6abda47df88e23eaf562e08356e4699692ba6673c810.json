@@ -1,0 +1,59 @@
+{
+  "operation_signature": "8d0fc4eb453fedae4b550e0c50ecde00ab7ffd92d5a96023adc0bccd6adba6ed",
+  "scope": {
+    "route": "tool.browser_type"
+  },
+  "graph": {
+    "setup": [],
+    "fan_out": [
+      {
+        "tool": "browser_type",
+        "args": {
+          "text": "$item.id"
+        },
+        "expect": {
+          "ok": true
+        },
+        "id": "fan_out_0",
+        "depends_on": []
+      },
+      {
+        "tool": "browser_snapshot",
+        "verifies": [
+          "fan_out_0"
+        ],
+        "args": {},
+        "expect": {
+          "done": true
+        },
+        "wait": {
+          "interval_seconds": 0,
+          "max_polls": 2
+        },
+        "id": "fan_out_1",
+        "depends_on": [
+          "fan_out_0"
+        ]
+      }
+    ],
+    "finalize": []
+  },
+  "mutation_target": null,
+  "verification": {
+    "verifier_step_ids": [
+      "fan_out_1"
+    ]
+  },
+  "preflight": [],
+  "fingerprint": "06f7175d4462d5b0a13d6a31e6837012fbbe628bb6d626f85a1007c2ffdd8889",
+  "status": "VERIFIED",
+  "verified_at": "2026-10-03T00:54:39.610791+00:00",
+  "version": 1,
+  "previous_fingerprint": null,
+  "stats": {
+    "successes": 1,
+    "failures": 0
+  },
+  "recipe_id": "auto.06f7175d4462d5b0a13d6a31e6837012fbbe628bb6d626f85a1007c2ffdd8889",
+  "schema_version": 1
+}

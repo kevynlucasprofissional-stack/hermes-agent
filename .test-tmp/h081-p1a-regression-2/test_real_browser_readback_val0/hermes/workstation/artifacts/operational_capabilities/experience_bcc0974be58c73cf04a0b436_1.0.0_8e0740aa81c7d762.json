@@ -1,0 +1,274 @@
+{
+  "id": "experience_bcc0974be58c73cf04a0b436",
+  "name": "Verified browser_navigate",
+  "version": "1.0.0",
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "output_schema": {},
+  "effect": "state_mutation",
+  "route": "native_browser",
+  "scope": {
+    "host": "example.test",
+    "path_family": "/guide"
+  },
+  "preconditions": [],
+  "postconditions": [
+    {
+      "type": "semantic_predicate",
+      "key": "host",
+      "expected": "example.test"
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "page_family",
+      "expected": "/guide"
+    },
+    {
+      "type": "semantic_predicate",
+      "key": "recovery_state",
+      "expected": "live"
+    }
+  ],
+  "verifier_contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "host",
+      "page_family",
+      "recovery_state",
+      "url"
+    ],
+    "effect_classes": [
+      "MUTATION"
+    ],
+    "observer": "workstation.browser_session_state",
+    "source_kind": "browser_local_persistence",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "CANDIDATE",
+    "validation_evidence_refs": [
+      "artifact://tasks/t_41b7f77d/browser_readback_043d5d3bb409a35115d447757152fd24141e240f38ddd34b6e4c2d0d474ee44c.json"
+    ],
+    "validation_receipts": [],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "258ac4e7ce164fc33957de946df58a441f7d4df407a9fd7b29a8e06790e2e76c"
+  },
+  "dependencies": [],
+  "implementation": {
+    "steps": [
+      {
+        "args": {
+          "url": "https://example.test/guide"
+        },
+        "id": "learned_0",
+        "primitive": "browser_navigate",
+        "verifier": true
+      }
+    ]
+  },
+  "lifecycle": "discovered",
+  "provenance": {
+    "source": "experience_compiler",
+    "origins": [
+      {
+        "task_id": "t_41b7f77d",
+        "run_id": "1",
+        "operation_id": "op-test-canonical",
+        "runtime": "electron-chromium",
+        "source": "adaptive_trace",
+        "authority_origin": "user",
+        "trust_class": "trusted_runtime",
+        "taint": [],
+        "operation_index": 0,
+        "sample_ref": "artifact://tasks/t_41b7f77d/transition_4cd07cf2786b4c8670835715_84df64602e498bbc7a702c49.json",
+        "authority_ref": "artifact://tasks/t_41b7f77d/trace_authority_9588d59c5a1dcb36933793748e204de764aed57dd07ce8efe93282ad69e2de8c.json",
+        "authority_scope": {
+          "allowed_actions": [
+            "browser_navigate"
+          ],
+          "allowed_resources": [
+            "native_browser"
+          ],
+          "channels": [],
+          "level": 1
+        }
+      }
+    ]
+  },
+  "semantic_fingerprint": "4bc13bdf68ea16aa4bb43d811045c7749a10e4e0c80f2c587849eb8597e6c141",
+  "compatibility_fingerprint": "bcc0974be58c73cf04a0b436a0478b2830b5c369019940277fb62f6ed57a77d2",
+  "validation_evidence": [],
+  "success_count": 0,
+  "failure_count": 0,
+  "drift_state": "healthy",
+  "savings": {},
+  "created_at": "2026-10-02T23:57:56.340931+00:00",
+  "updated_at": "2026-10-02T23:57:56.554474+00:00",
+  "causal_grade": 1,
+  "trust_class": "trusted_runtime",
+  "taint": [],
+  "source_trace_refs": [
+    "artifact://tasks/t_41b7f77d/browser_readback_043d5d3bb409a35115d447757152fd24141e240f38ddd34b6e4c2d0d474ee44c.json",
+    "artifact://tasks/t_41b7f77d/transition_4cd07cf2786b4c8670835715_84df64602e498bbc7a702c49.json",
+    "artifact://tasks/t_cc65d2ad/transition_9edf281d0b942d255a3c1818_dc66d0b3c9b0e47504898128.json"
+  ],
+  "promotion_policy_version": "",
+  "learning_metadata": {
+    "effects": {
+      "host": "example.test",
+      "page_family": "/guide",
+      "recovery_state": "live"
+    },
+    "preconditions": {},
+    "relations": [],
+    "bindings": [
+      {}
+    ],
+    "semantic_closure": true,
+    "parameterization_quality": true,
+    "evidence_strength": 2,
+    "run_ids": [
+      "1",
+      "2"
+    ],
+    "authority_origins": [
+      "user"
+    ],
+    "provenance_complete": true,
+    "utility": 2084,
+    "drift_rate": 0.0,
+    "unresolved_counterexamples": 0,
+    "model_inadequacy_detected": false,
+    "model_inadequacy_reason": "",
+    "node_classes": [
+      "core"
+    ],
+    "sample_refs": [
+      "transition_4cd07cf2786b4c8670835715",
+      "transition_9edf281d0b942d255a3c1818"
+    ],
+    "verifier_fingerprint": "258ac4e7ce164fc33957de946df58a441f7d4df407a9fd7b29a8e06790e2e76c",
+    "verifier_lifecycle": "CANDIDATE",
+    "operation_families": [
+      "browser_navigate"
+    ],
+    "target_families": [],
+    "promotion_lifecycle": {
+      "version": "h080b2-v1",
+      "state": "VALIDATION_PENDING",
+      "validation_evidence_refs": [],
+      "replay_evidence_refs": [],
+      "updated_at": "2026-10-02T23:57:56.554474+00:00"
+    }
+  },
+  "formal_contract": {
+    "operation_family": "browser_navigate",
+    "target_family": "native_browser",
+    "typed_preconditions": [],
+    "typed_postconditions": [
+      {
+        "type": "EQ",
+        "path": "host",
+        "value": "example.test"
+      },
+      {
+        "type": "EQ",
+        "path": "page_family",
+        "value": "/guide"
+      },
+      {
+        "type": "EQ",
+        "path": "recovery_state",
+        "value": "live"
+      }
+    ],
+    "effect_footprint": [
+      {
+        "kind": "SET",
+        "path": "host",
+        "value": "example.test"
+      },
+      {
+        "kind": "SET",
+        "path": "page_family",
+        "value": "/guide"
+      },
+      {
+        "kind": "SET",
+        "path": "recovery_state",
+        "value": "live"
+      }
+    ],
+    "authority_required": {
+      "level": 1,
+      "allowed_actions": [
+        "browser_navigate"
+      ],
+      "allowed_resources": [
+        "native_browser"
+      ],
+      "channels": []
+    },
+    "preserves": [],
+    "verifier": {
+      "schema_version": "1.0.0",
+      "covered_predicates": [
+        "host",
+        "page_family",
+        "recovery_state",
+        "url"
+      ],
+      "effect_classes": [
+        "MUTATION"
+      ],
+      "observer": "workstation.browser_session_state",
+      "source_kind": "browser_local_persistence",
+      "resource_binding": {},
+      "extractor_path": "",
+      "relation": "EXACT",
+      "relation_parameters": {},
+      "canonicalizer_id": "",
+      "canonicalizer_version": "",
+      "minimum_evidence": 2,
+      "allowed_trust": [],
+      "mutation_failure_domains": [],
+      "allowed_observer_failure_domains": [],
+      "require_distinct_failure_domain": false,
+      "temporal_basis": "none",
+      "max_age_seconds": null,
+      "require_read_after_write": false,
+      "settling_policy": {},
+      "disagreement_policy": "conflict",
+      "lifecycle": "CANDIDATE",
+      "validation_evidence_refs": [
+        "artifact://tasks/t_41b7f77d/browser_readback_043d5d3bb409a35115d447757152fd24141e240f38ddd34b6e4c2d0d474ee44c.json"
+      ],
+      "validation_receipts": [],
+      "ack_is_terminal_evidence": false,
+      "transition_claim": false,
+      "fingerprint": "258ac4e7ce164fc33957de946df58a441f7d4df407a9fd7b29a8e06790e2e76c"
+    },
+    "event_contract": null
+  },
+  "family_id": "browser_navigate:native_browser",
+  "alias_of": "",
+  "superseded_by": ""
+}

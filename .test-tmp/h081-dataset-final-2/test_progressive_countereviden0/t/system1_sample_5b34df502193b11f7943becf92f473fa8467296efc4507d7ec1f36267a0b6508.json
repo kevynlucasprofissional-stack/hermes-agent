@@ -1,0 +1,40 @@
+{
+  "sample_id": "prog_4112c8cb9680143228da5b3f",
+  "task_id": "t",
+  "run_id": "a",
+  "operation_id": "op",
+  "task_phase": "verification",
+  "objective": "progress",
+  "state": {
+    "objective": "progress",
+    "before": {},
+    "after": {
+      "done": true
+    },
+    "delta": {}
+  },
+  "questions": {
+    "progress_class": {
+      "type": "choice",
+      "instructions": "Has the recent state transition achieved meaningful progress toward the objective?",
+      "criteria": {
+        "progressing": "Pending work reduced, verifiable side-effect committed, or new evidence observed",
+        "stalled": "No change in state, no new evidence, or identical error repeated",
+        "loop_suspected": "Alternating or repeating states without pending work reduction",
+        "repetition": "Identical tool or candidate requested without intervening state change",
+        "ABSTAIN": "Uncertain progress signal"
+      }
+    }
+  },
+  "expected_answers": {
+    "progress_class": "progressing"
+  },
+  "confidence_target": 1.0,
+  "split": "train",
+  "verification_status": "UNCERTAIN",
+  "provenance": {
+    "task_id": "t",
+    "run_id": "a"
+  },
+  "created_at": "2026-10-03T00:32:07.611580+00:00"
+}

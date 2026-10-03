@@ -1,0 +1,50 @@
+{
+  "task_id": "work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587",
+  "plan_id": "plan_a595f29d3ef5",
+  "objective_ref": "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/objective.json",
+  "phase": "completed",
+  "constraints": {
+    "forbidden_routes": []
+  },
+  "recipe": {
+    "recipe_id": "auto.868233c48fb8a0f584b958e28462c956412325774900eb066ae30e88a7921e5d",
+    "status": "UNVERIFIED",
+    "fingerprint": "868233c48fb8a0f584b958e28462c956412325774900eb066ae30e88a7921e5d"
+  },
+  "setup": {
+    "completed": 0,
+    "total": 0,
+    "pending": 0,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "items": {
+    "completed": 1,
+    "total": 1,
+    "pending": 0,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "finalize": {
+    "completed": 0,
+    "total": 0,
+    "pending": 0,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "next_action": "finish",
+  "blockers": [],
+  "blocker_count": 0,
+  "artifact_refs": [
+    "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93.data",
+    "artifact://tasks/work_ec3b33e96352a0b1924c3cf640065879901d303a0fa8d65ff9637e86d4095587/norm_item_0001.json"
+  ],
+  "artifact_count": 2,
+  "latest_verified_state": {
+    "completed_items": 1,
+    "canary_verified": false
+  }
+}

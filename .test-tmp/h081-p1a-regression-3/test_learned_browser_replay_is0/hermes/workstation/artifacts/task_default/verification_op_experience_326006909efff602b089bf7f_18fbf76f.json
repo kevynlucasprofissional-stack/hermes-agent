@@ -1,0 +1,103 @@
+{
+  "task_id": "task_default",
+  "run_id": "run_default",
+  "operation_id": "op_experience_326006909efff602b089bf7f_18fbf76f",
+  "contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "pr_state"
+    ],
+    "effect_classes": [],
+    "observer": "fixture.owner.readback",
+    "source_kind": "test_fixture",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [
+      "trusted_runtime"
+    ],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "VALIDATED",
+    "validation_evidence_refs": [],
+    "validation_receipts": [
+      {
+        "kind": "positive_replay",
+        "passed": true,
+        "phase": "validation",
+        "evidence_ref": "positive"
+      },
+      {
+        "kind": "negative_control",
+        "passed": true,
+        "phase": "validation",
+        "evidence_ref": "negative"
+      }
+    ],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "ae3875ea1e495598ea0f91e8048160c226277415e05670eff53b46bb4e36f660"
+  },
+  "expected": {
+    "host": "github.com",
+    "mergeable": true,
+    "page_family": "/foo/bar/pull/:number",
+    "pr_state": "merged",
+    "url": "https://github.com/foo/bar/pull/999"
+  },
+  "evidence": [
+    {
+      "evidence_id": "observation:experience_326006909efff602b089bf7f:1.0.0",
+      "observer": "legacy_raw_observer",
+      "source_kind": "browser_dom",
+      "value": {
+        "host": "github.com",
+        "mergeable": true,
+        "page_family": "/foo/bar/pull/:number",
+        "pr_state": "merged",
+        "url": "https://github.com/foo/bar/pull/999"
+      },
+      "evidence_strength": 1,
+      "trust_class": "untrusted",
+      "observer_failure_domain": "browser_renderer",
+      "resource_id": "",
+      "resource_version": "",
+      "observed_at": "2026-10-02T23:58:48.548854+00:00",
+      "read_after_write": false,
+      "covered_predicates": [],
+      "artifact_ref": "",
+      "verifier_fingerprint": "",
+      "task_id": "task_default",
+      "run_id": "run_default",
+      "operation_id": "op_experience_326006909efff602b089bf7f_18fbf76f"
+    }
+  ],
+  "result": {
+    "status": "INCONCLUSIVE",
+    "verifier_fingerprint": "ae3875ea1e495598ea0f91e8048160c226277415e05670eff53b46bb4e36f660",
+    "evidence_refs": [
+      "observation:experience_326006909efff602b089bf7f:1.0.0"
+    ],
+    "covered_predicates": [],
+    "freshness_satisfied": false,
+    "relation_satisfied": false,
+    "source_admissible": false,
+    "fault_domain_admissible": false,
+    "transition_proven": false,
+    "reason": "observer_or_source_mismatch",
+    "evaluated_at": "2026-10-02T23:58:48.548854+00:00",
+    "accepted": false
+  },
+  "mutation_failure_domains": [],
+  "mutation_observed_at": ""
+}

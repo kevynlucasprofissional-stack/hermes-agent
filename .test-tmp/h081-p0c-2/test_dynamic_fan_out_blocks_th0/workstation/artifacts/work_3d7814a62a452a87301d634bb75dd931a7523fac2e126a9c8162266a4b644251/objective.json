@@ -1,0 +1,48 @@
+{
+  "operation_key": "remaining",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    },
+    {
+      "id": 2
+    },
+    {
+      "id": 3
+    },
+    {
+      "id": 4
+    }
+  ],
+  "steps": [
+    {
+      "id": "create",
+      "tool": "trello_create_card",
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "verify",
+      "tool": "trello_verify_card",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "id": "$item.id"
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

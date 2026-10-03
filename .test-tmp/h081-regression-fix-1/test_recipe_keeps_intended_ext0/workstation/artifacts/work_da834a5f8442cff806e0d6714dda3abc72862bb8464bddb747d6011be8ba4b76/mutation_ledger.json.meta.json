@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76/mutation_ledger.json",
+  "name": "mutation_ledger.json",
+  "task_id": "work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_recipe_keeps_intended_ext0\\workstation\\artifacts\\work_da834a5f8442cff806e0d6714dda3abc72862bb8464bddb747d6011be8ba4b76\\mutation_ledger.json",
+  "size_bytes": 12268,
+  "sha256": "f195f20b465e758dab583fc323e1dc538976f8a73868df8d14af487fa79b9144",
+  "schema": null,
+  "summary": {
+    "item_count": 12,
+    "type": "list"
+  },
+  "created_at": "2026-10-03T00:17:49.142517+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

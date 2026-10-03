@@ -1,0 +1,34 @@
+{
+  "authority_scope": null,
+  "capability_id": "experience_bcc0974be58c73cf04a0b436",
+  "capability_version": "1.0.0",
+  "covered_predicates": [
+    "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de",
+    "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+    "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc"
+  ],
+  "delta": {},
+  "freshness_satisfied": true,
+  "inputs": {},
+  "invocation_id": "inv_6f8dc09c86dc4ba9",
+  "operation_id": "controlled-native-navigation",
+  "run_id": "4",
+  "state_after": {
+    "host": "example.test",
+    "page_family": "/guide",
+    "recovery_state": "live",
+    "url": "https://example.test/guide"
+  },
+  "state_before": {},
+  "status": "COMMITTED",
+  "task_id": "t_a7feecd9",
+  "verification_evidence_refs": [
+    "artifact://tasks/t_a7feecd9/learned_browser_readback_1cf4026812b3b2b84433cea0142d1cd2f922d16a321b8a628cfa0907585f03df.json"
+  ],
+  "verification_reason": "verified",
+  "verification_record_ref": "artifact://tasks/t_a7feecd9/verification_controlled-native-navigation.json",
+  "verified": true,
+  "verifier_fingerprint": "464b27a25497e3a98889b70bfe9498c9736898afa3b551ec1792e792efb9eae4",
+  "verifier_status": "VERIFIED",
+  "timestamp": 1790985544.101965
+}

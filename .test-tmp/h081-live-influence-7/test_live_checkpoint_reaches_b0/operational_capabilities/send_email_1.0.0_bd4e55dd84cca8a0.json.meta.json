@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/send_email_1.0.0_bd4e55dd84cca8a0.json",
+  "name": "send_email_1.0.0_bd4e55dd84cca8a0.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-influence-7\\test_live_checkpoint_reaches_b0\\operational_capabilities\\send_email_1.0.0_bd4e55dd84cca8a0.json",
+  "size_bytes": 2657,
+  "sha256": "0e54b50ea4c7e6ff2ac8851e4d5b75272971233cfd9e789aa203eba03a2a20c5",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:22:25.524289+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

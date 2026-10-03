@@ -1,0 +1,23 @@
+{
+  "operation_id": "300ffa71a1aec1073028004a69231011aa936a81d44627877d543cbebdfc21e9",
+  "task_id": null,
+  "run_id": null,
+  "tool": "incident_ui",
+  "tool_effect": "MUTATION",
+  "effect": "external_mutation",
+  "scope": "external",
+  "external": true,
+  "provider": "fake_cards",
+  "field": "description",
+  "target_kind": "card",
+  "target_identifier": "0",
+  "operation_semantic": "description.update",
+  "timestamp": "2026-10-03T00:17:49.455227+00:00",
+  "evidence_ref": "artifact://tasks/owner/c41540a861cadc6a4246901c6f0d826e5e51050b7fa5198ce0237e9518546bd6.data",
+  "verifier_status": "not_verified",
+  "persisted": null,
+  "status": "uncertain",
+  "operation_fingerprint": "sem_op_c34862bb426c2ab798ea3f4e",
+  "semantic_fingerprint": "sem_op_c34862bb426c2ab798ea3f4e",
+  "structural_signature": "f127a17277ef2bdb48fdbbecffdb6444de19bed897002bf57630c3abf644c6f9"
+}

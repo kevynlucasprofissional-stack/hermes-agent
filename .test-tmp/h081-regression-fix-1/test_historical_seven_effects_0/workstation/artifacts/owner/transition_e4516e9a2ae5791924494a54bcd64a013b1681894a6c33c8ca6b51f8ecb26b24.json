@@ -1,0 +1,70 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "tool.write_file",
+    "dependencies": {},
+    "effect_class": "MUTATION",
+    "operation_family": "write_file",
+    "parameters": {
+      "path": "scratch/3.json"
+    },
+    "primitive": "write_file",
+    "scope": {},
+    "target_family": "filesystem.file:scratch\\3.json",
+    "target_instance": {}
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "observation_470f30813cf245048c9cb282ceec5c7c",
+    "operation_index": 3,
+    "run_id": null,
+    "runtime": "tool.write_file",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": null,
+    "trust_class": "runtime_observation"
+  },
+  "raw_result_ref": "artifact://tasks/owner/trace_result_d014c74387b08e0adf046fb1f208a9caf9a731916b3e79ac4aedb905595e2d99.json",
+  "sample_id": "transition_c1ab7ec370bddd2eaea237e9",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_d014c74387b08e0adf046fb1f208a9caf9a731916b3e79ac4aedb905595e2d99.json",
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_d014c74387b08e0adf046fb1f208a9caf9a731916b3e79ac4aedb905595e2d99.json",
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

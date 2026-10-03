@@ -1,0 +1,33 @@
+{
+  "authority_scope": null,
+  "capability_id": "experience_aa84b6408d58b5fb4acedbab",
+  "capability_version": "1.0.0",
+  "covered_predicates": [],
+  "delta": {},
+  "freshness_satisfied": false,
+  "inputs": {},
+  "invocation_id": "inv_db9c005e84274dbd",
+  "operation_id": "op_experience_aa84b6408d58b5fb4acedbab_7a055066",
+  "run_id": "run_default",
+  "state_after": {
+    "basename": "test_process_abstraction_and_c0",
+    "exists": true,
+    "exit_code": 0,
+    "extension": "",
+    "kind": "directory",
+    "process_state": "exited",
+    "size": 4096
+  },
+  "state_before": {},
+  "status": "ACKNOWLEDGED",
+  "task_id": "task_default",
+  "verification_evidence_refs": [
+    "observation:experience_aa84b6408d58b5fb4acedbab:1.0.0"
+  ],
+  "verification_reason": "observer_or_source_mismatch",
+  "verification_record_ref": "artifact://tasks/task_default/verification_op_experience_aa84b6408d58b5fb4acedbab_7a055066.json",
+  "verified": false,
+  "verifier_fingerprint": "8b6c458aad000ae8e77c4f1a7ba1b8e3d6837589db50c5624931c927747868cc",
+  "verifier_status": "INCONCLUSIVE",
+  "timestamp": 1790985529.506518
+}

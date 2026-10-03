@@ -1,0 +1,38 @@
+{
+  "read@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "read",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Read fixture",
+    "ref": "artifact://tasks/operational_capabilities/read_1.0.0_5e24af96c5e29d91.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "5e24af96c5e29d91cbbaae84b6f6c875d8c4e2933318d9a61fad7e4d053918b1",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:48.710782+00:00",
+    "version": "1.0.0"
+  },
+  "read@1.0.1": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "read",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Read fixture",
+    "ref": "artifact://tasks/operational_capabilities/read_1.0.1_50be1e44e1af20dd.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "50be1e44e1af20dda5dcfa781b55078e8315f2ad3dfb7586423f9adfa8c40ebf",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:48.688264+00:00",
+    "version": "1.0.1"
+  }
+}

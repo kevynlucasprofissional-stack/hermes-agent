@@ -1,0 +1,57 @@
+{
+  "operation_signature": "bb53f70ac626e00b7a5a571c61f6bff98168f57168f3dbf4ce2a33f3ea649f43",
+  "scope": {
+    "route": "tool.test_write"
+  },
+  "graph": {
+    "setup": [],
+    "fan_out": [
+      {
+        "id": "write",
+        "tool": "test_write",
+        "args": {
+          "id": "$item.id"
+        },
+        "expect": {
+          "ok": true
+        },
+        "depends_on": []
+      },
+      {
+        "id": "readback",
+        "tool": "test_readback",
+        "verifies": [
+          "write"
+        ],
+        "args": {
+          "id": "$item.id"
+        },
+        "expect": {
+          "id": "$item.id"
+        },
+        "depends_on": [
+          "write"
+        ]
+      }
+    ],
+    "finalize": []
+  },
+  "mutation_target": null,
+  "verification": {
+    "verifier_step_ids": [
+      "readback"
+    ]
+  },
+  "preflight": [],
+  "fingerprint": "734c3ba62cb66e6310dc866a99447db625937982b1c2339c2bc920edfaa492ad",
+  "status": "VERIFIED",
+  "verified_at": "2026-10-02T23:46:02.216654+00:00",
+  "version": 1,
+  "previous_fingerprint": null,
+  "stats": {
+    "successes": 1,
+    "failures": 0
+  },
+  "recipe_id": "auto.734c3ba62cb66e6310dc866a99447db625937982b1c2339c2bc920edfaa492ad",
+  "schema_version": 1
+}

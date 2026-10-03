@@ -1,0 +1,17 @@
+{
+  "task_id": "task-100",
+  "stale_run_id": "run-1",
+  "current_run_id": "run-2",
+  "termination_kind": "SUPERSEDED",
+  "checkpoint_ref": "artifact://tasks/task-100/checkpoint_superseded_run-1.json",
+  "pending_items_ref": "artifact://tasks/task-100/pending_work_run-1_to_run-2.json",
+  "uncertain_effects": [
+    {
+      "operation_id": "op_2",
+      "effect": "file_write_uncertain"
+    }
+  ],
+  "continuation_allowed": true,
+  "created_at": "2026-10-02T23:41:49.193682+00:00",
+  "details": {}
+}

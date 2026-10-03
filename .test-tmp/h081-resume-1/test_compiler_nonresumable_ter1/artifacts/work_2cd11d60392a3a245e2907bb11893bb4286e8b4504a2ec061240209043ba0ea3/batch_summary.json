@@ -1,0 +1,63 @@
+{
+  "task_id": "work_2cd11d60392a3a245e2907bb11893bb4286e8b4504a2ec061240209043ba0ea3",
+  "plan_id": "plan_f64cceec9d24",
+  "total": 3,
+  "success": 1,
+  "retry_success": 0,
+  "failed": 2,
+  "suspect": 0,
+  "anomalies": [
+    {
+      "item_id": "plan_f64cceec9d24_0002",
+      "index": 2,
+      "input": {
+        "id": 1,
+        "_work_phase": "fan_out"
+      },
+      "reason": "Execution error: 'WorkItem' object has no attribute 'state'",
+      "status": "failed"
+    },
+    {
+      "item_id": "plan_f64cceec9d24_0003",
+      "index": 3,
+      "input": {
+        "id": 2,
+        "_work_phase": "fan_out"
+      },
+      "reason": "Execution error: 'WorkItem' object has no attribute 'state'",
+      "status": "failed"
+    }
+  ],
+  "needs_reasoning": 2,
+  "completed": 1,
+  "status": "needs_reasoning",
+  "duration_seconds": 0.03,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_f64cceec9d24_0001",
+      "status": "completed",
+      "raw_ref": "artifact://tasks/work_2cd11d60392a3a245e2907bb11893bb4286e8b4504a2ec061240209043ba0ea3/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_2cd11d60392a3a245e2907bb11893bb4286e8b4504a2ec061240209043ba0ea3/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_2cd11d60392a3a245e2907bb11893bb4286e8b4504a2ec061240209043ba0ea3/norm_item_0001.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_f64cceec9d24_0002",
+      "status": "failed",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    },
+    {
+      "item_id": "plan_f64cceec9d24_0003",
+      "status": "failed",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    }
+  ]
+}

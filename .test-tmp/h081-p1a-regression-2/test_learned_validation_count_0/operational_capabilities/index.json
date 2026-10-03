@@ -1,0 +1,38 @@
+{
+  "learned@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "learned",
+    "immutable_contract": null,
+    "lifecycle": "validated",
+    "name": "Learned write",
+    "ref": "artifact://tasks/operational_capabilities/learned_1.0.0_d3fcbbb19b34d406.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "d3fcbbb19b34d40630f1e72cf0518e65ac1b355053c442c4bf1f7be18a9fb8e9",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:40.173687+00:00",
+    "version": "1.0.0"
+  },
+  "manual@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "manual",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Learned write",
+    "ref": "artifact://tasks/operational_capabilities/manual_1.0.0_6adf33f59e2c4e11.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "6adf33f59e2c4e110a7388b6c5f729a9aa8571ed53b3eadaa03c187b71208aff",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:40.188286+00:00",
+    "version": "1.0.0"
+  }
+}

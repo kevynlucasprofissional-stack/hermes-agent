@@ -1,0 +1,21 @@
+{
+  "request_id": "req_71600517a617",
+  "answers": {},
+  "decisions": {},
+  "probabilities": {},
+  "confidence": {},
+  "confidences": {},
+  "calibrated_confidences": {},
+  "abstentions": [],
+  "provider": "laya",
+  "model": "multilingual",
+  "model_revision": null,
+  "calibration_id": "calib-v1-20261002",
+  "schema_id": "",
+  "request_hash": "6b6efd768f68c1889792b64f25332e29a562ffb8d90a03b34db2085f3be59ee9",
+  "latency_ms": 0.007599999662488699,
+  "fallback_recommended": true,
+  "details": {
+    "error": "RuntimeError"
+  }
+}

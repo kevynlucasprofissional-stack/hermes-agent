@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/owner/mutation_bca19aaf7f82ee1156684d0b1e8088c95b48803f10a4f70f60e6d79108a46a2e.json",
+  "name": "mutation_bca19aaf7f82ee1156684d0b1e8088c95b48803f10a4f70f60e6d79108a46a2e.json",
+  "task_id": "owner",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_historical_seven_effects_0\\workstation\\artifacts\\owner\\mutation_bca19aaf7f82ee1156684d0b1e8088c95b48803f10a4f70f60e6d79108a46a2e.json",
+  "size_bytes": 865,
+  "sha256": "5d089ffc9a7cfe6579f3bfe984583dcc614079388bf45ae9e4a5ec20e27241ce",
+  "schema": null,
+  "summary": {
+    "item_count": 21,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:17:49.743688+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

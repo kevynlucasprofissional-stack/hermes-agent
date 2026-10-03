@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/cap_delete_all_files_1.0.0_0e40b2c1132b4974.json",
+  "name": "cap_delete_all_files_1.0.0_0e40b2c1132b4974.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-influence-3\\test_live_checkpoint_reaches_b0\\operational_capabilities\\cap_delete_all_files_1.0.0_0e40b2c1132b4974.json",
+  "size_bytes": 2677,
+  "sha256": "ff59dff40d6abb575cda1f8555081c7003391b8534ac3e39edd8f0b47fd66368",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:15:46.662719+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

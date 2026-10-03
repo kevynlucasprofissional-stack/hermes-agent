@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_03af0543/val_coord-pos-op.json",
+  "name": "val_coord-pos-op.json",
+  "task_id": "t_03af0543",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_experience_validation_pro0\\hermes\\workstation\\artifacts\\t_03af0543\\val_coord-pos-op.json",
+  "size_bytes": 830,
+  "sha256": "4f75dd53bca03c3dae1aa8706a888451a1f64d4f9dc49a85c9c750c097a09268",
+  "schema": "hermes.browser_local_readback.v1",
+  "summary": {
+    "item_count": 15,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:00.370882+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

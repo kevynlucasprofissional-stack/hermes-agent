@@ -1,0 +1,58 @@
+{
+  "composite1@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "composite1",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Reuse",
+    "ref": "artifact://tasks/operational_capabilities/composite1_1.0.0_7cd1b89eae5b5715.json",
+    "route": "composite",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "7cd1b89eae5b571538787c60ddf3379677b0ce657f3679eeee0b9bb2878088fd",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:41.028704+00:00",
+    "version": "1.0.0"
+  },
+  "composite2@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "composite2",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Reuse",
+    "ref": "artifact://tasks/operational_capabilities/composite2_1.0.0_b20c47c57ab3952e.json",
+    "route": "composite",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "b20c47c57ab3952efb56ea44fb1296515931fb766d95927ae808135b6b8729e8",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:41.112774+00:00",
+    "version": "1.0.0"
+  },
+  "experience_216b125211a8cf389dac2911@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "216b125211a8cf389dac29111a9788baae55989214d6effaa3318a514499aa99",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "experience_216b125211a8cf389dac2911",
+    "immutable_contract": "998a0be9fb93e6fcfb41be83f889174b08a1a00fbfe2e208b8ad86616858d7ed",
+    "lifecycle": "promoted",
+    "name": "Verified fs_stat",
+    "ref": "artifact://tasks/operational_capabilities/experience_216b125211a8cf389dac2911_1.0.0_29e5879a0779e7ba.json",
+    "route": "filesystem",
+    "scope": {
+      "base_dir": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0"
+    },
+    "semantic_fingerprint": "22b74cf1ef8b760db83b0ceda40d183d49028200d85e8f5f9e2205f2ae533c74",
+    "sha256": "29e5879a0779e7ba72c62cdd9fdd24960f54d2eefbfa16f6d5a3101ec97671ac",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:41.084772+00:00",
+    "version": "1.0.0"
+  }
+}

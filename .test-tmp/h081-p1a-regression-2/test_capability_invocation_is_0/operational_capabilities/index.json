@@ -1,0 +1,38 @@
+{
+  "cap.failing@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "quarantined",
+    "family_id": "",
+    "id": "cap.failing",
+    "immutable_contract": null,
+    "lifecycle": "validated",
+    "name": "Failing primitive",
+    "ref": "artifact://tasks/operational_capabilities/cap.failing_1.0.0_3af432a89ceceb34.json",
+    "route": "host_process",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "3af432a89ceceb345d26883b533cbd669626b3e6143a11820a6ae59f90f63192",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:42.315858+00:00",
+    "version": "1.0.0"
+  },
+  "cap.test.primitive@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "cap.test.primitive",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Test primitive",
+    "ref": "artifact://tasks/operational_capabilities/cap.test.primitive_1.0.0_b30415c73842b898.json",
+    "route": "host_process",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "b30415c73842b898769be5eb39086b83991fd80741404327e83443d6f23d08cf",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:42.269862+00:00",
+    "version": "1.0.0"
+  }
+}

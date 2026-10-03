@@ -1,0 +1,10 @@
+{
+  "completed_until": null,
+  "expected": "contract",
+  "observed": "gap",
+  "context": {
+    "run_id": "r",
+    "operation_id": "op"
+  },
+  "safe_to_resume": false
+}

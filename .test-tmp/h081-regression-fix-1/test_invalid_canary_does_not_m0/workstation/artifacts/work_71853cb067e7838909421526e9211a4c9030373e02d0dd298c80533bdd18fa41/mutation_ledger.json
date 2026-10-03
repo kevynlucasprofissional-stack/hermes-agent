@@ -1,0 +1,23 @@
+[
+  {
+    "operation_id": "c99ab7a7ed5ae49407dea1033e699fbc6ffd8c85e16d239bdcd1bcd2dd658393",
+    "task_id": "task",
+    "run_id": null,
+    "tool": "fake_create",
+    "tool_effect": "MUTATION",
+    "effect": "unknown_mutation",
+    "scope": "unknown",
+    "external": null,
+    "provider": null,
+    "field": null,
+    "target_kind": "unknown",
+    "target_identifier": 0,
+    "operation_semantic": "fake_create",
+    "timestamp": "2026-10-03T00:17:53.371009+00:00",
+    "status": "executed_unverified",
+    "persisted": null,
+    "verifier_status": "pending",
+    "evidence_ref": "artifact://tasks/work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41/173a1f71d649ed09529214752f3eef5f1d73e9b30f7940d315e9020837612319.data",
+    "item_id": "plan_f3c53b15912a_0002"
+  }
+]

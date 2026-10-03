@@ -1,0 +1,15 @@
+{
+  "ref": "artifact://tasks/work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41/raw_item_0790.json",
+  "name": "raw_item_0790.json",
+  "task_id": "work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_large_fanout_no_executor_1\\workstation\\artifacts\\work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41\\raw_item_0790.json",
+  "size_bytes": 474,
+  "sha256": "3157fb53c8eb3a4b8adb63efc43ffbb6603aa4edb30f0315ea708392636eb732",
+  "schema": "raw_batch_capture",
+  "summary": {
+    "output_type": "dict"
+  },
+  "created_at": "2026-10-03T00:19:50.829674+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

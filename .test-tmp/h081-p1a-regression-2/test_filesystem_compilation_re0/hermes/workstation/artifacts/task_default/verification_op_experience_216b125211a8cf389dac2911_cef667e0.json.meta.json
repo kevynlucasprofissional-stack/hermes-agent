@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/task_default/verification_op_experience_216b125211a8cf389dac2911_cef667e0.json",
+  "name": "verification_op_experience_216b125211a8cf389dac2911_cef667e0.json",
+  "task_id": "task_default",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_filesystem_compilation_re0\\hermes\\workstation\\artifacts\\task_default\\verification_op_experience_216b125211a8cf389dac2911_cef667e0.json",
+  "size_bytes": 3173,
+  "sha256": "02f970ab26b33968ca33c97171d21bc1554755b66a06f25529879ca5780ac89f",
+  "schema": "hermes.canonical_verification.v1",
+  "summary": {
+    "item_count": 9,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:40.922165+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

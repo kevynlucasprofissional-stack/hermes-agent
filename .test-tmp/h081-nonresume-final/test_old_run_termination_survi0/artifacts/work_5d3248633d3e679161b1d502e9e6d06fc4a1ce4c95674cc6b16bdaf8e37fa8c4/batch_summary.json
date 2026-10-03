@@ -1,0 +1,56 @@
+{
+  "task_id": "work_5d3248633d3e679161b1d502e9e6d06fc4a1ce4c95674cc6b16bdaf8e37fa8c4",
+  "plan_id": "plan_60d3ae7e7672",
+  "total": 3,
+  "success": 0,
+  "retry_success": 0,
+  "failed": 0,
+  "suspect": 1,
+  "anomalies": [
+    {
+      "item_id": "plan_60d3ae7e7672_0001",
+      "index": 1,
+      "input": {
+        "id": 0,
+        "_work_phase": "fan_out"
+      },
+      "reason": "mutation_failed_requires_review",
+      "issues": [],
+      "raw_ref": "artifact://tasks/work_5d3248633d3e679161b1d502e9e6d06fc4a1ce4c95674cc6b16bdaf8e37fa8c4/raw_item_0001.json",
+      "norm_ref": "artifact://tasks/work_5d3248633d3e679161b1d502e9e6d06fc4a1ce4c95674cc6b16bdaf8e37fa8c4/norm_item_0001.json",
+      "status": "invalid"
+    }
+  ],
+  "needs_reasoning": 1,
+  "completed": 0,
+  "status": "needs_reasoning",
+  "duration_seconds": 0.03,
+  "summary_artifact_ref": null,
+  "results": [
+    {
+      "item_id": "plan_60d3ae7e7672_0001",
+      "status": "blocked",
+      "raw_ref": "artifact://tasks/work_5d3248633d3e679161b1d502e9e6d06fc4a1ce4c95674cc6b16bdaf8e37fa8c4/raw_item_0001.json",
+      "result_ref": "artifact://tasks/work_5d3248633d3e679161b1d502e9e6d06fc4a1ce4c95674cc6b16bdaf8e37fa8c4/norm_item_0001.json",
+      "evidence_refs": [
+        {
+          "artifact_ref": "artifact://tasks/work_5d3248633d3e679161b1d502e9e6d06fc4a1ce4c95674cc6b16bdaf8e37fa8c4/norm_item_0001.json"
+        }
+      ]
+    },
+    {
+      "item_id": "plan_60d3ae7e7672_0002",
+      "status": "pending",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    },
+    {
+      "item_id": "plan_60d3ae7e7672_0003",
+      "status": "pending",
+      "raw_ref": null,
+      "result_ref": null,
+      "evidence_refs": []
+    }
+  ]
+}

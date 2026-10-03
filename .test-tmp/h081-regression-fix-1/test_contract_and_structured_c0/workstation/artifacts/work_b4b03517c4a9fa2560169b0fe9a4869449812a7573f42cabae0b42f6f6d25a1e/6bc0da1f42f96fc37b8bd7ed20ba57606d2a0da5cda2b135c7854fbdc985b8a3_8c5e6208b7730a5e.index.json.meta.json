@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_b4b03517c4a9fa2560169b0fe9a4869449812a7573f42cabae0b42f6f6d25a1e/6bc0da1f42f96fc37b8bd7ed20ba57606d2a0da5cda2b135c7854fbdc985b8a3_8c5e6208b7730a5e.index.json",
+  "name": "6bc0da1f42f96fc37b8bd7ed20ba57606d2a0da5cda2b135c7854fbdc985b8a3_8c5e6208b7730a5e.index.json",
+  "task_id": "work_b4b03517c4a9fa2560169b0fe9a4869449812a7573f42cabae0b42f6f6d25a1e",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_contract_and_structured_c0\\workstation\\artifacts\\work_b4b03517c4a9fa2560169b0fe9a4869449812a7573f42cabae0b42f6f6d25a1e\\6bc0da1f42f96fc37b8bd7ed20ba57606d2a0da5cda2b135c7854fbdc985b8a3_8c5e6208b7730a5e.index.json",
+  "size_bytes": 218,
+  "sha256": "67f00cf8a03329bfbb6680e7525918d31de2bf5fdc4d23f3147db0af006b89a8",
+  "schema": null,
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:18:03.047346+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

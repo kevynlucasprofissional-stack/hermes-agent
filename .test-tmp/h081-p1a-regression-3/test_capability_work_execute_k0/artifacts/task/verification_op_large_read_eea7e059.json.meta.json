@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/task/verification_op_large_read_eea7e059.json",
+  "name": "verification_op_large_read_eea7e059.json",
+  "task_id": "task",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_capability_work_execute_k0\\artifacts\\task\\verification_op_large_read_eea7e059.json",
+  "size_bytes": 1642,
+  "sha256": "1c9568bd80932ea87e95142ddee29ad59b78e10f4605e38aa441a642ca6169f6",
+  "schema": "hermes.canonical_verification.v1",
+  "summary": {
+    "item_count": 9,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:50.089682+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

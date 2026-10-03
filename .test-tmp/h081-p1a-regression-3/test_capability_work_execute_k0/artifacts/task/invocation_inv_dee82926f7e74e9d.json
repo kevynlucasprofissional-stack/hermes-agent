@@ -1,0 +1,23 @@
+{
+  "authority_scope": null,
+  "capability_id": "large_read",
+  "capability_version": "1.0.0",
+  "covered_predicates": [],
+  "delta": {},
+  "freshness_satisfied": false,
+  "inputs": {},
+  "invocation_id": "inv_dee82926f7e74e9d",
+  "operation_id": "op_large_read_eea7e059",
+  "run_id": "run_default",
+  "state_after": {},
+  "state_before": {},
+  "status": "ACKNOWLEDGED",
+  "task_id": "task",
+  "verification_evidence_refs": [],
+  "verification_reason": "verifier_not_validated,observer_unknown,source_unknown",
+  "verification_record_ref": "artifact://tasks/task/verification_op_large_read_eea7e059.json",
+  "verified": false,
+  "verifier_fingerprint": "deeffcf8d0865ba4e4e97d7e19e53703d68bac03a0b4c911b71183e41af2ce2d",
+  "verifier_status": "INCONCLUSIVE",
+  "timestamp": 1790985530.095681
+}

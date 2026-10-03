@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f/reasoning_6e5443c6c5313cdb2b3aa82bea835c26dbff96774499b9d47928504ebf3a34b1.json",
+  "name": "reasoning_6e5443c6c5313cdb2b3aa82bea835c26dbff96774499b9d47928504ebf3a34b1.json",
+  "task_id": "work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f\\reasoning_6e5443c6c5313cdb2b3aa82bea835c26dbff96774499b9d47928504ebf3a34b1.json",
+  "size_bytes": 454,
+  "sha256": "a709b4292573e7041a52d86087a57c7507db94158e2c64ddb23a21c511ddb397",
+  "schema": null,
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:17.762167+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

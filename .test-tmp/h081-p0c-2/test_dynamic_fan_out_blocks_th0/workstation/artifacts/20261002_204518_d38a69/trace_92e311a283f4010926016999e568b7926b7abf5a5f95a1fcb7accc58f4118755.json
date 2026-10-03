@@ -1,0 +1,30 @@
+{
+  "tool": "trello_create_card",
+  "action": "trello_create_card",
+  "execution_class": "semantic",
+  "route": "tool.trello_create_card",
+  "operation_fingerprint": "sem_op_4e10e8dbddb9e0017488e06e",
+  "semantic_fingerprint": "sem_op_4e10e8dbddb9e0017488e06e",
+  "arguments": {
+    "id": 0
+  },
+  "semantic_anchor": null,
+  "before_state_ref": null,
+  "after_state_ref": "artifact://tasks/20261002_204518_d38a69/trace_result_d014c74387b08e0adf046fb1f208a9caf9a731916b3e79ac4aedb905595e2d99.json",
+  "outcome": "executed_unverified",
+  "effect": "MUTATION",
+  "duration_ms": 95.16787528991699,
+  "task_id": null,
+  "run_id": null,
+  "operation_id": "observation_f84f10b8cb7343e29e1675b661ba4cd8",
+  "operation_id_conflict": false,
+  "caller_operation_id": null,
+  "owner_operation_id": null,
+  "operation_index": 0,
+  "captured_at": "2026-10-02T23:45:18.314950+00:00",
+  "scope": {},
+  "runtime": "tool.trello_create_card",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/20261002_204518_d38a69/transition_f807d905cbe16beff23c24d92bbf078893c2b54de33c1218dc6cf3af363ae95b.json"
+}

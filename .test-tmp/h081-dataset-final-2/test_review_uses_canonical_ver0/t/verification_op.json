@@ -1,0 +1,84 @@
+{
+  "task_id": "t",
+  "run_id": "r",
+  "operation_id": "op",
+  "contract": {
+    "schema_version": "1.0.0",
+    "covered_predicates": [
+      "17eb70a9090d3c23c7cec8d007990195a6c06f442d545d8709d02d8cd1320811"
+    ],
+    "effect_classes": [],
+    "observer": "owner.readback",
+    "source_kind": "source_of_record",
+    "resource_binding": {},
+    "extractor_path": "",
+    "relation": "EXACT",
+    "relation_parameters": {},
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "minimum_evidence": 2,
+    "allowed_trust": [
+      "trusted_owner"
+    ],
+    "mutation_failure_domains": [],
+    "allowed_observer_failure_domains": [],
+    "require_distinct_failure_domain": false,
+    "temporal_basis": "none",
+    "max_age_seconds": null,
+    "require_read_after_write": false,
+    "settling_policy": {},
+    "disagreement_policy": "conflict",
+    "lifecycle": "VALIDATED",
+    "validation_evidence_refs": [],
+    "validation_receipts": [],
+    "ack_is_terminal_evidence": false,
+    "transition_claim": false,
+    "fingerprint": "b35dcb29a618d2c704c3f7b2260068d1d636f11d108ec72c7657a12d7728c3a6"
+  },
+  "expected": {
+    "done": true
+  },
+  "evidence": [
+    {
+      "evidence_id": "source",
+      "observer": "owner.readback",
+      "source_kind": "source_of_record",
+      "value": {
+        "done": true
+      },
+      "evidence_strength": 2,
+      "trust_class": "trusted_owner",
+      "observer_failure_domain": "",
+      "resource_id": "",
+      "resource_version": "",
+      "observed_at": "",
+      "read_after_write": false,
+      "covered_predicates": [
+        "17eb70a9090d3c23c7cec8d007990195a6c06f442d545d8709d02d8cd1320811"
+      ],
+      "artifact_ref": "artifact://tasks/t/readback.json",
+      "verifier_fingerprint": "",
+      "task_id": "t",
+      "run_id": "r",
+      "operation_id": "op"
+    }
+  ],
+  "result": {
+    "status": "VERIFIED",
+    "verifier_fingerprint": "b35dcb29a618d2c704c3f7b2260068d1d636f11d108ec72c7657a12d7728c3a6",
+    "evidence_refs": [
+      "artifact://tasks/t/readback.json"
+    ],
+    "covered_predicates": [
+      "17eb70a9090d3c23c7cec8d007990195a6c06f442d545d8709d02d8cd1320811"
+    ],
+    "freshness_satisfied": true,
+    "relation_satisfied": true,
+    "source_admissible": true,
+    "fault_domain_admissible": true,
+    "transition_proven": true,
+    "reason": "verified",
+    "evaluated_at": "2026-10-03T00:32:07.635095+00:00",
+    "accepted": true
+  }
+}

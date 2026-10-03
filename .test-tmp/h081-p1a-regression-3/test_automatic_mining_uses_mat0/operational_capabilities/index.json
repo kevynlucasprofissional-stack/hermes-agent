@@ -1,0 +1,22 @@
+{
+  "experience_36dd080a3b229f604a85453d@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "36dd080a3b229f604a85453d8ce1d9b0899cc28916ae6646725e62af63c0ed64",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "experience_36dd080a3b229f604a85453d",
+    "immutable_contract": null,
+    "lifecycle": "discovered",
+    "name": "Verified browser_click",
+    "ref": "artifact://tasks/operational_capabilities/experience_36dd080a3b229f604a85453d_1.0.0_6c6ba73a2b0163f0.json",
+    "route": "native_browser",
+    "scope": {
+      "host": "github.com"
+    },
+    "semantic_fingerprint": "df08c4d8c09393a1fafa3a4c90fb35278426bdfa63daf927047aa2395ff273fe",
+    "sha256": "6c6ba73a2b0163f06e415e76bda4a5ce18aab74a20084d299bd97ff057cb252d",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:58:49.732655+00:00",
+    "version": "1.0.0"
+  }
+}

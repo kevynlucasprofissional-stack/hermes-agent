@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/decision_result_req_5565de5e203a.json",
+  "name": "decision_result_req_5565de5e203a.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_actual_provider_supersess0\\artifacts\\t\\decision_result_req_5565de5e203a.json",
+  "size_bytes": 531,
+  "sha256": "23ca13679e61bdd90bd83f0045d16730e485c6a6e9a3dcb7abe408d94cb9185d",
+  "schema": "system1.decision_result.v1",
+  "summary": {
+    "item_count": 17,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:17.830280+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

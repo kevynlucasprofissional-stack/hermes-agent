@@ -1,0 +1,31 @@
+{
+  "task_id": "t_712364dc",
+  "session_id": "h080b-session",
+  "run_id": "3",
+  "browser_task_id": "t_712364dc",
+  "tab_id": "tab-native",
+  "url": "https://example.test/guide",
+  "host": "example.test",
+  "page_family": "/guide",
+  "recovery_state": "live",
+  "browser_task_status": "hidden",
+  "saved_at": "2026-10-02T23:58:02.536096+00:00",
+  "revision": 1,
+  "last_receipt": {
+    "operationId": "auto-replay-3",
+    "taskId": "t_712364dc",
+    "runId": "3",
+    "browserTaskId": "t_712364dc",
+    "tabId": "tab-native",
+    "revision": 1,
+    "action": "browser_navigate",
+    "safeUrl": "https://example.test/guide",
+    "executedAt": "2026-10-02T23:58:02.536096+00:00"
+  },
+  "operation_id": "auto-replay-3",
+  "observed_effects": {
+    "host": "example.test",
+    "page_family": "/guide",
+    "recovery_state": "live"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "sample_id": "invocation_inv_882195ada2824824",
+  "task_id": "task_default",
+  "run_id": "run_default",
+  "operation_id": "op_composite_ddfee2fcd40dde8242c0c0ee_33b403aa",
+  "task_phase": "execution",
+  "objective": "Canonical capability outcome",
+  "state": {
+    "objective": "Canonical capability outcome",
+    "state": {},
+    "candidates": [
+      "composite_ddfee2fcd40dde8242c0c0ee"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Select the best candidate capability for the objective and state.",
+      "criteria": {
+        "composite_ddfee2fcd40dde8242c0c0ee": "Candidate capability: composite_ddfee2fcd40dde8242c0c0ee",
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "composite_ddfee2fcd40dde8242c0c0ee"
+  },
+  "confidence_target": 1.0,
+  "split": "held_out",
+  "verification_status": "UNCERTAIN",
+  "provenance": {
+    "task_id": "task_default",
+    "run_id": "run_default",
+    "operation_id": "op_composite_ddfee2fcd40dde8242c0c0ee_33b403aa",
+    "source": "OperationalKernel",
+    "source_refs": [
+      "artifact://tasks/task_default/invocation_inv_882195ada2824824.json"
+    ],
+    "evidence_refs": [],
+    "canonical_verifier_grounded": false
+  },
+  "created_at": "2026-10-02T23:58:50.356437+00:00"
+}

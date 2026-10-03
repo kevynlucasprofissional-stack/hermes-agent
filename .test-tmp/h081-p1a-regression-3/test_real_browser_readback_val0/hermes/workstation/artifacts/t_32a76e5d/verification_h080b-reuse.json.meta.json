@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_32a76e5d/verification_h080b-reuse.json",
+  "name": "verification_h080b-reuse.json",
+  "task_id": "t_32a76e5d",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_real_browser_readback_val0\\hermes\\workstation\\artifacts\\t_32a76e5d\\verification_h080b-reuse.json",
+  "size_bytes": 4029,
+  "sha256": "c32cf52e9f098c5177610e669362068452cfcb59ee9cbca8e0d130d14b6b2f65",
+  "schema": "hermes.canonical_verification.v1",
+  "summary": {
+    "item_count": 9,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:59:05.231127+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

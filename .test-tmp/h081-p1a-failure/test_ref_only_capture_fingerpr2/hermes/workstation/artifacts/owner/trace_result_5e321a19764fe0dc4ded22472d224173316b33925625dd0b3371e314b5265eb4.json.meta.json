@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/owner/trace_result_5e321a19764fe0dc4ded22472d224173316b33925625dd0b3371e314b5265eb4.json",
+  "name": "trace_result_5e321a19764fe0dc4ded22472d224173316b33925625dd0b3371e314b5265eb4.json",
+  "task_id": "owner",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-failure\\test_ref_only_capture_fingerpr2\\hermes\\workstation\\artifacts\\owner\\trace_result_5e321a19764fe0dc4ded22472d224173316b33925625dd0b3371e314b5265eb4.json",
+  "size_bytes": 137,
+  "sha256": "1c5998e11daeee34504e3d3c49d4e0899dbb13693c690df715f07a3b5f27a349",
+  "schema": null,
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:15.449698+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

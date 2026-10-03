@@ -1,0 +1,62 @@
+{
+  "operation_key": "graph",
+  "items": [
+    {
+      "id": 0
+    },
+    {
+      "id": 1
+    }
+  ],
+  "setup_steps": [
+    {
+      "id": "resolve_board",
+      "tool": "trello_create_card",
+      "args": {},
+      "expect": {
+        "ok": true
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "create",
+      "tool": "trello_create_card",
+      "args": {
+        "board": "$setup.resolve_board.board_id",
+        "id": "$item.id"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "verify",
+      "tool": "trello_verify_card",
+      "verifies": [
+        "create"
+      ],
+      "args": {
+        "id": "$item.id"
+      },
+      "expect": {
+        "id": "$item.id"
+      }
+    }
+  ],
+  "finalize_steps": [
+    {
+      "id": "summary",
+      "depends_on": [
+        "create"
+      ],
+      "tool": "trello_search_cards",
+      "args": {
+        "results": "$items_ref"
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628/fan_out_results.json",
+  "name": "fan_out_results.json",
+  "task_id": "work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_acirv_trello_replay_const0\\trello-replay\\workstation\\artifacts\\work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628\\fan_out_results.json",
+  "size_bytes": 2126,
+  "sha256": "007c09fe25a77c69610056d3e694cd78bc839434b839d71ec4b4ab909f2f8cd4",
+  "schema": null,
+  "summary": {
+    "item_count": 12,
+    "type": "list"
+  },
+  "created_at": "2026-10-02T23:45:32.676259+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

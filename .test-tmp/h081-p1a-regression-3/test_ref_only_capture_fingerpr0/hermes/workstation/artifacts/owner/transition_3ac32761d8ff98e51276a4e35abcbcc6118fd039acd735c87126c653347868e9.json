@@ -1,0 +1,76 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "MUTATION",
+    "operation_family": "browser_click",
+    "parameters": {
+      "semantic_anchor": {
+        "type": "testid",
+        "value": "merge"
+      }
+    },
+    "primitive": "browser_click",
+    "scope": {},
+    "target_family": "testid:merge",
+    "target_instance": {
+      "type": "testid",
+      "value": "merge"
+    }
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "observation_8659960f91e94fa092209f344f47487b",
+    "operation_index": 1,
+    "run_id": null,
+    "runtime": "electron-chromium",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": null,
+    "trust_class": "runtime_observation"
+  },
+  "raw_result_ref": "artifact://tasks/owner/trace_result_f89da00cbeec3500f2f37ebb81ba794068b0396321c717d2df9d151e16759fd5.json",
+  "sample_id": "transition_938e6950c4e1a0445a45665c",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_f89da00cbeec3500f2f37ebb81ba794068b0396321c717d2df9d151e16759fd5.json",
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_b0dfe1c2b003e2659045f18c7763e5ce770d31d05c13d07bb7027a9f5903250d.json",
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

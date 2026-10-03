@@ -1,0 +1,18 @@
+{
+  "task_id": "t_c3c9e9b6",
+  "stale_run_id": "1",
+  "current_run_id": "2",
+  "pending_items": [
+    {
+      "id": "plan_62df264b15de_0002",
+      "plan_id": "plan_62df264b15de",
+      "state": "blocked"
+    },
+    {
+      "id": "plan_62df264b15de_0003",
+      "plan_id": "plan_62df264b15de",
+      "state": "running"
+    }
+  ],
+  "uncertain_effects": []
+}

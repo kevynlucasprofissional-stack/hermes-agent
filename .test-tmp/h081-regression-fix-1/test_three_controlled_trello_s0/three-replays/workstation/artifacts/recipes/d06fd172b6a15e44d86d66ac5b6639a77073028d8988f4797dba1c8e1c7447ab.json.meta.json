@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/recipes/d06fd172b6a15e44d86d66ac5b6639a77073028d8988f4797dba1c8e1c7447ab.json",
+  "name": "d06fd172b6a15e44d86d66ac5b6639a77073028d8988f4797dba1c8e1c7447ab.json",
+  "task_id": "recipes",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\recipes\\d06fd172b6a15e44d86d66ac5b6639a77073028d8988f4797dba1c8e1c7447ab.json",
+  "size_bytes": 2763,
+  "sha256": "b43b82f8597f8791d9bc19ca3ef517bda394df39b4e340a44c1c8cd713d7e17f",
+  "schema": "verified_recipe_v1",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:24.173186+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

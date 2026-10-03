@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa/833f240479e6b9b64b88ee559cd834f4d3c9e4a273bf810cd745a95cdcdaf2fa_d0edb209fb4714f3.index.json",
+  "name": "833f240479e6b9b64b88ee559cd834f4d3c9e4a273bf810cd745a95cdcdaf2fa_d0edb209fb4714f3.index.json",
+  "task_id": "work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-nonresume-affected\\test_durable_regression_benchm0\\artifacts\\work_0a81083243bda50f108fe0add20d55959e6b8fe60981940fc793d308333032aa\\833f240479e6b9b64b88ee559cd834f4d3c9e4a273bf810cd745a95cdcdaf2fa_d0edb209fb4714f3.index.json",
+  "size_bytes": 243,
+  "sha256": "c8bc2ec79850368c355d134d04e73f5d9f6e3f83346c04b7b37e6d21444f4e5f",
+  "schema": null,
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:54:42.037365+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

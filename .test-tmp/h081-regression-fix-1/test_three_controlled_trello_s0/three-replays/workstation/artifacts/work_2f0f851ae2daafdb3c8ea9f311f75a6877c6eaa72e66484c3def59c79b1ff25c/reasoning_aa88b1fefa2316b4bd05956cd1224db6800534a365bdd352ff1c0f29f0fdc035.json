@@ -1,0 +1,18 @@
+{
+  "completed_until": "step_2",
+  "expected": {
+    "persisted": true,
+    "card_id": "$steps.create.card_id"
+  },
+  "observed": {
+    "result_ref": "artifact://tasks/work_2f0f851ae2daafdb3c8ea9f311f75a6877c6eaa72e66484c3def59c79b1ff25c/raw_item_0002.json",
+    "reason": "unexpected_state"
+  },
+  "context": {
+    "item_id": "plan_33a8973ebea1_0002",
+    "phase": "fan_out",
+    "failed_index": 3,
+    "recipe_fingerprint": "f9fdd6afb01a5346aece55701b56d543350c771d303e1fbc58aa59a3af09a31b"
+  },
+  "safe_to_resume": true
+}

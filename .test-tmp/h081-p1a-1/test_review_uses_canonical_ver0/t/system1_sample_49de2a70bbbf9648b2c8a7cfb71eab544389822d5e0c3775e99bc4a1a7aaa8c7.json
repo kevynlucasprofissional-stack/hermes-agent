@@ -1,0 +1,48 @@
+{
+  "sample_id": "review_04d57a68214ef1690bded062",
+  "task_id": "t",
+  "run_id": "r",
+  "operation_id": "op",
+  "task_phase": "execution",
+  "objective": "Learning review proposal",
+  "state": {
+    "objective": "Learning review proposal",
+    "state": {},
+    "candidates": [
+      "approved-cap"
+    ]
+  },
+  "questions": {
+    "preferred_candidate": {
+      "type": "choice",
+      "instructions": "Select the best candidate capability for the objective and state.",
+      "criteria": {
+        "approved-cap": "Candidate capability: approved-cap",
+        "NO_MATCH": "None of the provided candidates are appropriate",
+        "ABSTAIN": "Uncertain between multiple candidates; abstain"
+      }
+    }
+  },
+  "expected_answers": {
+    "preferred_candidate": "approved-cap"
+  },
+  "confidence_target": 1.0,
+  "split": "train",
+  "verification_status": "VERIFIED_SUCCESS",
+  "provenance": {
+    "task_id": "t",
+    "run_id": "r",
+    "operation_id": "op",
+    "source": "LearningReview",
+    "source_refs": [
+      "artifact://tasks/t/invocation_test.json"
+    ],
+    "action_shape": "str",
+    "review_status": "success",
+    "canonical_verifier_grounded": true,
+    "evidence_refs": [
+      "artifact://tasks/t/readback.json"
+    ]
+  },
+  "created_at": "2026-10-02T23:56:56.683595+00:00"
+}

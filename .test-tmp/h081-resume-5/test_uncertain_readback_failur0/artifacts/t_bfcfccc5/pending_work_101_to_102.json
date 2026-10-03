@@ -1,0 +1,42 @@
+{
+  "task_id": "t_bfcfccc5",
+  "stale_run_id": "101",
+  "current_run_id": "102",
+  "pending_items": [
+    {
+      "item_id": "plan_a0bfe2ef5b3c_0001",
+      "operation_id": "op_plan_a0bfe2ef5b3c_0001"
+    },
+    {
+      "item_id": "plan_a0bfe2ef5b3c_0002",
+      "operation_id": "op_plan_a0bfe2ef5b3c_0002"
+    },
+    {
+      "item_id": "plan_a0bfe2ef5b3c_0003",
+      "operation_id": "op_plan_a0bfe2ef5b3c_0003"
+    }
+  ],
+  "uncertain_effects": [
+    {
+      "operation_id": "8277d24693fda8cebc75c02a8154f5ec3238c51cce0543704b431bb7454d5c3c",
+      "task_id": "t_bfcfccc5",
+      "run_id": "101",
+      "tool": "test_write",
+      "tool_effect": "MUTATION",
+      "effect": "unknown_mutation",
+      "scope": "unknown",
+      "external": null,
+      "provider": null,
+      "field": null,
+      "target_kind": "unknown",
+      "target_identifier": 0,
+      "operation_semantic": "test_write",
+      "timestamp": "2026-10-02T23:46:03.197734+00:00",
+      "status": "uncertain",
+      "persisted": null,
+      "verifier_status": "pending",
+      "item_id": "plan_a0bfe2ef5b3c_0001",
+      "step": "step_0"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "tool": "browser_click",
+  "action": "click",
+  "execution_class": "semantic",
+  "route": "native_browser",
+  "operation_fingerprint": "sem_op_8f2f2a71f5766c5519d41937",
+  "semantic_fingerprint": "sem_op_8f2f2a71f5766c5519d41937",
+  "arguments": {
+    "semantic_anchor": {
+      "type": "testid",
+      "value": "merge"
+    }
+  },
+  "semantic_anchor": {
+    "type": "testid",
+    "value": "merge"
+  },
+  "before_state_ref": "artifact://tasks/owner/trace_result_b0dfe1c2b003e2659045f18c7763e5ce770d31d05c13d07bb7027a9f5903250d.json",
+  "after_state_ref": "artifact://tasks/owner/trace_result_f89da00cbeec3500f2f37ebb81ba794068b0396321c717d2df9d151e16759fd5.json",
+  "outcome": "executed_unverified",
+  "effect": "MUTATION",
+  "duration_ms": null,
+  "task_id": null,
+  "run_id": null,
+  "operation_id": "observation_0b2a274f52c440ac85ee456cdafd81c2",
+  "operation_id_conflict": false,
+  "caller_operation_id": null,
+  "owner_operation_id": null,
+  "operation_index": 1,
+  "captured_at": "2026-10-02T23:57:39.756928+00:00",
+  "scope": {},
+  "runtime": "electron-chromium",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/owner/transition_94a8b1a8e0e13a8091d7e6e90d50fa08791b28aa46110c0166db3d6cd91e89a4.json"
+}

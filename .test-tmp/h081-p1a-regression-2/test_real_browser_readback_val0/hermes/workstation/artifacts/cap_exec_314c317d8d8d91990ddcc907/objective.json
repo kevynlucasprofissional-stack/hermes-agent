@@ -1,0 +1,57 @@
+{
+  "operation_intent": {
+    "id": "h080b-native-intent",
+    "schema_version": 1,
+    "mode": "ACHIEVE",
+    "target": "native_browser",
+    "goal": {
+      "type": "EQ",
+      "path": "host",
+      "value": "example.test"
+    },
+    "invariants": [],
+    "effect_budget": [
+      {
+        "kind": "SET",
+        "path": "host",
+        "value": "example.test"
+      },
+      {
+        "kind": "SET",
+        "path": "page_family",
+        "value": "/guide"
+      },
+      {
+        "kind": "SET",
+        "path": "recovery_state",
+        "value": "live"
+      }
+    ],
+    "authority_ref": "",
+    "acceptance": {
+      "policy": "evidence",
+      "required_deliverables": [],
+      "required_verifiers": []
+    },
+    "lineage": [],
+    "context_refs": [],
+    "metadata": {
+      "operation_family": "browser_navigate",
+      "target_family": "native_browser"
+    }
+  },
+  "semantic_state": {
+    "host": ""
+  },
+  "capability_inputs": {},
+  "operation_id": "h080b-reuse",
+  "expected_task_id": "t_b5c82944",
+  "expected_run_id": "5",
+  "expected_operation_id": "h080b-reuse",
+  "runtime_state": {
+    "outstanding_uncertain_mutations": []
+  },
+  "capability_id": "experience_bcc0974be58c73cf04a0b436",
+  "capability_version": "1.0.0",
+  "operation_key": "route_h080b-native-intent"
+}

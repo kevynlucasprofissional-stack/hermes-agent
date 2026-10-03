@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/cap.drifted_b_1.0.0_20b1755abd57949a.json",
+  "name": "cap.drifted_b_1.0.0_20b1755abd57949a.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_child_drift_or_quarantine0\\artifacts\\operational_capabilities\\cap.drifted_b_1.0.0_20b1755abd57949a.json",
+  "size_bytes": 1101,
+  "sha256": "3d40ab6ee1556d2bcf75931a356c55aaa059997cba044ecdd1c99610d4b81c11",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:42.527918+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

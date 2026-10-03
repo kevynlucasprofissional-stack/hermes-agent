@@ -1,0 +1,30 @@
+{
+  "tool": "write_file",
+  "action": "write_file",
+  "execution_class": "semantic",
+  "route": "tool.write_file",
+  "operation_fingerprint": "sem_op_19549bdc9cfc980f63a3c561",
+  "semantic_fingerprint": "sem_op_19549bdc9cfc980f63a3c561",
+  "arguments": {
+    "path": "scratch/2.json"
+  },
+  "semantic_anchor": null,
+  "before_state_ref": "artifact://tasks/owner/trace_result_d014c74387b08e0adf046fb1f208a9caf9a731916b3e79ac4aedb905595e2d99.json",
+  "after_state_ref": "artifact://tasks/owner/trace_result_d014c74387b08e0adf046fb1f208a9caf9a731916b3e79ac4aedb905595e2d99.json",
+  "outcome": "executed_unverified",
+  "effect": "MUTATION",
+  "duration_ms": null,
+  "task_id": null,
+  "run_id": null,
+  "operation_id": "observation_dbf792609463420ebd5b607f706975bf",
+  "operation_id_conflict": false,
+  "caller_operation_id": null,
+  "owner_operation_id": null,
+  "operation_index": 2,
+  "captured_at": "2026-10-03T00:17:49.746689+00:00",
+  "scope": {},
+  "runtime": "tool.write_file",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/owner/transition_eb0586008e7832d4a27921f52f1d3f165e97a4210ee294a6a78e713930cfda6b.json"
+}

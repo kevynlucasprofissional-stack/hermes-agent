@@ -1,0 +1,72 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "state_mutation",
+    "operation_family": "merge_pr",
+    "parameters": {},
+    "primitive": "browser_click",
+    "scope": {
+      "host": "github.com"
+    },
+    "target_family": "browser_click",
+    "target_instance": {}
+  },
+  "outcome": "verified_success",
+  "provenance": {
+    "authority_origin": "user",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "browser_click",
+    "operation_index": null,
+    "run_id": "r2",
+    "runtime": "electron-chromium",
+    "sample_ref": null,
+    "source": "fixture",
+    "taint": [],
+    "task_id": "task",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": null,
+  "sample_id": "transition_b0abc4869a79c3311a3004b9",
+  "state_after": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [
+      "artifact://proof"
+    ],
+    "evidence_strength": 2,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "owner_readback",
+    "verifier_fingerprint": ""
+  }
+}

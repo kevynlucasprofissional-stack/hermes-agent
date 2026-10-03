@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628/norm_item_0001.json",
+  "name": "norm_item_0001.json",
+  "task_id": "work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_acirv_trello_replay_const0\\trello-replay\\workstation\\artifacts\\work_93cdb0796f935d95f67f3fc81949b345061175829354be3319d35398abd0b628\\norm_item_0001.json",
+  "size_bytes": 692,
+  "sha256": "b1d540938c5a485d37804b498c08a07b1517d14178d6a2297099b3fad09e7577",
+  "schema": "normalized_batch_output",
+  "summary": {
+    "item_count": 2,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:45:27.954109+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_b5c82944/h080b-established-intent.json",
+  "name": "h080b-established-intent.json",
+  "task_id": "t_b5c82944",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_real_browser_readback_val0\\hermes\\workstation\\artifacts\\t_b5c82944\\h080b-established-intent.json",
+  "size_bytes": 1084,
+  "sha256": "679e865daa3ec305e68a2f46980300909f53bdbd7e27573d4094239679277ad4",
+  "schema": null,
+  "summary": {
+    "item_count": 7,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:56.803205+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

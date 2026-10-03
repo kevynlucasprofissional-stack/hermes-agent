@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/system1/decision_candidates_req_4e4cddbe73f5.json",
+  "name": "decision_candidates_req_4e4cddbe73f5.json",
+  "task_id": "system1",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-dataset-final-1\\test_error_fallback_has_durabl0\\system1\\decision_candidates_req_4e4cddbe73f5.json",
+  "size_bytes": 35,
+  "sha256": "09ea520cbdf4542bbd8c9302c7144bc45393d723b216a1e0e1a72cffcbd2acf4",
+  "schema": "system1.candidate_set.v1",
+  "summary": {
+    "item_count": 1,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:31:32.092298+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

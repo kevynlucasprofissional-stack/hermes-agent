@@ -1,0 +1,23 @@
+[
+  {
+    "operation_id": "8768f8f37bbaaa2b218f54a20a57b7fcb2e04c67369eb5706132aef6ac24194a",
+    "task_id": "t_455c78e8",
+    "run_id": "5",
+    "tool": "trello_create_card",
+    "tool_effect": "MUTATION",
+    "effect": "unknown_mutation",
+    "scope": "unknown",
+    "external": null,
+    "provider": null,
+    "field": null,
+    "target_kind": "unknown",
+    "target_identifier": null,
+    "operation_semantic": "trello_create_card",
+    "timestamp": "2026-10-03T00:20:18.336683+00:00",
+    "status": "executed_unverified",
+    "persisted": null,
+    "verifier_status": "pending",
+    "evidence_ref": "artifact://tasks/work_2f0f851ae2daafdb3c8ea9f311f75a6877c6eaa72e66484c3def59c79b1ff25c/1e97f49a70c4517bbd52540d8acfb4ad4ecb6cd68264c22f2d194012a7b184b8.data",
+    "item_id": "plan_33a8973ebea1_0002"
+  }
+]

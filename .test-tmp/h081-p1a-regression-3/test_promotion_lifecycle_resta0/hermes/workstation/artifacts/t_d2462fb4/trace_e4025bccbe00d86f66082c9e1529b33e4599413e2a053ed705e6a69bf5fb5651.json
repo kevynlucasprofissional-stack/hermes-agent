@@ -1,0 +1,33 @@
+{
+  "tool": "browser_navigate",
+  "action": "navigate",
+  "execution_class": "semantic",
+  "route": "native_browser",
+  "operation_fingerprint": "a6d2661559feddfe393cdc20d2d64a7a12b96ad82795ad9cbb9062c63db0ffb4",
+  "semantic_fingerprint": null,
+  "arguments": {
+    "url": "https://example.test/guide"
+  },
+  "semantic_anchor": null,
+  "before_state_ref": null,
+  "after_state_ref": "artifact://tasks/t_d2462fb4/trace_result_97059bd8b7d213c648e3197be86792f81aecab3d23ae7fd9ef93cc59fe0fc51d.json",
+  "outcome": "executed_unverified",
+  "effect": "MUTATION",
+  "duration_ms": null,
+  "task_id": "t_d2462fb4",
+  "run_id": "1",
+  "operation_id": "op-test-canonical",
+  "operation_id_conflict": false,
+  "caller_operation_id": "op-test-canonical",
+  "owner_operation_id": "op-test-canonical",
+  "operation_index": 0,
+  "captured_at": "2026-10-02T23:59:08.451337+00:00",
+  "scope": {
+    "host": "example.test",
+    "path_family": "/guide"
+  },
+  "runtime": "electron-chromium",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/t_d2462fb4/transition_de37e221f247ba61df7c0fb00c0762d351651c221d404b68bb4bae41479647cb.json"
+}

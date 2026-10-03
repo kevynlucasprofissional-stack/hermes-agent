@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/system1/decision_result_req_ffc9ec696c62.json",
+  "name": "decision_result_req_ffc9ec696c62.json",
+  "task_id": "system1",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-influence-7\\test_wrong_old_format_and_unbo0\\system1\\decision_result_req_ffc9ec696c62.json",
+  "size_bytes": 658,
+  "sha256": "8aef36d8caf057bbb860d84b16e66be4fd93897de4e58a3ae0700e8a000046e2",
+  "schema": "system1.decision_result.v1",
+  "summary": {
+    "item_count": 17,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:22:25.464969+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

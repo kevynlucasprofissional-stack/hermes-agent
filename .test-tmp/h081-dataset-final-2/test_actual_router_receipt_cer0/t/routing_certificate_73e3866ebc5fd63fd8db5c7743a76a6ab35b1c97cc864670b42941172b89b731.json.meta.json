@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/routing_certificate_73e3866ebc5fd63fd8db5c7743a76a6ab35b1c97cc864670b42941172b89b731.json",
+  "name": "routing_certificate_73e3866ebc5fd63fd8db5c7743a76a6ab35b1c97cc864670b42941172b89b731.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-dataset-final-2\\test_actual_router_receipt_cer0\\t\\routing_certificate_73e3866ebc5fd63fd8db5c7743a76a6ab35b1c97cc864670b42941172b89b731.json",
+  "size_bytes": 823,
+  "sha256": "7e5b06d855269a7d9b53794c99d3e8a37137a59c467247dec2b95da90b401ff2",
+  "schema": "workstation.routing_certificate.v1",
+  "summary": {
+    "item_count": 23,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:32:07.763161+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

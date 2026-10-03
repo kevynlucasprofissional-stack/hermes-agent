@@ -1,0 +1,6 @@
+{
+  "preferred_candidate": [
+    "read_file",
+    "send_email"
+  ]
+}

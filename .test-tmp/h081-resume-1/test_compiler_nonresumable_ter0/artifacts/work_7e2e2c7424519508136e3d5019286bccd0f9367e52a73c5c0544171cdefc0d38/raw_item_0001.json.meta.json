@@ -1,0 +1,15 @@
+{
+  "ref": "artifact://tasks/work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38/raw_item_0001.json",
+  "name": "raw_item_0001.json",
+  "task_id": "work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-resume-1\\test_compiler_nonresumable_ter0\\artifacts\\work_7e2e2c7424519508136e3d5019286bccd0f9367e52a73c5c0544171cdefc0d38\\raw_item_0001.json",
+  "size_bytes": 474,
+  "sha256": "7383d61ca68112989847b12de1bfd51313333c88422278d38c710da224711e08",
+  "schema": "raw_batch_capture",
+  "summary": {
+    "output_type": "dict"
+  },
+  "created_at": "2026-10-02T23:42:56.605243+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

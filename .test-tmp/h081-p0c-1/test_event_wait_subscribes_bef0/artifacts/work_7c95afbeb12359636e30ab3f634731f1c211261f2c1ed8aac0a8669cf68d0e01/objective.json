@@ -1,0 +1,27 @@
+{
+  "operation_key": "records-v1",
+  "items": [
+    {
+      "id": 0
+    }
+  ],
+  "steps": [
+    {
+      "tool": "read_file",
+      "args": {
+        "path": "$item.id"
+      },
+      "expect": {
+        "done": true
+      },
+      "wait": {
+        "event_type": "worker.result",
+        "correlation_id": "item-0",
+        "timeout_seconds": 2
+      }
+    }
+  ],
+  "constraints": {
+    "forbidden_routes": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_bc8d0f096fc7f5233a00c96f6346f1b1144d63d27131794c262489d9ac8b2bd4/batch_summary.json",
+  "name": "batch_summary.json",
+  "task_id": "work_bc8d0f096fc7f5233a00c96f6346f1b1144d63d27131794c262489d9ac8b2bd4",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_uncertain_readback_failur0\\artifacts\\work_bc8d0f096fc7f5233a00c96f6346f1b1144d63d27131794c262489d9ac8b2bd4\\batch_summary.json",
+  "size_bytes": 1724,
+  "sha256": "851c114ce61b07d4c28f2cb16a5ca897a43ce0248f6539aaa8b7f8d0847f9b4a",
+  "schema": "batch_run_summary",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:19.617554+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

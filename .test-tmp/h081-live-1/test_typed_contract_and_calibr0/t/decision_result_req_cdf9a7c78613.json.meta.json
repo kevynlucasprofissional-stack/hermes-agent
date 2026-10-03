@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t/decision_result_req_cdf9a7c78613.json",
+  "name": "decision_result_req_cdf9a7c78613.json",
+  "task_id": "t",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-live-1\\test_typed_contract_and_calibr0\\t\\decision_result_req_cdf9a7c78613.json",
+  "size_bytes": 1120,
+  "sha256": "c982b42ff7f3e096720cca824fa9262a41060ceb5e3d6dbf35ab73f394b998ed",
+  "schema": "system1.decision_result.v1",
+  "summary": {
+    "item_count": 17,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:11:56.987761+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

@@ -1,0 +1,34 @@
+{
+  "authority_scope": null,
+  "capability_id": "experience_bcc0974be58c73cf04a0b436",
+  "capability_version": "1.0.0",
+  "covered_predicates": [
+    "1b8e039c7cc02b3794693d43004ef9fd4f6f08f3df91f60cca447b98bfa625de",
+    "8c325fd9942b8c99977f2436212b17f187be6d9758e59db5978d2d3379c486f0",
+    "ca4af9dcfafcbe3b6d36aeb7a416186b66673a77b0e3187efed07195d6560efc"
+  ],
+  "delta": {},
+  "freshness_satisfied": true,
+  "inputs": {},
+  "invocation_id": "inv_23699198b12541e3",
+  "operation_id": "coord-replay-4",
+  "run_id": "4",
+  "state_after": {
+    "host": "example.test",
+    "page_family": "/guide",
+    "recovery_state": "live",
+    "url": "https://example.test/guide"
+  },
+  "state_before": {},
+  "status": "COMMITTED",
+  "task_id": "t_5ea748bf",
+  "verification_evidence_refs": [
+    "artifact://tasks/t_5ea748bf/learned_browser_readback_00ecc8dd22c6baa203aa643e941c18863d1cb153a101e4b3a0a3ed71717c548d.json"
+  ],
+  "verification_reason": "verified",
+  "verification_record_ref": "artifact://tasks/t_5ea748bf/verification_coord-replay-4.json",
+  "verified": true,
+  "verifier_fingerprint": "dba444b38fd49352e1065dd3f83a2b0d1f94bc793d16f6b9482290c1b9ff272f",
+  "verifier_status": "VERIFIED",
+  "timestamp": 1790985480.510404
+}

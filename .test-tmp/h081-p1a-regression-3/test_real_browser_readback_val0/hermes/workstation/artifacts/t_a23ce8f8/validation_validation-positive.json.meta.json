@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_a23ce8f8/validation_validation-positive.json",
+  "name": "validation_validation-positive.json",
+  "task_id": "t_a23ce8f8",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-3\\test_real_browser_readback_val0\\hermes\\workstation\\artifacts\\t_a23ce8f8\\validation_validation-positive.json",
+  "size_bytes": 842,
+  "sha256": "db89167c18e66986fb7df3ff917ad5ab55b2eea9d8d030a0b89b56ae8606a26e",
+  "schema": "hermes.browser_local_readback.v1",
+  "summary": {
+    "item_count": 15,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:59:04.031953+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

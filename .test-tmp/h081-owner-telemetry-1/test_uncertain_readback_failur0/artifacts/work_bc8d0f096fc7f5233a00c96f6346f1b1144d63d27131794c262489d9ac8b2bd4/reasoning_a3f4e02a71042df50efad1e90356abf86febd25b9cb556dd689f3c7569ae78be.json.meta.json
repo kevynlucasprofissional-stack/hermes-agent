@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_bc8d0f096fc7f5233a00c96f6346f1b1144d63d27131794c262489d9ac8b2bd4/reasoning_a3f4e02a71042df50efad1e90356abf86febd25b9cb556dd689f3c7569ae78be.json",
+  "name": "reasoning_a3f4e02a71042df50efad1e90356abf86febd25b9cb556dd689f3c7569ae78be.json",
+  "task_id": "work_bc8d0f096fc7f5233a00c96f6346f1b1144d63d27131794c262489d9ac8b2bd4",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-owner-telemetry-1\\test_uncertain_readback_failur0\\artifacts\\work_bc8d0f096fc7f5233a00c96f6346f1b1144d63d27131794c262489d9ac8b2bd4\\reasoning_a3f4e02a71042df50efad1e90356abf86febd25b9cb556dd689f3c7569ae78be.json",
+  "size_bytes": 492,
+  "sha256": "5374a010d72e53bd4ec18c0e785669c286fc89b1d15f777f998e6dbb7ffd1df7",
+  "schema": null,
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:28:19.621562+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

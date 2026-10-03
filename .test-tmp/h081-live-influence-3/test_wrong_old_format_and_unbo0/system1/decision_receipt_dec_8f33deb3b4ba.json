@@ -1,0 +1,70 @@
+{
+  "receipt_id": "dec_8f33deb3b4ba",
+  "request_ref": "928ee0a4f1c080c7b1d2dc6fa56806ef250374d758501a3ab310d65a1adea4e7",
+  "result_ref": "artifact://tasks/system1/decision_result_req_c724af346c07.json",
+  "domain": "",
+  "schema_id": "",
+  "state_digest": "empty",
+  "request_hash": "928ee0a4f1c080c7b1d2dc6fa56806ef250374d758501a3ab310d65a1adea4e7",
+  "state_ref": "artifact://tasks/system1/decision_state_req_c724af346c07.json",
+  "candidate_set_ref": "artifact://tasks/system1/decision_candidates_req_c724af346c07.json",
+  "candidate_set_hash": "28550acd2b79c100",
+  "task_id": "",
+  "run_id": "",
+  "operation_id": "",
+  "influence_mode": "fallback",
+  "selected_candidate": null,
+  "fallback_taken": true,
+  "provider": "laya",
+  "model": "multilingual",
+  "model_revision": null,
+  "calibration_id": "calib-v1-20261002",
+  "question_schema_version": "1.0.0",
+  "laya_version": "0.3.23",
+  "laya_source_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+  "laya_source_path": "C:\\Github\\hermes-agent\\.venv\\Lib\\site-packages\\laya\\__init__.py",
+  "checkpoint_digest": null,
+  "confidence": {
+    "q": 0.0
+  },
+  "confidences": {
+    "q": 0.0
+  },
+  "answers": {
+    "q": null
+  },
+  "decisions": {
+    "q": null
+  },
+  "calibrated_confidences": {},
+  "probabilities": {
+    "q": {}
+  },
+  "abstentions": [
+    "q"
+  ],
+  "downstream_certificate_ref": null,
+  "downstream_verification_ref": null,
+  "latency_ms": 0.005099998816149309,
+  "created_at": "2026-10-03T00:15:46.614192+00:00",
+  "details": {
+    "provenance": {
+      "provider": "laya",
+      "source_path": "C:\\Github\\hermes-agent\\.venv\\Lib\\site-packages\\laya\\__init__.py",
+      "laya_version": "0.3.23",
+      "laya_source_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+      "lock_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+      "is_vendored": true,
+      "locked_version": "0.3.23",
+      "locked_role": "system1-runtime-upstream",
+      "expected_subtree_dir": "C:\\Github\\hermes-agent\\workstation\\third_party\\laya",
+      "model": "multilingual",
+      "checkpoint_revision": null,
+      "checkpoint_digest": null,
+      "device": "cpu",
+      "calibration_id": "calib-v1-20261002",
+      "question_schema_version": "1.0.0",
+      "source_bytes_verified": true
+    }
+  }
+}

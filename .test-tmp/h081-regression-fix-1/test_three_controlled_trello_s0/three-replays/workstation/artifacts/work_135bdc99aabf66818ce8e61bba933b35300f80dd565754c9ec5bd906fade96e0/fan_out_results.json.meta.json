@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_135bdc99aabf66818ce8e61bba933b35300f80dd565754c9ec5bd906fade96e0/fan_out_results.json",
+  "name": "fan_out_results.json",
+  "task_id": "work_135bdc99aabf66818ce8e61bba933b35300f80dd565754c9ec5bd906fade96e0",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\work_135bdc99aabf66818ce8e61bba933b35300f80dd565754c9ec5bd906fade96e0\\fan_out_results.json",
+  "size_bytes": 2126,
+  "sha256": "f54fb272631d22de1b479bb484094b01e05e336f16cfbc90a1c178740a39286e",
+  "schema": null,
+  "summary": {
+    "item_count": 12,
+    "type": "list"
+  },
+  "created_at": "2026-10-03T00:20:20.589796+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

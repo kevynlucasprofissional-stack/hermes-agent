@@ -1,0 +1,58 @@
+{
+  "task_id": "work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f",
+  "plan_id": "plan_c7c31ff20115",
+  "objective_ref": "artifact://tasks/work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f/objective.json",
+  "phase": "fan_out",
+  "constraints": {
+    "forbidden_routes": []
+  },
+  "recipe": {
+    "recipe_id": "acirv.trello.cards.v1",
+    "status": "STALE",
+    "fingerprint": "0852907dfa765c78c9af19144f1d6d2183f7b3b9e35288210818bbb16c1d341f"
+  },
+  "setup": {
+    "completed": 3,
+    "total": 3,
+    "pending": 0,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "items": {
+    "completed": 0,
+    "total": 12,
+    "pending": 11,
+    "needs_reasoning": 1,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "finalize": {
+    "completed": 0,
+    "total": 1,
+    "pending": 1,
+    "needs_reasoning": 0,
+    "failed": 0,
+    "uncertain": 0
+  },
+  "next_action": "review_exceptions",
+  "blockers": [
+    {
+      "item_id": "plan_c7c31ff20115_0002",
+      "status": "blocked",
+      "code": "recipe_stale",
+      "evidence_ref": "artifact://tasks/work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f/norm_item_0002.json"
+    }
+  ],
+  "blocker_count": 1,
+  "artifact_refs": [
+    "artifact://tasks/work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f/2879c5bb910b25af0399a4028a7d276fb388131bc04bd02e5f622d849a60f91c.data",
+    "artifact://tasks/work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f/89a04c28b7d0ce9d95eb0f1a971afba198ce1e9a709ae435dba9f20b923e5cb1.data",
+    "artifact://tasks/work_0ba6d295e23e50f47bfdeee65ccc364cc1391e032f35770cec8f3f4f22b3792f/fd44c75642cd982cddff3ac361e576dec8a9ce405d07db213ef3b0ded49433a4.data"
+  ],
+  "artifact_count": 5,
+  "latest_verified_state": {
+    "completed_items": 0,
+    "canary_verified": false
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": 20.9963321685791,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "tool.trello_search_board",
+    "dependencies": {},
+    "effect_class": "DISCOVERY",
+    "operation_family": "trello_search_board",
+    "parameters": {},
+    "primitive": "trello_search_board",
+    "scope": {},
+    "target_family": "trello_search_board",
+    "target_instance": {}
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "observation_c98e0dd71e3a400e8c1d11f533c6a0aa",
+    "operation_index": 0,
+    "run_id": null,
+    "runtime": "tool.trello_search_board",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": null,
+    "trust_class": "runtime_observation"
+  },
+  "raw_result_ref": "artifact://tasks/20261002_204519_d176b2/trace_result_4f4221d5ce34041e40baa0d6e908991a6b1261a478abfa2044dc7c61933ed378.json",
+  "sample_id": "transition_1546d22ae990931e0c0e9a26",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/20261002_204519_d176b2/trace_result_4f4221d5ce34041e40baa0d6e908991a6b1261a478abfa2044dc7c61933ed378.json",
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 0,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

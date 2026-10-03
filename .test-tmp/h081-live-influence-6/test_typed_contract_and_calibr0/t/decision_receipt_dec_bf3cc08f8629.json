@@ -1,0 +1,90 @@
+{
+  "receipt_id": "dec_bf3cc08f8629",
+  "request_ref": "acc6e6bbb2a0d38f6ea4c703be71fd8dec7d06336c501819d5013647a6789748",
+  "result_ref": "artifact://tasks/t/decision_result_req_e0ddba646ffe.json",
+  "domain": "",
+  "schema_id": "typed-v1",
+  "state_digest": "empty",
+  "request_hash": "acc6e6bbb2a0d38f6ea4c703be71fd8dec7d06336c501819d5013647a6789748",
+  "state_ref": "artifact://tasks/t/decision_state_req_e0ddba646ffe.json",
+  "candidate_set_ref": "artifact://tasks/t/decision_candidates_req_e0ddba646ffe.json",
+  "candidate_set_hash": "e18d848ac5dec674",
+  "task_id": "t",
+  "run_id": "r",
+  "operation_id": "op",
+  "influence_mode": "ranking_only",
+  "selected_candidate": "B",
+  "fallback_taken": false,
+  "provider": "laya",
+  "model": "multilingual",
+  "model_revision": null,
+  "calibration_id": "calib-v1-20261002",
+  "question_schema_version": "1.0.0",
+  "laya_version": "0.3.23",
+  "laya_source_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+  "laya_source_path": "C:\\Github\\hermes-agent\\.venv\\Lib\\site-packages\\laya\\__init__.py",
+  "checkpoint_digest": null,
+  "confidence": {
+    "preferred_candidate": 0.9,
+    "urgency": 0.84,
+    "risk": 0.98
+  },
+  "confidences": {
+    "preferred_candidate": 0.9,
+    "urgency": 0.84,
+    "risk": 0.98
+  },
+  "answers": {
+    "preferred_candidate": "B",
+    "urgency": 2.8,
+    "risk": 0.02
+  },
+  "decisions": {
+    "preferred_candidate": "B",
+    "urgency": 2.8,
+    "risk": 0.02
+  },
+  "calibrated_confidences": {
+    "preferred_candidate": 0.9,
+    "urgency": 0.84,
+    "risk": 0.98
+  },
+  "probabilities": {
+    "preferred_candidate": {
+      "A": 0.1,
+      "B": 0.9
+    },
+    "urgency": {
+      "0": 0.01,
+      "1": 0.02,
+      "2": 0.13,
+      "3": 0.84
+    },
+    "risk": {}
+  },
+  "abstentions": [],
+  "downstream_certificate_ref": null,
+  "downstream_verification_ref": null,
+  "latency_ms": 0.0039000005926936865,
+  "created_at": "2026-10-03T00:20:40.379523+00:00",
+  "details": {
+    "provenance": {
+      "provider": "laya",
+      "source_path": "C:\\Github\\hermes-agent\\.venv\\Lib\\site-packages\\laya\\__init__.py",
+      "laya_version": "0.3.23",
+      "laya_source_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+      "lock_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+      "is_vendored": true,
+      "locked_version": "0.3.23",
+      "locked_role": "system1-runtime-upstream",
+      "expected_subtree_dir": "C:\\Github\\hermes-agent\\workstation\\third_party\\laya",
+      "model": "multilingual",
+      "checkpoint_revision": null,
+      "checkpoint_digest": null,
+      "device": "cpu",
+      "calibration_id": "calib-v1-20261002",
+      "question_schema_version": "1.0.0",
+      "source_bytes_verified": true
+    }
+  }
+}

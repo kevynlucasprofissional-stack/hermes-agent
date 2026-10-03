@@ -1,0 +1,34 @@
+{
+  "tool": "browser_navigate",
+  "action": "navigate",
+  "execution_class": "semantic",
+  "route": "native_browser",
+  "operation_fingerprint": "b58cccc093f353c126e266b1315083ffdd2177a2c1add296dadeb93cf6b0c630",
+  "semantic_fingerprint": null,
+  "arguments": {
+    "url": "https://example.test/guide",
+    "operation_id": "h080b-reuse"
+  },
+  "semantic_anchor": null,
+  "before_state_ref": null,
+  "after_state_ref": "artifact://tasks/t_b5c82944/trace_result_6aaf5848f071ac509250486e8399cca84911a4a9c6fdd5132c2e62f3081ec5d9.json",
+  "outcome": "executed_unverified",
+  "effect": "MUTATION",
+  "duration_ms": 36.522865295410156,
+  "task_id": "t_b5c82944",
+  "run_id": 5,
+  "operation_id": "h080b-reuse",
+  "operation_id_conflict": false,
+  "caller_operation_id": "h080b-reuse",
+  "owner_operation_id": "h080b-reuse",
+  "operation_index": 0,
+  "captured_at": "2026-10-02T23:57:57.757802+00:00",
+  "scope": {
+    "host": "example.test",
+    "path_family": "/guide"
+  },
+  "runtime": "electron-chromium",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/t_b5c82944/transition_60b2f23498b329fd0da1938051e23baf1d7e2d08ffe6e40276d9b5368005bab2.json"
+}

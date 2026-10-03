@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/recipes/a5867f6aa1e6c167f1dce4687bb099d34bed7e6b0693a02d3add8328e4853b0b.json",
+  "name": "a5867f6aa1e6c167f1dce4687bb099d34bed7e6b0693a02d3add8328e4853b0b.json",
+  "task_id": "recipes",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p0c-2\\test_finalize_checkpoint_and_f0\\workstation\\artifacts\\recipes\\a5867f6aa1e6c167f1dce4687bb099d34bed7e6b0693a02d3add8328e4853b0b.json",
+  "size_bytes": 1903,
+  "sha256": "649c9bec25185a75389409517f210eed3b47e98b62e1b1898d7f7329129b2c7f",
+  "schema": "verified_recipe_v1",
+  "summary": {
+    "item_count": 14,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:45:21.966688+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

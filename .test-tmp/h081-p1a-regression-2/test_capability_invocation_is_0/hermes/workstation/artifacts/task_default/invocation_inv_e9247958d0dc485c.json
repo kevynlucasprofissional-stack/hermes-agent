@@ -1,0 +1,25 @@
+{
+  "authority_scope": null,
+  "capability_id": "cap.test.primitive",
+  "capability_version": "1.0.0",
+  "covered_predicates": [],
+  "delta": {},
+  "freshness_satisfied": false,
+  "inputs": {
+    "x": 1
+  },
+  "invocation_id": "inv_e9247958d0dc485c",
+  "operation_id": "op_cap.test.primitive_6cb0b401",
+  "run_id": "run_default",
+  "state_after": {},
+  "state_before": {},
+  "status": "ACKNOWLEDGED",
+  "task_id": "task_default",
+  "verification_evidence_refs": [],
+  "verification_reason": "verifier_not_validated,observer_unknown,source_unknown",
+  "verification_record_ref": "artifact://tasks/task_default/verification_op_cap.test.primitive_6cb0b401.json",
+  "verified": false,
+  "verifier_fingerprint": "deeffcf8d0865ba4e4e97d7e19e53703d68bac03a0b4c911b71183e41af2ce2d",
+  "verifier_status": "INCONCLUSIVE",
+  "timestamp": 1790985462.284857
+}

@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_ab37b602/verification_controlled-native-navigation.json",
+  "name": "verification_controlled-native-navigation.json",
+  "task_id": "t_ab37b602",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_real_browser_readback_val0\\hermes\\workstation\\artifacts\\t_ab37b602\\verification_controlled-native-navigation.json",
+  "size_bytes": 4080,
+  "sha256": "507c91ee4183155cb7cdc02fa6ca8d0644c37e7270c5def351176437f9ab5a35",
+  "schema": "hermes.canonical_verification.v1",
+  "summary": {
+    "item_count": 9,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:56.713138+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

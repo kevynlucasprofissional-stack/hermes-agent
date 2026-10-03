@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "runtime": "electron-chromium",
+  "url": "https://example.test/second",
+  "operation_id": "op-test-second",
+  "readiness": "stable",
+  "wall_detected": false
+}

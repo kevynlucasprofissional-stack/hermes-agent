@@ -1,0 +1,21 @@
+{
+  "preferred_candidate": {
+    "type": "choice",
+    "criteria": {
+      "A": "A",
+      "B": "B"
+    }
+  },
+  "urgency": {
+    "type": "score",
+    "criteria": [
+      "low",
+      "medium",
+      "high",
+      "critical"
+    ]
+  },
+  "risk": {
+    "type": "noul"
+  }
+}

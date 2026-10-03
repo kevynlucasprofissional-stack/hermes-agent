@@ -1,0 +1,13 @@
+{
+  "ref": "artifact://tasks/h080b-session/cc5df944732dea0579585535798599171c1ff735a659d2257dc663252b96fd1f.data",
+  "name": "cc5df944732dea0579585535798599171c1ff735a659d2257dc663252b96fd1f.data",
+  "task_id": "h080b-session",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_run_a_normal_hermes_turn_0\\hermes\\workstation\\artifacts\\h080b-session\\cc5df944732dea0579585535798599171c1ff735a659d2257dc663252b96fd1f.data",
+  "size_bytes": 185,
+  "sha256": "cc5df944732dea0579585535798599171c1ff735a659d2257dc663252b96fd1f",
+  "schema": "tool_result",
+  "summary": {},
+  "created_at": "2026-10-02T23:57:55.381826+00:00",
+  "media_type": "application/octet-stream",
+  "encoding": null
+}

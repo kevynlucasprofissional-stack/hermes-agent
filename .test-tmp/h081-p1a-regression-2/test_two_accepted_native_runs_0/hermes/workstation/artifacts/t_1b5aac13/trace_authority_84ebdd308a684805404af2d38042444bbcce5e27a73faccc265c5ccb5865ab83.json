@@ -1,0 +1,16 @@
+{
+  "task_id": "t_1b5aac13",
+  "run_id": "1",
+  "session_id": "h080b-session",
+  "authority_origin": "user",
+  "authority_scope": {
+    "level": 1,
+    "allowed_actions": [
+      "browser_navigate"
+    ],
+    "allowed_resources": [
+      "native_browser"
+    ],
+    "channels": []
+  }
+}

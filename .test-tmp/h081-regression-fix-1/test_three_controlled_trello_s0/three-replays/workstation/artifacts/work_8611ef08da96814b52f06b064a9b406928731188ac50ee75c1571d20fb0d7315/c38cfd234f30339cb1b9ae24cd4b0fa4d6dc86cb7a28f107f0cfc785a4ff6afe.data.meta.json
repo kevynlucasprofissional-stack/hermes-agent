@@ -1,0 +1,13 @@
+{
+  "ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/c38cfd234f30339cb1b9ae24cd4b0fa4d6dc86cb7a28f107f0cfc785a4ff6afe.data",
+  "name": "c38cfd234f30339cb1b9ae24cd4b0fa4d6dc86cb7a28f107f0cfc785a4ff6afe.data",
+  "task_id": "work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_three_controlled_trello_s0\\three-replays\\workstation\\artifacts\\work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315\\c38cfd234f30339cb1b9ae24cd4b0fa4d6dc86cb7a28f107f0cfc785a4ff6afe.data",
+  "size_bytes": 41,
+  "sha256": "c38cfd234f30339cb1b9ae24cd4b0fa4d6dc86cb7a28f107f0cfc785a4ff6afe",
+  "schema": "tool_result",
+  "summary": {},
+  "created_at": "2026-10-03T00:20:23.622216+00:00",
+  "media_type": "application/octet-stream",
+  "encoding": null
+}

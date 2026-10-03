@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_6f4feecf1a4fe8a11294c261207f4418c5218f0a7b43041cfdb72b966406586f/norm_item_0002.json",
+  "name": "norm_item_0002.json",
+  "task_id": "work_6f4feecf1a4fe8a11294c261207f4418c5218f0a7b43041cfdb72b966406586f",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_compiler_nonresumable_ter0\\artifacts\\work_6f4feecf1a4fe8a11294c261207f4418c5218f0a7b43041cfdb72b966406586f\\norm_item_0002.json",
+  "size_bytes": 531,
+  "sha256": "455322c6f3cab9ca9595808616795d1e3300f02b3e52f9cff904d93991314144",
+  "schema": "normalized_batch_output",
+  "summary": {
+    "item_count": 4,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:20:28.269858+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

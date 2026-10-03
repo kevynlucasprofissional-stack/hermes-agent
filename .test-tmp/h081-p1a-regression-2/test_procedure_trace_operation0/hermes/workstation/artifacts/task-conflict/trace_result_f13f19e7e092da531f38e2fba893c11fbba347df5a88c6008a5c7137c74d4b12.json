@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "runtime": "electron-chromium",
+  "url": "https://example.test/guide",
+  "operation_id": "op_owner_divergent_2",
+  "readiness": "stable",
+  "wall_detected": false
+}

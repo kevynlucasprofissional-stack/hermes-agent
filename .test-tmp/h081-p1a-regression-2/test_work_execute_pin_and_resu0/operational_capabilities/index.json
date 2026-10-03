@@ -1,0 +1,38 @@
+{
+  "read@1.0.0": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "read",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Read fixture",
+    "ref": "artifact://tasks/operational_capabilities/read_1.0.0_24cff2905ca2cc75.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "24cff2905ca2cc75d7fb26656187ce84f02c12b2474f9c2c1659739ac6fa8789",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:40.752655+00:00",
+    "version": "1.0.0"
+  },
+  "read@1.0.1": {
+    "alias_of": "",
+    "compatibility_fingerprint": "",
+    "drift_state": "healthy",
+    "family_id": "",
+    "id": "read",
+    "immutable_contract": null,
+    "lifecycle": "promoted",
+    "name": "Read fixture",
+    "ref": "artifact://tasks/operational_capabilities/read_1.0.1_c191dcddbaa226bb.json",
+    "route": "filesystem",
+    "scope": {},
+    "semantic_fingerprint": "",
+    "sha256": "c191dcddbaa226bb033a3ba6f0b7f2d3f37e4c670d156b812dd1f75ca6a63017",
+    "superseded_by": "",
+    "updated_at": "2026-10-02T23:57:40.730125+00:00",
+    "version": "1.0.1"
+  }
+}

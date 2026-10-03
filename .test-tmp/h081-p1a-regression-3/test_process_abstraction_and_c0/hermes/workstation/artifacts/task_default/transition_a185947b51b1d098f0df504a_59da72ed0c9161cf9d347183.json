@@ -1,0 +1,73 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "composite",
+    "dependencies": {},
+    "effect_class": "unknown",
+    "operation_family": "",
+    "parameters": {},
+    "primitive": "experience_aa84b6408d58b5fb4acedbab",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "uncertain",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "op_experience_aa84b6408d58b5fb4acedbab_7a055066",
+    "operation_index": null,
+    "run_id": "run_default",
+    "runtime": "",
+    "sample_ref": null,
+    "source": "progressive_owner",
+    "taint": [],
+    "task_id": "task_default",
+    "trust_class": "trusted_runtime"
+  },
+  "raw_result_ref": null,
+  "sample_id": "transition_a185947b51b1d098f0df504a",
+  "state_after": {
+    "artifact_ref": null,
+    "semantic_predicates": {
+      "exit_code": 0,
+      "process_state": "exited"
+    }
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [
+      "observation:experience_aa84b6408d58b5fb4acedbab:1.0.0"
+    ],
+    "evidence_strength": 2,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "fixture.owner.readback",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "test_fixture",
+    "status": "INCONCLUSIVE",
+    "trust_class": "trusted_runtime",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": "8b6c458aad000ae8e77c4f1a7ba1b8e3d6837589db50c5624931c927747868cc"
+  }
+}

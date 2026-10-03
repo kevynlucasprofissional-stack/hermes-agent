@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_061ebd87/trace_authority_7d5cf5070187b4d4e105e2e805bd22cc57e10f394f36351fb2bef6e40ee3eb1d.json",
+  "name": "trace_authority_7d5cf5070187b4d4e105e2e805bd22cc57e10f394f36351fb2bef6e40ee3eb1d.json",
+  "task_id": "t_061ebd87",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_product_owned_completion_0\\hermes\\workstation\\artifacts\\t_061ebd87\\trace_authority_7d5cf5070187b4d4e105e2e805bd22cc57e10f394f36351fb2bef6e40ee3eb1d.json",
+  "size_bytes": 286,
+  "sha256": "0bb59dc0e4e69d7097704c79c5c3aa4e189ed85eb1c91a5775cc41e98e2603aa",
+  "schema": "hermes.trace_authority.v1",
+  "summary": {
+    "item_count": 5,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:02.080373+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

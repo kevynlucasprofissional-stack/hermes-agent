@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41/fan_out_results.json",
+  "name": "fan_out_results.json",
+  "task_id": "work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-regression-fix-1\\test_stale_preflight_blocks_al0\\workstation\\artifacts\\work_71853cb067e7838909421526e9211a4c9030373e02d0dd298c80533bdd18fa41\\fan_out_results.json",
+  "size_bytes": 2126,
+  "sha256": "ca19ab5aed5b6f7e0d8993c9cc9d9aaf06a878cd864ae27f8c5c2234bfce18f0",
+  "schema": null,
+  "summary": {
+    "item_count": 12,
+    "type": "list"
+  },
+  "created_at": "2026-10-03T00:17:58.464464+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

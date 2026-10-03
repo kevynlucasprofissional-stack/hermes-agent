@@ -1,0 +1,9 @@
+{
+  "q": {
+    "type": "choice",
+    "criteria": {
+      "A": "a",
+      "B": "b"
+    }
+  }
+}

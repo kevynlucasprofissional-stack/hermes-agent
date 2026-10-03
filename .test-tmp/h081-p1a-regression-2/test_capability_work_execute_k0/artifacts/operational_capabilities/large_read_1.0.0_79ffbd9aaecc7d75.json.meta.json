@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/operational_capabilities/large_read_1.0.0_79ffbd9aaecc7d75.json",
+  "name": "large_read_1.0.0_79ffbd9aaecc7d75.json",
+  "task_id": "operational_capabilities",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_capability_work_execute_k0\\artifacts\\operational_capabilities\\large_read_1.0.0_79ffbd9aaecc7d75.json",
+  "size_bytes": 1113,
+  "sha256": "b6644fc112966379b5d47676d77f505e3f3868830bcf7dcb373bafb7184ba3d6",
+  "schema": null,
+  "summary": {
+    "item_count": 34,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:42.058246+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

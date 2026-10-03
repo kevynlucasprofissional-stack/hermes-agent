@@ -1,0 +1,68 @@
+{
+  "delta": {
+    "added": {},
+    "changed": {},
+    "removed": {}
+  },
+  "metrics": {
+    "duration_ms": null,
+    "provider_usage": {}
+  },
+  "operation": {
+    "boundary_signals": [],
+    "canonical_route": "native_browser",
+    "dependencies": {},
+    "effect_class": "PURE_READ",
+    "operation_family": "browser_snapshot",
+    "parameters": {},
+    "primitive": "browser_snapshot",
+    "scope": {},
+    "target_family": "",
+    "target_instance": {}
+  },
+  "outcome": "observed",
+  "provenance": {
+    "authority_origin": "environment",
+    "authority_ref": null,
+    "authority_scope": null,
+    "operation_id": "observation_766f20d77a0c4141a0c6a6e7cc5e8569",
+    "operation_index": 0,
+    "run_id": null,
+    "runtime": "electron-chromium",
+    "sample_ref": null,
+    "source": "adaptive_trace",
+    "taint": [],
+    "task_id": null,
+    "trust_class": "runtime_observation"
+  },
+  "raw_result_ref": "artifact://tasks/owner/trace_result_5e321a19764fe0dc4ded22472d224173316b33925625dd0b3371e314b5265eb4.json",
+  "sample_id": "transition_95336a532be0d76c517bc81e",
+  "state_after": {
+    "artifact_ref": "artifact://tasks/owner/trace_result_5e321a19764fe0dc4ded22472d224173316b33925625dd0b3371e314b5265eb4.json",
+    "semantic_predicates": {}
+  },
+  "state_before": {
+    "artifact_ref": null,
+    "semantic_predicates": {}
+  },
+  "verification": {
+    "canonicalizer_id": "",
+    "canonicalizer_version": "",
+    "evidence_refs": [],
+    "evidence_strength": 1,
+    "extractor_path": "",
+    "observed_at": "",
+    "observer": "",
+    "observer_failure_domain": "",
+    "relation": "EXACT",
+    "resource_binding": {},
+    "resource_version": "",
+    "source_kind": "unknown",
+    "status": "INCONCLUSIVE",
+    "trust_class": "untrusted",
+    "validation_receipts": [],
+    "verified_predicates": {},
+    "verifier": "",
+    "verifier_fingerprint": ""
+  }
+}

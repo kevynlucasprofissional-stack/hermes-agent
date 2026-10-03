@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_d045d953/browser_readback_ca39b43f3edbdb694b96b27f573f1ae4d21604d723832520dc6a8d8f9a5de66c.json",
+  "name": "browser_readback_ca39b43f3edbdb694b96b27f573f1ae4d21604d723832520dc6a8d8f9a5de66c.json",
+  "task_id": "t_d045d953",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_product_owned_completion_0\\hermes\\workstation\\artifacts\\t_d045d953\\browser_readback_ca39b43f3edbdb694b96b27f573f1ae4d21604d723832520dc6a8d8f9a5de66c.json",
+  "size_bytes": 1411,
+  "sha256": "d91cbf9da228405353ad61c10660bc7da10ec2aa768bbaa33573a62aa0d832bd",
+  "schema": "hermes.browser_local_readback.v1",
+  "summary": {
+    "item_count": 25,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:58:02.308490+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

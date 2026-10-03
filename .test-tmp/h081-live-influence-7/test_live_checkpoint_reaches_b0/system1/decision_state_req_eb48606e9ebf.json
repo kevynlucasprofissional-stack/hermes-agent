@@ -1,0 +1,8 @@
+{
+  "objective": "Read an existing file from the filesystem.",
+  "target": "filesystem",
+  "candidates": [
+    "read_file",
+    "send_email"
+  ]
+}

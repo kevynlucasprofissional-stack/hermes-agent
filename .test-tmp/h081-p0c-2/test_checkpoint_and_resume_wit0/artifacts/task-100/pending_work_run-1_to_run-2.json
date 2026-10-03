@@ -1,0 +1,23 @@
+{
+  "task_id": "task-100",
+  "stale_run_id": "run-1",
+  "current_run_id": "run-2",
+  "pending_items": [
+    {
+      "item_id": "item_2",
+      "operation_id": "op_2",
+      "action": "create_file"
+    },
+    {
+      "item_id": "item_3",
+      "operation_id": "op_3",
+      "action": "send_request"
+    }
+  ],
+  "uncertain_effects": [
+    {
+      "operation_id": "op_2",
+      "effect": "file_write_uncertain"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "tool": "incident_ui",
+  "action": "incident_ui",
+  "execution_class": "semantic",
+  "route": "fake_cards.ui",
+  "operation_fingerprint": "sem_op_c34862bb426c2ab798ea3f4e",
+  "semantic_fingerprint": "sem_op_c34862bb426c2ab798ea3f4e",
+  "arguments": {
+    "id": "0"
+  },
+  "semantic_anchor": null,
+  "before_state_ref": null,
+  "after_state_ref": "artifact://tasks/owner/trace_result_4e7f649637a350846c4ebd55734da57d39bde05fade2153d4e287724c7cf87a1.json",
+  "outcome": "failed",
+  "effect": "MUTATION",
+  "duration_ms": null,
+  "task_id": null,
+  "run_id": null,
+  "operation_id": "observation_bc5dbc8bf52044d6b4397a177f92b2ea",
+  "operation_id_conflict": false,
+  "caller_operation_id": null,
+  "owner_operation_id": null,
+  "operation_index": 0,
+  "captured_at": "2026-10-03T00:17:49.423234+00:00",
+  "scope": {},
+  "runtime": "fake_cards.ui",
+  "provider_usage": null,
+  "replayable": true,
+  "transition_ref": "artifact://tasks/owner/transition_ad23fb27087c12b57deb684ae9ba6725c895edd3f7c52052ec160fdf97f007c6.json"
+}

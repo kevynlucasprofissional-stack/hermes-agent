@@ -1,0 +1,50 @@
+[
+  {
+    "item_id": "plan_d97d5e94f1e5_0002",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0002.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0003",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0003.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0004",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0004.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0005",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0005.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0006",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0006.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0007",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0007.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0008",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0008.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0009",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0009.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0010",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0010.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0011",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0011.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0012",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0012.json"
+  },
+  {
+    "item_id": "plan_d97d5e94f1e5_0013",
+    "result_ref": "artifact://tasks/work_8611ef08da96814b52f06b064a9b406928731188ac50ee75c1571d20fb0d7315/norm_item_0013.json"
+  }
+]

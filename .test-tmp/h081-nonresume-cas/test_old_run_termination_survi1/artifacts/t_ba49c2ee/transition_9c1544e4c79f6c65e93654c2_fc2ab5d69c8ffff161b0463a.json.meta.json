@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_ba49c2ee/transition_9c1544e4c79f6c65e93654c2_fc2ab5d69c8ffff161b0463a.json",
+  "name": "transition_9c1544e4c79f6c65e93654c2_fc2ab5d69c8ffff161b0463a.json",
+  "task_id": "t_ba49c2ee",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-nonresume-cas\\test_old_run_termination_survi1\\artifacts\\t_ba49c2ee\\transition_9c1544e4c79f6c65e93654c2_fc2ab5d69c8ffff161b0463a.json",
+  "size_bytes": 1647,
+  "sha256": "3f4ef224c73bb9c77532c4138b21df747933a8099f9d00411bd540a756f63344",
+  "schema": "hermes.transition_sample.v1",
+  "summary": {
+    "item_count": 10,
+    "type": "dict"
+  },
+  "created_at": "2026-10-03T00:55:07.101473+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

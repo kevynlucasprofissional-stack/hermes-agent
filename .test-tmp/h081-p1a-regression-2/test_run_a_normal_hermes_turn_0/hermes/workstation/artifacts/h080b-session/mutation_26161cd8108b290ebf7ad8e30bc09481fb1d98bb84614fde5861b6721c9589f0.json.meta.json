@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/h080b-session/mutation_26161cd8108b290ebf7ad8e30bc09481fb1d98bb84614fde5861b6721c9589f0.json",
+  "name": "mutation_26161cd8108b290ebf7ad8e30bc09481fb1d98bb84614fde5861b6721c9589f0.json",
+  "task_id": "h080b-session",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-p1a-regression-2\\test_run_a_normal_hermes_turn_0\\hermes\\workstation\\artifacts\\h080b-session\\mutation_26161cd8108b290ebf7ad8e30bc09481fb1d98bb84614fde5861b6721c9589f0.json",
+  "size_bytes": 888,
+  "sha256": "e1211ae3c1bf988de407fa9f0b4b54d35ed83582c5178c7583393286e36659f9",
+  "schema": null,
+  "summary": {
+    "item_count": 21,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:57:55.383827+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

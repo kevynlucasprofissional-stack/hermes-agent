@@ -1,0 +1,16 @@
+{
+  "ref": "artifact://tasks/t_0dcfce70/authority_superseded_101.json",
+  "name": "authority_superseded_101.json",
+  "task_id": "t_0dcfce70",
+  "local_path": "C:\\Github\\hermes-agent\\.test-tmp\\h081-resume-5\\test_compiler_nonresumable_ter1\\artifacts\\t_0dcfce70\\authority_superseded_101.json",
+  "size_bytes": 416,
+  "sha256": "daf3d24fe386945a93fefe4227514576f7c0b35fdeebf1807b3ec3bb20558e6f",
+  "schema": "workstation.authority_superseded.v1",
+  "summary": {
+    "item_count": 10,
+    "type": "dict"
+  },
+  "created_at": "2026-10-02T23:46:06.348171+00:00",
+  "media_type": "application/json",
+  "encoding": "utf-8"
+}

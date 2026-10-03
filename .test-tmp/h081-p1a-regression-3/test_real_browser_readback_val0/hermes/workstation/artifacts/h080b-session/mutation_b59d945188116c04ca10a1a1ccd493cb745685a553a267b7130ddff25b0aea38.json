@@ -1,0 +1,23 @@
+{
+  "operation_id": "b59d945188116c04ca10a1a1ccd493cb745685a553a267b7130ddff25b0aea38",
+  "task_id": "t_32a76e5d",
+  "run_id": 5,
+  "tool": "browser_navigate",
+  "tool_effect": "MUTATION",
+  "effect": "unknown_mutation",
+  "scope": "unknown",
+  "external": null,
+  "provider": null,
+  "field": null,
+  "target_kind": "unknown",
+  "target_identifier": null,
+  "operation_semantic": "browser_navigate",
+  "timestamp": "2026-10-02T23:59:05.206033+00:00",
+  "evidence_ref": "artifact://tasks/h080b-session/eee6d83639da60a73f8324d546e1027b35212c3b65bb5b6653e34f88ac985269.data",
+  "verifier_status": "not_verified",
+  "persisted": null,
+  "status": "executed_unverified",
+  "operation_fingerprint": "b58cccc093f353c126e266b1315083ffdd2177a2c1add296dadeb93cf6b0c630",
+  "semantic_fingerprint": null,
+  "structural_signature": "b58cccc093f353c126e266b1315083ffdd2177a2c1add296dadeb93cf6b0c630"
+}
