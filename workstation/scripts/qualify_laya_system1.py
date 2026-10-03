@@ -9,6 +9,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -72,7 +73,11 @@ def main():
                           for key in ("tests", "failures", "errors", "skipped")}
                 totals["passed"] = totals["tests"] - totals["failures"] - totals["errors"] - totals["skipped"]
                 evidence.update(totals)
+                evidence["properties"] = {prop.get("name"): prop.get("value") for prop in suite.iter("property")}
             evidence["status"] = "passed" if result.returncode == 0 else "failed"
+            summary = re.search(r"Summary: (\d+) files, (\d+) tests passed, (\d+) failed(?:, (\d+) skipped)?", result.stdout)
+            if summary:
+                evidence.update(dict(zip(("files", "passed", "failures", "skipped"), (int(v or 0) for v in summary.groups()))))
             report["gates"][name] = evidence
             print(name + ": " + evidence["status"], flush=True)
             if result.returncode:

@@ -46,7 +46,7 @@ def test_wrong_old_format_and_unbounded_choice_abstain(tmp_path):
 
 
 @pytest.mark.skipif(os.getenv("HERMES_LAYA_LIVE_TEST") != "1", reason="explicit checkpoint opt-in required")
-def test_live_checkpoint_reaches_bounded_router(tmp_path):
+def test_live_checkpoint_reaches_bounded_router(tmp_path, record_property):
     from workstation.tests.test_system1_capability_routing import _build_test_capability
     from workstation.control_plane.router import CapabilityRouter, ExecutableDecision
     from workstation.control_plane.intent import OperationIntent
@@ -78,5 +78,12 @@ def test_live_checkpoint_reaches_bounded_router(tmp_path):
         assert receipt.answers["preferred_candidate"] == decision.capability.id == "read_file"
         assert receipt.downstream_certificate_ref
         assert receipt.model_revision
+        record_property("laya_model_revision", receipt.model_revision)
+        record_property("laya_version", receipt.laya_version)
+        record_property("laya_source_revision", receipt.laya_source_sha)
+        record_property("selected_candidate", receipt.selected_candidate)
+        record_property("calibrated_confidence", receipt.calibrated_confidences["preferred_candidate"])
+        record_property("calibration_id", receipt.calibration_id)
+        record_property("certificate_valid", decision.certificate.is_valid())
     finally:
         reset_system1_decision()
