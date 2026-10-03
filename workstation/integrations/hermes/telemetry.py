@@ -24,6 +24,13 @@ def install_workstation_telemetry():
 
 
 def _observe_runtime_event(event_name: str, metadata: dict) -> None:
+    if event_name == "task_run_superseded":
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.AUTHORITY_SUPERSEDED, source_owner="hermes.kanban_taskrun",
+            task_id=metadata["task_id"], run_id=metadata["stale_run_id"],
+            dedupe_key=f"supersession:{metadata['task_id']}:{metadata['stale_run_id']}:{metadata['run_id']}",
+            payload={"current_run_id": metadata["run_id"], "termination_kind": "SUPERSEDED"})
+        return
     if event_name == "system1_completed":
         from workstation.telemetry import TelemetryEventType, emit_event
         emit_event(TelemetryEventType.SYSTEM1_COMPLETED, source_owner="workstation.system1.provider",

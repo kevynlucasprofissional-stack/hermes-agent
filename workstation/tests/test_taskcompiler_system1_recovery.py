@@ -15,6 +15,10 @@ from workstation.tests.test_system1_capability_routing import _validated_verifie
 
 @pytest.mark.parametrize("confidence,has_reader,verified", [(0.99, True, True), (.1, True, True), (.99, False, True), (.99, True, False)])
 def test_compiler_known_reprobe_without_system2(tmp_path, monkeypatch, confidence, has_reader, verified):
+    import agent.runtime_events as runtime_events
+    monkeypatch.setattr(runtime_events, "_observers", [])
+    provider_calls = []
+    runtime_events.register_runtime_event_observer(lambda name, data: provider_calls.append(data) if name == "provider_called" else None)
     monkeypatch.setenv("HERMES_HOME", str(tmp_path))
     compiler = TaskCompiler(DurableTaskStore(conn=sqlite3.connect(tmp_path / "db")), ArtifactStore(tmp_path / "artifacts"))
     compiler.capability_registry = OperationalCapabilityRegistry(artifacts=compiler.artifacts)
@@ -39,6 +43,7 @@ def test_compiler_known_reprobe_without_system2(tmp_path, monkeypatch, confidenc
             assert result["verification_result"]["status"] == "VERIFIED"
             assert result["semantic_state"]["service"]["online"] is True
             assert calls == ["source.readback"]
+            assert provider_calls == []
         else:
             assert result["routing_decision"] == "WAKE_LLM"
     finally:
