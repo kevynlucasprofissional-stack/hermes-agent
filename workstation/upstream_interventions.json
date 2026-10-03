@@ -124,24 +124,217 @@
     "sunset_condition": "Upstream adopts equivalent projection boundary"
   },
   {
-    "id": "UPINT-005", "upstream_path": "agent/runtime_events.py", "symbols_or_region": ["* (new file)"],
-    "intervention_type": "ADD", "introduced_at": "2026-09-23", "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057", "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
-    "reason": "Add a generic content-free observer registry for optional runtime analytics", "previous_behavior": "No generic provider runtime observation boundary", "new_behavior": "Registered observers receive bounded structural provider dispatch metadata and cannot affect execution",
-    "hermes_work_dependencies": ["workstation.integrations.hermes.telemetry"], "fallback": {"mode": "legacy", "behavior": "Empty observer list is a no-op", "conditions": "When Workstation adapter is not installed"},
-    "seam_ids": ["SEAM-RUNTIME-TELEMETRY"], "tests": ["workstation/tests/test_operational_telemetry.py"], "reconciliation_notes": "Generic registry imports no Workstation code", "sunset_condition": "Upstream adopts equivalent runtime event observers"
+    "id": "UPINT-005",
+    "upstream_path": "agent/runtime_events.py",
+    "symbols_or_region": [
+      "* (new file)"
+    ],
+    "intervention_type": "ADD",
+    "introduced_at": "2026-09-23",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
+    "reason": "Add a generic content-free observer registry for optional runtime analytics",
+    "previous_behavior": "No generic provider runtime observation boundary",
+    "new_behavior": "Registered observers receive bounded structural provider dispatch metadata and cannot affect execution",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.telemetry"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Empty observer list is a no-op",
+      "conditions": "When Workstation adapter is not installed"
+    },
+    "seam_ids": [
+      "SEAM-RUNTIME-TELEMETRY"
+    ],
+    "tests": [
+      "workstation/tests/test_operational_telemetry.py"
+    ],
+    "reconciliation_notes": "Generic registry imports no Workstation code",
+    "sunset_condition": "Upstream adopts equivalent runtime event observers"
   },
   {
-    "id": "UPINT-006", "upstream_path": "agent/turn_api_call.py", "symbols_or_region": ["perform_api_call"],
-    "intervention_type": "MODIFY", "introduced_at": "2026-09-23", "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057", "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
-    "reason": "Observe main provider dispatch status and duration without content", "previous_behavior": "Provider dispatch had no generic structural observer notification", "new_behavior": "One success/error notification is emitted per actual main provider call",
-    "hermes_work_dependencies": ["workstation.integrations.hermes.telemetry"], "fallback": {"mode": "legacy", "behavior": "Notification is a no-op with no observers", "conditions": "When Workstation adapter is not installed"},
-    "seam_ids": ["SEAM-RUNTIME-TELEMETRY"], "tests": ["workstation/tests/test_operational_telemetry.py"], "reconciliation_notes": "No request or response content crosses the seam", "sunset_condition": "Upstream adopts equivalent runtime event observers"
+    "id": "UPINT-006",
+    "upstream_path": "agent/turn_api_call.py",
+    "symbols_or_region": [
+      "perform_api_call"
+    ],
+    "intervention_type": "MODIFY",
+    "introduced_at": "2026-09-23",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
+    "reason": "Observe main provider dispatch status and duration without content",
+    "previous_behavior": "Provider dispatch had no generic structural observer notification",
+    "new_behavior": "One success/error notification is emitted per actual main provider call",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.telemetry"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Notification is a no-op with no observers",
+      "conditions": "When Workstation adapter is not installed"
+    },
+    "seam_ids": [
+      "SEAM-RUNTIME-TELEMETRY"
+    ],
+    "tests": [
+      "workstation/tests/test_operational_telemetry.py"
+    ],
+    "reconciliation_notes": "No request or response content crosses the seam",
+    "sunset_condition": "Upstream adopts equivalent runtime event observers"
   },
   {
-    "id": "UPINT-007", "upstream_path": "agent/auxiliary_client.py", "symbols_or_region": ["_notify_aux_dispatch"],
-    "intervention_type": "MODIFY", "introduced_at": "2026-09-23", "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057", "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
-    "reason": "Reuse the existing auxiliary dispatch hook to distinguish auxiliary provider use", "previous_behavior": "Auxiliary dispatch hook only notified a thread-local liveness counter", "new_behavior": "The same dispatch point also publishes content-free purpose metadata",
-    "hermes_work_dependencies": ["workstation.integrations.hermes.telemetry"], "fallback": {"mode": "legacy", "behavior": "Notification is a no-op with no observers", "conditions": "When Workstation adapter is not installed"},
-    "seam_ids": ["SEAM-RUNTIME-TELEMETRY"], "tests": ["workstation/tests/test_operational_telemetry.py"], "reconciliation_notes": "Existing dispatch ownership and progress hooks remain unchanged", "sunset_condition": "Upstream adopts equivalent runtime event observers"
+    "id": "UPINT-007",
+    "upstream_path": "agent/auxiliary_client.py",
+    "symbols_or_region": [
+      "_notify_aux_dispatch"
+    ],
+    "intervention_type": "MODIFY",
+    "introduced_at": "2026-09-23",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "297a0be7fd75e67fe90480dd323823efce13972b",
+    "reason": "Reuse the existing auxiliary dispatch hook to distinguish auxiliary provider use",
+    "previous_behavior": "Auxiliary dispatch hook only notified a thread-local liveness counter",
+    "new_behavior": "The same dispatch point also publishes content-free purpose metadata",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.telemetry"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Notification is a no-op with no observers",
+      "conditions": "When Workstation adapter is not installed"
+    },
+    "seam_ids": [
+      "SEAM-RUNTIME-TELEMETRY"
+    ],
+    "tests": [
+      "workstation/tests/test_operational_telemetry.py"
+    ],
+    "reconciliation_notes": "Existing dispatch ownership and progress hooks remain unchanged",
+    "sunset_condition": "Upstream adopts equivalent runtime event observers"
+  },
+  {
+    "id": "UPINT-008",
+    "upstream_path": "agent/system1_decision.py",
+    "symbols_or_region": [
+      "DecisionRequest",
+      "DecisionResult",
+      "decide_system1"
+    ],
+    "intervention_type": "ADD",
+    "introduced_at": "2026-10-02",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "736be5b9cebc8ffcb1c02a084a4bdba3755a5074",
+    "reason": "Typed non-authoritative bounded decisions",
+    "previous_behavior": "No equivalent generic boundary",
+    "new_behavior": "Typed non-authoritative bounded decisions",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.adapter"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Empty observer/provider registries preserve normal Hermes behavior",
+      "conditions": "First-party adapter not installed"
+    },
+    "seam_ids": [
+      "SEAM-SYSTEM1-DECISION"
+    ],
+    "tests": [
+      "workstation/tests/test_laya_real_contract.py",
+      "workstation/tests/test_system1_safety.py"
+    ],
+    "reconciliation_notes": "No direct Workstation import; canonical authority and verification remain sovereign.",
+    "sunset_condition": "Upstream supplies equivalent semantics"
+  },
+  {
+    "id": "UPINT-009",
+    "upstream_path": "agent/background_review.py",
+    "symbols_or_region": [
+      "LearningReview",
+      "_emit_learning_review"
+    ],
+    "intervention_type": "MODIFY",
+    "introduced_at": "2026-10-02",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "736be5b9cebc8ffcb1c02a084a4bdba3755a5074",
+    "reason": "Generic review lineage without review self-certification",
+    "previous_behavior": "No equivalent generic boundary",
+    "new_behavior": "Generic review lineage without review self-certification",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.adapter"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Empty observer/provider registries preserve normal Hermes behavior",
+      "conditions": "First-party adapter not installed"
+    },
+    "seam_ids": [
+      "SEAM-SYSTEM1-DECISION"
+    ],
+    "tests": [
+      "workstation/tests/test_system1_learning_review_bridge.py"
+    ],
+    "reconciliation_notes": "No direct Workstation import; canonical authority and verification remain sovereign.",
+    "sunset_condition": "Upstream supplies equivalent semantics"
+  },
+  {
+    "id": "UPINT-010",
+    "upstream_path": "hermes_cli/kanban_db.py",
+    "symbols_or_region": [
+      "claim_task"
+    ],
+    "intervention_type": "MODIFY",
+    "introduced_at": "2026-10-02",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "d4f8e12cbfff28774d7887129e030a63fb8a7267",
+    "reason": "Publish committed TaskRun supersession through the existing event observer",
+    "previous_behavior": "No equivalent generic boundary",
+    "new_behavior": "Publish committed TaskRun supersession through the existing event observer",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.adapter"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Empty observer/provider registries preserve normal Hermes behavior",
+      "conditions": "First-party adapter not installed"
+    },
+    "seam_ids": [
+      "SEAM-RUNTIME-TELEMETRY"
+    ],
+    "tests": [
+      "workstation/tests/test_system1_telemetry.py"
+    ],
+    "reconciliation_notes": "No direct Workstation import; canonical authority and verification remain sovereign.",
+    "sunset_condition": "Upstream supplies equivalent semantics"
+  },
+  {
+    "id": "UPINT-011",
+    "upstream_path": "hermes_cli/kanban_db_runtime_events.py",
+    "symbols_or_region": [
+      "notify_claimed_run"
+    ],
+    "intervention_type": "ADD",
+    "introduced_at": "2026-10-02",
+    "upstream_baseline_sha": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+    "downstream_commit_sha": "d4f8e12cbfff28774d7887129e030a63fb8a7267",
+    "reason": "Content-free post-commit run lineage notification",
+    "previous_behavior": "No equivalent generic boundary",
+    "new_behavior": "Content-free post-commit run lineage notification",
+    "hermes_work_dependencies": [
+      "workstation.integrations.hermes.adapter"
+    ],
+    "fallback": {
+      "mode": "legacy",
+      "behavior": "Empty observer/provider registries preserve normal Hermes behavior",
+      "conditions": "First-party adapter not installed"
+    },
+    "seam_ids": [
+      "SEAM-RUNTIME-TELEMETRY"
+    ],
+    "tests": [
+      "workstation/tests/test_system1_telemetry.py"
+    ],
+    "reconciliation_notes": "No direct Workstation import; canonical authority and verification remain sovereign.",
+    "sunset_condition": "Upstream supplies equivalent semantics"
   }
 ]

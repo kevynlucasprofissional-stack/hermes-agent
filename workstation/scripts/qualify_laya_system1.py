@@ -38,8 +38,12 @@ GATES = {
 def run(command, env):
     started = time.monotonic()
     result = subprocess.run(command, cwd=ROOT, env=env, text=True, encoding="utf-8", errors="replace", capture_output=True)
-    return result, {"command": command, "exit_code": result.returncode,
-                    "duration_seconds": round(time.monotonic() - started, 3)}
+    evidence = {"command": command, "exit_code": result.returncode,
+                "duration_seconds": round(time.monotonic() - started, 3)}
+    summary = re.search(r"Summary: (\d+) files, (\d+) tests passed, (\d+) failed(?:, (\d+) skipped)?", result.stdout)
+    if summary:
+        evidence.update(dict(zip(("files", "passed", "failures", "skipped"), (int(v or 0) for v in summary.groups()))))
+    return result, evidence
 
 
 def main():
@@ -75,9 +79,6 @@ def main():
                 evidence.update(totals)
                 evidence["properties"] = {prop.get("name"): prop.get("value") for prop in suite.iter("property")}
             evidence["status"] = "passed" if result.returncode == 0 else "failed"
-            summary = re.search(r"Summary: (\d+) files, (\d+) tests passed, (\d+) failed(?:, (\d+) skipped)?", result.stdout)
-            if summary:
-                evidence.update(dict(zip(("files", "passed", "failures", "skipped"), (int(v or 0) for v in summary.groups()))))
             report["gates"][name] = evidence
             print(name + ": " + evidence["status"], flush=True)
             if result.returncode:

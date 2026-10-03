@@ -11,6 +11,7 @@ def bind_native_reprobe(compiler, objective, task, session_id):
     operation_id = objective.get("operation_id")
     if not operation_id or task.current_run_id is None:
         return
+    compiler.canonical_operation_id = operation_id
     from workstation.control_plane.verification import VerificationContract, VerificationLifecycle, VerificationEvidence
     from workstation.execution_policy import EvidenceStrength
     compiler.authoritative_state_contract = VerificationContract(
@@ -52,7 +53,8 @@ def resolve_reprobe(compiler, intent, task_id, session_id):
         return None
     verdict = evaluate_verification(contract, state, evidence,
         required_predicates={intent.goal.fingerprint()}, expected_task_id=task_id,
-        expected_run_id=getattr(compiler, "canonical_run_id", None))
+        expected_run_id=getattr(compiler, "canonical_run_id", None),
+        expected_operation_id=getattr(compiler, "canonical_operation_id", None) or intent.id)
     if not verdict.verified:
         return None
     ref = compiler.artifacts.store(task_id, "known_reprobe_verification.json", verdict.to_dict(),

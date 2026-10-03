@@ -25,7 +25,7 @@ def test_compiler_known_reprobe_without_system2(tmp_path, monkeypatch, confidenc
     goal = EQ("service.online", True)
     evidence = VerificationEvidence(evidence_id="owner:read", observer="owner.readback", source_kind="source_of_record",
         value={"service": {"online": True}}, trust_class="trusted_owner" if verified else "untrusted",
-        evidence_strength=EvidenceStrength.SEMANTIC_PERSISTED_READBACK, covered_predicates=(goal.fingerprint(),), task_id="t")
+        evidence_strength=EvidenceStrength.SEMANTIC_PERSISTED_READBACK, covered_predicates=(goal.fingerprint(),), task_id="t", operation_id="i")
     calls = []
     if has_reader:
         compiler.authoritative_state_reader = lambda: calls.append("source.readback") or [evidence]

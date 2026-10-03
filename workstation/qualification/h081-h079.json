@@ -1,0 +1,60 @@
+{
+  "schema": "hermes.h079.classification.v1",
+  "date": "2026-10-02",
+  "lane": "H-081 correction of existing accepted cycle; no promotion or main merge",
+  "baseline": "e4d079f005ba6b324316e70bb4f9915460f555aa",
+  "immutable_adopted_upstream_pin": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+  "upstream_initial_tip": "729012410066f559c8bd82e894973712388ffa72",
+  "upstream_final_tip": "46904a3b467f62616f5b3ee247adce30b1b277a0",
+  "merge_base": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+  "compared_head": "8be8bd29b2a23a7613b1d7b8a623ca42bde2a14b",
+  "upstream_only_commits": 7336,
+  "downstream_only_commits_at_compared_head": 770,
+  "classification": "MATERIAL_FILE_OVERLAP / TARGET_SEAMS_CLASSIFIED",
+  "physical_upstream_merge": false,
+  "overlaps": [
+    {
+      "path": "agent/background_review.py",
+      "disposition": "SEMANTIC_PORT",
+      "concern": "Keep generic LearningReview lineage/evidence fields and hook while adopting upstream teardown/caching/localization on next upstream cycle; H-081 changes do not replace those functions.",
+      "upstream_delta": {
+        "added": 74,
+        "deleted": 76
+      }
+    },
+    {
+      "path": "hermes_cli/kanban_db.py",
+      "disposition": "SEMANTIC_PORT",
+      "concern": "Keep post-commit structural TaskRun notification; owner transitions and claim CAS remain upstream-owned.",
+      "upstream_delta": {
+        "added": 31,
+        "deleted": 92
+      }
+    },
+    {
+      "path": "pyproject.toml",
+      "disposition": "KEEP_WORKSTATION",
+      "concern": "The approved local Laya path source and workstation-laya extra are first-party packaging; upstream version/dependency changes belong to the next pinned baseline cycle.",
+      "upstream_delta": {
+        "added": 402,
+        "deleted": 159
+      }
+    },
+    {
+      "path": "tools/lazy_deps.py",
+      "disposition": "ADOPT_UPSTREAM",
+      "concern": "No H-081 edits here; adopt the upstream lazy dependency decomposition with the next baseline cycle.",
+      "upstream_delta": {
+        "added": 19,
+        "deleted": 844
+      }
+    }
+  ],
+  "no_upstream_overlap": [
+    "agent/system1_decision.py",
+    "agent/runtime_events.py",
+    "hermes_cli/kanban_db_runtime_events.py"
+  ],
+  "seam_disposition": "UPSTREAM_ABSTRACT",
+  "scope_note": "Classification is complete for this corrective branch. It does not certify a baseline aligned to the latest upstream tip or authorize promotion across the material drift. User explicitly ordered continuation of this branch and classification after corrections."
+}
