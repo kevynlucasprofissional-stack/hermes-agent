@@ -6,9 +6,11 @@
 Supported vendored Laya install, real checkpoint bounded influence, immutable stale-run
 fencing with canonical adoption/readback, verified no-System2 reprobe, verifier-grounded
 labels, durable progressive samples/reconstructible dataset, receipts and owner telemetry
-are proven locally. Final focused dogfood: **39 passed including live**, plus full
+are proven locally. Final focused dogfood: **43 passed including live**, plus full
 Workstation regression and adjacent owner/core gates. H-079 material drift is classified;
 no new upstream pin or main merge was performed. CI remains the external qualification gate.
+Latest complete runtime regression: **853 passed, 0 failed, 2 skipped**.
+
 See [H-081 closure evidence](../../qualification/H081_CLOSURE_2026-10-02.md) for exact scope, counts and reproducer.
 
 The following audit/state entries are historical; their local P0/P1 findings are

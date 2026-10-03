@@ -1,0 +1,159 @@
+{
+  "initial_head": "972bc0389f36d43bde149816c8db965da23b515f",
+  "through_runtime_head": "617f4349799cf1c657ae7aff8bb577613ea88c57",
+  "commits": [
+    {
+      "sha": "82687da6afdfa8baa69606542cd4c4461dbb483f",
+      "subject": "docs(workstation): reopen H-081 after Laya branch audit",
+      "imported_existing_audit": true
+    },
+    {
+      "sha": "cdd2f81adf0614e342208af6b8d851f29fdf1c7f",
+      "subject": "Merge commit '82687da6afdfa8baa69606542cd4c4461dbb483f' into workstation/laya-direct-system1",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "abec3b241445b6c2f5375898a75b142d788aa7d1",
+      "subject": "fix(system1): activate vendored laya with strict provenance",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "56babb85bfe31ea3644ff70eb03e0f94a1f42e1e",
+      "subject": "fix(system1): decode real laya typed prediction contract",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "3d70d99ae32b54509dcc836380b825981285fab6",
+      "subject": "fix(workstation): close taskrun authority supersession continuation",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "31d1e60cf921ff7f9872c8ddd4ed5c7211931c95",
+      "subject": "fix(workstation): honor deterministic no-system2 recovery",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "e2da0c89258552556e30a68f164c16f43fe43aed",
+      "subject": "fix(system1): ground learning labels in verifier evidence",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "1f9e13bb639c2a23badc1b59e989086f222fb56b",
+      "subject": "feat(workstation): capture progressive experience for system1 learning",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "1790a5e6071b76fed5c6867b5b39e3f6e11daf45",
+      "subject": "feat(system1): complete decision receipt provenance",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "36e934354e7a99aab935e0de44bc56049c1a228d",
+      "subject": "feat(workstation): wire system1 outcome telemetry",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "3f8ac8e16363eadaecc32a9929ddca8d8bbfd4f3",
+      "subject": "fix(workstation): preserve invocation fences and durable counterevidence",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "d4f8e12cbfff28774d7887129e030a63fb8a7267",
+      "subject": "fix(workstation): observe canonical taskrun supersession events",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "687f39ac157d2b24118273758ff67e35e4dfb2cf",
+      "subject": "test(workstation): qualify laya system1 end-to-end",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "8be8bd29b2a23a7613b1d7b8a623ca42bde2a14b",
+      "subject": "test(system1): retain live checkpoint qualification metadata",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "66e23b5ecc8b7c9226d49260a99bc8924e3a8240",
+      "subject": "test(workstation): register h081 seams and upstream classification",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "e79d4c636b901a9792f67b3742ecae859e7da9e6",
+      "subject": "docs(workstation): record h081 qualification evidence",
+      "imported_existing_audit": false
+    },
+    {
+      "sha": "617f4349799cf1c657ae7aff8bb577613ea88c57",
+      "subject": "fix(workstation): keep terminated run and plan lineage non-resumable",
+      "imported_existing_audit": false
+    }
+  ],
+  "files": [
+    ".github/workflows/laya-system1-qualification.yml",
+    "agent/background_review.py",
+    "agent/system1_decision.py",
+    "hermes_cli/kanban_db.py",
+    "hermes_cli/kanban_db_runtime_events.py",
+    "pyproject.toml",
+    "tests/hermes_cli/test_kanban_db.py",
+    "tests/hermes_cli/test_kanban_reclaim_claim_lock_guard.py",
+    "uv.lock",
+    "workstation/ROADMAP.md",
+    "workstation/UPSTREAM_DELTA.md",
+    "workstation/authority_supersession.py",
+    "workstation/batch_detection.py",
+    "workstation/context/CURRENT_STATE.md",
+    "workstation/context/DECISIONS.md",
+    "workstation/context/HERMES_WORKSTATION_INTELLIGENCE.md",
+    "workstation/context/KNOWN_ISSUES.md",
+    "workstation/context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md",
+    "workstation/context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md",
+    "workstation/context/engineering-journal/CURRENT.md",
+    "workstation/control_plane/metrics.py",
+    "workstation/control_plane/router.py",
+    "workstation/durable_tasks.py",
+    "workstation/experience_compiler/corpus.py",
+    "workstation/experience_compiler/models.py",
+    "workstation/experience_compiler/progressive.py",
+    "workstation/experience_compiler/state_abstraction.py",
+    "workstation/first_party_seams.json",
+    "workstation/integrations/hermes/adapter.py",
+    "workstation/integrations/hermes/operational_resolution.py",
+    "workstation/integrations/hermes/scoped_execution.py",
+    "workstation/integrations/hermes/telemetry.py",
+    "workstation/integrations/hermes/tool_observer.py",
+    "workstation/operational_kernel.py",
+    "workstation/procedure_trace.py",
+    "workstation/qualification/H081_CLOSURE_2026-10-02.md",
+    "workstation/qualification/h081-changes.json",
+    "workstation/qualification/h081-final-focused.json",
+    "workstation/qualification/h081-final-runtime.json",
+    "workstation/qualification/h081-h079.json",
+    "workstation/qualification/h081-local.json",
+    "workstation/reasoning_handoff.py",
+    "workstation/scripts/qualify_laya_system1.py",
+    "workstation/system1/dataset.py",
+    "workstation/system1/laya_provider.py",
+    "workstation/system1/laya_source_manifest.json",
+    "workstation/system1/provenance.py",
+    "workstation/system1/receipts.py",
+    "workstation/system1/schemas.py",
+    "workstation/task_compiler.py",
+    "workstation/task_compiler_recovery.py",
+    "workstation/telemetry/models.py",
+    "workstation/telemetry/projectors.py",
+    "workstation/tests/test_experience_compiler.py",
+    "workstation/tests/test_laya_real_contract.py",
+    "workstation/tests/test_laya_vendor_provenance.py",
+    "workstation/tests/test_non_resident_await_telemetry.py",
+    "workstation/tests/test_progressive_experience_capture.py",
+    "workstation/tests/test_system1_dataset_builder.py",
+    "workstation/tests/test_system1_learning_review_bridge.py",
+    "workstation/tests/test_system1_receipts_provenance.py",
+    "workstation/tests/test_system1_telemetry.py",
+    "workstation/tests/test_taskcompiler_supersession_e2e.py",
+    "workstation/tests/test_taskcompiler_system1_recovery.py",
+    "workstation/upstream_interventions.json"
+  ],
+  "preserved_uncommitted_user_file": "workstation/dogfood/02.10.26.md"
+}
