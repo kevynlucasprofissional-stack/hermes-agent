@@ -33,6 +33,9 @@ class DecisionReceipt:
     schema_id: str = ""
     state_digest: str = ""
     request_hash: str = ""
+    state_ref: str = ""
+    candidate_set_ref: str = ""
+    candidate_set_hash: str = ""
 
     task_id: str = ""
     run_id: str = ""
@@ -49,12 +52,16 @@ class DecisionReceipt:
     question_schema_version: str = "1.0.0"
     laya_version: str = ""
     laya_source_sha: str = ""
+    laya_source_path: str = ""
+    checkpoint_digest: Optional[str] = None
 
     confidence: Dict[str, float] = field(default_factory=dict)
     confidences: Dict[str, float] = field(default_factory=dict)
     answers: Dict[str, Any] = field(default_factory=dict)
     decisions: Dict[str, Any] = field(default_factory=dict)
     calibrated_confidences: Dict[str, float] = field(default_factory=dict)
+    probabilities: Dict[str, Any] = field(default_factory=dict)
+    abstentions: list[str] = field(default_factory=list)
 
     downstream_certificate_ref: Optional[str] = None
     downstream_verification_ref: Optional[str] = None
@@ -149,3 +156,22 @@ def load_decision_receipt(
     except Exception:
         pass
     return None
+
+
+def link_decision_receipt(ref, store, *, task_id=None, run_id=None, operation_id=None, certificate_ref=None, verification_ref=None):
+    receipt = load_decision_receipt(ref, store)
+    if receipt is None:
+        return False
+    for field, expected in (("task_id", task_id), ("run_id", run_id), ("operation_id", operation_id)):
+        actual = getattr(receipt, field)
+        if actual and expected is not None and str(actual) != str(expected):
+            raise ValueError("DecisionReceipt downstream lineage mismatch")
+    if certificate_ref:
+        receipt.downstream_certificate_ref = certificate_ref
+        certificate = store.read_json(certificate_ref)
+        receipt.details["provider_preferred_candidate"] = receipt.selected_candidate
+        receipt.selected_candidate = certificate.get("capability_id") or receipt.selected_candidate
+    if verification_ref:
+        receipt.downstream_verification_ref = verification_ref
+    persist_decision_receipt(receipt, store)
+    return True

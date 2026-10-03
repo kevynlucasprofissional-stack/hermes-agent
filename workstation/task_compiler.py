@@ -1059,9 +1059,10 @@ class TaskCompiler:
         # baseline state — is offered to the router rather than decided here. The
         # router owns reconciliation gating; a caller that observes nothing passes
         # nothing and routing behaves exactly as before.
-        runtime_state = request.get("runtime_state")
+        runtime_state = {**(request.get("runtime_state") or {}), "task_id": canonical_task_id or task_id}
         decision = router.route(intent, semantic_state, authority,
-                                runtime_state=runtime_state if isinstance(runtime_state, dict) else None)
+                                runtime_state=runtime_state, run_id=getattr(self, "canonical_run_id", None) or _canonical_caller_run.get(),
+                                operation_id=request.get("operation_id") or intent.id)
         try:
             self.metrics_collector.on_routing_decision(decision)
         except Exception:
@@ -1114,6 +1115,13 @@ class TaskCompiler:
                     },
                 )
                 exec_res = dispatch_res.get("result", {})
+                if decision.system1_receipt_ref and exec_res.get("verification_result"):
+                    from workstation.system1.receipts import link_decision_receipt
+                    verification_ref = self.artifacts.store(canonical_task_id or task_id,
+                        "routing_verification_" + cert_hash + ".json", exec_res["verification_result"], schema="workstation.verification_result.v1").ref
+                    link_decision_receipt(decision.system1_receipt_ref, self.artifacts,
+                        task_id=canonical_task_id or task_id, run_id=getattr(self, "canonical_run_id", None),
+                        operation_id=request.get("operation_id") or intent.id, verification_ref=verification_ref)
                 if not dispatch_res.get("success", True):
                     return {
                         **exec_res,

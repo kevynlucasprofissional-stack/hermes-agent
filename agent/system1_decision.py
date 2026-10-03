@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -67,11 +67,7 @@ class DecisionRequest:
 
     def request_hash(self) -> str:
         import hashlib, json
-        data = {
-            "request_id": self.request_id,
-            "questions": self.questions,
-            "minimal_state": self.minimal_state,
-        }
+        data = asdict(self)
         return hashlib.sha256(json.dumps(data, sort_keys=True, default=str).encode("utf-8")).hexdigest()
 
 

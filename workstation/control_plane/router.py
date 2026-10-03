@@ -160,6 +160,7 @@ class ExecutableDecision(RoutingDecision):
 
     capability: OperationalCapability
     certificate: RoutingCertificate
+    system1_receipt_ref: str | None = None
 
     @property
     def is_dispatchable(self) -> bool:
@@ -352,6 +353,7 @@ class CapabilityRouter:
         authority = authority_scope or AuthorityScope(level=AuthorityLevel.READ)
         intent_h = operation_intent_hash(operation_intent)
         state_h = _state_hash(semantic_state)
+        ranking_receipt_ref = None
 
         # 1. Check outstanding uncertain mutations in relevant domain
         uncertain_mutations = runtime_state.get("outstanding_uncertain_mutations", [])
@@ -405,10 +407,16 @@ class CapabilityRouter:
                         "target": operation_intent.target,
                         "candidates": candidate_ids[:20],
                     },
-                    context={"run_id": run_id, "operation_id": operation_id},
+                    context={"task_id": runtime_state.get("task_id", ""), "run_id": run_id, "operation_id": operation_id},
+                    candidate_sets={"preferred_candidate": candidate_ids[:20]},
                 )
                 s1_res = decide_system1(s1_req)
-                if s1_res and s1_res.provider != "deterministic_fallback":
+                if s1_res and s1_res.provider != "deterministic_fallback" and not s1_res.fallback_recommended and not s1_res.is_abstained("preferred_candidate"):
+                    from workstation.system1.calibration import default_calibration_policy
+                    if not default_calibration_policy.evaluate_confidence("preferred_candidate", s1_res.confidence.get("preferred_candidate", 0.0)):
+                        s1_res = None
+                if s1_res and not s1_res.fallback_recommended and not s1_res.is_abstained("preferred_candidate"):
+                    ranking_receipt_ref = s1_res.details.get("receipt_ref")
                     preferred = s1_res.decisions.get("preferred_candidate")
                     if preferred and preferred not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
                         matched = [c for c in candidates if c.id == preferred]
@@ -567,7 +575,13 @@ class CapabilityRouter:
                 operation_id=operation_id,
             )
 
-            return ExecutableDecision(capability=cap, certificate=cert)
+            if ranking_receipt_ref:
+                from workstation.system1.receipts import link_decision_receipt
+                cert_ref = self.registry.artifacts.store(runtime_state.get("task_id") or "system1",
+                    "routing_certificate_" + cert.certificate_hash() + ".json", cert.to_dict(), schema="workstation.routing_certificate.v1").ref
+                link_decision_receipt(ranking_receipt_ref, self.registry.artifacts,
+                    task_id=runtime_state.get("task_id"), run_id=run_id, operation_id=operation_id, certificate_ref=cert_ref)
+            return ExecutableDecision(capability=cap, certificate=cert, system1_receipt_ref=ranking_receipt_ref)
 
         # 4. If any candidate had an authority shortfall, yield to human
         if authority_shortfalls:
@@ -618,7 +632,7 @@ class CapabilityRouter:
                     "has_candidates": len(candidates) > 0,
                     "runtime_state": {k: str(v) for k, v in runtime_state.items() if k != "baseline_state"},
                 },
-                context={"run_id": run_id, "operation_id": operation_id},
+                context={"task_id": runtime_state.get("task_id", ""), "run_id": run_id, "operation_id": operation_id},
             )
             s1_res = decide_system1(s1_req)
             if s1_res and s1_res.provider != "deterministic_fallback" and not s1_res.fallback_recommended:

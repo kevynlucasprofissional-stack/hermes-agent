@@ -89,11 +89,9 @@ class LayaDecisionProvider:
         start_time = time.perf_counter()
 
         if not request.questions:
-            return DecisionResult(
-                request_id=request.request_id,
-                fallback_recommended=True,
-                details={"reason": "empty_questions"},
-            )
+            result = DecisionResult(request_id=request.request_id, provider="laya", model=self.model, fallback_recommended=True, details={"reason": "empty_questions"})
+            self._persist_receipt(request, result)
+            return result
 
         try:
             router = self._ensure_router()
@@ -183,43 +181,14 @@ class LayaDecisionProvider:
                 },
             )
 
-            # 5. Persist durable DecisionReceipt
-            receipt = DecisionReceipt(
-                request_ref=request.state_ref or compute_state_hash(request.minimal_state),
-                request_hash=request.request_hash(),
-                domain=request.domain,
-                schema_id=request.schema_id,
-                state_digest=compute_state_hash(request.minimal_state),
-                result_ref=f"res_{request.request_id}",
-                task_id=request.task_id,
-                run_id=request.run_id,
-                operation_id=request.operation_id,
-                influence_mode="direct" if not fallback_rec else "fallback",
-                selected_candidate=answers.get("preferred_candidate"),
-                fallback_taken=fallback_rec,
-                provider="laya",
-                model=target_model,
-                calibration_id=self.calibration_policy.calibration_id,
-                question_schema_version=request.question_schema_version,
-                confidence=confidence,
-                calibrated_confidences=calibrated_confidences,
-                laya_version=self.provenance.laya_version,
-                laya_source_sha=self.provenance.laya_source_sha,
-                model_revision=self.provenance.checkpoint_revision,
-                details={"probabilities": probabilities, "abstentions": abstentions,
-                    "candidate_set_hash": request.candidate_set_hash or compute_candidate_set_hash(request.candidate_sets),
-                    "provenance": self.provenance.to_dict()},
-                answers=answers,
-                latency_ms=latency_ms,
-            )
-            result.details["receipt_ref"] = persist_decision_receipt(receipt, self.artifact_store)
+            self._persist_receipt(request, result)
 
             return result
 
         except Exception as exc:
             latency_ms = (time.perf_counter() - start_time) * 1000.0
             logger.error("Laya decision execution failed; falling back to default path", exc_info=True)
-            return DecisionResult(
+            result = DecisionResult(
                 request_id=request.request_id,
                 provider="laya",
                 model=self.model,
@@ -227,3 +196,37 @@ class LayaDecisionProvider:
                 fallback_recommended=True,
                 details={"error": str(exc)},
             )
+
+            self._persist_receipt(request, result)
+            return result
+
+    def _persist_receipt(self, request, result):
+        from dataclasses import asdict
+        result.schema_id = request.schema_id
+        result.request_hash = request.request_hash()
+        result.calibration_id = self.calibration_policy.calibration_id
+        revisions = getattr(self._router, "loaded_revisions", {})
+        self.provenance.checkpoint_revision = revisions.get(result.model) if isinstance(revisions, dict) else None
+        result.model_revision = self.provenance.checkpoint_revision
+        result_ref = self.artifact_store.store(request.task_id or "system1", "decision_result_" + request.request_id + ".json",
+            asdict(result), schema="system1.decision_result.v1").ref
+        from workstation.recipes import sanitize
+        state_ref = request.state_ref or self.artifact_store.store(request.task_id or "system1",
+            "decision_state_" + request.request_id + ".json", sanitize(request.minimal_state), schema="system1.minimal_state.v1").ref
+        candidates_ref = self.artifact_store.store(request.task_id or "system1", "decision_candidates_" + request.request_id + ".json",
+            request.candidate_sets or request.questions, schema="system1.candidate_set.v1").ref
+        receipt = DecisionReceipt(request_ref=request.request_hash(), result_ref=result_ref,
+            request_hash=request.request_hash(), domain=request.domain, schema_id=request.schema_id,
+            state_ref=state_ref, state_digest=compute_state_hash(request.minimal_state), candidate_set_ref=candidates_ref,
+            candidate_set_hash=request.candidate_set_hash or compute_state_hash(request.candidate_sets or request.questions),
+            task_id=request.task_id, run_id=request.run_id, operation_id=request.operation_id,
+            influence_mode="fallback" if result.fallback_recommended else "ranking_only" if "preferred_candidate" in request.questions else "direct",
+            selected_candidate=result.answers.get("preferred_candidate"), fallback_taken=result.fallback_recommended,
+            provider="laya", model=result.model, model_revision=result.model_revision,
+            checkpoint_digest=self.provenance.checkpoint_digest, calibration_id=result.calibration_id,
+            question_schema_version=request.question_schema_version, laya_version=self.provenance.laya_version,
+            laya_source_path=self.provenance.source_path, laya_source_sha=self.provenance.laya_source_sha,
+            confidence=result.confidence, calibrated_confidences=result.calibrated_confidences,
+            probabilities=result.probabilities, abstentions=result.abstentions, answers=result.answers,
+            latency_ms=result.latency_ms, details={"provenance": self.provenance.to_dict()})
+        result.details["receipt_ref"] = persist_decision_receipt(receipt, self.artifact_store)
