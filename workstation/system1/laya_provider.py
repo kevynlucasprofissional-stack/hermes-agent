@@ -63,6 +63,7 @@ class LayaDecisionProvider:
             if self._router is not None:
                 return self._router
 
+            verify_laya_provenance()
             from laya import Router
 
             logger.info("Initializing resident Laya Router on device: %s", self.device)
@@ -194,7 +195,7 @@ class LayaDecisionProvider:
                 model=self.model,
                 latency_ms=latency_ms,
                 fallback_recommended=True,
-                details={"error": str(exc)},
+                details={"error": type(exc).__name__},
             )
 
             self._persist_receipt(request, result)

@@ -107,7 +107,7 @@ def build_candidate_ranking_schema(
     return {
         "preferred_candidate": {
             "type": "choice",
-            "instructions": instructions or "Select the best candidate capability for the objective and state.",
+            "instructions": instructions or "Which capability should handle the request in objective?",
             "criteria": criteria,
         }
     }

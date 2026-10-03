@@ -54,17 +54,29 @@ def test_live_checkpoint_reaches_bounded_router(tmp_path):
     from workstation.control_plane.lattice import AuthorityLevel, AuthorityScope
     from workstation.operational_capabilities import OperationalCapabilityRegistry
     provider = LayaDecisionProvider(artifact_store=ArtifactStore(root_dir=tmp_path))
-    registry = OperationalCapabilityRegistry()
-    for name in ("cap_alpha", "cap_beta"):
+    registry = OperationalCapabilityRegistry(artifacts=provider.artifact_store)
+    for name in ("send_email", "read_file"):
         registry.register(_build_test_capability(name))
-    register_system1_decision_provider(provider)
+    reset_system1_decision()
+    routed_results = []
+    def live_provider(request):
+        outcome = provider(request)
+        routed_results.append(outcome)
+        return outcome
+    register_system1_decision_provider(live_provider)
     try:
         result = provider(DecisionRequest(questions={"q": {"type": "choice", "instructions": "Choose the matching word: beta", "criteria": {"cap_alpha": "alpha", "cap_beta": "beta"}}}))
         assert result.answers["q"] in ("cap_alpha", "cap_beta")
         assert "error" not in result.details and provider.provenance.source_bytes_verified
         decision = CapabilityRouter(registry=registry).route(
-            OperationIntent(id="live", target="filesystem", goal=EQ("file.exists", True), effect_budget=[SET("file.exists", True)], metadata={"target_family": "filesystem"}),
+            OperationIntent(id="live", target="filesystem", goal=EQ("file.exists", True), effect_budget=[SET("file.exists", True)], metadata={"target_family": "filesystem", "objective": "Read an existing file from the filesystem."}),
             {"state": {"ready": True}}, AuthorityScope(level=AuthorityLevel.EXTERNAL_REVERSIBLE, allowed_actions={"*"}))
         assert isinstance(decision, ExecutableDecision) and decision.certificate.is_valid()
+        assert decision.system1_receipt_ref, [(r.answers, r.confidence, r.abstentions, r.details) for r in routed_results]
+        receipt = load_decision_receipt(decision.system1_receipt_ref, provider.artifact_store)
+        assert not receipt.fallback_taken and not receipt.abstentions
+        assert receipt.answers["preferred_candidate"] == decision.capability.id == "read_file"
+        assert receipt.downstream_certificate_ref
+        assert receipt.model_revision
     finally:
         reset_system1_decision()

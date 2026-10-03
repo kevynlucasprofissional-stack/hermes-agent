@@ -424,7 +424,8 @@ class CapabilityRouter:
                         if matched:
                             candidates = matched + rest
             except Exception:
-                pass
+                import logging
+                logging.getLogger(__name__).exception("System-1 ranking failed; preserving bounded candidate order")
 
         authority_shortfalls: list[tuple[OperationalCapability, AuthorityScope]] = []
 

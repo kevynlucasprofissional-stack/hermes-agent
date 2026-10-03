@@ -1,0 +1,37 @@
+name: Laya System-1 qualification
+
+on:
+  push:
+    branches: [workstation/laya-direct-system1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  h081-contracts:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.12.3"
+      - name: Supported local-source install
+        run: uv sync --locked --python 3.11 --extra dev --extra workstation-laya
+      - name: Verify exact head
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne '${{ github.sha }}') { throw 'Wrong candidate checkout' }
+      - name: H-081 owner proofs and full Workstation regression
+        run: .venv/Scripts/python.exe -m workstation.scripts.qualify_laya_system1 --full
+      - name: Strict seams and dependency provenance
+        run: |
+          .venv/Scripts/python.exe workstation/scripts/audit_hermes_seams.py --strict
+          .venv/Scripts/python.exe workstation/scripts/validate_lock.py
+          .venv/Scripts/python.exe workstation/scripts/verify_licenses.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: h081-${{ github.sha }}
+          path: workstation/qualification/h081-local.json
