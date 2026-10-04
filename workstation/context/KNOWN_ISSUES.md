@@ -1,9 +1,11 @@
 # Workstation Known Issues
 
-## KI-024 — Voice input can auto-activate on a fresh session and submit ambient transcripts as user turns [OPEN — P0 SAFETY / ROOT CAUSE OPEN]
+## KI-024 — Dictation can activate unintentionally while listening mode is armed and submit ambient transcripts as user turns [OPEN — P0 SAFETY / ROOT CAUSE OPEN]
 
 **Confirmed 2026-10-03:** Hermes Work was directly reproduced activating its voice/dictation
-conversation path when a fresh session was opened, without an explicit user action to start voice.
+conversation path without an explicit user action to start dictation. Opening a fresh session is
+one observed context, but **not the only trigger condition**. While the listening mode remains
+open/armed, dictation can be activated accidentally at other times as well.
 
 The earlier session `20261003_220744_7f4b93` contained a stream of unsolicited `role=user`
 messages, several carrying Hermes' first-party spoken-reply interruption note. One false transcript
@@ -15,15 +17,22 @@ selection.
 Current code contains a relevant but **unproven** candidate seam:
 `apps/desktop/src/store/composer.ts` deliberately latches
 `$voiceConversationStartRequest` across a fresh-session composer remount, and
-`use-composer-voice.ts` consumes that request and calls `activateConversation()`. Do not call
-this the root cause until the request producer, target ownership and remount ordering are traced.
+`use-composer-voice.ts` consumes that request and calls `activateConversation()`. That seam may
+explain some session-transition activations, but the broader reproduction means it cannot be
+treated as the whole cause unless it is shown to remain triggerable while listening mode is already
+open. The complete transition from passive listening to active dictation must be traced.
 
 Required closure:
-- bind voice-start authority to the exact intended session/surface and explicit user gesture;
-- prove stale requests cannot survive into unrelated sessions/remounts/windows;
+- bind every transition into active dictation to an explicit, attributable user intent for the
+  exact session/surface;
+- prove passive/listening mode can remain open for an extended period without spontaneously
+  promoting itself into active dictation;
+- prove stale requests cannot survive into unrelated sessions/remounts/windows or fire later;
 - preserve the legitimate start-voice-then-create-session handoff;
-- add regression coverage for session creation/switch/remount/multi-surface cases;
-- prove fresh-session creation with ambient audio cannot auto-submit a `user` turn;
+- add regression coverage for prolonged listening, idle/background periods, session
+  creation/switch/remount and multi-surface cases;
+- prove ambient audio cannot become a submitted `user` turn unless dictation was explicitly
+  activated by the user;
 - carry explicit voice/STT provenance downstream as defense in depth.
 
 This bug is security-relevant but is **not evidence of an external attack**. Root cause and

@@ -4,23 +4,27 @@
 
 **Classification:** REPRODUCED / P0 SAFETY BUG / ROOT CAUSE OPEN.
 
-Observed symptom: opening a fresh Hermes Work session can activate voice/dictation without the
-operator pressing the voice control. This supplies the missing reproduction condition for session
-`20261003_220744_7f4b93`, where unsolicited voice-derived `user` turns interrupted spoken replies
-and one false transcript caused normal read/query tool selection.
+Observed symptom: Hermes Work can activate voice/dictation without the operator pressing the voice
+control. Opening a fresh session reproduced it, but subsequent observation broadened the bug:
+**while listening mode remains open/armed, accidental activation can occur at other times too**.
+This supplies a plausible input path for session `20261003_220744_7f4b93`, where unsolicited
+voice-derived `user` turns interrupted spoken replies and one false transcript caused normal
+read/query tool selection.
 
-The strongest implementation clue is the deliberate fresh-session latch in
-`apps/desktop/src/store/composer.ts`: `$voiceConversationStartRequest` survives composer remount,
-and `use-composer-voice.ts` consumes an accepted request by calling `activateConversation()`.
-This is a hypothesis target, not a confirmed root cause.
+The deliberate fresh-session latch in `apps/desktop/src/store/composer.ts` remains a concrete
+implementation clue: `$voiceConversationStartRequest` survives composer remount, and
+`use-composer-voice.ts` consumes an accepted request by calling `activateConversation()`.
+However, it is now only one hypothesis target. The investigation must also cover the state
+transition from passive/listening mode into active dictation when no session transition occurs.
 
 Security interpretation: unintended microphone activation can elevate ambient speech into the same
 semantic channel as typed user instructions. No evidence currently establishes remote compromise or
 an attacker.
 
-Next falsification target: instrument request producer -> request id -> intended session/surface ->
-consumer session/surface -> activation, then reproduce fresh-session creation under stale/no-start
-conditions.
+Next falsification target: instrument every transition into active dictation — trigger/call-site,
+request/event id, listening-state transition, explicit-user-gesture evidence, intended
+session/surface and consumer session/surface — then reproduce both prolonged idle listening and
+fresh-session/remount cases under no-start conditions.
 
 Canonical incident context:
 [../VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md](../VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md).

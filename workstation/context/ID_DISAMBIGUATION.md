@@ -94,7 +94,7 @@ own numbering.
 
 | ID | Title | State |
 |---|---|---|
-| `KI-024` | Voice input can auto-activate on a fresh session and submit ambient transcripts as user turns | OPEN — P0 SAFETY / root cause open |
+| `KI-024` | Dictation can activate unintentionally while listening mode is armed and submit ambient transcripts as user turns | OPEN — P0 SAFETY / root cause open |
 | `KI-023` | Browser owner receipt enforced as causal proof | RESOLVED IN H-080B.2 |
 | `KI-022` | Product-owned validation lifecycle and empirical verifier receipts | RESOLVED IN H-080B.2 |
 | `KI-021` | H-080B production capture does not yet become verified learning capital | OPEN / qualification evolving |

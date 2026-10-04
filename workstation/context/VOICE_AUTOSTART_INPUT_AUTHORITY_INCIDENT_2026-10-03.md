@@ -4,8 +4,10 @@
 
 ## Summary
 
-Hermes Work has been directly reproduced activating its voice/dictation conversation path when a
-fresh session is opened, without an explicit user action to start voice input.
+Hermes Work has been directly reproduced activating its voice/dictation path without an explicit
+user action to start dictation. Opening a fresh session is one observed context, but the defect is
+broader: **while listening mode remains open/armed, dictation can be activated accidentally at
+other times as well**.
 
 This reproduces the missing precondition behind an earlier incident in session
 `20261003_220744_7f4b93`: while the operator was away from the computer, Hermes received a stream
@@ -18,8 +20,10 @@ It is not evidence, by itself, of remote compromise or an external attacker.
 
 ## Confirmed observations
 
-1. Opening a new Hermes Work session can cause voice input / voice conversation to activate without
-   the operator pressing the voice control.
+1. Hermes Work can transition into active dictation without the operator pressing the voice
+   control. Opening a new session reproduced this once, but it is **not required**: when listening
+   mode remains open/armed, accidental activation can occur later and outside a session-opening
+   transition.
 2. The earlier incident contained approximately 18 unexpected `user` turns over a short period.
 3. Representative unsolicited transcripts included:
    - `This is our central bridge.` repeated three times;
@@ -58,7 +62,8 @@ that either happened in the 2026-10-03 incident.
 
 ## Primary implementation clue — not yet a root-cause verdict
 
-The current Desktop code intentionally latches voice-start requests across a fresh-session remount:
+The current Desktop code intentionally latches voice-start requests across a fresh-session remount,
+which remains one concrete implementation clue:
 
 - `apps/desktop/src/store/composer.ts`
   - module-level `$voiceConversationStartRequest = atom(0)`;
@@ -71,10 +76,11 @@ The current Desktop code intentionally latches voice-start requests across a fre
     `takeVoiceConversationStart(voiceStartRequest)`;
   - an accepted request calls `activateConversation()`.
 
-This is highly relevant because the reproduced failure occurs specifically around opening a fresh
-session. However, the evidence does **not** yet prove that a stale latch is the trigger. The caller
-that creates the unexpected request, remount ordering, multi-surface ownership and session binding
-must be traced before declaring cause.
+This is relevant because one reproduction occurred around opening a fresh session. However,
+subsequent observation shows that the failure can also occur while listening mode is already open,
+with no session-opening event. The stale latch therefore cannot be treated as a complete
+explanation unless it can also fire later. The investigation must trace both the request producer
+and the broader state machine that promotes passive/listening state into active dictation.
 
 The interruption note seen in the incident is also first-party:
 
@@ -87,62 +93,70 @@ evidence of an attacker.
 
 ## Root-cause hypotheses to falsify
 
-1. **Stale cross-session voice-start request.** A latched start request survives the session/remount
-   transition and is consumed by a new main composer that was not the intended target.
-2. **Request ownership is too broad.** The module-level counter is not bound to
+1. **Listening-state promotion bug.** A passive/armed listening state can transition into active
+   dictation without a fresh explicit user intent, for example through VAD, wake-state, lifecycle,
+   timer/rearm or another state-machine event.
+2. **Stale cross-session voice-start request.** A latched start request survives the session/remount
+   transition and is consumed by a new main composer that was not the intended target, or remains
+   live long enough to fire later.
+3. **Request ownership is too broad.** The module-level counter is not bound to
    `session_id`, composer occurrence, window/surface owner or an explicit user-gesture token.
-3. **Session creation race.** The intended "start voice in the new session" handoff races with
-   session selection/remount and activates a later/unrelated session.
-4. **Multi-window / floating-composer interaction.** More than one surface observes or transfers the
-   same start intent incorrectly.
-5. **Separate trigger path.** A hotkey, wake-word or other Desktop voice-start path issues
-   `requestVoiceConversationStart()` unexpectedly.
+4. **Session creation / lifecycle race.** A voice-start handoff or listening rearm races with
+   selection/remount/background lifecycle and activates an unrelated or later session.
+5. **Multi-window / floating-composer interaction.** More than one surface observes or transfers the
+   same start/listening intent incorrectly.
+6. **Separate trigger path.** A hotkey, wake-word, VAD or other Desktop voice-start path issues
+   `requestVoiceConversationStart()` or equivalent activation unexpectedly.
 
-Treat all five as hypotheses until instrumentation or a deterministic test identifies the producer
-and consumer of the bad request.
+Treat all six as hypotheses until instrumentation or a deterministic test identifies the event that
+promotes listening into active dictation and the authority by which it does so.
 
 ## Required instrumentation before the fix is called understood
 
 Record, without audio content:
 
-- voice-start request id/nonce;
-- producer/call-site;
+- voice-start request/event id or nonce;
+- producer/call-site and trigger class (button, hotkey, wake, VAD, rearm, lifecycle, remount, other);
 - timestamp;
+- listening-mode state before and after the transition;
 - current `session_id`;
 - intended target session / composer occurrence;
 - window/surface id;
-- whether the request followed an explicit user gesture;
+- whether the transition followed an explicit user gesture;
 - consumer session/surface;
 - activation and teardown timestamps.
 
-A trace must make it possible to answer: **who requested voice, for which session, and why did this
-composer have authority to consume it?**
+A trace must make it possible to answer: **what event promoted listening into active dictation, who
+authorized it, for which session, and why did this composer have authority to consume it?**
 
 ## Acceptance criteria for closure
 
 A fix is not complete until all of the following are proven:
 
-1. Creating/opening/switching a session never opens the microphone or activates voice conversation
-   without an explicit voice-start intent for that exact target.
-2. A voice-start intent is single-use and cannot leak into a later unrelated session, remount,
-   window, floating composer or application restart.
-3. The legitimate flow "start voice -> create/open fresh session -> continue voice in that intended
+1. Listening mode can remain open/armed for a sustained idle/background period without transitioning
+   into active dictation unless an explicit valid trigger occurs.
+2. Creating/opening/switching a session never activates dictation without an explicit voice-start
+   intent for that exact target.
+3. A voice-start intent is single-use and cannot leak into a later unrelated session, remount,
+   window, floating composer, idle period or application restart.
+4. The legitimate flow "start voice -> create/open fresh session -> continue voice in that intended
    session" still works.
-4. Regression tests cover stale requests, remounts, rapid session switching and multi-surface
-   ownership.
-5. A negative E2E test proves that opening a fresh session while ambient audio exists does not
-   generate or submit a `user` turn.
-6. Voice-origin turns carry explicit provenance so downstream policy/telemetry can distinguish
+5. Regression tests cover prolonged listening, VAD/wake/rearm transitions, stale requests, remounts,
+   rapid session switching and multi-surface ownership.
+6. Negative E2E tests prove that ambient audio during prolonged listening or fresh-session creation
+   cannot generate or submit a `user` turn unless the user explicitly activated dictation.
+7. Voice-origin turns carry explicit provenance so downstream policy/telemetry can distinguish
    typed input from STT input. This is defense in depth and must not be used as a substitute for
-   fixing auto-start.
-7. Consequential tool execution from voice-origin input is reviewed against the Workstation
+   fixing unintended activation.
+8. Consequential tool execution from voice-origin input is reviewed against the Workstation
    authority/effect-safety model; ambiguous unsolicited audio must not silently gain more authority
    than the user intended.
 
 ## Classification boundary
 
-**Confirmed:** voice mode can auto-start on a fresh session; unsolicited voice-derived turns can be
-accepted as `user` input; such turns can influence tool selection.
+**Confirmed:** active dictation can start without an explicit user action while listening mode is
+open/armed; a fresh-session transition is one observed context but is not required. Unsolicited
+voice-derived turns can be accepted as `user` input and can influence tool selection.
 
 **Not confirmed:** which code path emits the unintended start request; whether the defect is
 upstream, downstream or an interaction between them; whether any external actor participated.
