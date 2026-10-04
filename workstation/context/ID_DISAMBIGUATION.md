@@ -94,6 +94,14 @@ own numbering.
 
 | ID | Title | State |
 |---|---|---|
+| `KI-024` | Voice input can auto-activate on a fresh session and submit ambient transcripts as user turns | OPEN — P0 SAFETY / root cause open |
+| `KI-023` | Browser owner receipt enforced as causal proof | RESOLVED IN H-080B.2 |
+| `KI-022` | Product-owned validation lifecycle and empirical verifier receipts | RESOLVED IN H-080B.2 |
+| `KI-021` | H-080B production capture does not yet become verified learning capital | OPEN / qualification evolving |
+| `KI-020` | H-080 production path / exact-head CI qualification | OPEN — CI / qualification evolving |
+| `KI-019` | Anthropic routing contract lacks a real SDK construction proof | CLOSED LOCALLY — CI PENDING |
+| `KI-018` | Windows release gate mixes POSIX/macOS fixtures into Windows execution | CLOSED LOCALLY — CI PENDING |
+| `KI-017` | One-click dogfood fails on an existing supported venv without pip | CLOSED LOCALLY — CI PENDING |
 | `KI-016` | Post-H-076/H-077 false-confidence residuals can still overstate operational truth | IMPLEMENTED — exact-head CI pending |
 | `KI-015` | "Verified" could encode correlated, stale or under-specified evidence | RESOLVED — H-076 |
 | `KI-014` | Verified adaptive procedure stays in the LLM loop instead of handing off in-flight | RESOLVED — H-075 |
@@ -170,7 +178,7 @@ reference means, as established from context.
 ## Rules going forward
 
 1. **Never reuse a retired number.** Take the next unused identifier in the series: `H-080` and
-   above in the journal, `KI-017` and above in the known-issues registry. Old series are not
+   above in the journal, `KI-025` and above in the known-issues registry. Old series are not
    available for recycling even where an entry is closed.
 2. New journal hypotheses are **appended above** existing ones (`CURRENT.md` is newest-first);
    new decisions are **appended below** existing ones (`DECISIONS.md` is ascending).

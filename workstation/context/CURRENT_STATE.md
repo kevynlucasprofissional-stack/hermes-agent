@@ -1190,6 +1190,12 @@ The exact-head native Windows/Electron probe emitted `H010_CLASSIFICATION=VALIDA
 
 See `KNOWN_ISSUES.md` and the active reliability gate.
 
+- **KI-024 (voice auto-start / input authority) is OPEN P0:** opening a fresh session has been
+  reproduced activating voice/dictation without an explicit current-session user action. A prior
+  incident shows unsolicited STT-derived `user` turns can influence normal tool selection.
+  Root cause is not yet assigned; the latched `$voiceConversationStartRequest` remount handoff is
+  a candidate seam, not a verdict. See
+  `VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md`.
 - The 2026-09-17 confirmed execution-identity/completion/journal contradictions are active P0 work even though the underlying subsystem tests are green.
 - KI-003 is resolved by promoted BrowserSessionState.
 - KI-002/KI-004 (Preview duplication and host overlap/ownership composition)

@@ -1,5 +1,38 @@
 # Workstation Known Issues
 
+## KI-024 — Voice input can auto-activate on a fresh session and submit ambient transcripts as user turns [OPEN — P0 SAFETY / ROOT CAUSE OPEN]
+
+**Confirmed 2026-10-03:** Hermes Work was directly reproduced activating its voice/dictation
+conversation path when a fresh session was opened, without an explicit user action to start voice.
+
+The earlier session `20261003_220744_7f4b93` contained a stream of unsolicited `role=user`
+messages, several carrying Hermes' first-party spoken-reply interruption note. One false transcript
+about `TX520K14` was treated as user intent strongly enough to trigger read/query tools
+(`web_search` and Windows PnP inspection). The failure therefore crosses an input-authority
+boundary: unintended ambient/STT text can become an authoritative user turn and influence tool
+selection.
+
+Current code contains a relevant but **unproven** candidate seam:
+`apps/desktop/src/store/composer.ts` deliberately latches
+`$voiceConversationStartRequest` across a fresh-session composer remount, and
+`use-composer-voice.ts` consumes that request and calls `activateConversation()`. Do not call
+this the root cause until the request producer, target ownership and remount ordering are traced.
+
+Required closure:
+- bind voice-start authority to the exact intended session/surface and explicit user gesture;
+- prove stale requests cannot survive into unrelated sessions/remounts/windows;
+- preserve the legitimate start-voice-then-create-session handoff;
+- add regression coverage for session creation/switch/remount/multi-surface cases;
+- prove fresh-session creation with ambient audio cannot auto-submit a `user` turn;
+- carry explicit voice/STT provenance downstream as defense in depth.
+
+This bug is security-relevant but is **not evidence of an external attack**. Root cause and
+upstream/downstream ownership remain open.
+
+Detailed evidence, hypotheses and acceptance criteria:
+[VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md](VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md).
+
+
 ## KI-023 — Browser owner receipt enforced as causal proof [RESOLVED IN H-080B.2]
 
 Resolved in H-080B.2:

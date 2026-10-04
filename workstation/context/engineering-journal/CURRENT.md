@@ -1,5 +1,31 @@
 # CURRENT — Workstation Engineering Journal
 
+## Voice auto-start / input-authority incident — 2026-10-03
+
+**Classification:** REPRODUCED / P0 SAFETY BUG / ROOT CAUSE OPEN.
+
+Observed symptom: opening a fresh Hermes Work session can activate voice/dictation without the
+operator pressing the voice control. This supplies the missing reproduction condition for session
+`20261003_220744_7f4b93`, where unsolicited voice-derived `user` turns interrupted spoken replies
+and one false transcript caused normal read/query tool selection.
+
+The strongest implementation clue is the deliberate fresh-session latch in
+`apps/desktop/src/store/composer.ts`: `$voiceConversationStartRequest` survives composer remount,
+and `use-composer-voice.ts` consumes an accepted request by calling `activateConversation()`.
+This is a hypothesis target, not a confirmed root cause.
+
+Security interpretation: unintended microphone activation can elevate ambient speech into the same
+semantic channel as typed user instructions. No evidence currently establishes remote compromise or
+an attacker.
+
+Next falsification target: instrument request producer -> request id -> intended session/surface ->
+consumer session/surface -> activation, then reproduce fresh-session creation under stale/no-start
+conditions.
+
+Canonical incident context:
+[../VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md](../VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md).
+Canonical known issue: `KI-024`.
+
 ## H-081 — Laya direct System-1 / resumable authority / learning-loop experiment (2026-10-02)
 
 **Classification:** ARCHITECTURAL DECISION ACCEPTED / IMPLEMENTATION OPEN / ISOLATED-BRANCH EXPERIMENT AUTHORIZED.

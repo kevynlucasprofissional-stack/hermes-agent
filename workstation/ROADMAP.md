@@ -159,6 +159,11 @@ dependencies without falsification/evidence**:
 
 The strategic map treats the following as active truth, not historical footnotes:
 
+- **KI-024 voice auto-start/input-authority is a P0 blocker:** fresh-session creation can
+  activate the voice path without an explicit current-session user action, allowing ambient/STT
+  text to become authoritative `user` turns and influence tool selection. Root cause remains
+  unconfirmed; close only with session/surface-bound start authority plus deterministic regression
+  and negative E2E evidence;
 - H-080A production authority/real dispatch/real post-effect evidence/truthful metrics/
   exact-head CI remain open;
 - H-080B verified Experience Compiler feedback-loop closure remains open;
