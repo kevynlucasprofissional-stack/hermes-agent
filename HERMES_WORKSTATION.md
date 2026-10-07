@@ -46,6 +46,12 @@ Equivalent explicit PowerShell invocation:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\workstation\install.ps1
 ```
 
+> **Known startup reliability gap (2026-10-07):** the current one-click path still performs
+> dependency preparation on every launch, so a healthy warm start can fail on PyPI/npm registry
+> availability. On the Laya branch the local setup path also does not explicitly mirror CI's
+> `workstation-laya` profile. The accepted correction is documented in
+> [`workstation/context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md`](workstation/context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+>
 The installer is idempotent, validates all core patch anchors before writing,
 selects a usable Python interpreter, and records its integration through stable
 anchors rather than replacing Hermes source wholesale.
