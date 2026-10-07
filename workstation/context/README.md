@@ -56,6 +56,7 @@ changing or reviewing that lane:
 - [`IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md`](IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md) — identity vocabulary, ownership projection, cross-tenant falsification and allowlist-first MCP environments.
 - [`LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md`](LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md) — progress watchdog, circuit breakers, capability health, typed operational failures and Cost per Verified Outcome.
 - [`LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md) — active branch-gated System-1 provider, DecisionReceipts, progressive/retrospective learning and second upstream policy.
+- [`WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md`](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md) — warm-start/offline readiness, lock-based repair/bootstrap, local/CI Laya profile parity and Python/Node dependency preparation boundaries.
 
 These documents extend existing owners and gates. They do not authorize parallel stores,
 a second control plane, a second scheduler or bypass of H-080/H-079/H-078.
