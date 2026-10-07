@@ -57,6 +57,18 @@ the target change is then implemented from that stable baseline.
 
 ## One-click Windows dogfood
 
+### Current bootstrap caveat — 2026-10-07
+
+The current implementation still enters dependency preparation on every one-click launch. Even
+with an existing healthy `.venv`, `install.ps1` runs Python installation/resolution and
+`npm ci`. A temporary package-registry outage can therefore block warm startup. On the Laya
+branch, CI also prepares `workstation-laya` explicitly while this local path does not.
+
+This is a tracked open reliability issue, not intended steady-state behavior. The accepted target
+is an offline-capable local readiness fast path with `uv sync --locked` / `npm ci` used only
+when the prepared environment is missing, stale or broken. See
+[`context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md`](context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 For the normal personal/dogfood path, double-click the repository-root launcher:
 
 ```text
