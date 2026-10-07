@@ -1,5 +1,30 @@
 # CURRENT — Workstation Engineering Journal
 
+## H-082 — One-click warm-start failure is bootstrap/network coupling, not Laya runtime (2026-10-07)
+
+**Classification: VALIDATED / IMPLEMENTATION NEXT.**
+
+Hypothesis: the observed `pillow-heif` timeout is a startup/bootstrap architecture defect rather
+than a Laya/System-1 or Python 3.13 runtime incompatibility.
+
+Evidence confirms:
+- failure is inside `install.ps1` before Desktop/System-1 start;
+- locked HEIF package has a CPython 3.13 Windows x64 wheel;
+- installer blob is identical on `main` and the Laya branch;
+- one-click always invokes install and current install still runs `uv pip install -e .`;
+- the same phase also runs `npm ci`;
+- H-081 CI uses `uv sync --locked --extra workstation-laya`, exposing a local/CI profile gap.
+
+Next hypothesis/experiment: a deterministic local readiness gate can skip Python/Node dependency
+preparation on an unchanged healthy environment while correctly forcing repair after dependency
+lock/profile drift. First acceptance experiment blocks package-registry access and requires
+one-click to reach Desktop from a healthy prepared environment.
+
+Detailed record:
+[bootstrap-startup-network-coupling-2026-10-07.md](bootstrap-startup-network-coupling-2026-10-07.md).  
+Canonical target:
+[../WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](../WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## 2026-10-02 — H-081 corrective runtime closure
 
 **LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
