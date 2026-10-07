@@ -1,5 +1,40 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-07 — Bootstrap não é startup: warm start deve ser offline-capable
+
+Uma falha real de dogfood corrigiu a interpretação do problema: o timeout em
+`https://pypi.org/simple/pillow-heif/` não revela falha do Laya nem incompatibilidade com
+Python 3.13. O erro acontece antes do runtime do Hermes Work: o launcher chama instalação em
+toda abertura, `install.ps1` executa `uv pip install -e .` mesmo com `.venv` saudável e
+também executa `npm ci`.
+
+A consequência arquitetural é maior que o pacote que disparou o erro:
+
+> **se warm start depende de resolução de pacotes, disponibilidade do PyPI/npm vira
+> disponibilidade do aplicativo.**
+
+Nova inteligência operacional:
+
+```text
+startup
+= validação local + readiness local + doctor + Desktop
+
+bootstrap/repair
+= uv sync --locked + perfil requerido + npm ci quando necessário
+```
+
+Para H-081 há ainda um gap de paridade: CI já usa
+`uv sync --locked --extra workstation-laya`; o one-click local não. Portanto
+"qualificou no CI" não implica que o ambiente dogfood local tenha o mesmo conjunto de runtime.
+
+Decisão: um ambiente saudável e inalterado deve iniciar sem acesso ao PyPI ou npm registry.
+Mudança de `uv.lock`/metadata, ausência/quebra do ambiente ou reparo explícito pode ativar sync.
+O fast path não pode ser um `-SkipInstall` cego: precisa de prova local determinística de
+readiness, incluindo provenance estrita do Laya nesta branch.
+
+Canônico:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## 2026-10-02 — H-081 corrective runtime closure
 
 **LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
