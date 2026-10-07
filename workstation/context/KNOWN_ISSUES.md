@@ -1,5 +1,36 @@
 # Workstation Known Issues
 
+## KI-025 — Healthy warm start can fail on package-registry availability [OPEN — STARTUP RELIABILITY]
+
+Observed on `workstation/laya-direct-system1` during real one-click dogfood.
+
+Fingerprint:
+
+```text
+START-HERMES-WORKSTATION.bat
+-> install.cmd
+-> install.ps1
+-> uv pip install --python ... -e .
+-> PyPI pillow-heif simple index
+-> timeout after retries
+-> launcher abort
+```
+
+This is not a Laya/System-1 runtime exception. The package is locked with a compatible CPython
+3.13 Windows x64 wheel, and `install.ps1` is shared with `main`.
+
+Root problem:
+- warm start unconditionally enters dependency preparation;
+- existing healthy `.venv` does not suppress Python resolution/install;
+- `npm ci` is also unconditional;
+- Laya branch local setup does not explicitly match CI's `workstation-laya` profile.
+
+Do not "fix" by removing `pillow-heif`, weakening the lock, or blindly skipping install.
+Close with a deterministic local readiness proof plus lock-based repair/bootstrap.
+
+Canonical:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## 2026-10-02 — H-081 corrective runtime closure
 
 **LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
