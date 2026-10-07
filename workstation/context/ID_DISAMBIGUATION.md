@@ -169,8 +169,9 @@ reference means, as established from context.
 
 ## Rules going forward
 
-1. **Never reuse a retired number.** Take the next unused identifier in the series: `H-080` and
-   above in the journal, `KI-017` and above in the known-issues registry. Old series are not
+1. **Never reuse a retired number.** Take the next unused identifier in the series. As of
+   2026-10-07, the latest assigned identifiers are `H-082`, `KI-025`, and `D-037`; therefore
+   new work should begin at `H-083`, `KI-026`, and `D-038` respectively. Old series are not
    available for recycling even where an entry is closed.
 2. New journal hypotheses are **appended above** existing ones (`CURRENT.md` is newest-first);
    new decisions are **appended below** existing ones (`DECISIONS.md` is ascending).
