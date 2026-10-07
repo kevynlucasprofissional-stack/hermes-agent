@@ -1,5 +1,25 @@
 # Current State
 
+## 2026-10-07 — One-click startup bootstrap coupling [OPEN — IMPLEMENTATION REQUIRED]
+
+A dogfood launch on `workstation/laya-direct-system1` failed in dependency preparation before
+Desktop or System-1 runtime execution. `uv pip install -e .` timed out reading the PyPI
+`pillow-heif` index after retries. The branch lock contains `pillow-heif==1.5.0` with a
+CPython 3.13 Windows x64 wheel, so this is not evidence of package/Python incompatibility.
+
+Current one-click behavior always runs install; `install.ps1` still resolves Python
+dependencies and runs `npm ci` even when the local environment already exists. This makes
+registry availability a warm-start dependency.
+
+H-081-specific parity gap: exact qualification uses
+`uv sync --locked --extra workstation-laya`; local one-click setup does not explicitly install
+that profile.
+
+Required correction: offline local readiness fast path; lock-based repair/bootstrap;
+`workstation-laya` parity; no unconditional `npm ci`; actionable failure classification.
+Canonical design:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## 2026-10-02 — H-081 corrective runtime closure
 
 **LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
