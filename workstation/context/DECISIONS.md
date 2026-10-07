@@ -1116,3 +1116,45 @@ Canonical evidence:
 
 D-035 refines D-017 and D-031; it does not weaken their authority, uncertainty or
 verification contracts.
+
+## D-037 — Dependency preparation is not Workstation startup
+
+**Decision date:** 2026-10-07  
+**Status:** ACCEPTED
+
+A healthy unchanged Hermes Workstation environment must be startable without contacting Python or
+Node package registries.
+
+### Decision
+
+1. **Warm start is offline-capable.**
+   Startup may perform local source/integration/readiness validation, doctor and Desktop launch.
+   It must not run dependency resolution solely because the application was opened.
+
+2. **Bootstrap/repair is conditional.**
+   Dependency preparation runs only for missing, stale or locally proven broken state, dependency
+   metadata/lock drift, or explicit user repair/update.
+
+3. **Use project-lock semantics.**
+   Python repair/bootstrap uses `uv sync --locked` rather than unconstrained
+   `uv pip install -e .` as the Workstation environment owner.
+
+4. **H-081 local setup matches qualification profile.**
+   On the Laya branch, the prepared environment includes `workstation-laya` and strict vendored
+   provenance. CI-only availability is not sufficient.
+
+5. **Node follows the same rule.**
+   `npm ci` is preparation, not warm startup; run it only when workspace readiness requires it.
+
+6. **Fast path requires proof, not a blind skip.**
+   The implementation must use deterministic local readiness/fingerprint evidence so dependency
+   drift cannot be silently ignored.
+
+7. **Registry retry settings are mitigation only.**
+   Longer timeouts/retries may improve cold install, but they do not satisfy the warm-start
+   availability contract.
+
+8. **Doctor validates; it does not become a hidden package installer.**
+
+Canonical design:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
