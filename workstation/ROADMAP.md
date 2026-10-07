@@ -1,5 +1,42 @@
 # Workstation roadmap
 
+## 2026-10-07 — Warm-start bootstrap decoupling / local-CI environment parity
+
+**Status: DESIGN ACCEPTED / IMPLEMENTATION REQUIRED on `workstation/laya-direct-system1`.**
+
+A real dogfood start exposed a startup-availability defect before Laya/System-1 runtime execution:
+the one-click launcher always enters `install.ps1`; a healthy existing `.venv` still executes
+`uv pip install -e .`, and the same phase runs `npm ci`. A transient timeout while reading
+the PyPI `pillow-heif` index therefore aborts Hermes Work. The locked package already has a
+CPython 3.13 Windows x64 wheel, and the installer is identical on `main` and this branch, so
+this is not a Laya or Python-compatibility regression.
+
+The branch also has an environment-parity gap: H-081 CI/qualification uses
+`uv sync --locked ... --extra workstation-laya`, while local one-click setup uses
+`uv pip install -e .` and does not explicitly request the Laya Workstation profile.
+
+Required order:
+
+```text
+RED warm-start/offline regressions
+-> local environment readiness/fingerprint contract
+-> uv sync --locked repair/bootstrap
+-> workstation-laya profile parity
+-> Python fast path
+-> Node fast path (no unconditional npm ci)
+-> doctor/launcher error classification
+-> offline warm-start dogfood
+-> H-081 focused + full regressions
+-> exact-head CI / final drift
+```
+
+Target invariant: **an unchanged healthy Workstation must start without contacting PyPI or the
+npm registry; network/package resolution belongs only to first install, dependency drift,
+explicit repair/update, or a locally proven broken environment.**
+
+Canonical design and acceptance:
+[context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## Strategic map — 2026-09-28 conversation-derived intake
 
 This section is the **current navigation layer** for Hermes Workstation development.
