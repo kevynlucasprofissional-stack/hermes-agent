@@ -1,5 +1,15 @@
 # Workstation roadmap
 
+## 2026-10-08 — CURRENT PRIORITY: Online compilability safety correction (C0–C6)
+
+**STATUS: PARTIALLY IMPLEMENTED / P0 SAFETY AND REAL E2E OPEN / NOT QUALIFIED / NO MAIN MERGE.** The `c969fbf` implementation introduced the monitor and locally reported 11/11 new tests, 71/71 selected regressions and 14/14 gates. Those counts do not prove end-to-end autonomous reuse. Independent code audit on `b13a2424` found fabricated replay/evidence and LOCAL_MUTATION authority/budgets in `validate_candidate_run_local()`, missing `POSSIBLE_RUN_LOCAL_REUSE` automatic continuation, mining global corpus before post-hoc run filtering, direct-by-default uncalibrated Laya, inaccurate success/avoided-call metrics, and bounded-worker gaps. CI `37783114603` failed; `37794367952` was pending at audit. Historic “implemented/qualified” entries below are snapshots, not release closure.
+
+**Do in order:** C0 default SHADOW/contain + H-079/H-081 baseline; C1 RED/GREEN fail-closed replay/verification/TaskRun authority; C2 source-scoped corpus mining; C3 automatic TaskRun handoff under existing run_closure owners; C4 bounded shadow calibration/fallback/worker lifecycle; C5 terminal verified receipts and measured System-2 impact; C6 integrated adversarial tests, real Laya, full suite and exact-head CI. Do not duplicate compiler/registry or close H-082 by this work.
+
+**Single implementation specification:** [context/ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](context/ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
 ## 2026-10-08 — Checkout prerequisite corrected; loop implementation still blocked
 
 `b849d919de` untracks generated test artifacts without deleting local files/history.
