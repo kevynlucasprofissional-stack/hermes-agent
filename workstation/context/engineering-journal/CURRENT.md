@@ -1,5 +1,14 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
+
+Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
+Baseline: origin/main 920fdda07a74e2f4a6e790fcc6bc3a2d2ab976a7; active user checkout 938d9b2beeafde554b961112bca8ca5af2212df5 is a separate unqualified Laya lane and is preserved.
+Hypothesis CW01-GATE: current main can admit CW-02 only if H-079 ancestry/drift, exact-head product gates and P0 input-authority blockers close. Falsifiers: relevant unadopted upstream delta, missing/red Windows qualification, open voice authority defect. Observe via Git ancestry/diff, GitHub job/step readback, static owner inspection and existing read-only audit scripts. Do not treat local focused passes as baseline qualification.
+Hypothesis CW01-OWNERS: existing resolver/process/MCP/Browser/TaskCompiler/ArtifactStore/Journal/EC owners can host the first vertical. Falsifier: absence of scoped lifecycle or empirical readback contract; record the smallest extension, not a replacement owner.
+Hypothesis CW01-SOURCES: official refs/license/manifests permit future optional integration. Falsifiers: absent license, incompatible redistribution terms, unreviewed filesystem/JS/revision surface. Audit source only; no third-party execution.
+Results: CW-01 BLOCKED. Main 920fdda07a74e2f4a6e790fcc6bc3a2d2ab976a7; adopted pin/merge-base 71a2fe399bbd7a219c71f9d9fca2b313b01f2057; observed upstream 517b5e10febd619ce30bb22580e29b160266eb43; 748/10510 divergence and material owner overlap require separate Stage A. Main KI-024 is the OPEN voice input-authority incident (the Laya branch reuses the identifier). Exact main Workstation contracts/anchors CI passed, full Windows/general qualification not proven. Main production lockfile audit failed: 18 findings (2 critical, 4 high, 3 moderate, 9 low). PR50 Windows failure is Production dependency audit, not compiler failure. Local lock/license/strict seams/anchors passed; existing ArtifactStore/persistent-worker/registry tests 22 passed, no Creative E2E. Source/license intake PARTIAL: Penpot root/MPL vs server-package/MIT scope mismatch; Remotion embedding/redistribution unapproved. Detailed owner table, commands, source pins, evidence and release actions: [CW01 audit](../../creative-workstation/CW01_AUDIT_2026-10-08.md). No runtime, engine install or merge.
+
 ### CW-00.1 — Creative documentation-review audit (2026-10-08)
 
 **Status:** DOCUMENTATION-ONLY, NOT_RUNTIME_IMPLEMENTED. New compact execution brief, per-phase prompts, explicit security/test matrix, CW-03A/B/C split, and preserved full textual versions of both source passages (Markdown escaping normalized; transient UI chips omitted). Penpot core and AI Kit licensed separately (MPL vs AI Kit CC-BY-4.0 per GitHub repository metadata).
@@ -23,7 +32,6 @@
 **Evidência atual:** documentos e links de pesquisa, sem tests/CI/receipts próprios; `FACT` externo não equivale a Hermes `VERIFIED`. Reportar futuras evidências com SHA, testes negativos e head exato; não anotar PASS antecipado.
 
 **Referências:** [../../creative-workstation/README.md](../../creative-workstation/README.md), [../../creative-workstation/IMPLEMENTATION_PLAN.md](../../creative-workstation/IMPLEMENTATION_PLAN.md), [../../ROADMAP.md](../../ROADMAP.md) e [../../SOURCE_MATRIX.md](../../SOURCE_MATRIX.md).
-
 
 
 ## Voice auto-start / input-authority incident — 2026-10-03

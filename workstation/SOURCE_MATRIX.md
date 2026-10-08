@@ -209,3 +209,17 @@ Duplicate copies of the same benchmark report were deduplicated during intake. T
 **Plugin-system lane — parallel research intake, implementation gated:** current Hermes plugin/catalog/MCP baseline -> ChatGPT black-box behavior matrix -> Dify + Plugin Daemon -> LobeHub/LobeChat -> Open WebUI + LibreChat -> MCP cross-cut -> gap synthesis -> separately reviewable Hermes proposals.
 
 The waves are sequencing hints only. The canonical readiness gates and evidence schema live in `context/REFERENCE_CODE_TO_CODE_AUDIT_2026-09-23.md`.
+
+## 2026-10-08 — Creative CW-01 source intake (PARTIAL / runtime BLOCKED)
+
+[CW-01 audit](creative-workstation/CW01_AUDIT_2026-10-08.md) records exact official refs, metadata/license evidence, dependencies, scope risks, rollback and minimum owner gaps. No integration is qualified and no third-party code was executed.
+
+| Source | Pinned audited ref | Evidence / disposition |
+| --- | --- | --- |
+| penpot/penpot mcp | 2c08a065bbbb12fa3036a7c9ae8526d43bec4f49 | FACT metadata 2.17.0/MPL-2.0; root MPL vs server package MIT unresolved. PARTIAL license-scope/security audit; KEEP EXTERNAL/opt-in. |
+| penpot/penpot-ai-kit | fe4f99e51c7149512d50cd75f0d55204c2458664 | FACT LICENSE API/metadata CC-BY-4.0, 0.5.1; installer/skill full audit NV. REFERENCE/optional. |
+| mrdoob/three.js editor | e9a8a1264c58150907230122ac17f5760a1ebab1 | FACT root MIT/0.186.0; typed bridge/revision/security parity NV. KEEP EXTERNAL. |
+| FFmpeg/FFmpeg | e0e6ca1e29ef3f6b1e9b7d8656fe341eee8cf647 | FACT source license conditional LGPL/GPL/nonfree; actual binary/build/codecs/license qualification NV. KEEP EXTERNAL. |
+| remotion-dev/remotion | 90e3db961921dadf99e8fd61eb18a6cd09265b4b | FACT core 4.0.534/custom license; entity/use/redistribution decision missing. CW-03C license BLOCKED. |
+
+These are audit pins, not adoption/installed-version pins. Per-file/transitive and asset/font licensing, consent, isolation and real verification remain required. H-079/production dependency audit/main voice KI-024 block CW-02 independently of source availability.

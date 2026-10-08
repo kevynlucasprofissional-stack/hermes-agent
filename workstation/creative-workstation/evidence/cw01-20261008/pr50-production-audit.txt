@@ -1,0 +1,39 @@
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0035241Z Severity: critical
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0036528Z simple-git: `VISUAL` editor environment variable is omitted from unsafe editor detection - https://github.com/advisories/GHSA-v5rq-49vh-5v5c
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0040771Z   Depends on vulnerable versions of @simple-git/argv-parser
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0041837Z Severity: high
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0042683Z brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service - https://github.com/advisories/GHSA-q2hr-2g5m-vwhr
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0044110Z brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion - https://github.com/advisories/GHSA-qhr7-859c-m2p7
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0045812Z brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion - https://github.com/advisories/GHSA-6j4f-fj2g-mc7p
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0048794Z   Depends on vulnerable versions of brace-expansion
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0052711Z DOMPurify: IN_PLACE: node-removing afterSanitize hook leaves detached subtree event handlers armed, causing DOM XSS - https://github.com/advisories/GHSA-p98j-92pf-mc4p
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0054937Z DOMPurify: IN_PLACE returns a force-removed rawtext root whose text carries attacker markup — pure HTML reparse executes - https://github.com/advisories/GHSA-6688-9rhm-gjv2
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0057152Z   Depends on vulnerable versions of dompurify
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0057477Z   Depends on vulnerable versions of katex
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0058205Z Severity: high
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0058849Z http-cache-semantics max-stale handling can disclose cross-user cached responses - https://github.com/advisories/GHSA-ch52-4w7c-c8xp
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0062971Z Severity: moderate
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0063874Z ip-address: Address6.isLinkLocal() recognizes fe80::/64 rather than fe80::/10, allowing SSRF and trust-boundary bypass to on-link hosts - https://github.com/advisories/GHSA-rpw4-54j3-4h4q
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0065268Z ip-address: no classifier recognizes the NAT64 local-use range 64:ff9b:1::/48, allowing SSRF and trust-boundary bypass - https://github.com/advisories/GHSA-2vr4-cq9g-pvrc
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0067072Z ip-address: isInSubnet() and isHostInSubnet() compare addresses of different families as if they shared an address space, allowing an allowlist check to admit an address outside its range - https://github.com/advisories/GHSA-j6r3-76f7-8jcv
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0068763Z ip-address: Address6 builds a parse diagnostic proportional to the input with no length bound, allowing a single long string to stall or crash the process - https://github.com/advisories/GHSA-h3mg-xc3c-68pw
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0070587Z   Depends on vulnerable versions of ip-address
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0071659Z KaTeX: Existing prototype pollution can bypass trust restrictions - https://github.com/advisories/GHSA-238p-pmpm-9mq7
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0072180Z No fix available
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0072799Z   Depends on vulnerable versions of katex
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0073112Z   Depends on vulnerable versions of rehype-katex
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0073451Z   Depends on vulnerable versions of remark-math
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0074327Z     Depends on vulnerable versions of @streamdown/math
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0075226Z   Depends on vulnerable versions of katex
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0076098Z     Depends on vulnerable versions of micromark-extension-math
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0076920Z   Depends on vulnerable versions of katex
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0077695Z Severity: moderate
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0078302Z PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion - https://github.com/advisories/GHSA-rj75-hqrm-r3gf
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0080518Z   Depends on vulnerable versions of postcss-selector-parser
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0081365Z Severity: high
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0082030Z source-map-js allows event-loop denial of service through indexed source-map section offsets - https://github.com/advisories/GHSA-68fv-2mgg-jv7q
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0084605Z Severity: high
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0085356Z undici vulnerable to Denial of Service via unhandled error in WebSocket permessage-deflate decompression - https://github.com/advisories/GHSA-3wwx-pv8p-q78v
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0086701Z undici vulnerable to downstream response splitting via retry interceptor - https://github.com/advisories/GHSA-r53p-7pc4-xj5r
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0087668Z undici vulnerable to Denial of Service via unrequested WebSocket subprotocol - https://github.com/advisories/GHSA-rfgv-xxqx-mfg5
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0089450Z 19 vulnerabilities (8 low, 4 moderate, 5 high, 2 critical)
