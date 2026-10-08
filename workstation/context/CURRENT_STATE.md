@@ -1,5 +1,16 @@
 # Current State
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## 2026-10-08 Creative Workstation — documentation intake, no runtime change
+
+Nova iniciativa **PLANNED / DOCUMENTATION ONLY / NOT IMPLEMENTED**: [../creative-workstation/README.md](../creative-workstation/README.md), [arquitetura](../creative-workstation/ARCHITECTURE.md), [plano e gates](../creative-workstation/IMPLEMENTATION_PLAN.md), [integrações](../creative-workstation/INTEGRATIONS.md), [prompt implementador](../creative-workstation/IMPLEMENTER_PROMPT.md).
+
+CW-00 registra proposta, ferramentas candidatas, riscos/licenças, proprietários e fases. Não instalou Penpot/Remotion/Three.js/FFmpeg nem lançou MCPs, apps Electron ou capacidades criativas; nenhum teste de implementação ou H-080/H-079 qualification foi realizado nesta iniciativa. Compatibilidade de engines e skills no Hermes é **NV**.
+
+Próxima implementação só após preflight upstream-first com SHA pinado, baseline verde, fechamento/observância dos bloqueios de segurança/reliability aplicáveis (incluindo KI-024, H-080A/H-080B) e auditoria de licenças/integrações. Nenhuma alteração de autoridade operacional está aprovada.
+
+
+
 ## 2026-09-23 External Reference Code-to-Code Audit — PLANNED / READINESS-GATED
 
 Documentation-only planning update. No implementation or qualification claim is added by this entry.

@@ -1,5 +1,22 @@
 # CURRENT — Workstation Engineering Journal
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## CW-00 — Creative Workstation research intake (2026-10-08)
+
+**Classificação:** DOCUMENTATION-ONLY / NO EXPERIMENT EXECUTED / NO RUNTIME IMPLEMENTED. Branch de documentação: `docs/creative-workstation-foundation-20261008`. Registro de hipótese do produto, não prova técnica.
+
+**Hipótese:** incorporar Penpot (MCP/web), Three.js (bridge/web) e Remotion/React/FFmpeg (código/CLI) como engines externas, com capacidade de edição humana e por agentes em um projeto referenciado, permite outputs verificados e aprendizado operacional mantendo owners do Hermes.
+
+**Falsificadores para futuras CW-01+ (ainda não executados):** necessidade de outro Browser/TaskRun/authority owner; licença Remotion incompatível; WebContentsView não preserva revisão/usuário; MCP vaza segredos; edição manual sobrescrita; restart reexecuta mutação incerta; testes de render/projeto não verificam resultado externamente; custo/complexidade supera ganho.
+
+**Menor experimento proposto:** após H-079, baseline e segurança liberados, React/SVG -> preview Electron real -> PNG verificado; FFmpeg e Remotion apenas com license gate, depois Penpot/Three.js. Registrar ID de experimento e matriz de sucesso/refutação antes de testar.
+
+**Evidência atual:** documentos e links de pesquisa, sem tests/CI/receipts próprios; `FACT` externo não equivale a Hermes `VERIFIED`. Reportar futuras evidências com SHA, testes negativos e head exato; não anotar PASS antecipado.
+
+**Referências:** [../../creative-workstation/README.md](../../creative-workstation/README.md), [../../creative-workstation/IMPLEMENTATION_PLAN.md](../../creative-workstation/IMPLEMENTATION_PLAN.md), [../../ROADMAP.md](../../ROADMAP.md) e [../../SOURCE_MATRIX.md](../../SOURCE_MATRIX.md).
+
+
+
 ## Voice auto-start / input-authority incident — 2026-10-03
 
 **Classification:** REPRODUCED / P0 SAFETY BUG / ROOT CAUSE OPEN.
