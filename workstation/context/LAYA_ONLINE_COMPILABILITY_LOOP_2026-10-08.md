@@ -1,5 +1,11 @@
 # Laya Online Compilability Loop — 2026-10-08
 
+## 2026-10-08 — Later D-039 autonomy decision (NOT YET IMPLEMENTED)
+
+The original P0–P6 implementation has now been corrected locally under D-038 with strong fail-closed proof and automatic TaskRun adoption tests, but exact-head H-081 CI, real production `ValidationEnvironmentProvider`, real-Laya decision calibration and H-079 remain OPEN. The NEW D-039 product direction rejects permanent blanket SHADOW and static learning attempt/TTL dropouts: actively capture and mine canonical samples without effects, enable qualified family-scoped DIRECT as soon as real owner authority/verifier/replay allow, and persist/retry opportunities with new evidence/after restart. This changes learning eagerness and adaptive scheduling, **not** the authority ceiling, readback, uncertainty or global promotion rules. [Current A0–A7 implementation target](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md). The pre-D-038 historical state below is not the current code state.
+
+
+
 > **RELEASE HOLD — independent review (2026-10-08):** Experimental implementation and locally reported 14/14 gates do **not** constitute safe autonomous integration. P0: replay proof may be synthetic after failure/absent steps; `RunClosureProof` self-issues LOCAL_MUTATION, budget, defaults and `uncertainty_clear=True`. P1: `POSSIBLE_RUN_LOCAL_REUSE` is not automatically invoked, corpus scoped after mining, DIRECT default and inflated metrics. **Current release status: PARTIALLY IMPLEMENTED / NOT QUALIFIED / DO NOT MERGE.** Follow mandatory C0–C6 [independent post-implementation audit](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md); legacy implementation status below is a local milestone only.
 
 
