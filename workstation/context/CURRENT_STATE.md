@@ -1,5 +1,13 @@
 # Current State
 
+## 2026-10-08 — Independent online compilability release hold (authoritative)
+
+Code landed in `c969fbf`: monitor, post-tool and OperationalKernel notification, typed Laya domain, `ExperienceCompiler.mine()` trigger, validation helper and manually invoked run-local handoff. Local log reports 11/11 new tests, 71/71 selected regressions and 14/14 gates, but static code review found **P0 safety issues**: fabricated replay refs on missing/error replay; self-issued LOCAL_MUTATION scope, effect budget, identities and `uncertainty_clear=True`. **P1**: `process_event()` has no automatic POSSIBLE_RUN_LOCAL_REUSE path; corpus mined globally then filtered, mode defaults DIRECT; success and avoided-System2 telemetry overstates actual verified outcome. **P2**: worker lifetime/drain and end-to-end evidence gaps. The test's positive case manually calls handoff with fake Laya, injected steps/items/dispatcher; real model smoke verifies typed response shape, not calibrated accuracy.
+
+**Status:** PARTIALLY IMPLEMENTED / SAFETY RED GATES OPEN / NOT QUALIFIED. CI `37783114603` FAILED, `37794367952` was IN_PROGRESS when observed; recheck exact current HEAD. H-079/H-081/H-082 are separate gates. Earlier notes below describe historical stages and must not override this release hold. Corrective C0–C6 owner: [ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
 ## 2026-10-08 — H-081 checkout corrected; upstream baseline still required
 
 Commit `b849d919de` removes generated `.test-tmp` artifacts from Git tracking while
