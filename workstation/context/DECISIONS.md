@@ -1,5 +1,22 @@
 # Architectural Decisions
 
+## D-037 — Laya online compilability is event-driven, evidence-gated and run-local first
+
+**Decision date:** 2026-10-08  
+**Status:** ACCEPTED DESIGN / IMPLEMENTATION PENDING / BRANCH-GATED  
+**Context:** Three Laya-use evaluations identified an online learning opportunity not satisfied by progressive evidence capture alone.
+
+1. **Observe canonical runtime events, not the LLM's private text or raw UI gestures.** Trigger on durable transition, verifier outcome, state change, meaningful repetition, failure/uncertainty and closure, using deterministic prefilter + bounded per-run coalescing.
+2. **Laya decides readiness only within typed choices.** It may recommend KEEP_COLLECTING, MINE_CANDIDATE, VALIDATE_CANDIDATE, POSSIBLE_RUN_LOCAL_REUSE, NEEDS_SYSTEM2 or ABSTAIN. No Laya confidence grants effect authority, proves replay, validates an outcome or authorizes promotion.
+3. **ExperienceCompiler remains provider-free and the sole ordinary candidate-mining engine.** An LLM/System-2 is used only for novel cognitive ambiguity that the deterministic compiler cannot resolve; the execution LLM is not interrupted to own learning.
+4. **Capture, mining, run-local reuse and global promotion are distinct stages.** A run-scoped candidate may be **considered** for early verified handoff when existing authority/verification criteria admit it. A single run cannot bypass global cross-run/replay/verifier/causal/ExperiencePromotionPolicy gates.
+5. **Learning is subordinate to user execution.** Nonblocking bounded worker, dedup, backpressure, explicit abstention/fallback and strict negative evidence treatment are mandatory. No per-token, per-second or per-mouse-move Laya polling.
+6. **Calibration must use canonical truth.** Build replay/verifier-grounded labels, not LearningReview opinions, raw confidence or unverified observations. Evaluate performance by verified reuse, avoided System-2 reasoning, and Cost per Verified Outcome without correctness regressions.
+7. **This does not reopen closed work.** Reuse existing `capture_progressive`, `ExperienceCorpus`, `ExperienceCompiler`, `ExperienceValidationPromotionCoordinator`, generic System-1 seam, `DecisionReceipt` and TaskCompiler/OperationalKernel run-scoped execution. H-081/H-082 and upstream-first qualification stay independently required.
+
+**Decision owner/reference:** [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md).
+
+
 ## D-036 — H-081 qualification requires real-provider, causal-continuation and empirical-learning closure
 
 **Decision date:** 2026-10-02  
