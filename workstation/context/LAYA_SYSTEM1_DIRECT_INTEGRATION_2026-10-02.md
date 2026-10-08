@@ -1,5 +1,12 @@
 # Laya Direct System-1 Integration — 2026-10-02
 
+## 2026-10-08 — Online compilability extension (design-only)
+
+Follow-on architecture: [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). The new System-1 use case is **event-driven online compilability readiness**, not raw UI observation or continuous polling. Existing post-tool progressive capture and OperationalKernel verifier checkpoints become a bounded nonblocking learning-plane input; Laya recommends the next investigation stage; existing provider-free `ExperienceCompiler` may mine early; independently verified candidates may enter existing safe run-scoped handoff. A single-run candidate cannot bypass global `ExperiencePromotionPolicy`.
+
+This does not supersede H-081 real-provider adapter/provenance, TaskRun authority semantics, calibration/receipts, exact-head CI requirements or H-082 warm-start remediation. No claim of implementation/qualification is made for this extension.
+
+
 **Status:** ARCHITECTURE APPROVED / BRANCH IMPLEMENTATION AUDITED / REMEDIATION REQUIRED / NOT QUALIFIED  
 **Reviewed Laya pin:** `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` — Laya 0.3.23, Apache-2.0, Python >=3.10.  
 **Scope:** Hermes Agent + Hermes Workstation reasoning amortization, TaskRun continuity, outcome telemetry, Experience Compiler feedback, self-improvement review and secondary Laya upstream.
