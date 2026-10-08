@@ -88,7 +88,7 @@ Do **not** equate `answer_confidence` with the probability that a trace is compi
 
 ### P3 — Bounded mining/validation
 - Only when deterministic guards + calibrated threshold permit, schedule idempotent, bounded `ExperienceCompiler.compile()/mine()` using canonical corpus windows, including counterexamples; do not rewrite the compiler in an LLM.
-- Reuse `ExperienceValidationPromotionCoordinator`, replay and causal evidence. Do not use `LearningReview` or System-1 judgments as positive verification truth.
+- Reuse existing verifier, causal and controlled-replay primitives. **Do not call `ExperienceValidationPromotionCoordinator.process_candidate()/coordinate_all()` blindly for run-local admission:** `process_candidate()` can reach `ExperienceCompiler.promote()` and the global registry. Introduce/reuse a clear validation-only boundary or explicit mode that never promotes; global promotion remains a separate later decision under existing policy. Do not use `LearningReview` or System-1 judgments as positive verification truth.
 
 ### P4 — Safe run-local reuse
 - Connect *verified* candidate to the **existing** run-scoped capability/TaskCompiler/OperationalKernel handoff; check task/run ownership, lease, effect budget, target identity, preconditions, verifier, readback and unresolved uncertainty.
