@@ -1,5 +1,11 @@
 # Online Compilability Monitor — architectural investigation (2026-10-08)
 
+## 2026-10-08 — Independent corrective audit supersedes local qualification
+
+The implementation log reported 11/11 new tests and 14/14 local qualification gates, and implemented a real monitor. Static audit of `compilability_monitor.py` found **P0 synthetic replay/authority/uncertainty proof**, **P1 missing automatic POSSIBLE_RUN_LOCAL_REUSE, unscoped mine(), DIRECT default and success/avoided-System2 overcount**, and worker lifecycle gaps. The positive test manually injects fake Laya, TaskRun steps and dispatcher. It proves component interoperability, not a full autonomous TaskRun. `37783114603` CI FAILED; `37794367952` was pending on audited HEAD. All historical implementation findings below are retained but release remains **NOT QUALIFIED**. Follow [authoritative corrective C0–C6 plan](../ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md). No new runtime code or new test result is claimed by this documentation update.
+
+
+
 **Branch:** `workstation/laya-direct-system1`  
 **Classification:** IMPLEMENTED / LOCAL GATES QUALIFIED / CI QUALIFICATION PENDING
 **Change type:** Implementation of Online Compilability Loop (P0–P6), passing 14/14 local gates including real Laya.
