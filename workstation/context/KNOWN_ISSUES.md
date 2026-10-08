@@ -1,5 +1,15 @@
 # Workstation Known Issues
 
+## KI-027 — Rigid online learning limits discard valuable same-run opportunities [OPEN — OPPORTUNITY/PRODUCT]
+
+**Observed design gap (2026-10-08):** At `938d9b2beeaf`, SHADOW mode suppresses mining and validation entirely. DIRECT is unlocked by any nonempty `direct_qualification_ref` (not a verified attestation). `OnlineCompilabilityMonitor` discards queued events on saturation/stop and evicts 900s-idle hot windows; attempt budgets (3 compilation attempts per segment; 3 validations per candidate), 4 offers and 64 windows do not re-open based on genuine new evidence or rehydrate persistent opportunity state. The existing 100-item checkpoint limit is a fairness budget but does not independently ensure next-checkpoint continuation. Long-running TaskRuns are not intentionally cancelled by these learning limits; loss is missed or postponed compilation/reuse.
+
+**Decision D-039:** user accepts higher learning/operational expense to gain autonomy. Make capture/mining active even if effect admission remains shadow, derive narrow permissions automatically from TaskRun (never mint authority), use genuine version-bound family qualification for DIRECT, prioritized durable event pointers, retry after material evidence changes or dependency recovery, rehydratable `run_learning_checkpoint.v1`, fair cross-run backpressure and next-checkpoint continuation. Never bypass verifier, owner effect budgets, uncertainty/lease fences, or global promotion criteria. Production ValidationEnvironmentProvider and real Laya dogfood required for effect-qualified scopes.
+
+**Closure:** A0–A7 RED/GREEN tests in [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md), real TaskRun >100-item and multi-hour/restart test, measured opportunity-loss reduction without duplicate effects or latency regression, exact-head H-081 and H-079 qualifications. Status OPEN / NOT QUALIFIED; no main merge.
+
+
+
 ## KI-026 — Laya online-loop unsafe proof and missing autonomous closure [CODE PATHS CORRECTED LOCALLY — RELEASE GATES OPEN]
 
 Observed on `workstation/laya-direct-system1` code `c969fbf`, audited 2026-10-08. **Release blocker.** `workstation/experience_compiler/compilability_monitor.py:validate_candidate_run_local()` can substitute fictitious replay references for failed/missing proof, construct `AuthorityScope(LOCAL_MUTATION)`, effect budget and `uncertainty_clear=True` outside canonical owners. `process_event()` lacks automatic `POSSIBLE_RUN_LOCAL_REUSE` continuation. `mine_candidate_in_run()` mines globally before filtering and may admit empty run provenance. DIRECT is default, aborted model inference may trigger deterministic mining, and absence of anomalies can inflate both reuse and avoided-System2 counters. `drain(timeout)` does not bound the wait; no explicit per-run state TTL. Positive test manually invokes helper with fake Laya and fake dispatcher.
