@@ -35,6 +35,9 @@
 - **R5:** Creative Runtime remains planned; CW-03A/B, Penpot/Three.js/Remotion are unqualified and license-gated as applicable.
 - **D-039:** active scoped learning, durable checkpoint and adaptive retry are desirable, but actual provider/replay/authorization and end-to-end proof remain necessary.
 
+## Completed metadata enumeration (not source reading)
+All 30 root directory Git trees were enumerated without truncation, yielding 16,093 blob entries plus 97 root-level files (16,190 observed entries). See [INVENTORY_SNAPSHOT.md](INVENTORY_SNAPSHOT.md) for directory counts and the remaining source-classification work. This is **not** equivalent to reading 16,190 file contents.
+
 ## Comprehensive audit protocol (pending)
 1. Capture immutable `git ls-files -z` for main and relevant divergent branches, classify path, language, generated, vendored, binary, tests, docs, licensed third party; record SHA+size. Mark binary/vendor **inventoried**, not `semantically read`.
 2. Construct module graph (Python import graph, TypeScript workspace dependencies, IPC entrypoints, owner/state boundaries), symbol indices, test-to-owner edges, CI gates; flag inaccessible code.
