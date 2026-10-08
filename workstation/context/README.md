@@ -1,5 +1,10 @@
 # Hermes Workstation — Coding-Agent Context
 
+## 2026-10-08 — New implementation context: Laya online compilability
+
+For the **new, not-yet-implemented** event-driven Laya/Experience Compiler feature, begin at [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). It has the concrete P0–P5 implementation order, exact file touchpoints, safety gates, acceptance scenarios and upstream/qualification dependencies. Also inspect [engineering-journal/online-compilability-monitor-2026-10-08.md](engineering-journal/online-compilability-monitor-2026-10-08.md), the H-081 source [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md), and [IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md). Do not mistake existing progressive observation for an online compilation/handoff loop.
+
+
 This directory is the operational entry point for coding agents working on the downstream Hermes Workstation surface. It does **not** replace the repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) or duplicate the architecture documents in `workstation/`.
 
 ## Required reading order
