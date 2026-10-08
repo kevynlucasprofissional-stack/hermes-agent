@@ -1,5 +1,17 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-08 — Diagnóstico causal e estratégia de desbloqueio criativo (PLANEJADO / NÃO IMPLEMENTADO)
+
+A CW-01 não deve gerar apenas outra auditoria bloqueada. Há três camadas **causalmente separadas**: (1) paridade do ambiente de CI com as dependências reais do Laya; (2) integridade da cadeia npm/Windows e da experiência Electron/voz; (3) qualificação H-079 de uma baseline upstream pinada. A integração do Laya D-038/D-039 **já chegou ao main** em `f21e803b`, mas `main` **não está qualificado**. As 7 falhas da CI main compartilham `ModuleNotFoundError: laya`; ausência do extra `workstation-laya` é causa direta verificada no workflow, **não prova de que a biblioteca/modelo funciona após instalação**.
+
+**Intervenção de menor risco:** reparar o perfil do job `contracts` em PR exclusivamente de CI (mesmo `uv sync --locked --python 3.13 --extra dev --extra anthropic` acrescido de `--extra workstation-laya`) e reexecutar todos os gates, inclusive os anteriormente SKIPPED. Em trilha própria, corrigir vulnerabilidades de produção npm (PR #52 Actions: 19 findings, incluindo 2 critical) sem `--force`/supressão de audit; aferir dependência transitiva, licenças e compatibilidade. A CI pode ficar verde nesse aspecto sem resolver segurança, Stage A ou KI-024.
+
+**Integração upstream racional:** 10.510 commits unadopted não equivalem a 10.510 bugs ou patches manuais. H-079 exige um SHA upstream fixo, merge real da história e reconciliação semântica dos owners/first-party seams. Candidata irremediavelmente quebrada permite apenas exceção **com prova e registro formal**, não waiver automático por urgência ou tamanho da divergência. Gate/reliability repairs são independentes de nova feature runtime; nunca iniciar CW-02 antes de baseline admissível e bloqueios aplicáveis.
+
+**Produto final desejado:** Hermes como estação de projetos criativos editáveis por humano/agente; CW-02 opt-in capability/health, CW-03A React/SVG→Electron→PNG editável e verificado, CW-03B FFmpeg com ffprobe, CW-03C Remotion condicionado à licença, CW-04 Penpot/MCP e CW-05 Three.js/GLB em PRs separados, CW-07 reutilização pelo Experience Compiler somente com resultado externo validado. Reusar BrowserTask, Policy/Router, TaskCompiler, ProcessRegistry, Journal/ArtifactStore e registry existentes; Laya sugere, não concede autoridade ou certificação.
+
+**Distinções não negociáveis:** `NOT_RUN != PASS`; log Windows de npm audit não é erro de TS; teste local de Laya não equivale a CI HEAD; artefato PNG não comprova projeto fonte/revisão; skill .md não equivale a capability operational. Receita executável: [plano de desbloqueio](../creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md); autoridades permanecem ROADMAP, CURRENT_STATE, TESTING, D-040 e H-079.
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
 
