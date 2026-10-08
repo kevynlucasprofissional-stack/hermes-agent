@@ -1,5 +1,15 @@
 # Current State
 
+## 2026-10-08 — Overlay de estado atual pós-merge Laya (fonte temporal; CW continua BLOCKED)
+
+**Observação confirmada no GitHub:** `main@f21e803b3525b70ee6be2305e579c1cc1f930e74` é um merge de `workstation/laya-direct-system1`. As passagens abaixo que ainda dizem `NO MAIN MERGE` se referem aos commits/execuções históricos de branch; **não** são a situação atual do repositório e **não** devem ser apagadas ou transformadas em prova de qualificação.
+
+**Gates observados:** [Workstation CI 37826432518](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37826432518) no SHA main falhou: **7 failed (todas `ModuleNotFoundError: laya`), 893 passed, 2 skipped**; core-patch anchors PASS; core seam regressions e recipe replay não ocorreram após o erro. `.github/workflows/workstation-ci.yml` tem `--extra dev --extra anthropic` e omite `--extra workstation-laya` que `pyproject.toml` e o workflow dedicado Laya já reconhecem. Reparação candidata **não aplicada aqui** e PASS pós-reparo **não presumido**.
+
+[PR #52](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/52) estava OPEN, apenas documentação, `head 989e4aabd033` quando observado. Seu [workflow Windows 37829895692](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37829895692) parou no audit de produção npm com **19 findings (2 critical/5 high/4 moderate/8 low)**, antes de E2E/empacotamento. Número distinto de **18** na auditoria local mais antiga da CW-01. `npm audit` local novo NÃO_EXECUTADO (aprovação negada); remoto sim. Sem mudança/instalação de engine criativa ou teste Creative/Electron E2E nesta documentação.
+
+**Pendente:** H-079 Stage A do tip observado `517b5e10febd` (pin antigo `71a2fe399bbd`; 857/10.510 downstream/upstream segundo refresh), KI-024 voice input-authority P0, H-080B.3 Electron, KI-025/H-082 bootstrap e qualificação Windows/produção. **CW-01 BLOCKED; CW-02 NOT AUTHORIZED** até cumprir os gates aplicáveis. [Plano de desbloqueio, ordem e comandos](../creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md).
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
 
