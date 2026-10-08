@@ -1,5 +1,17 @@
 # Workstation roadmap
 
+## 2026-10-08 — D-039 opportunity-preserving autonomy (current direction / NOT IMPLEMENTED)
+
+**Approved priority:** do not discard opportunities to compile and reuse verified operations during a TaskRun because of static attempt counters, queue overflow or 900-second hot-window eviction. User prefers benefit of autonomous same-run reuse and accepts extra inference/resource expense and qualified operational risk. **Do not** reinterpret acceptance of risk as authority expansion or fake verifier proof.
+
+**Follow-up track A0–A7 (after mandatory H-079 upstream-first baseline, H-081 CI and H-082 classification):** A1 evidence-bound DIRECT for *eligible* effect families and active learning/mining for unsupported ones even when mutating adoption stays SHADOW; A2 durable rehydratable learning checkpoints + retries reopened by new evidence; A3 prioritized, fair, bounded resource queue with recoverable important event refs; A4 automatically derived short-lived authority under existing TaskRun grant, without duplicate user prompts; A5 real product ValidationEnvironmentProvider, real Laya and real safe workload dogfood; A6 resumable >100-item checkpoint yields instead of TaskRun cancellation; A7 measured outcome savings, calibration, exact-head CI and product release gates.
+
+**Current code gaps:** binary SHADOW suppresses compilation entirely; `resolve_policy` treats any nonempty `direct_qualification_ref` as proof; `TaskRunObservationWindow` has 3 compile attempts/segment, 3 validations/candidate, 4 offers, 64 hot events; queue sheds new arrivals, 64 windows expire after 900s without hydration; `stop()` discards pending events; `RunLocalAdopter(item_limit=100)` lacks a durable, explicitly re-scheduled continuation policy. Production validation provider absent. **Future design, not current behavior.** The latest audited code was `938d9b2beeaf`; CI run `37804714508` was FAILURE (two full-suite runner timeouts). Do not merge.
+
+**Exact owners, acceptance matrix and implementation prompt context:** [context/LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](context/LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md). Prior D-038 P0 proof/authority boundaries remain mandatory, but D-039 supersedes a *blanket permanent* SHADOW policy for non-effectful mining and qualified eligible scopes.
+
+
+
 ## 2026-10-08 — D-038 corrective execution C0–C6: code paths corrected locally, release gates still OPEN
 
 **Status: CORRECTED LOCALLY / NOT QUALIFIED / NO MAIN MERGE.** Corrective commits on `workstation/laya-direct-system1` start from documentation reference `c5cc11c0c9`; the local qualification below was taken at code commit `fd3085f087`. Exact-head CI, H-079 and H-082 were not closed by this work (see "Still open").
