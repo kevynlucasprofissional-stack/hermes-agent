@@ -1,5 +1,11 @@
 # Hermes Workstation — Coding-Agent Context
 
+## 2026-10-08 — New approved autonomy optimization lane (D-039)
+
+**For the NEXT requested work on Laya/adaptive learning, begin with** [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md). That accepted-but-unimplemented A0–A7 corrective optimization explicitly favors early qualified run-local reuse, derived automatic permissions and persistent adaptive learning over blanket SHADOW and fixed budget dropouts. It does **not** waive D-038 evidence/authority, production verifier, one-pin H-079 upstream-first, exact-head H-081 or separate H-082. Latest inspected baseline: `938d9b2beeaf` / CI `37804714508` failure. Read the existing D-038 audit for historical fixed problems, not as a mandate to permanently suppress all mining. The D-039 task is docs-only today; code change must run upstream-first gate and RED tests.
+
+
+
 ## 2026-10-08 — Current online-loop correction entrypoint
 
 **Read first:** [ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md) for current P0 safety defects, exact runtime files, C0–C6 RED/GREEN sequence, automatic E2E criteria and H-079/H-081/H-082 constraints. The earlier [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md) is foundational architectural context; implementation was subsequently added but is **NOT QUALIFIED**. Preserve prior notes, do not fabricate replay or authority, do not mistake a manual fake-Laya handoff for automatic execution and do not merge to main.
