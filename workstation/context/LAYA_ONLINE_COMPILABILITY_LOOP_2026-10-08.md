@@ -16,7 +16,7 @@ Verified existing components:
 - `workstation/experience_compiler/compiler.py:ExperienceCompiler.compile()/mine()` is a **provider-free** compiler.
 - `workstation/experience_compiler/lifecycle.py:ExperienceValidationPromotionCoordinator` owns the validation/promotion lifecycle.
 - `workstation/system1/laya_provider.py` implements a bounded resident provider behind `agent/system1_decision.py`.
-- `workstation/tests/test_in_flight_handoff.py` exercises a separate, existing verified run-local handoff capability.
+- `workstation/run_closure.py:RunScopedCapability/execute_in_flight_handoff` is the concrete existing run-local owner; `workstation/tests/test_in_flight_handoff.py` exercises its verified handoff.
 - `workstation/context/IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md` defines existing run-scoped reuse policy.
 
 Remaining gap: no confirmed end-to-end path from each relevant progressive sample to **online compilation readiness → guarded in-run mining → qualified run-local adoption/reuse**, mediated by Laya, with verified outcomes feeding a calibrated dataset. Do not assume that an existing `EphemeralCompiledSegment` / run-scoped handoff already completes this new loop; inspect the actual code before reusing it.
