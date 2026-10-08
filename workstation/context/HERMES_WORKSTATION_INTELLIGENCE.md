@@ -1,5 +1,17 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-08 — D-039: autonomia progressiva, aprendizagem durável e limites flexíveis
+
+**Decisão de produto:** maximizar aprendizado e reutilização verificável **durante o próprio TaskRun**. O usuário aceita risco operacional controlado e custo adicional de inferência em troca de menos oportunidades perdidas. A arquitetura atual protege a execução principal, mas o `SHADOW` binário impede mineração/aproveitamento, o `DIRECT` aceita qualquer referência textual não vazia, e limites fixos (3 compilações, 3 validações, 4 ofertas, 64 eventos, expiração de 900 s, descarte no shutdown) podem desperdiçar aprendizado útil. Esses valores são envelopes de recursos, não limites legítimos de *conhecimento*.
+
+**Nova inteligência:** (1) Laya observa/minera ativamente com evidência, inclusive quando efeitos não são admitidos; (2) DIRECT é o caminho preferido para famílias de operações com verificador/replay reais, qualificação versionada e autoridade existente; (3) monitor solicita automaticamente uma autorização **derivada**, limitada e revalidada no checkpoint, sem pedir novamente consentimento para efeitos já concedidos; (4) candidatos sem owner/verificador são HELD para retomada, jamais tratados como sucesso nem apagados; (5) fila por prioridade, coalescência, spill durável de eventos valiosos, checkpoint reidratável, backoff adaptativo a *novas* amostras e fairness por TaskRun; (6) lote de 100 itens deve ceder o checkpoint e retomar, não extinguir trabalho; (7) registrar perdas, recuperação de oportunidades, custo por resultado e economia real de System-2.
+
+**A exceção é a segurança semântica:** não inventar poder de LOCAL_MUTATION, receipts ou contratos; respeitar escopo do usuário, efeitos, lease, readback e resultado incerto. D-038 permanece obrigatória; D-039 substitui apenas o excesso de precaução que converte falta de calibração ou limites de RAM em incapacidade permanente de **aprender**. H-079 upstream-first e H-081 CI continuam bloqueando afirmação de produção; H-082 independente. `938d9b2beeaf` é baseline auditada e ainda não tem essas melhorias. Não alegar implantação.
+
+**Plano e RED tests A0–A7:** [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md). Não duplicar ExperienceCorpus/Compiler/Policy.
+
+
+
 ## 2026-10-08 — D-038 corrective execution C0–C6: code paths corrected locally, release gates still OPEN
 
 **Status: CORRECTED LOCALLY / NOT QUALIFIED / NO MAIN MERGE.** Corrective commits on `workstation/laya-direct-system1` start from documentation reference `c5cc11c0c9`; the local qualification below was taken at code commit `fd3085f087`. Exact-head CI, H-079 and H-082 were not closed by this work (see "Still open").
