@@ -1,5 +1,9 @@
 # Hermes Workstation — Coding-Agent Context
 
+## 2026-10-08 — Nova entrada para desbloqueio CW-01 (documentação / SEM aprovação de runtime)
+
+A CW-01 foi auditada e está **BLOCKED**, portanto a próxima execução não começa por uma segunda auditoria CW-01. O guia operacional atual é [../creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md](../creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md): **R1** perfil `workstation-laya` omitido na CI, **R2** vulnerabilidades npm e Windows, **R3** H-079 Stage A, **R4** KI-024 voz / H-080B.3 Electron / KI-025 bootstrap, **R5** retomada CW-02+ após gates aplicáveis. `main@f21e803b` já contém merge Laya, mas seus contratos da CI falharam (7 `ModuleNotFoundError`); PR #52 permanece documental quando observado. Preservar leituras obrigatórias, root/Workstation AGENTS, upstream-first e política de segurança/autoridade. Este índice indica o ponto de entrada, não reduz o rigor de qualificação.
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ### Planned Creative Workstation context — read on demand
 
