@@ -1,5 +1,17 @@
 # 2026-10-08 — Authorized Creative development exception / CW-02
 
+CW03A-NATIVE hypothesis (specified by fixture assertions before execution): typed
+SVG can render in the existing owner-bound WebContentsView, preserve foreground,
+reopen source exactly and reject stale/foreign/human-fenced requests. Initial
+trial failed creative_empty_frame; font readiness did not imply compositor paint.
+Added a bounded two-frame barrier using the existing parked view. Final native
+trial PASS on Electron 40.10.2 / Chromium 144.0.7559.236. Independently decoded
+PNG and verified palette, text pixels, dimensions, source/SVG/output hashes with
+Pillow; same source reopened to the same PNG hash and variation changed it.
+Five native negative controls pass without export. 43 owner regressions and
+2 media-verifier tests pass. No claim of full CW-03A/project entrypoint, restart,
+CI or baseline qualification. See ../../creative-workstation/CW03A_NATIVE_2026-10-08.md.
+
 CW02-PROCESS follow-up: implemented shell-free typed adapter primitives using
 ScopedPolicyEngine, canonical command guards/env builder and ProcessRegistry
 adoption. Hypothesis: canonical ownership suffices for timeout, cancellation and

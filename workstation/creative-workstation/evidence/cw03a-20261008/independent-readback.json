@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "initial": {
+    "media_type": "image/png",
+    "width": 360,
+    "height": 640,
+    "sha256": "00c50e99b20f10586005d88db6bd2fceb29acc0d55ac707a089eea5defefb6fd",
+    "size_bytes": 27943,
+    "decoder": "Pillow",
+    "decoded": true
+  },
+  "variant": {
+    "media_type": "image/png",
+    "width": 360,
+    "height": 640,
+    "sha256": "cd158723d1e7137dd16d9afb35cbab4d0e3a55e1fe6e37cb5642d856496b7df7",
+    "size_bytes": 26902,
+    "decoder": "Pillow",
+    "decoded": true
+  },
+  "source_hash_match": true,
+  "svg_hash_match": true,
+  "pixel_controls": "pass",
+  "scope": "native fixture media readback; not baseline/capability certification"
+}

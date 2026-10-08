@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "runtime": "electron-chromium",
+  "electron": "40.10.2",
+  "chromium": "144.0.7559.236",
+  "first": {
+    "success": true,
+    "runtime": "electron-chromium",
+    "screenshot_path": "invitation.png",
+    "width": 360,
+    "height": 640,
+    "source_sha256": "59020bf1e4fa263596f88f491fe32bd16deb61fe81b0b09b9f9ec6eca499400c",
+    "sha256": "00c50e99b20f10586005d88db6bd2fceb29acc0d55ac707a089eea5defefb6fd",
+    "svg_sha256": "0992aa2a06c980494637076aa45dfb9b978f22e625a889700fb77c35227cf1b6",
+    "media_type": "image/png",
+    "task_id": "cw03a-native-render",
+    "tab_id": "d5cb63c0-2653-492d-ae13-c02a4fccd26d",
+    "operation_id": "cw03a-native-op-1",
+    "receipt": {
+      "operationId": "cw03a-native-op-1",
+      "taskId": "cw03a-native-render",
+      "runId": "cw03a-native-run",
+      "browserTaskId": "cw03a-native-render",
+      "tabId": "d5cb63c0-2653-492d-ae13-c02a4fccd26d",
+      "revision": 1,
+      "action": "browser_creative_render",
+      "safeUrl": null,
+      "executedAt": "2026-10-08T21:52:14.279Z"
+    }
+  },
+  "reopen_sha256": "00c50e99b20f10586005d88db6bd2fceb29acc0d55ac707a089eea5defefb6fd",
+  "variant_sha256": "cd158723d1e7137dd16d9afb35cbab4d0e3a55e1fe6e37cb5642d856496b7df7",
+  "negative_controls": [
+    "malformed-shape",
+    "stale-source",
+    "wrong-session",
+    "stale-run",
+    "human-control"
+  ],
+  "foreground_preserved": true
+}

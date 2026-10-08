@@ -3,10 +3,15 @@
 The maintainer authorized proceeding under the explicit
 [development exception](../creative-workstation/DEVELOPMENT_EXCEPTION_2026-10-08.md).
 Previous statements blocking all CW-02 implementation are superseded for this lane.
-CW-01 baseline gaps remain NOT RESOLVED / NOT QUALIFIED. CW-02 passive opt-in
-discovery is now implemented through RuntimeCapabilityRegistry and hermes_platform;
-2 focused contract tests pass. Lifecycle, UI and Creative end-to-end proof remain
-incomplete. Main is unchanged.
+CW-01 baseline gaps remain NOT RESOLVED / NOT QUALIFIED. CW-02 now has passive
+opt-in discovery, canonical process adoption/recovery/cancel/timeout and real CLI
+health with ArtifactStore/ExecutionJournal receipts; 6 focused tests pass. CW-03A
+has a typed SVG renderer in the existing BrowserTask/WebContentsView and a passing
+real Electron native fixture (PNG, variation, source reopen, ownership negatives).
+Pillow independently decoded and checked the outputs. 43 Desktop owner tests and
+2 media verifier tests pass. Portable project manifest, product entrypoint,
+restart qualification and CW-03B through CW-07 remain in progress/pending.
+Main is unchanged; these results do not qualify the baseline or the entire product.
 
 # Current State
 

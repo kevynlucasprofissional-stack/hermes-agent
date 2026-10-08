@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "width": 360,
+  "height": 640,
+  "background": "#14263d",
+  "elements": [
+    {
+      "kind": "circle",
+      "x": 180,
+      "y": 130,
+      "radius": 62,
+      "fill": "#f6c85f"
+    },
+    {
+      "kind": "rect",
+      "x": 28,
+      "y": 240,
+      "width": 304,
+      "height": 230,
+      "radius": 16,
+      "fill": "#234366"
+    },
+    {
+      "kind": "text",
+      "x": 180,
+      "y": 300,
+      "size": 30,
+      "fill": "#ffffff",
+      "anchor": "middle",
+      "text": "HERMES"
+    },
+    {
+      "kind": "text",
+      "x": 180,
+      "y": 355,
+      "size": 22,
+      "fill": "#f6c85f",
+      "anchor": "middle",
+      "text": "Creative invitation"
+    },
+    {
+      "kind": "text",
+      "x": 180,
+      "y": 410,
+      "size": 18,
+      "fill": "#ffffff",
+      "anchor": "middle",
+      "text": "08 October · 19:00"
+    }
+  ]
+}

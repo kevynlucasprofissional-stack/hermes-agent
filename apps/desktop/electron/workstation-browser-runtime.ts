@@ -28,6 +28,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { app, BrowserWindow, ipcMain, session, type Session, type WebContents, WebContentsView } from 'electron'
+import { renderCreativeFrame } from './workstation-creative-frame'
 
 import {
   buildWorkstationResourceSnapshot,
@@ -2158,6 +2159,14 @@ export class WorkstationBrowserRuntime {
       return this.removeExtensionForController(String(args.extension_id ?? ''))
     }
 
+    if (action === 'browser_creative_render') {
+      const task = this.taskLifecycle().task(taskId)
+      if (!sessionHost || !runId || !operationId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      if (!task || task.sessionHost !== sessionHost || task.runId !== runId) {
+        throw workstationControllerFault('NO_BOUND_TAB', 'creative_owner_mismatch')
+      }
+    }
+
     const mutating = new Set([
       'browser_navigate',
       'browser_click',
@@ -2165,7 +2174,8 @@ export class WorkstationBrowserRuntime {
       'browser_scroll',
       'browser_back',
       'browser_press',
-      'browser_extension_open_options'
+      'browser_extension_open_options',
+      'browser_creative_render'
     ])
 
     if (mutating.has(action)) {
@@ -2174,6 +2184,27 @@ export class WorkstationBrowserRuntime {
 
     if (sessionHost || kanbanCardId || runId) {
       this.bindControllerSessionIdentity(taskId, sessionHost, kanbanCardId, runId)
+    }
+
+    if (action === 'browser_creative_render') {
+      if (!sessionHost || !runId || !operationId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      const entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
+      if (!entry) throw workstationControllerFault('NO_BOUND_TAB', 'creative_bound_tab_required')
+      const assertOwner = () => {
+        this.assertAgentControl(taskId)
+        const task = this.taskLifecycle().task(taskId)
+        if (task?.runId !== runId || task.sessionHost !== sessionHost || this.entries.get(entry.id) !== entry || entry.ownerTaskId !== taskId) {
+          throw workstationControllerFault('NO_BOUND_TAB', 'creative_owner_changed')
+        }
+      }
+      const result = await renderCreativeFrame(entry.view, args, screenshotDirectory(), assertOwner)
+      const receipt: BrowserOwnerReceipt = {
+        operationId, taskId, runId, browserTaskId: taskId, tabId: entry.id, revision: 0,
+        action, safeUrl: null, executedAt: new Date().toISOString()
+      }
+      const updated = this.taskLifecycle().recordReceipt(taskId, receipt)
+      this.persistBrowserSessionState()
+      return { ...result, task_id: taskId, tab_id: entry.id, operation_id: operationId, receipt: updated.lastReceipt }
     }
 
     if (action === 'browser_navigate') {
