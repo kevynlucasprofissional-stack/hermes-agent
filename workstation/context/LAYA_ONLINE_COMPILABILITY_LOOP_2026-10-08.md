@@ -10,6 +10,14 @@ baseline gate at `3176d97db711`; exact-head CI failed in checkout before qualifi
 The permitted local focused rerun passed 43 existing tests including real Laya. No new
 monitor or RED tests were added. See [evidence](../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
 
+**Resumed prerequisite correction:** `b849d919de` untracks generated `.test-tmp` content,
+preserving working files/history. CI checkout and install pass; local `--live --full`
+passes 43 focused plus 853 full-suite tests (2 full-suite skips). Full remote qualification
+failed on a missing Anthropic extra and a 900-second canary-file timeout. The CI profile
+is corrected; timeout diagnosis and H-079 Stage A remain required. Target implementation
+is still not started.
+See [correction evidence](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
 ## 1. Source and falsification boundary
 
 Consolidation of the 2026-10-06/07 three conversations about Laya usage, reviewed against branch-local code on 2026-10-08. This is a **new architectural implementation target**, not evidence that it has shipped. Existing H-081 real-provider qualification and H-082 warm-start work remain independent gates.

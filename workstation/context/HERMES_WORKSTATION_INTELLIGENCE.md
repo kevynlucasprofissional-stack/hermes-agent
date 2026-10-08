@@ -1,5 +1,17 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-08 — Checkout H-081 corrigido com preservação dos temporários locais
+
+A causa do bloqueio era o versionamento de 22.855 artefatos gerados em `.test-tmp`.
+O commit `b849d919de` retirou apenas essas entradas do índice e adicionou a regra de
+ignore; preservou arquivos locais e histórico. Checkout e instalação limpa passaram no
+CI. Localmente, o runner oficial passou 43 testes focados com Laya real e 853 na suíte
+completa, com 2 skips. O CI completo falhou por ausência do extra Anthropic e timeout de
+900 s no arquivo de canary; o perfil de CI foi corrigido, mas a causa do timeout continua
+pendente. H-081 não está qualificado; o loop novo segue bloqueado também pela baseline
+H-079. Nenhuma capacidade de aprendizagem nova foi implementada.
+[Evidências](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
 ## 2026-10-08 — Preflight do loop online: implementação bloqueada
 
 O HEAD documental `3176d97db711` falha no checkout Windows do H-081 por caminhos longos

@@ -1,5 +1,15 @@
 # Workstation roadmap
 
+## 2026-10-08 — Checkout prerequisite corrected; loop implementation still blocked
+
+`b849d919de` untracks generated test artifacts without deleting local files/history.
+Windows checkout/install now pass; official local H-081 full regression: 853 passed,
+0 failed, 2 skipped; 43 focused passed including real Laya. Remote qualification FAILED:
+missing Anthropic extra and canary-file timeout. CI profile corrected; timeout diagnosis
+remains pending without changing budgets or assertions. H-081 is NOT QUALIFIED.
+H-079 qualified upstream baseline is still required before P0 RED/P1–P6 target coding;
+H-082 remains separate. [Evidence](qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
 ## 2026-10-08 — Online loop execution preflight: BLOCKED
 
 At `3176d97db711`, H-081 exact-head CI fails during checkout before tests; H-079 has

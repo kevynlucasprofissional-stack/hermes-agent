@@ -21,6 +21,39 @@ remain present; the original tree is recoverable as
 Preexisting dogfood workspace diff remains 15 additions / 6 deletions and is excluded.
 Exact-head CI remains pending until the corrective commit is pushed and measured.
 
+Corrective commit `b849d919deb465c8e991218495f619a47d66bc40` was pushed. Run
+`37774683099` passed Windows checkout and reached setup-uv, confirming the checkout
+hypothesis without changing runner settings or skipping repository contents.
+Next permitted experiment: run the official H-081 `--live --full` qualification locally
+on this corrective HEAD while CI executes its own supported clean installation. The
+earlier 43-test receipt does not substitute for this full regression. Target runtime
+work remains blocked pending the remaining baseline obligations.
+
+Local full experiment result on `b849d919de`: `LOCAL_GATES_PASSED`; 43 focused tests
+passed including real Laya with zero skips; full Workstation 101 files / 853 passed /
+0 failed / 2 skipped in 300.234 seconds. Strict seams, component lock, license policy
+and core integration anchors passed. See
+[correction evidence](../../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
+Remote result: run `37774683099` FAILED after checkout/install succeeded. Focused gates
+passed (42 tests / 1 live opt-in skip); full regression reported 822 passed / 1 failed /
+1 skipped and one additional file timeout. `test_anthropic_sdk_construction.py` fails
+because the H-081 workflow omits the existing `anthropic` extra that Workstation CI
+installs. `test_canary_recipe_context.py` reached 23 successful test dots, then exceeded
+the unchanged 900-second file budget (31 collected). The runner summary omits partial
+passes from timed-out files; 822 is not the total number of assertions executed.
+
+Next corrective experiment: align only the H-081 CI install with the existing Workstation
+profile by adding `--extra anthropic`. Preserve lock, assertions, 4-worker concurrency and
+900-second timeout. Enable verbose pytest/fault-handler diagnostics for the same existing
+suite to expose a timeout stack if it recurs. This does not fix or relabel the observed
+canary performance failure; H-081 stays NOT QUALIFIED and target implementation blocked.
+
+Isolated local measurement: the existing 1,000-item fanout/no-confirmed-replay test
+passed in 80.08 seconds (79.45 seconds call time). This does not close remote concurrency/
+storage performance; the 900-second CI timeout remains negative evidence. New diagnostic
+CI must be judged on its own HEAD. No monitor/new domain/validation-only path was added.
+
 ## 2026-10-08 — Online Compilability Loop pre-change gate
 
 **TARGET IMPLEMENTATION BLOCKED / LOCAL FOCUSED BASELINE PASSED.**

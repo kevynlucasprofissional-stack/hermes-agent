@@ -1,5 +1,20 @@
 # Current State
 
+## 2026-10-08 — H-081 checkout corrected; upstream baseline still required
+
+Commit `b849d919de` removes generated `.test-tmp` artifacts from Git tracking while
+preserving local files and history. Its Windows CI passed checkout and supported locked
+installation. Local official `--live --full`: 43 focused tests passed including real Laya;
+full Workstation 853 passed / 0 failed / 2 skipped. Seams, anchors, lock and licenses passed.
+Remote full qualification FAILED: missing `anthropic` in the CI install profile and a
+900-second canary-file timeout. The profile correction adds the existing Anthropic extra;
+the timeout remains unresolved, with diagnostic logging added and budgets preserved.
+Main `contracts` and `core-patch-dry-run` are
+green; the separately reported Install & Update E2E failure does not negate those checks.
+H-079 Stage A for the new loop remains unqualified across material upstream overlap;
+H-082 and P0 RED/P1–P6 target work remain pending. See
+[resumed evidence](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
 ## 2026-10-08 — Online loop implementation blocked at pre-change gate
 
 Reference HEAD `3176d97db711a0454de17ca055be956763849838` has red exact-head H-081 CI:

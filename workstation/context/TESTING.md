@@ -1,5 +1,16 @@
 # Workstation Testing
 
+## 2026-10-08 H-081 clean-profile and timeout qualification
+
+The H-081 complete suite includes real Anthropic SDK construction. Its clean CI install
+must include `--extra dev --extra anthropic --extra workstation-laya` under `uv sync --locked`.
+The checkout correction passed Windows checkout/install, but its full CI run failed on
+the omitted SDK and a 900-second canary-file timeout. Keep 4 workers, timeout and assertions
+unchanged while collecting verbose/fault-handler diagnostics. A local full pass (853 passed,
+2 skipped) and isolated 1,000-item pass (80.08 seconds) do not close the remote failure.
+Real Laya remains a separate explicit `--live` measurement. See
+[current evidence](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
 ## 2026-10-07 bootstrap/startup reliability gate
 
 Any change that claims to close warm-start bootstrap coupling must prove all of the following

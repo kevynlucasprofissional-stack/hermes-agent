@@ -18,12 +18,14 @@ jobs:
         with:
           version: "0.12.3"
       - name: Supported local-source install
-        run: uv sync --locked --python 3.11 --extra dev --extra workstation-laya
+        run: uv sync --locked --python 3.11 --extra dev --extra anthropic --extra workstation-laya
       - name: Verify exact head
         shell: pwsh
         run: |
           if ((git rev-parse HEAD) -ne '${{ github.sha }}') { throw 'Wrong candidate checkout' }
       - name: H-081 owner proofs and full Workstation regression
+        env:
+          PYTEST_ADDOPTS: "-vv -o faulthandler_timeout=120"
         run: .venv/Scripts/python.exe -m workstation.scripts.qualify_laya_system1 --full
       - name: Strict seams and dependency provenance
         run: |
