@@ -1,5 +1,11 @@
 # Online Compilability Monitor — architectural investigation (2026-10-08)
 
+## 2026-10-08 — Accepted follow-up: D-039 adaptive opportunity preservation
+
+After D-038 corrective commits (`a91cba8`, `f5f7c3b`, `fd3085f`, `938d9b2`), focused safety/E2E tests and full local qualification demonstrate progress, but CI `37804714508` remains red and the real product validation owner/calibration are missing. The next hypothesis is that blanket SHADOW + fixed 3 attempts and 900s window eviction lose more valid learning than necessary. User explicitly prioritizes autonomous same-TaskRun learning/reuse and accepts bounded processing risk. D-039 directs A0–A7: **eligible DIRECT with real qualification, active provider-free mining without effect authority, automatically derived task-scope grants, adaptive evidence-revision retries, prioritized durable queue and restart hydration, fair >100-item continuation and empirical dogfood.** Preserve D-038 replay/authority invariants. Documentation decision only, no code or tests executed. [Canonical spec](../LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md).
+
+
+
 ## 2026-10-08 — Independent corrective audit supersedes local qualification
 
 The implementation log reported 11/11 new tests and 14/14 local qualification gates, and implemented a real monitor. Static audit of `compilability_monitor.py` found **P0 synthetic replay/authority/uncertainty proof**, **P1 missing automatic POSSIBLE_RUN_LOCAL_REUSE, unscoped mine(), DIRECT default and success/avoided-System2 overcount**, and worker lifecycle gaps. The positive test manually injects fake Laya, TaskRun steps and dispatcher. It proves component interoperability, not a full autonomous TaskRun. `37783114603` CI FAILED; `37794367952` was pending on audited HEAD. All historical implementation findings below are retained but release remains **NOT QUALIFIED**. Follow [authoritative corrective C0–C6 plan](../ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md). No new runtime code or new test result is claimed by this documentation update.
