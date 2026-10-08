@@ -1,5 +1,11 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-10-08 — Run-local verification must be canonical (P0 corrective gate)
+
+The online monitor was experimentally implemented on `workstation/laya-direct-system1` in `c969fbf`, but is **not qualified**. `validate_candidate_run_local()` currently fabricates replay references on exception/absent steps and constructs RunClosureProof authority/effect budget/uncertainty rather than consuming canonical receipts. A missing/failed replay or invalid/absent verifier/authorization must categorically **deny** mutating reuse; no invented `artifact://replay_...`. Mine scoped evidence before candidate discovery, and wire automatic TaskRun handoff only via existing run_closure/Policy/Verifier owners. Do not call promoting lifecycle methods for ephemeral run-local admission. The following older “design-approved but not implemented” note describes a prior milestone. See [independent safety audit](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
 ## 2026-10-08 — Online compilability is a trigger, not a second compiler
 
 The new [Laya Online Compilability Loop](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md) is **design-approved but not implemented**. Existing progressive capture, `ExperienceCorpus`, `ExperienceCompiler.compile()/mine()`, replay/causal checks, `ExperienceValidationPromotionCoordinator` and `ExperiencePromotionPolicy` remain the owners of learning truth. **Caution:** the coordinator's `process_candidate()` may call `compiler.promote()`; early run-local admission must use a validation-only path, never accidentally invoke the global-promotion cycle.
