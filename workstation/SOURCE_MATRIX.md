@@ -1,5 +1,11 @@
 # Source reuse matrix
 
+## 2026-10-08 — Remotion personal-use clarification
+
+User confirmed personal use now; official license/FAQ were checked live. [Use-case disposition](creative-workstation/REMOTION_USE_CASE_2026-10-08.md): personal image/video automation eligibility only; engine security/render qualification, future company use and third-party redistribution remain separate gates. No vendoring/installation approval follows from this intake.
+
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation external-reference intake — 2026-10-08
 

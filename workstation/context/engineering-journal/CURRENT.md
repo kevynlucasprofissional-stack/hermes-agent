@@ -1,5 +1,26 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — Creative execution: combined R1/R2 candidate and Stage A preflight
+
+Status: CW-01 BLOCKED; CW-02 through CW-07 NOT_IMPLEMENTED / baseline-blocked. No main merge or external engine installation.
+
+Main: f21e803b3525b70ee6be2305e579c1cc1f930e74. Adopted upstream/merge-base: 71a2fe399bbd7a219c71f9d9fca2b313b01f2057. Cycle pin: 517b5e10febd619ce30bb22580e29b160266eb43 (not adopted). Fresh observed tip: d94b70f675205c2c046138997819428772cd2678; one later CLI reasoning-effort change is observed drift, not a reason to repin. Main divergence from observed tip: 857/10511.
+
+Hypothesis R12-COMPOSITION: existing R1 and R2 repairs can close the missing Laya CI profile and production npm audit on one candidate, without weakening gates. Falsifiers: locked install, production audit, import/build/typecheck or owner regression failure. Existing source PRs #54 and #56 remain separate; cherry-picks retain authorship and provenance. Candidate before evidence commit: 0ae24478bb, with R1 aefba46a91 and R2 8a206565c6/0ae24478bb. Combined-head CI and local install are NOT_RUN at registration. Reusing main node_modules would not prove the changed lockfile.
+
+Observed source-PR evidence: #54 c43dfef787cafe255769af9911846e3bc14c222b contracts and core-patch-dry-run SUCCESS. #56 36f49d7b2e15f0d9af10220f9c5fef011e47b6a7 Windows run 37837955981 production audit, install, doctor and production build SUCCESS; release qualification IN_PROGRESS at inspection. These receipts do not qualify the composed head or main.
+
+Stage A virtual merge experiment: git merge-tree --write-tree main 517b5e10 returned exit 1 and 55 conflict paths, without changing checkout/index. Conflicts include pre-I/O guardrails, compressor, session persistence, registry, Browser broker, native Electron, preview and uv.lock. Result tree a32d27996d8c1b41603f105cce4e20dd315d81c5 is a conflicted diagnostic object, never a baseline. No actual upstream merge performed. No blanket ours/theirs resolution authorized by this result.
+
+Read-only main checks this execution: component-lock validation PASS; license policy PASS; core anchors PASS (personal tracked edits warning). Strict seam audit PASS: 14 classified direct seams, 0 unclassified, 0 budget regressions, 650 edge references; REMOVE remains debt. Full canonical runtime read order, semantic reconciliation, exact-head qualification and native product proof remain prerequisites before target implementation.
+
+Safety hold remains: KI-024 voice input-authority incident OPEN, KI-025 startup reliability OPEN, H-080B.3 native proof not established here. User confirmed personal use for now; official license/FAQ support individual image/video creation and automation. Record PERSONAL_USE_ELIGIBLE only, no redistribution/company approval; see ../../creative-workstation/REMOTION_USE_CASE_2026-10-08.md. Existing CW01 audit contains reusable owners and external intake, but its historical main/PR status is superseded by the live observations above.
+
+Environment experiment: shared Python 3.11 run completed with 7 Laya provenance failures across 4 files and one no-tests file (test_canary_recipe_context.py); preserve failures, no qualification. uv sync --locked --python 3.13 --extra dev --extra anthropic --extra workstation-laya created local venv but failed downloading torch==2.14.1 after DNS os error 11001. A subsequent independent socket.getaddrinfo for files.pythonhosted.org succeeded (IPv4/IPv6), a material connectivity change. Retry the unchanged locked install once under recovered DNS; do not omit torch or weaken provenance. Typecheck and Git tests already passed; npm audit exit 0 with 8 LOW findings.
+
+NEXT: qualify the composed R1/R2 candidate; reconcile the fixed-pin Stage A separately; close applicable R4 safety/product gates; only then release CW-02. Preserve personal Obsidian workspace/note in original checkout. Rollback of this candidate is dropping its branch/worktree after preserving evidence; no project files are removed.
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.

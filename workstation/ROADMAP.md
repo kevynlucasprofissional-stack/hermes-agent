@@ -1,5 +1,11 @@
 # Workstation roadmap
 
+## 2026-10-08 — Creative execution checkpoint
+
+[Current evidence](creative-workstation/CW_EXECUTION_2026-10-08.md): R1/R2 baseline gate repairs composed, fixed-pin Stage A still required, applicable safety/native gates open. CW-02–CW-07 remain blocked; no creative engine or manifest is implemented. Existing source PRs remain independent and no main merge occurred.
+
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 

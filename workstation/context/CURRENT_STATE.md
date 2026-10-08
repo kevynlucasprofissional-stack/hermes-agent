@@ -1,5 +1,11 @@
 # Current State
 
+## 2026-10-08 — Creative execution baseline repair candidate
+
+R1/R2 corrections are composed in an isolated branch, not main. Local npm production audit, Desktop typecheck and 9 Git integration tests passed; upstream Stage A and safety/product gates remain open. CW-02–CW-07 are NOT_IMPLEMENTED / BLOCKED. See [execution checkpoint](../creative-workstation/CW_EXECUTION_2026-10-08.md) for exact SHAs, provenance and pending qualification. Personal Remotion eligibility is documented separately and does not approve distribution.
+
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
 
