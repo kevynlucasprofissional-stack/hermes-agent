@@ -1,5 +1,11 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-10-08 — D-039: active mining despite unqualified effects, durable opportunity
+
+New accepted product direction: evidence capture, event classification, scoped `ExperienceCompiler.mine(task_id, run_id)` and optional isolated verification are **learning**, not external-effect permission. A permanent binary SHADOW mode that suppresses mining sacrifices valuable same-TaskRun operationalization. Move to active background mining with evidence-revision retry and durable candidate/checkpoint pointers even when run-local **effects** remain shadow/held for absent authority or product verifier. Do not confuse `HELD` with rejected or promoted; on new canonical evidence or provider recovery resume validation. Eligible family-scoped, real verifier/replay/readback and owner-granted effect budget may enable immediate run-local DIRECT, without repeated consent inside current TaskRun. Global `ExperiencePromotionPolicy` is unchanged; D-038 no-fabricated-receipt and no-self-issued-authority obligations still apply. 3 compile/validation attempts are *per evidence revision/budget envelope*, not an irreversible knowledge cap. Canonical plan: [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md); none of this is implemented in this documentation pass.
+
+
+
 ## 2026-10-08 — Run-local verification must be canonical (P0 corrective gate)
 
 The online monitor was experimentally implemented on `workstation/laya-direct-system1` in `c969fbf`, but is **not qualified**. `validate_candidate_run_local()` currently fabricates replay references on exception/absent steps and constructs RunClosureProof authority/effect budget/uncertainty rather than consuming canonical receipts. A missing/failed replay or invalid/absent verifier/authorization must categorically **deny** mutating reuse; no invented `artifact://replay_...`. Mine scoped evidence before candidate discovery, and wire automatic TaskRun handoff only via existing run_closure/Policy/Verifier owners. Do not call promoting lifecycle methods for ephemeral run-local admission. The following older “design-approved but not implemented” note describes a prior milestone. See [independent safety audit](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
