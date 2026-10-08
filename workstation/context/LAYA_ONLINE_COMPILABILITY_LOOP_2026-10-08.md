@@ -1,6 +1,10 @@
 # Laya Online Compilability Loop — 2026-10-08
 
-**Status:** IMPLEMENTED ON BRANCH / LOCAL GATES PASSED (14/14 INCL. REAL LAYA) / CI QUALIFICATION PENDING
+> **RELEASE HOLD — independent review (2026-10-08):** Experimental implementation and locally reported 14/14 gates do **not** constitute safe autonomous integration. P0: replay proof may be synthetic after failure/absent steps; `RunClosureProof` self-issues LOCAL_MUTATION, budget, defaults and `uncertainty_clear=True`. P1: `POSSIBLE_RUN_LOCAL_REUSE` is not automatically invoked, corpus scoped after mining, DIRECT default and inflated metrics. **Current release status: PARTIALLY IMPLEMENTED / NOT QUALIFIED / DO NOT MERGE.** Follow mandatory C0–C6 [independent post-implementation audit](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md); legacy implementation status below is a local milestone only.
+
+
+
+**Status:** PARTIALLY IMPLEMENTED / P0 SAFETY RED GATES / AUTONOMOUS E2E & CI PENDING / NOT QUALIFIED
 **Working branch:** `workstation/laya-direct-system1`  
 **Owner:** Workstation learning/control plane.  
 **Purpose:** Detect sufficiently informative runtime experiences *while a TaskRun executes*, invoke the existing provider-free Experience Compiler at appropriate moments, and safely enable same-run reuse without premature global promotion.
