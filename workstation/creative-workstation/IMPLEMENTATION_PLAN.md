@@ -1,5 +1,11 @@
 # Plano de implementação — Hermes Creative Workstation
 
+## Entrada corretiva obrigatória antes de CW-02 — R1/R2/R3/R4 (2026-10-08)
+
+**Estado observado: CW-01 BLOCKED.** O refresh [PR #52](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/52) é auditoria documental, não liberação. O main observado `f21e803b` já inclui Laya, mas [CI main](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37826432518) falhou em 7 testes por `No module named laya`; o workflow `.github/workflows/workstation-ci.yml` omite o extra `workstation-laya`. O [Windows PR #52](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37829895692) encontrou 19 vulnerabilidades no `npm audit --omit=dev --audit-level=moderate`; Electron/package pós-audit não executaram. H-079 Stage A, KI-024 voz, H-080B.3 e KI-025/H-082 permanecem em aberto.
+
+**Antes de executar as tabelas de CW abaixo, cumprir o [plano R1–R5](BASELINE_UNBLOCK_EXECUTION_2026-10-08.md):** R1 PR separado de paridade locked-Laya da CI e gates; R2 PR independente para riscos npm; R3 upstream fixo + reconciliação H-079; R4 provas/correções P0 e produto conforme aplicabilidade; R5 inicia CW-02 apenas com baseline qualificado. A investigação de R1/R2 pode avançar sem depender de renders ou instalação de engines, mas código downstream de feature **não** pode violar o upstream-first. Registro de branch/PR não significa merge. Os estados e critérios abaixo continuam válidos para cada CW-xx, não para autorização antecipada.
+
 **Estado:** BACKLOG PLANEJADO, documentação inicial. **Este arquivo não libera expansão runtime.**
 **Autoridade de prioridade:** [../ROADMAP.md](../ROADMAP.md).  
 **Pré-condições:** [H-079 upstream-first](../context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md), H-080A/H-080B e bloqueios de [CURRENT_STATE](../context/CURRENT_STATE.md).
