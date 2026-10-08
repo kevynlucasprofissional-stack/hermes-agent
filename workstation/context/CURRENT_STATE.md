@@ -1,5 +1,15 @@
 # Current State
 
+## 2026-10-08 — D-039 approved: adaptive autonomous learning, not yet implemented
+
+**Current factual state:** `workstation/laya-direct-system1@938d9b2beeaf` retains the earlier D-038 local fixes (37 safety/E2E tests and 16 local qualification gates recorded at `fd3085f`; full local 900 passed/0 failed/2 skipped) but H-081 exact HEAD CI `37804714508` FAILED on `full_workstation` runner timeouts, H-079 upstream pin qualification is open and H-082/bootstrap separate. Product `ValidationEnvironmentProvider` and Laya compilability calibration are absent; DIRECT gate trusts any nonempty qualification ref; SHADOW prevents active mining; work windows/attempts/offers are fixed and not checkpoint-rehydrated.
+
+**Approved D-039 direction, NOT CODED:** minimize opportunity loss through active evidence capture and provider-free mining regardless of effect mode; prioritize qualified same-run DIRECT rather than permanent SHADOW; allow automatic *derived* authority from existing TaskRun grants without re-prompt, with real verification. Make 3 compilation / 3 validation failures reopen on new evidence, preserve high-value event pointers despite queue saturation, rehydrate candidate/window checkpoints after 900s TTL, shutdown/restart, and yield/resume after 100 items/checkpoint. Keep worker CPU/memory/backpressure caps, valid receipt and cancellation/lease/uncertainty fences. Track actual lost opportunities, result verifications and measured System-2 savings.
+
+**Release:** unchanged, NOT QUALIFIED / NO MAIN MERGE. These are new requirements, not implementation results. Architecture/owners/tests: [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md); D-039 supersedes only overly rigid learning suppression, not D-038 proof/authority safeguards.
+
+
+
 ## 2026-10-08 — D-038 corrective execution C0–C6: code paths corrected locally, release gates still OPEN
 
 **Status: CORRECTED LOCALLY / NOT QUALIFIED / NO MAIN MERGE.** Corrective commits on `workstation/laya-direct-system1` start from documentation reference `c5cc11c0c9`; the local qualification below was taken at code commit `fd3085f087`. Exact-head CI, H-079 and H-082 were not closed by this work (see "Still open").
