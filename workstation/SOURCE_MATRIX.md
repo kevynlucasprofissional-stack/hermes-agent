@@ -1,5 +1,27 @@
 # Source reuse matrix
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## Creative Workstation external-reference intake — 2026-10-08
+
+**RESEARCH LEADS ONLY; runtime compatibility NOT VERIFIED.** See [Creative Workstation integrations](creative-workstation/INTEGRATIONS.md) for links, skills, license caveats and status. This matrix alone does not approve vendoring/installation; pin exact upstream SHA and inspect code/headers before implementation.
+
+| Reference | Disposition | Research target / status |
+| --- | --- | --- |
+| `penpot/penpot` (`mcp/`) and `penpot/penpot-ai-kit` | KEEP EXTERNAL + ADAPT MCP/SKILLS | Official MCP moved to main monorepo (prior `penpot-mcp` archived), auth/plugin code execution, self-host/remote mode, MPL; Hermes integration NV |
+| `remotion-dev/remotion` and `remotion-dev/skills` | KEEP EXTERNAL + EVAL | React/Studio/CLI, official skills; special license requires distribution/use-case review; Hermes E2E NV |
+| `mrdoob/three.js` (`editor/`) | ADAPT IDEA/CONTRACT | Thin typed bridge, scene identities, versioned editor internals, MIT; Hermes E2E NV |
+| FFmpeg | KEEP EXTERNAL | Typed CLI / ffprobe proof; build/license/codec must be audited |
+| Blender; Inkscape | KEEP EXTERNAL | `bpy`/headless, SVG/CLI, community MCP optional, GPL; Hermes E2E NV |
+| GraphiteEditor/Graphite | REFERENCE + EXPERIMENT | Graph-based procedural editor, software MIT/Apache; separate asset license, stable agent graph interface NV |
+| BOMWiki/partmode; sgenoud/replicad | REFERENCE | Agent-oriented CAD operations and JS CAD; hosted MCP/auth/AGPL analysis |
+| GIMP; Krita; Godot; PixiJS; p5.js; Tone.js; Strudel; Scribus | RESEARCH/KEEP EXTERNAL | Specialized engines, compatibility and source/license ref NV |
+| Community MCPs for Blender/Inkscape/GIMP/Krita/Remotion/Godot | REFERENCE/EVAL | Code execution and secret/FS isolation, pinned versions, negative effect tests required |
+| n8n | KEEP EXTERNAL, not creative core | Existing optional MCP catalogue, do not duplicate workflow runtime |
+
+Classification: upstream capabilities are source-documented FACT/PARTIAL where linked; compatibility, qualification, redistributability and skill installation in the Hermes fork are **NV**, not ABSENT.
+
+
+
 This file is the canonical intake registry for external projects, papers, benchmarks and implementation patterns that may help Hermes Work.
 
 Canonical split of responsibility:
