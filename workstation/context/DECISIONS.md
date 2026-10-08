@@ -1,5 +1,19 @@
 # Architectural Decisions
 
+## D-041 — Ordem de desbloqueio CW-01 sem waiver de segurança ou H-079 (2026-10-08)
+
+**Status: DIREÇÃO DE EXECUÇÃO DOCUMENTAL ACEITA / CORREÇÕES PROPOSTAS, NÃO IMPLEMENTADAS OU QUALIFICADAS.** Esta decisão formaliza como organizar trabalho de reparo e evita mais uma CW-01 somente diagnóstica. **Não é exceção H-079, não muda política de release e não aprova engines.**
+
+1. **Separar causas:** (R1) a CI Workstation deixou de instalar o extra `workstation-laya`, já definido no `pyproject.toml`; as sete falhas do `main@f21e803b` são `ModuleNotFoundError: laya` (causa imediata observada, resultado após reparo ainda não provado); (R2) falha distinta de auditoria npm do Desktop Windows no PR #52 com 19 achados e E2E posteriores pulados; (R3) H-079 Stage A upstream não qualificada; (R4) input voice KI-024 P0, Electron H-080B.3 e bootstrap KI-025/H-082.
+2. **Reparo menor primeiro, evidência real depois:** começar pela menor correção de perfil de instalação no workflow `.github/workflows/workstation-ci.yml`, sem alterar testes, lock, proveniência Laya ou runtime para fabricar resultado. PR próprio; CI completa no HEAD; posteriormente regressões antes puladas.
+3. **Segurança npm separada:** diagnóstico por logs de Actions já existentes não precisa de nova consulta local ao registry; `npm audit` local novo só com autorização e análise de dependências privadas. Remediar direct/transitive com mudança de lock revisada, jamais `npm audit fix --force` como solução cega ou supressão de gate.
+4. **Preservar H-079:** R1/R2 são triagem/reparo de gate, não sinal verde para implementação criativa downstream. Stage A pinada, conciliação semântica de owners/seams e qualificação são obrigatórias; exceção apenas quando o upstream candidato for comprovadamente inviável, explicitamente registrada e submetida à política existente.
+5. **Segurança de produto é independente:** KI-024 de ditado involuntário requer autoridade de usuário/sessão verificável e testes negativos; H-080B.3 depende de Electron real; KI-025/H-082 de warm start no Windows. Cada bloqueio pode exigir seu PR e gate; não declarar fechado por ter passado outra suíte.
+6. **Retomar criatividade incrementalmente:** CW-02 somente após baseline admissível e blockers aplicáveis; CW-03A React/SVG→Chromium→PNG, CW-03B FFmpeg e CW-03C Remotion opcional por licença; CW-04 Penpot e CW-05 Three.js independentes; CW-07 empírico só depois de vertical comprovada.
+7. **Owner único e estados honestos:** ProcessRegistry, BrowserTask, Control Plane, TaskCompiler, ArtifactStore/Journal, OperationalCapabilityRegistry e Experience Compiler não devem ser duplicados. Registros históricos pré-merge Laya permanecem identificados como históricos; `NOT_RUN` nunca é `PASS`. Sem merge automático.
+
+Referência detalhada: [BASELINE_UNBLOCK_EXECUTION_2026-10-08.md](../creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md). Evidência temporal: [CI main 37826432518](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37826432518), [Windows PR #52 37829895692](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37829895692), [PR #52](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/52).
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## D-040 — Creative Workstation documentation scope, not new runtime authority (2026-10-08)
 
