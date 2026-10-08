@@ -1,5 +1,17 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — Independent code-audit corrective experiment / release HOLD
+
+**Observation:** `c969fbf` adds real Online Compilability Monitor components, but local 11/11 new tests and 14/14 qualification gates are not proof of safe runtime integration. Static audit of `compilability_monitor.py` identified: fail-open synthetic replay refs after replay error/missing steps; constructed LOCAL_MUTATION authority, budget, canonical task/run defaults and `uncertainty_clear=True`; no auto `POSSIBLE_RUN_LOCAL_REUSE` in `process_event()`; unscoped `compiler.mine()`; default DIRECT/shadow omission; success if no anomalies and inflated `system2_calls_avoided`; unbounded `drain(timeout)` and per-run lifetime. Test A manually injects fake Laya, remaining items, steps and dispatcher.
+
+**RED experiments required before GREEN:** replay exception/missing/failed => no proof; revoked/overbroad scope/uncertain mutation => no dispatch; unrelated runs => no candidate leakage; actual TaskRun events => automatic verified next-item handoff without manual helper invocation; no terminal verifier => no success/avoided-call telemetry; timeout/abstain => no influence; bounded shutdown and exact-head CI. Real Laya typed-answer tests do not establish calibrated readiness.
+
+**Outcome:** documentation-only follow-up, no new runtime or tests executed here. CI `37783114603` FAILED, `37794367952` IN_PROGRESS at check; H-081, H-079 and H-082 remain independently gated. Historical positive reports below preserved as local milestones, not release acceptance.
+
+Full C0–C6 audit: [../ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](../ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
 ## 2026-10-08 — H-081 checkout hygiene corrective experiment
 
 **Hypothesis / experiment registered before mutation.** Exact-head run `37774360790`
