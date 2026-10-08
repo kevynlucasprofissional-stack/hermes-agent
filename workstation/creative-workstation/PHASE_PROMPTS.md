@@ -8,7 +8,7 @@
 
 **Todos os prompts pressupõem acesso ao repositório e obedecem `AGENTS.md`, `workstation/context/README.md`, H-079 e [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md).** Não use esses prompts para burlar os gates; as leituras mandatórias continuam mandatórias.
 
-## CW-01 — Preflight e auditoria (primeira mensagem recomendada)
+## CW-01 — Preflight e auditoria (registro histórico; JÁ EXECUTADA COMO BLOCKED)
 
 > Verifique `workstation/creative-workstation/EXECUTION_BRIEF.md` e a seção CW-01 do `IMPLEMENTATION_PLAN.md`. Leia as instruções mandatórias de AGENTS/context, execute H-079 no HEAD real, identifique main/upstream pins, CI required, blockers H-080/KI e owners existentes para adapter, process lifecycle, Browser, TaskCompiler, artifacts, registry e Experience Compiler. Audite licença e ref de Penpot, Remotion, Three e FFmpeg. **Não altere runtime.** Registre tabela de owner/arquivo/símbolo/gap, baseline e recomendação GO/BLOCKED para CW-02, com receipts/links; atualize journal como investigação e apresente o menor PR/evidência necessário.
 
@@ -44,4 +44,4 @@
 
 `STATUS | HEAD/pin/CI | owners/code diff | tests (comandos + outcomes) | receipts/artifacts | negative tests | blocker/rollback | PR | next smallest safe step`.
 
-A primeira mensagem da série deve ser **CW-01**. Os prompts seguintes são escolhidos somente após gates/CI/avaliação da fase anterior.
+**A próxima mensagem após a auditoria CW-01 é R1 (paridade CI Laya)**, com instrução em [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md). Os prompts CW-02–CW-07 só são executados conforme gates e qualificações da fase anterior.
