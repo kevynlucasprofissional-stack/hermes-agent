@@ -1,5 +1,9 @@
 # CW — Execution Brief (entrada compacta para coding agents)
 
+## Correção da porta de entrada (2026-10-08)
+
+**Primeira ação agora é R1 (perfil CI Laya), não uma segunda auditoria CW-01.** A CW-01 foi concluída como diagnóstico BLOCKED; [reparo e qualificação R1–R5](BASELINE_UNBLOCK_EXECUTION_2026-10-08.md) é o handoff autoritativo para a próxima IA. Trabalhar a partir do SHA atual (verificar), não assumir que `PR #52` foi merged. R1 edita apenas o workflow omitindo o extra `workstation-laya`, faz as provas de instalação/proveniência e a CI exata. R2 segurança npm, R3 upstream-first H-079, R4 P0 e produto permanecem separadas; CW-02 depende de todas as qualificações aplicáveis. Este parágrafo atualiza a orientação histórica “comece na CW-01” abaixo sem eliminar os registros de auditoria.
+
 **Estado em 2026-10-08:** documentos, não runtime. **Prioridade efetiva:** `workstation/ROADMAP.md` e gates atuais; CW-P0 não substitui H-079/H-080/KI-024. **Referência desta iniciativa:** [README](README.md) → [plano](IMPLEMENTATION_PLAN.md) → [matriz de aprovação](VERIFICATION_MATRIX.md).
 
 ## Contrato em 12 linhas
