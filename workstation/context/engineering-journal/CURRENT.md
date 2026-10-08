@@ -1,5 +1,17 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — D-039 autonomy trade-off accepted; adaptive learning hypothesis (documentation only)
+
+**Factual trigger:** Branch `938d9b2beeaf` has local safety/E2E evidence (37/37 new tests, 900 passed/0 failed/2 skipped and 16/16 local gates reported on `fd3085f`), but exact-head CI `37804714508` FAILED due to two full Workstation runner timeouts, and the production verification owner, calibration and H-079/H-082 remain unclosed. Runtime still defaults to SHADOW suppressing mining; DIRECT unlock checks only nonempty ref; monitor hot queue/window caps discard learning state; 3 fixed attempts per segment/candidate block fresh evidence; worker stop discards pending optional events. None of this cancels the TaskRun by design, but it can lose reuse opportunities.
+
+**Hypothesis:** separating immutable resource limits from adaptive, persistent opportunity handling materially increases validated run-local reuse per Laya inference without increasing unauthorized/uncertain effects. Accept more valid inference and stored metadata; maintain D-038 authority and proof gates. RED tests: 3 failed attempts + new evidence => retry; transient verifier failure + recovery => resume; expired 900s hot window/restart => rehydrate candidate/provenance; saturated queue => verified/negative event ref persists; 2 simultaneous runs receive fair scheduling; >100 items checkpoint yields and resumes; a fabricated DIRECT ref cannot enable mutation; genuine owner-authorized scope auto-grants without user re-prompt. Check actual foreground latency, memory, verified outcomes and System-2 counterfactual.
+
+**Experiment execution order:** A0 upstream-first H-079/H-081 baseline; A1 scoped active learning and verifiable qualification attestation; A2 durable adaptive state; A3 event scheduling fairness; A4 narrow auto-delegation; A5 actual ValidationEnvironmentProvider and real Laya workload; A6 resumable checkpoint; A7 qualification and honest measurements. **Outcome today:** design recorded, no runtime code, new RED tests or qualification executed; preserve release HOLD until evidence closes.
+
+Canonical spec: [../LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](../LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md).
+
+
+
 ## 2026-10-08 — D-038 corrective execution C0–C6: code paths corrected locally, release gates still OPEN
 
 **Status: CORRECTED LOCALLY / NOT QUALIFIED / NO MAIN MERGE.** Corrective commits on `workstation/laya-direct-system1` start from documentation reference `c5cc11c0c9`; the local qualification below was taken at code commit `fd3085f087`. Exact-head CI, H-079 and H-082 were not closed by this work (see "Still open").
