@@ -1,5 +1,19 @@
 # Workstation roadmap
 
+## PRIORIDADE EXECUTÁVEL — desbloqueio da baseline CW-01 (2026-10-08; planejamento, NÃO QUALIFICADO)
+
+**Direção de trabalho aceita para documentação e ordem de implementação:** não repetir apenas a auditoria CW-01; iniciar uma **correção independente do perfil de CI Laya** e continuar por lanes separadas de segurança npm, H-079 Stage A, voz/Electron/bootstrap e, só depois dos gates aplicáveis, CW-02. Referência executável: [Plano de desbloqueio CW-01](creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md). Este plano **não aprova waiver de H-079**, não libera código criativo ou integração de engines e não faz merge.
+
+| Prioridade | Lane / owner | Estado conhecido | Aceite para avançar |
+| --- | --- | --- | --- |
+| **R1 imediatamente** | `.github/workflows/workstation-ci.yml` + extra `workstation-laya` | CI main `f21e803b`: 7 `ModuleNotFoundError: laya`; 893 passed / 2 skipped; anchors green. O workflow Laya já instala o extra. | PR exclusivamente de CI, `uv sync --locked` e proveniência real, contratos completos + regressões que foram puladas e CI no HEAD exato. |
+| **R2 separado** | `package.json` / `package-lock.json` / `workstation-browser-windows.yml` | Auditoria de produção no PR #52: **19** findings (2 critical/5 high/4 moderate/8 low); Desktop/Electron após auditoria não executados. | Dependências corrigidas e validadas com auditoria + regressões, ou exceção explícita de segurança; sem `npm audit fix --force` automático. |
+| **R3 obrigatório** | H-079 Stage A / upstream owners e seams | Pin adotado `71a2fe39`, tip observado `517b5e10`, divergência material (857/10.510 no refresh do PR #52); não qualificado. | Integração por pin imutável e conciliação por concern; CI/release gates. Exceção somente quando candidata upstream comprovadamente inaceitável e formalizada. |
+| **R4 P0/produto** | KI-024 voz, H-080B.3 Electron, KI-025/H-082 bootstrap | Bloqueios abertos; evidência local histórica não significa closure de produto. | Origem/autoridade de voz corrigida, provas negativas, Electron real e warm-start conforme aplicabilidade e gates. |
+| **R5 criativo** | CW-02 → CW-03A/03B; opcionais CW-03C/04/05/06; CW-07 após vertical real | CW-01 BLOCKED; engines não qualificadas. | PRs independentes, fontes editáveis, artefatos reais, readback e E2E no SHA exato. |
+
+**Política de fluxo:** R1/R2 podem ser investigados em paralelo com branches isoladas; correção de gate não equivale a autorização para modificar runtime antes do H-079; manter `main` intacta até aprovação explícita. D-040 permanece documentação, D-039 permanece não qualificada. Anotações antigas declarando Laya ausente de main são históricas depois do merge `f21e803b`. [PR #52](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/52) está aberto neste registro. Atualizar estados/referências mediante novos SHAs e evidências.
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 
