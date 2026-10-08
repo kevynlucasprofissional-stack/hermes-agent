@@ -1,8 +1,0 @@
-{
-  "objective": "filesystem",
-  "target": "filesystem",
-  "candidates": [
-    "cap_alpha",
-    "cap_beta"
-  ]
-}

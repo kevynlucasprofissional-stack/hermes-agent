@@ -1,5 +1,26 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — H-081 checkout hygiene corrective experiment
+
+**Hypothesis / experiment registered before mutation.** Exact-head run `37774360790`
+failed during Windows checkout on tracked `.test-tmp` long paths. Commit
+`9bc903c6ddbe6c03b6cf4244b5c0e1f1d0cf85a0` introduced 22,855 generated test files
+there (maximum relative path length 272); the inspected test runners/workflows do not
+reference those files as fixtures. Remove only this directory from the Git index with
+`git rm --cached`, preserve working files and historical commit, and add a root ignore rule.
+No runtime/installer change or upstream seam modification is part of this correction.
+Confirm: zero tracked `.test-tmp` paths, ignore rule effective, scoped staged diff,
+unchanged dogfood state, and exact-head CI reaches installation/qualification.
+Refute closure if checkout still fails or any required qualification fails/skips.
+The Online Compilability Loop remains blocked by the mandatory baseline gates.
+
+Local result: exactly 22,855 staged deletions, all under `.test-tmp`; zero paths from
+that directory remain tracked and the root ignore rule matches. Working directories
+remain present; the original tree is recoverable as
+`9bc903c6dd:.test-tmp` = `26d13b547430c5c3f1b979695eed87aa8b0f50e8`.
+Preexisting dogfood workspace diff remains 15 additions / 6 deletions and is excluded.
+Exact-head CI remains pending until the corrective commit is pushed and measured.
+
 ## 2026-10-08 — Online Compilability Loop pre-change gate
 
 **TARGET IMPLEMENTATION BLOCKED / LOCAL FOCUSED BASELINE PASSED.**

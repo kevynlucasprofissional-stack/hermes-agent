@@ -1,9 +1,0 @@
-{
-  "q": {
-    "type": "choice",
-    "criteria": {
-      "A": "a",
-      "ABSTAIN": "neutral"
-    }
-  }
-}

@@ -3,6 +3,20 @@
 Date: 2026-10-08. Branch: `workstation/laya-direct-system1`.
 Status: **BLOCKED BEFORE TARGET IMPLEMENTATION / NOT QUALIFIED**.
 
+## Resumed checkout correction
+
+After the user resumed work, the same failure was confirmed on evidence commit
+`846111d9cb643ee68782e1bec9fe11af7a5a90e1`,
+[run 37774360790](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37774360790).
+The permitted corrective change removes 22,855 generated `.test-tmp` entries from
+the index only and adds `/.test-tmp/` to `.gitignore`. No working-file deletion,
+runtime change, fixture deletion or history rewrite occurs. Source commit
+`9bc903c6ddbe6c03b6cf4244b5c0e1f1d0cf85a0` retains the original artifact tree
+`26d13b547430c5c3f1b979695eed87aa8b0f50e8`; local directories remain present.
+Tracked count is now zero and ignore matching passes. Qualification still requires
+the resulting corrective commit's actual CI; this does not close H-079 or H-082.
+The following initial-preflight observations are retained as historical evidence.
+
 ## Exact baseline and preservation
 
 - Initial local HEAD: `3a8351233b7675024f97d1139382edf28c7e808d`.
