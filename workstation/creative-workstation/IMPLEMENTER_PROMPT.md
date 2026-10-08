@@ -1,60 +1,52 @@
-# Prompt de handoff para IA implementadora — Creative Workstation
+# Hermes Creative Workstation — prompt operacional para a IA implementadora
 
-> Use o texto abaixo como instrução inicial em uma sessão que tenha acesso ao checkout/terminal e ao GitHub do fork.
+**Repositório:** `kevynlucasprofissional-stack/hermes-agent`. **Iniciativa:** `workstation/creative-workstation/`. **Estado inicial:** documentação apenas; sem runtime criativo instalado/qualificado. **Branch documental:** `docs/creative-workstation-foundation-20261008` (PR #50; use `main` quando a documentação estiver integrada).
 
-**Repositório:** `kevynlucasprofissional-stack/hermes-agent`.  
-**Documento de entrada:** `workstation/creative-workstation/README.md`.  
-**Plano executável:** `workstation/creative-workstation/IMPLEMENTATION_PLAN.md`.  
-**Estado inicial:** documentação aprovada para investigação; **nenhum runtime criativo está declarado pronto**.
+## Ordem de leitura, sem gastar contexto desnecessário
 
-## Sua missão
+1. **Mandatório:** siga integralmente `AGENTS.md`, `workstation/AGENTS.md`, `workstation/context/README.md` e as leituras/gates requeridos pelo repositório. Não contorne a política H-079 nem leia apenas um resumo quando uma instrução canônica obrigar leitura.
+2. **Operacional:** leia `workstation/creative-workstation/EXECUTION_BRIEF.md`, a unidade atual em `IMPLEMENTATION_PLAN.md`, e as seções relevantes de `VERIFICATION_MATRIX.md`.
+3. **Por demanda:** consulte `ARCHITECTURE.md` e `INTEGRATIONS.md` somente para o subsistema/tool da fase; leia `SOURCE_MATRIX.md` e documentos históricos extensos por seção/símbolo/intervalo quando necessário. As transcrições em `research/` são fontes históricas, não leitura inicial obrigatória.
+4. **Para a próxima fase:** use `PHASE_PROMPTS.md`, uma fase por vez.
 
-Implementar progressivamente o Hermes Creative Workstation **sem construir um segundo Hermes**. O produto deve permitir ao agente orquestrar projetos editáveis por APIs/MCP/código/CLI, apresentar Penpot/Remotion/Three.js no Chromium interno quando admissível, renderizar outputs com FFmpeg/engines e eventualmente reutilizar procedimentos certificados via Experience Compiler. Não instalar tudo ao mesmo tempo.
+## Execute AGORA: CW-01 — preflight e plano de integração
 
-## Ordem estrita: faça nesta sequência
+1. Resolva branch/PR #50 vs `main` **sem fazer merge automático**.
+2. Registre `DOWNSTREAM_MAIN_SHA`, `UPSTREAM_MAIN_SHA_OBSERVED`, `CURRENT_PIN_SHA`, merge-base/ahead-behind, CI obrigatórios, owner e seam afetados. Execute preflight H-079 e obtenha status GO/BLOCKED.
+3. Determine de forma concreta, lendo o código atual, os owners existentes de capability/adapter, managed processes, plugins/MCP/skills, Browser Electron, TaskCompiler, ArtifactStore/Journal, OperacionalCapabilityRegistry e Experience Compiler. Anote `arquivo::símbolo → função existente → lacuna mínima`.
+4. Audite repositório/ref/licença/dependências de Penpot MCP/AI Kit, Three.js Editor, FFmpeg e Remotion (este último condicionado à licença); nenhum install automático.
+5. Identifique blocker H-080A/H-080B/KI-024, quaisquer CVEs/auditoria de dependências e a qualificação real do baseline. **Se houver gate vermelho, pare antes de modificar runtime**; registre no journal e entregue plano mínimo para desbloquear.
+6. Entregue relatório CW-01: `GO|BLOCKED`, SHAs, evidências, matriz owner→caminho, primeiros arquivos/contratos sugeridos para CW-02, riscos e menores passos.
+7. Não mexa em `main`; faça PR independente para qualquer mudança posterior.
 
-**0. Preparar.** Localize `main` atual e leia `AGENTS.md`, `workstation/AGENTS.md`, `workstation/context/README.md` e a leitura mandatória definida ali, `workstation/context/engineering-journal/CURRENT.md`; em seguida `workstation/creative-workstation/{README,ARCHITECTURE,IMPLEMENTATION_PLAN,INTEGRATIONS}.md`, `workstation/{ROADMAP,SOURCE_MATRIX,ARCHITECTURE}.md`, `workstation/context/{CURRENT_STATE,DECISIONS,HERMES_WORKSTATION_INTELLIGENCE}.md`. Estas são fontes de autoridade, não orientação opcional.
+## Depois de CW-01
 
-**1. Gate de código, ANTES de editar runtime.** Execute H-079 upstream-first: registre SHA da main e upstream, pin imutável, merge-base, ahead/behind, CI required e seams impactadas; reconcilie e qualifique baseline exato. Se H-080A/H-080B, KI-024 ou gate equivalente bloquear expansão, **não implemente features**. Produza relatório técnico de bloqueios e PR somente documental/evidência; não declare entrega funcional.
+Somente se gates permitirem, implemente **CW-02** num PR pequeno, com descoberta/health e lifecycle opt-in, sem novo DB/Browser/autoridade. Siga uma fase por vez:
 
-**2. Auditar o que existe.** Inspecione processos/apps/Plugin/MCP/skills no Hermes upstream e Workstation, Electron `WebContentsView` Browser, `workstation/control_plane/`, `task_compiler.py`, `operational_capabilities.py`, `experience_compiler/`, ArtifactStore, policy e verificadores. Reuse owners. Anote símbolos e arquivos concretos; nenhum path da proposta é mandato automático de alteração.
+`CW-02 → CW-03A React/SVG + Electron + PNG → CW-03B FFmpeg → CW-03C Remotion (somente licença) → CW-04 Penpot / CW-05 Three.js (PRs independentes) → CW-06 engines opcional → CW-07 Experience Compiler reuso verificado`.
 
-**3. Auditar dependências.** Penpot MCP atual em `penpot/penpot/mcp`, remotion-dev/skills e licença atual de Remotion, Three.js Editor, FFmpeg. Fixe SHA, licença, schema, pontos de extensão, dependências, risco de execução de código e testes necessários. MCP comunitário/skill externo só após análise e consentimento. Se Remotion não for legalmente admissível para o cenário de distribuição, implemente a vertical inicial apenas em React/SVG + FFmpeg.
+CW-07 pode começar após uma vertical comprovada; não precisa aguardar todas as engines.
 
-**4. Creative Runtime mínimo.** Aproveite lifecycle/authority existentes para descobrir capabilities, verificar disponibilidade, pedir consentimento de instalação, iniciar/monitorar/parar uma ferramenta e produzir health/status derivados. App manifest tipado com path/hash/version e scopes; nenhuma nova DB ou lifecycle soberano. Projeto editável e outputs rastreados em ArtifactStore/Journal existentes.
+## Invariantes não negociáveis
 
-**5. Uma vertical real.** Gere e abra no Electron um projeto React/SVG, exporte PNG verificável; depois renderize/valide vídeo vertical com FFmpeg e Remotion somente se license-gated. Exija confirmação humana para mutações sensíveis, evidência real e testes negativos (porta, auth, perfil, encerramento, crash, missing asset, render incorreto). Não pare em mocks.
+- Reutilizar Control Plane Router/Policy/Verifier, TaskRun/Kanban, BrowserTask/WebContentsView, ArtifactStore/Journal, OperationalCapabilityRegistry e Experience Compiler existentes.
+- Skills são instruções; MCP/API/CLI oferecem ações; capabilities aprendidas exigem prova causal externa/replay/promoção. Laya/System-1 não autoriza efeitos.
+- Preferir operações tipadas/API/CLI/MCP a mouse. Manter projeto editável, revisão humana, hashes/proveniência e rollback.
+- Exigir autorização explícita para instalações, efeitos irreversíveis e terceiros. Version pin + licença + sandbox + env allowlist + no secret leakage.
+- Nenhuma promoção sem recibo do owner, testes negativos e verificação real. Não chamar screenshot, exit code ou sucesso de mock de `E2E_PASS`.
+- Se bloqueado, reportar o resultado **sem inventar sucesso**, sem enfraquecer gate, sem instalar tudo e sem fazer merge.
 
-**6. Edidores:** Penpot via MCP oficial + UI no Chromium; prove que edição humana não é sobrescrita. Depois Three.js Editor com bridge restrita (inspecionar, transformar, material, luz, câmera, importar/exportar/snapshot), IDs semânticos, revisões e rollback. Evite JS arbitrário privilegiado e não assuma estabilidade dos internals.
-
-**7. Expansão separada:** FFmpeg e Inkscape CLI, Blender headless quando justificável; Graphite/áudio/CAD/Godot continuam de pesquisa até prova. Não importá-los como dependências first-party por conveniência.
-
-**8. Reuso:** somente depois de verificar o pipeline, conecte ao Experience Compiler/registry já existentes; candidatos -> validação empírica -> replay -> policy -> promoção. Versões, schemas, identidade e scope compõem fingerprints; drift invalida execução sem reautorização.
-
-**9. Qualificar e entregar.** PRs pequenos por fase, testes em regressão, real Electron, owner receipts, checks no HEAD exato, seam audit, drift snapshot. Atualize roadmap, Source Matrix, DECISIONS (apenas decisões aceitas), CURRENT_STATE, intelligence e journal com SHAs, testes e bloqueios. Não merge automaticamente e não marque H-080 ou capability VERIFIED sem prova.
-
-## Contratos inegociáveis
-
-- Upstream owns sessions/memory/Kanban; Workstation possui semântica operacional mínima.
-- Chromium é interface visual, não owner de efeitos. Nunca introduzir outro Browser profile/BrowserTask router.
-- Router/Policy/Certificate/Verifier existentes controlam execução; Laya/System-1 não autoriza efeitos.
-- Skills não são executáveis certificados; MCP não elimina approval/verification.
-- Instalações, portas e credenciais somente com autorização e isolamento; proibir secret leakage.
-- UI não pode declarar sucesso antes do efeito verificado.
-- Prioridade e bloqueios canônicos prevalecem sobre a lista criativa P0.
-
-## Formato de relatório obrigatório em cada fase
+## Formato final de cada fase (preencher apenas resultados observados)
 
 ```text
-FASE / STATUS: IMPLEMENTED | BLOCKED | PARTIAL | VERIFIED
-BASELINE: downstream SHA / upstream pin / CI / seam audit
-CHANGES: arquivos, owners e contratos alterados
-EXTERNAL: repo/ref/licença/integração verificada
-TESTS: comando, ambiente, número real e resultado
-EVIDENCE: receipts, artefatos, screenshots, URLs/SHAs, testes negativos
-BLOCKERS: motivo e próxima menor ação
-UPSTREAM DRIFT: estado e classificação
-PR: link, head, merge status
+FASE / STATUS: CW-xx | PLANNED, BLOCKED, IMPLEMENTED, INTEGRATION_PASS, E2E_PASS, QUALIFIED
+BASELINE: downstream SHA / upstream SHA pin / CI / H-079 / upstream drift
+OWNERS: caminho::símbolo utilizado; contratos criados ou modificados
+LICENÇA/SUPPLY-CHAIN: ref, dependências, consentimento, parecer de uso/distribuição
+TESTES: comandos realmente executados, resultados e testes negativos (ou NOT_RUN)
+EVIDÊNCIAS: receipts, hashes, revisão do projeto, ffprobe/artefato, E2E se aplicável
+BLOQUEIOS / ROLLBACK: impacto e próxima ação mínima
+GIT: branch / commit SHA / PR / checks / status de merge
 ```
 
-Fazer **o máximo seguro dentro do gate atual**, sem pedir permissão repetida para detalhes já definidos; caso falhe um gate, parar a mutação insegura e apresentar resultado útil verificável. Nunca inventar testes, compatibilidade ou instalação.
+**Não amplie o escopo para a suíte inteira na primeira execução. Comece por CW-01 e pare no primeiro gate real que impeça implementação funcional.**

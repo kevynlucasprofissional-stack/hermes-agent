@@ -4,6 +4,36 @@
 **Autoridade de prioridade:** [../ROADMAP.md](../ROADMAP.md).  
 **Pré-condições:** [H-079 upstream-first](../context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md), H-080A/H-080B e bloqueios de [CURRENT_STATE](../context/CURRENT_STATE.md).
 
+## Contrato de execução por fase
+
+**Fontes:** [Execution Brief](EXECUTION_BRIEF.md) para iniciar sem duplicar históricos; [Verification Matrix](VERIFICATION_MATRIX.md) para testes/security/provas; [Phase Prompts](PHASE_PROMPTS.md) para instrução específica. Leitura obrigatória definida por `AGENTS.md` e `context/README.md` não pode ser abreviada por este briefing.
+
+**Estados permitidos:** `PLANNED` (documentado), `BLOCKED` (gate externo), `IMPLEMENTED` (código presente), `INTEGRATION_PASS` (efeito real), `E2E_PASS` (ambiente produto), `QUALIFIED` (gates exatos + efeitos + safety). `DOCUMENTED` não implica `IMPLEMENTED`. Atualizar journal com evidência real, não estados presumidos.
+
+### Unidades de PR e entregas verificáveis
+
+| Unidade | Entra quando | Muda o quê | Só sai quando |
+| --- | --- | --- | --- |
+| CW-00 | Agora | Documentação e proveniência | Arquivos e links válidos, análise integral preservada, zero runtime |
+| CW-01 | Antes de qualquer código | Auditoria upstream/baseline/source/owners | GO/BLOCKED explícito com SHAs, riscos, contratos e CI |
+| CW-02 | Gate CW-01=GO | Discovery/health/lifecycle mínimo opt-in | Spawn/stop/rollback/isolamento verificados + testes negativos |
+| CW-03A | CW-02 qualificada | React/SVG → Electron preview → PNG | Projeto nativo reabre; PNG e owner receipts reais |
+| CW-03B | CW-03A qualificada | FFmpeg/ffprobe tipados | MP4/codec/duração/dimensões/hash e cancelamento verificáveis |
+| CW-03C | CW-03A/B + licença admitida | Remotion/Studio opcional | License gate + render/vídeo E2E; caso contrário omitir |
+| CW-04 | Vertical + gates | Penpot MCP/UI em PR separado | Humano e agente preservam revisões e escopo |
+| CW-05 | Vertical + gates | Three.js Editor/bridge em PR separado | Scene/GLB, revision/undo, comando allowlisted |
+| CW-06 | Caso de uso concreto | Adapter Inkscape ou Blender por PR | Outputs e isolamento de cada engine |
+| CW-07 | Pelo menos uma vertical qualificada | Experience Compiler existente | Candidate→prova empírica→replay→promote→reuso real sem auto-certificar |
+
+**Sequenciamento:** CW-04 e CW-05 são independentes entre si. CW-07 pode começar depois da **primeira** vertical já comprovada e não exige que Penpot + Three.js + Blender estejam todos prontos. Não realizar deploy automático de ferramentas externas apenas porque são P0.
+
+### Dependência e parada
+
+- Dependência **requerida** indisponível → `BLOCKED` com motivo; sem fallback silencioso.
+- Dependência **opcional** indisponível → seguir sem ela somente se o contrato permitir, informando redução de escopo.
+- H-079 / CI / segurança / licença vermelhos → bloquear *runtime*; pode continuar evidência/doc do CW-01.
+- Toda fase gera um PR com owner alterado, testes determinísticos + negativos, artifact/receipt e rollback. Nada pode ser chamado `QUALIFIED` somente por passar unit tests.
+
 ## Estratégia de entrega
 
 Evitar um único PR gigante. Escolher **uma fatia vertical com evidências independentes** antes de adicionar os outros editores. Cada fase tem owner, contrato, aceitação negativa e saída de rollback. Qualificações fora desta fase não podem ser inferidas.
@@ -12,7 +42,7 @@ Evitar um único PR gigante. Escolher **uma fatia vertical com evidências indep
 
 **Mudanças:** criar `workstation/creative-workstation/`; atualizar as referências canônicas `ROADMAP.md`, `SOURCE_MATRIX.md`, `context/HERMES_WORKSTATION_INTELLIGENCE.md`, `context/CURRENT_STATE.md` e `context/engineering-journal/CURRENT.md`. Registrar princípios em `context/DECISIONS.md` apenas como proposta, não decisão final.
 
-**Aceite:** arquivos presentes, links internos válidos, propostas/FACT/PARTIAL/NV marcados, docs não afirmam código em execução, zero changes em runtime/deps/CI. Não promover entrega funcional.
+**Aceite:** arquivos presentes, links internos válidos, [dois textos-base completos](research/) acessíveis, propostas/FACT/PARTIAL/NV marcados, docs não afirmam código em execução, zero changes em runtime/deps/CI. Não promover entrega funcional.
 
 ### CW-01 — Audit + preflight / gate [BLOCKED até upstream/CI aptos]
 
@@ -33,7 +63,9 @@ Implementar a menor extensão necessária para: descobrir engine/capability; det
 
 **Teste:** unit contrato + processo fake, falha de instalação, porta ocupada, timeout, cancelamento, troca de perfil, restart, env secret leak, falha requerida sem fallback inseguro. **Aceite:** processo acessível apenas no escopo autorizado e encerrado sem órfãos, health receipt real, UI/status coerentes.
 
-### CW-03 — Primeiro fluxo criativo ponta a ponta
+### CW-03A/B/C — Primeiro fluxo criativo ponta a ponta
+
+**Subfases independentes:** CW-03A gera/abre PNG com React/SVG; CW-03B codifica vídeo via FFmpeg; CW-03C integra Remotion **somente após aprovação do cenário de licenciamento**. Cada subfase tem seu próprio PR, testes e rollback; o uso de FFmpeg não depende do Remotion.
 
 Preferir **React/SVG -> preview no Chromium -> imagem estática verificada**, e **FFmpeg** para encodar assets de teste; adicionar Remotion depois do license gate.
 
@@ -69,17 +101,25 @@ Usar os owners `workstation/experience_compiler/`, `workstation/operational_capa
 
 **Aceite:** segunda execução realmente resolve pela rota certificada, respeita risco/autoridade e fornece evidência com menor ou igual custo observado; não depender de auto-certificação.
 
+## Qualidade e segurança — oráculos obrigatórios
+
+Usar [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md) como check list de falsificação por etapa (S-01 consentimento; S-02 isolamento/processo; S-03 integridade/revisões; S-04 supply chain/licença; S-05 aprendizado).
+
+**DoD por PR:** 1) owner/arquivo/símbolo real e scope; 2) contrato de entrada/saída e segurança; 3) teste happy path e ao menos teste negativo para cada domínio afetado; 4) receipt/readback externo e artefato real; 5) cancelamento/restart/drift se aplicável; 6) regressões + Electron E2E para UI; 7) CI HEAD exato, seam audit e upstream drift; 8) relatório/rollback. Se alguma prova é inviável, registrar `NOT_RUN` ou `BLOCKED`, não preencher PASS por intenção.
+
 ## Ordem / dependências
 
 ```text
 CW-00 (docs)
    -> CW-01 (H-079 + baseline gates + license/source audit)
    -> CW-02 (capability app contract)
-   -> CW-03 (primeira vertical React/SVG + FFmpeg, Remotion gated)
-   -> CW-04 Penpot   (opcional paralelo após CW-03)
-   -> CW-05 Three.js (opcional paralelo após CW-03)
-   -> CW-06 engines especializadas
-   -> CW-07 aprendizado/reuso validado
+   -> CW-03A (React/SVG + preview Electron + PNG)
+   -> CW-03B (FFmpeg/ffprobe)
+   -> CW-03C (Remotion somente após licença, independente)
+   +-> CW-04 Penpot (PR próprio após vertical)
+   +-> CW-05 Three.js (PR próprio após vertical)
+   +-> CW-06 engines sob demanda
+   +-> CW-07 aprendizado/reuso (após primeira vertical qualificada)
 ```
 
 CW-04 e CW-05 podem ter PRs independentes após a vertical e os gates; não colocar ambos e CW-07 num patch só.

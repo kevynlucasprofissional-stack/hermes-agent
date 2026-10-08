@@ -15,15 +15,26 @@ O Hermes Work deve orquestrar projetos criativos **editáveis, observáveis, ver
 
 **Engines especializadas posteriores:** Inkscape CLI/SVG, Blender Python/headless, GIMP/Krita; pesquisa opt-in em Graphite; Tone.js/Strudel, PixiJS/p5.js, Godot, CAD/PartMode/replicad somente se casos de uso justificarem.
 
+## Entrada rápida para implementação
+
+**A melhor primeira mensagem é CW-01 (preflight, sem código).** Não envie ao agente o histórico integral como prompt: use o [briefing compacto](EXECUTION_BRIEF.md), o [prompt principal](IMPLEMENTER_PROMPT.md) e, depois, o [prompt da fase autorizada](PHASE_PROMPTS.md). O [plano](IMPLEMENTATION_PLAN.md) define o que produzir; a [matriz](VERIFICATION_MATRIX.md) define como provar. As leituras mandatórias em `AGENTS.md` e `workstation/context/README.md` **continuam obrigatórias**.
+
+O debate original foi preservado em dois documentos de pesquisa sem autoridade normativa: [análise completa](research/2026-10-08-full-analysis.md) e [proposta documental completa](research/2026-10-08-full-documentation-proposal.md). A [síntese curada](research/2026-10-08-original-analysis.md) continua disponível para navegação rápida. A transcrição textual normaliza escapes e omite apenas chips/favicons de UI; o conteúdo técnico, exemplos, tabelas e ressalvas permanecem.
+
 ## Onde começar
 
 | Documento | Responsabilidade |
 | --- | --- |
+| [EXECUTION_BRIEF.md](EXECUTION_BRIEF.md) | Resumo operacional de entrada, com dependências e status, sem reler todo o histórico |
+| [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md) | Evidência, testes negativos, segurança, rollout e promoção |
+| [PHASE_PROMPTS.md](PHASE_PROMPTS.md) | Instruções enxutas por etapa, a usar após os gates |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Limites, proprietários de estado, fluxo de execução e modelo de projeto |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Ordem executável, responsáveis por subsistema, testes, gates e critérios de aceite |
 | [INTEGRATIONS.md](INTEGRATIONS.md) | Candidatos, integração, licenças, MCPs, skills, links e nível de evidência |
 | [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md) | Briefing curto, autocontido e sequencial para uma IA implementadora |
-| [research/2026-10-08-original-analysis.md](research/2026-10-08-original-analysis.md) | Registro curado da análise original da conversa, separado da autoridade técnica |
+| [research/2026-10-08-original-analysis.md](research/2026-10-08-original-analysis.md) | Síntese curada da análise anterior |
+| [research/2026-10-08-full-analysis.md](research/2026-10-08-full-analysis.md) | Texto-base completo da análise (sem itens temporários de UI) |
+| [research/2026-10-08-full-documentation-proposal.md](research/2026-10-08-full-documentation-proposal.md) | Texto-base completo da proposta de documentação |
 | [../ROADMAP.md](../ROADMAP.md) | **Única fonte de verdade para prioridade e liberação da iniciativa** |
 | [../SOURCE_MATRIX.md](../SOURCE_MATRIX.md) | **Único registro canônico de referências externas** |
 
