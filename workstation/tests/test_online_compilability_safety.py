@@ -559,8 +559,8 @@ def test_taskrun_learns_then_automatically_adopts_and_verifies_next_items(fx, tm
 
 
 def test_single_run_candidate_is_never_promoted_globally(fx, tmp_path):
-    monitor = learn(fx, tmp_path, k=3)
-    fx.checkpoint()
+    learn(fx, tmp_path, k=3)
+    assert fx.checkpoint().all_items_completed
     for cap in fx.registry.list_capabilities():
         assert cap.lifecycle != CapabilityLifecycle.PROMOTED
         assert ExperiencePromotionPolicy().evaluate(cap).admitted is False

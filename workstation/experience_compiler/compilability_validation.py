@@ -37,9 +37,6 @@ from workstation.run_closure import RunClosureProof, evaluate_run_local_closure
 
 logger = logging.getLogger(__name__)
 
-_READ_EFFECTS = {"read_only", "PURE_READ", "DISCOVERY"}
-
-
 def _resolves(artifacts: ArtifactStore, ref: Any) -> bool:
     """A reference is evidence only if it resolves with intact bytes in the canonical store."""
     if not isinstance(ref, str) or not ref:

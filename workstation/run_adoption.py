@@ -34,7 +34,7 @@ from workstation.control_plane.lattice import (
     extract_effect_authority_requirements,
     join_all,
 )
-from workstation.durable_tasks import DurableTaskStore, WorkItem, WorkItemStatus
+from workstation.durable_tasks import DurableTaskStore, WorkItemStatus
 from workstation.run_closure import RunClosureProof, execute_in_flight_handoff
 
 logger = logging.getLogger(__name__)
