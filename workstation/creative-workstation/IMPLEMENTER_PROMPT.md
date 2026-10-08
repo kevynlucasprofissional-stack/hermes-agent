@@ -1,52 +1,48 @@
-# Hermes Creative Workstation — prompt operacional para a IA implementadora
+# Hermes Creative Workstation — prompt inicial para IA implementadora
 
-**Repositório:** `kevynlucasprofissional-stack/hermes-agent`. **Iniciativa:** `workstation/creative-workstation/`. **Estado inicial:** documentação apenas; sem runtime criativo instalado/qualificado. **Branch documental:** `docs/creative-workstation-foundation-20261008` (PR #50; use `main` quando a documentação estiver integrada).
+**Repositório:** `kevynlucasprofissional-stack/hermes-agent`. **Iniciativa:** `workstation/creative-workstation/`. **Status:** planejamento; **NENHUM runtime criativo qualificado**. Documentação no PR #50 (`docs/creative-workstation-foundation-20261008`) até ser incorporada.
 
-## Ordem de leitura, sem gastar contexto desnecessário
+## Missão e ponto de partida
 
-1. **Mandatório:** siga integralmente `AGENTS.md`, `workstation/AGENTS.md`, `workstation/context/README.md` e as leituras/gates requeridos pelo repositório. Não contorne a política H-079 nem leia apenas um resumo quando uma instrução canônica obrigar leitura.
-2. **Operacional:** leia `workstation/creative-workstation/EXECUTION_BRIEF.md`, a unidade atual em `IMPLEMENTATION_PLAN.md`, e as seções relevantes de `VERIFICATION_MATRIX.md`.
-3. **Por demanda:** consulte `ARCHITECTURE.md` e `INTEGRATIONS.md` somente para o subsistema/tool da fase; leia `SOURCE_MATRIX.md` e documentos históricos extensos por seção/símbolo/intervalo quando necessário. As transcrições em `research/` são fontes históricas, não leitura inicial obrigatória.
-4. **Para a próxima fase:** use `PHASE_PROMPTS.md`, uma fase por vez.
+Implemente o Creative Workstation incrementalmente **reutilizando o Hermes**: projetos editáveis pelo humano/agente, APIs/MCP/CLI tipados, preview no Chromium Electron, outputs verificados e reuso futuro pelo Experience Compiler.
 
-## Execute AGORA: CW-01 — preflight e plano de integração
+**Leitura (em ordem):**
+1. **Obrigatória e sem atalhos:** `AGENTS.md`, `workstation/AGENTS.md`, `workstation/context/README.md` e todas as leituras/gates ali exigidos. Obedeça H-079, H-080 e bloqueios P0.
+2. **Compacta:** `workstation/creative-workstation/EXECUTION_BRIEF.md`.
+3. **Só fase atual:** seção CW-01 de `IMPLEMENTATION_PLAN.md`, testes dessa fase em `VERIFICATION_MATRIX.md` e fonte/owner específico quando necessário.
+4. **Depois:** `PHASE_PROMPTS.md` contém instruções de cada próxima fase. Não carregue históricos completos ou projetos externos sem necessidade e **não pule** leituras canônicas obrigatórias.
 
-1. Resolva branch/PR #50 vs `main` **sem fazer merge automático**.
-2. Registre `DOWNSTREAM_MAIN_SHA`, `UPSTREAM_MAIN_SHA_OBSERVED`, `CURRENT_PIN_SHA`, merge-base/ahead-behind, CI obrigatórios, owner e seam afetados. Execute preflight H-079 e obtenha status GO/BLOCKED.
-3. Determine de forma concreta, lendo o código atual, os owners existentes de capability/adapter, managed processes, plugins/MCP/skills, Browser Electron, TaskCompiler, ArtifactStore/Journal, OperacionalCapabilityRegistry e Experience Compiler. Anote `arquivo::símbolo → função existente → lacuna mínima`.
-4. Audite repositório/ref/licença/dependências de Penpot MCP/AI Kit, Three.js Editor, FFmpeg e Remotion (este último condicionado à licença); nenhum install automático.
-5. Identifique blocker H-080A/H-080B/KI-024, quaisquer CVEs/auditoria de dependências e a qualificação real do baseline. **Se houver gate vermelho, pare antes de modificar runtime**; registre no journal e entregue plano mínimo para desbloquear.
-6. Entregue relatório CW-01: `GO|BLOCKED`, SHAs, evidências, matriz owner→caminho, primeiros arquivos/contratos sugeridos para CW-02, riscos e menores passos.
-7. Não mexa em `main`; faça PR independente para qualquer mudança posterior.
+## Execute agora SOMENTE CW-01 — auditoria e liberação
 
-## Depois de CW-01
+1. Identifique `main`, situação do PR #50, upstream pin, merge-base, CI required, owners/seams. Não faça merge.
+2. Execute o gate H-079 no baseline correto e classifique H-080A/H-080B, KI-024 e demais bloqueios, incluindo auditoria de dependências.
+3. Inspecione código atual e produza tabela `owner → arquivo::símbolo → comportamento existente → gap mínimo` para lifecycle/processo, MCP/skills, Browser Electron, Control Plane, TaskCompiler, ArtifactStore/Journal e Experience Compiler.
+4. Verifique repositório/SHA/licença/segurança de Penpot MCP e AI Kit, Three.js Editor, FFmpeg e Remotion (licença comercial/redistribuição). Não instale nada.
+5. Registre achados e falsificadores no journal; entregue `GO` ou `BLOCKED` com SHAs, links, testes/CI efetivos e lista mínima de arquivos para CW-02. **Se gate vermelho, não altere runtime.**
 
-Somente se gates permitirem, implemente **CW-02** num PR pequeno, com descoberta/health e lifecycle opt-in, sem novo DB/Browser/autoridade. Siga uma fase por vez:
+## Fases posteriores, cada uma com PR e provas próprios
 
-`CW-02 → CW-03A React/SVG + Electron + PNG → CW-03B FFmpeg → CW-03C Remotion (somente licença) → CW-04 Penpot / CW-05 Three.js (PRs independentes) → CW-06 engines opcional → CW-07 Experience Compiler reuso verificado`.
+`CW-02` app/capability discovery + health/opt-in → `CW-03A` React/SVG + preview real Electron + PNG → `CW-03B` FFmpeg/ffprobe → `CW-03C` Remotion **somente se licença aprovada** → `CW-04` Penpot e `CW-05` Three.js em PRs independentes → `CW-06` engines opcionais por necessidade → `CW-07` Experience Compiler após uma vertical com efeitos comprovados. Siga a fase específica em `PHASE_PROMPTS.md`; não implemente tudo num PR.
 
-CW-07 pode começar após uma vertical comprovada; não precisa aguardar todas as engines.
+## Invariantes e aprovação
 
-## Invariantes não negociáveis
+- Não duplicar Session/TaskRun/Kanban/BrowserTask, Control Plane, approvals, Journal, ArtifactStore ou registry/Experience Compiler.
+- Sem execução privilegiada arbitrária, instalação automática, segredos em logs, writes fora do workspace, sobrescrita de revisão humana ou retry cego de mutações incertas.
+- Skill instrui; MCP/API/CLI executam; certificação exige verificador empírico/negative replay/policy.
+- `VERIFICATION_MATRIX.md` define os oráculos, negativos, Windows/Electron E2E, rollbacks e gates. Não invente comandos, PASS, CI ou recibos; `NOT_RUN` e `BLOCKED` são válidos.
+- Conserve `main`, upstream-first, SHAs fixos e PRs pequenos. Não faça merge automaticamente.
 
-- Reutilizar Control Plane Router/Policy/Verifier, TaskRun/Kanban, BrowserTask/WebContentsView, ArtifactStore/Journal, OperationalCapabilityRegistry e Experience Compiler existentes.
-- Skills são instruções; MCP/API/CLI oferecem ações; capabilities aprendidas exigem prova causal externa/replay/promoção. Laya/System-1 não autoriza efeitos.
-- Preferir operações tipadas/API/CLI/MCP a mouse. Manter projeto editável, revisão humana, hashes/proveniência e rollback.
-- Exigir autorização explícita para instalações, efeitos irreversíveis e terceiros. Version pin + licença + sandbox + env allowlist + no secret leakage.
-- Nenhuma promoção sem recibo do owner, testes negativos e verificação real. Não chamar screenshot, exit code ou sucesso de mock de `E2E_PASS`.
-- Se bloqueado, reportar o resultado **sem inventar sucesso**, sem enfraquecer gate, sem instalar tudo e sem fazer merge.
-
-## Formato final de cada fase (preencher apenas resultados observados)
+## Saída obrigatória
 
 ```text
-FASE / STATUS: CW-xx | PLANNED, BLOCKED, IMPLEMENTED, INTEGRATION_PASS, E2E_PASS, QUALIFIED
-BASELINE: downstream SHA / upstream SHA pin / CI / H-079 / upstream drift
-OWNERS: caminho::símbolo utilizado; contratos criados ou modificados
-LICENÇA/SUPPLY-CHAIN: ref, dependências, consentimento, parecer de uso/distribuição
-TESTES: comandos realmente executados, resultados e testes negativos (ou NOT_RUN)
-EVIDÊNCIAS: receipts, hashes, revisão do projeto, ffprobe/artefato, E2E se aplicável
-BLOQUEIOS / ROLLBACK: impacto e próxima ação mínima
-GIT: branch / commit SHA / PR / checks / status de merge
+FASE / STATUS: CW-xx — GO | BLOCKED | IMPLEMENTED | E2E_PASS | QUALIFIED
+BASELINE: main SHA / upstream pin / gates / exact-head CI
+OWNERS: caminho::símbolo → reutilização/gap
+EXTERNAL: ref/license/risco
+TESTS: comandos executados e outcomes (ou NOT_RUN); negativos
+EVIDENCE: receipts, revisões, hashes, outputs
+BLOCKERS: motivo / menor correção segura / rollback
+GITHUB: branch / commit / PR / checks / merge status
 ```
 
-**Não amplie o escopo para a suíte inteira na primeira execução. Comece por CW-01 e pare no primeiro gate real que impeça implementação funcional.**
+**Comece por CW-01. Priorize evidência e mudanças pequenas, sem rediscutir a visão já consolidada.**
