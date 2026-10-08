@@ -232,7 +232,8 @@ class ExperienceCompiler:
             cap.family_id = f"{fc.operation_family}:{fc.target_family}"
         return self.registry.register(cap)
 
-    def mine(self):
+    def mine(self, **scope):
+        """Mine candidates; ``scope`` (e.g. task_id, run_id) selects corpus samples BEFORE compilation."""
         if self.corpus is None:
             return []
         groups = {}
@@ -240,7 +241,7 @@ class ExperienceCompiler:
             terminal = next((s for s in reversed(segment) if s.operation.effect_class not in _READ), segment[-1])
             return digest((terminal.operation.operation_family, terminal.operation.target_family,
                 terminal.operation.canonical_route, terminal.operation.scope, terminal.provenance.runtime))
-        for trace in self.corpus.traces():
+        for trace in self.corpus.traces(**scope):
             for segment in segments(trace):
                 groups.setdefault(family(segment), [[], []])[0].append(segment)
             for index, sample in enumerate(trace):

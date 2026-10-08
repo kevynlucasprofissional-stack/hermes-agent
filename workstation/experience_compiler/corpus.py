@@ -31,6 +31,14 @@ class ExperienceCorpus:
             self.refs = self.refs[-self.max_samples:]
         return ref
 
+    def refresh_task(self, task_id):
+        """Index samples another corpus instance persisted for ``task_id`` (same artifact projection)."""
+        known = set(self.refs)
+        for artifact in self.artifacts.list_artifacts(task_id):
+            if artifact.schema == 'hermes.transition_sample.v1' and artifact.ref not in known:
+                self.refs.append(artifact.ref)
+        self.refs = self.refs[-self.max_samples:]
+
     def ingest_journal(self, journal):
         for event in journal.read_events():
             ref = event.metadata.get('transition_ref')

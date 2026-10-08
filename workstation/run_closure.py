@@ -149,6 +149,7 @@ def evaluate_run_local_closure(
     executable_primitive_or_capability: str | None = None,
     source_trace_refs: list[str] | None = None,
     has_uncertain_mutation: bool = False,
+    first_verifier_fingerprint: str | None = None,
 ) -> tuple[bool, RunClosureProof | None, list[str]]:
     """Fail-closed evaluator for run-local operationalization handoff.
 
@@ -200,7 +201,12 @@ def evaluate_run_local_closure(
             continue
         if result.status != VerificationStatus.VERIFIED:
             reasons.append(f"{label}_verification_{result.status.value.lower()}")
-        if result.verifier_fingerprint != typed_verifier.fingerprint():
+        # The first verification predates verifier validation, so it is bound to the
+        # pre-validation contract fingerprint when the caller supplies it; the replay
+        # always carries the validated one. Neither is ever rewritten.
+        expected_fp = (first_verifier_fingerprint if label == "first" and first_verifier_fingerprint
+                       else typed_verifier.fingerprint())
+        if result.verifier_fingerprint != expected_fp:
             reasons.append(f"{label}_verifier_fingerprint_mismatch")
         if set(required_predicates or ()) - set(result.covered_predicates):
             reasons.append(f"{label}_predicate_coverage_insufficient")
@@ -240,7 +246,10 @@ def evaluate_run_local_closure(
     if not authority_covers(auth_auth, req_auth):
         reasons.append("authority_expansion_forbidden")
 
-    # 8. Effect budget containment (same or subset)
+    # 8. Effect budget containment (same or subset). An absent budget grants
+    # nothing: a mutation without an owner-declared budget is never contained.
+    if requested_effects and not effect_budget:
+        reasons.append("effect_budget_missing")
     if requested_effects and effect_budget:
         parsed_req: list[Effect] = [
             Effect.from_dict(e) if isinstance(e, dict) else e for e in requested_effects
@@ -437,8 +446,15 @@ def execute_in_flight_handoff(
     preflight: list[dict[str, Any]] | None = None,
     constraints: dict[str, Any] | None = None,
     stop_on_exception: bool = True,
+    can_start_item: Callable[[WorkItem], bool] | None = None,
+    max_retries: int | None = None,
 ) -> dict[str, Any]:
-    """Transfer closed subgraph to DurableBatchRunner with atomic checkpoints and exception wake."""
+    """Transfer closed subgraph to DurableBatchRunner with atomic checkpoints and exception wake.
+
+    ``can_start_item`` is the runner's own item-boundary gate (False stops the batch
+    before that item starts). ``max_retries=0`` makes a failed item terminal, so a
+    mutation that may already have crossed I/O is never dispatched again.
+    """
     store = task_store or DurableTaskStore()
     artifacts = artifact_store or ArtifactStore()
 
@@ -469,7 +485,10 @@ def execute_in_flight_handoff(
     else:
         store.update_plan_metadata(plan.id, {"execution_envelope": req["execution_envelope"]})
 
-    runner = DurableBatchRunner(proof.task_id, task_store=store, artifact_store=artifacts)
+    runner_kwargs: dict[str, Any] = {}
+    if max_retries is not None:
+        runner_kwargs.update(max_retries=max_retries, backoff_seconds=0.0)
+    runner = DurableBatchRunner(proof.task_id, task_store=store, artifact_store=artifacts, **runner_kwargs)
 
     def worker_fn(input_payload: dict[str, Any], work_item: WorkItem) -> dict[str, Any]:
         step_results = {}
@@ -504,6 +523,7 @@ def execute_in_flight_handoff(
         stop_on_exception=stop_on_exception,
         session_id=proof.run_id,
         metadata={"execution_envelope": req["execution_envelope"]},
+        can_start_item=can_start_item,
     )
 
     if summary.anomalies:

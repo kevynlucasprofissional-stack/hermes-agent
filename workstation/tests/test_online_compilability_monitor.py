@@ -144,151 +144,10 @@ def test_online_compilability_monitor_imports_and_schemas_exist():
     assert CompilabilityStage.POSSIBLE_RUN_LOCAL_REUSE == "POSSIBLE_RUN_LOCAL_REUSE"
 
 
-def test_case_a_positive_same_run_reuse(tmp_path):
-    """Caso A: Execução verificável, compilação de candidata, validação e reutilização run-local.
-
-    Provas:
-    1. Experiência de 2 itens completada com sucesso verificado.
-    2. Laya/System-1 sugere MINE_CANDIDATE.
-    3. Monitor produz candidata CANDIDATE (não PROMOTED).
-    4. Validação independente produz RunClosureProof.
-    5. Reutilização run-local executa 2 itens restantes com zero chamadas System-2.
-    """
-    artifacts = ArtifactStore(root_dir=tmp_path / "artifacts")
-    registry = OperationalCapabilityRegistry(artifacts)
-    corpus = ExperienceCorpus(artifacts)
-    compiler = ExperienceCompiler(registry, corpus)
-
-    # 1. Capture 2 verified traces for cards in run_1
-    def build_trace(pr, run, offset):
-        s1 = _make_transition_sample(
-            "browser_navigate", run,
-            before={"card_state": "open"}, after={"card_state": "open"},
-            parameters={"url": f"https://example.com/cards/{pr}"},
-            verified=False,
-        )
-        s1.outcome = TransitionOutcome.OBSERVED
-        s1.provenance.operation_id = f"op_{run}_{offset}"
-        s1.provenance.operation_index = offset
-
-        s2 = _make_transition_sample(
-            "browser_type", run,
-            before={"card_state": "open"}, after={"card_state": "open"},
-            parameters={"text": f"Card {pr} update", "semantic_anchor": {"type": "testid", "value": "card_input"}},
-            effect="state_mutation",
-            verified=False,
-        )
-        s2.outcome = TransitionOutcome.OBSERVED
-        s2.provenance.operation_id = f"op_{run}_{offset + 1}"
-        s2.provenance.operation_index = offset + 1
-
-        s3 = _make_transition_sample(
-            "browser_snapshot", run,
-            before={"card_state": "open"}, after={"card_state": "updated"},
-            effect="read_only",
-            verified=True,
-        )
-        s3.outcome = TransitionOutcome.VERIFIED_SUCCESS
-        s3.provenance.operation_id = f"op_{run}_{offset + 2}"
-        s3.provenance.operation_index = offset + 2
-
-        return [s1, s2, s3]
-
-    t1 = build_trace(1, "run_1", 0)
-    t2 = build_trace(2, "run_1", 3)
-
-    refs = []
-    for s in t1 + t2:
-        refs.append(corpus.capture(s))
-
-    # Register System-1 provider recommending MINE_CANDIDATE
-    def mock_provider(req: DecisionRequest) -> DecisionResult:
-        return DecisionResult(
-            request_id=req.request_id,
-            answers={"compilability_stage": CompilabilityStage.MINE_CANDIDATE.value},
-            confidence={"compilability_stage": 0.95},
-            provider="fake_laya",
-            model="laya-multilingual",
-        )
-
-    register_system1_decision_provider(mock_provider)
-
-    monitor = OnlineCompilabilityMonitor(
-        artifacts=artifacts,
-        registry=registry,
-        corpus=corpus,
-        compiler=compiler,
-        mode="direct",
-        cooldown_seconds=0.0,
-    )
-
-    # Trigger event on the completed second sample
-    event = CompilabilityEvent(
-        event_kind="verified_transition",
-        sample_ref=refs[-1],
-        task_id="task_1",
-        run_id="run_1",
-        operation_id="op_card_2",
-        primitive="browser_snapshot",
-        route="native_browser",
-        outcome="verified_success",
-        operation_family="batch_card",
-        target_family="card",
-        evidence_refs=("artifact://proof_evidence",),
-    )
-
-    result = monitor.process_event(event)
-    assert result["status"] == "evaluated"
-    assert result["stage"] == CompilabilityStage.MINE_CANDIDATE.value
-    assert len(result.get("mined_candidates", [])) >= 1
-    cand_id = result["mined_candidates"][0]
-
-    # Verify candidate was registered as DISCOVERED/VALIDATED, NOT PROMOTED
-    candidate = registry.get(cand_id)
-    assert candidate is not None
-    assert candidate.lifecycle != CapabilityLifecycle.PROMOTED
-    assert candidate.lifecycle in (CapabilityLifecycle.DISCOVERED, CapabilityLifecycle.VALIDATED)
-
-    # Validation produced proof
-    proof = monitor._windows[("task_1", "run_1")].validated_proofs.get(cand_id)
-    assert proof is not None
-    assert isinstance(proof, RunClosureProof)
-    assert proof.uncertainty_clear is True
-
-    # 2. Run-local reuse for remaining items (cards 3 and 4)
-    remaining_items = [
-        {"card_id": "3", "text": "Card 3 update"},
-        {"card_id": "4", "text": "Card 4 update"},
-    ]
-    steps = [
-        {"id": "nav", "tool": "browser_navigate", "args": {"url": "https://example.com/cards/$item.card_id"}},
-        {"id": "type", "tool": "browser_type", "args": {"text": "$item.text"}},
-        {"id": "snap", "tool": "browser_snapshot", "args": {}},
-    ]
-
-    dispatched_calls = []
-
-    def dispatch_fn(tool, args):
-        dispatched_calls.append((tool, args))
-        return {"status": "ok"}
-
-    db_file = tmp_path / "tasks.db"
-    task_store = DurableTaskStore(conn=sqlite3.connect(db_file))
-
-    reuse_result = monitor.attempt_run_local_reuse(
-        proof,
-        remaining_items,
-        steps,
-        dispatch_fn,
-        task_store=task_store,
-        artifact_store=artifacts,
-    )
-
-    assert reuse_result["status"] in ("COMPLETED", "success", "BATCH_COMPLETED") or not reuse_result.get("anomalies")
-    # All 2 remaining items executed through deterministic dispatch
-    assert len(dispatched_calls) == 6  # 3 steps * 2 items
-    assert monitor.metrics["system2_calls_avoided"] == 2
-    assert monitor.metrics["run_local_reuses"] == 1
+# Caso A (reutilizacao positiva) foi substituido por um teste de integracao real:
+# workstation/tests/test_online_compilability_safety.py::test_taskrun_learns_then_automatically_adopts_and_verifies_next_items
+# (TaskRun real -> observer -> monitor -> candidata -> prova independente -> adocao automatica -> readback).
+# O teste antigo injetava fake_laya, itens/steps sinteticos e chamava attempt_run_local_reuse() manualmente.
 
 
 def test_case_b_non_compilable_creative_experience(tmp_path):
@@ -498,7 +357,7 @@ def test_case_g_performance_and_backpressure(tmp_path):
     # Non-blocking, took < 0.2s for 20 events
     assert duration < 0.5
     # Shedding occurred without crash
-    assert monitor.metrics["events_filtered"] > 0
+    assert monitor.metrics["events_shed"] > 0
     monitor.drain()
     monitor.stop()
 
