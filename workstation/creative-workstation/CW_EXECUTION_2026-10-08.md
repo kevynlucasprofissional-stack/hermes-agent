@@ -1,3 +1,13 @@
+# Authorization update — 2026-10-08
+
+The maintainer authorized implementation with outstanding baseline issues marked
+NOT RESOLVED. The [development exception](DEVELOPMENT_EXCEPTION_2026-10-08.md)
+supersedes the earlier blanket development block below, preserving its historical
+evidence. CW-01 remains NOT QUALIFIED. CW-02 has started: passive opt-in discovery
+is implemented and 2 focused tests pass; lifecycle and integrated proof remain
+incomplete. Subsequent phases remain pending implementation, not automatically
+blocked solely by the unqualified baseline.
+
 # Creative Workstation execution checkpoint — 2026-10-08
 
 **Initiative: BLOCKED / NOT QUALIFIED.** This checkpoint delivers the composed R1/R2 gate repairs and reproducible Stage A conflict evidence. It does not implement a Creative runtime, adopt upstream, approve redistribution or merge main.

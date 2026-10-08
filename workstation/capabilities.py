@@ -13,7 +13,12 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from hermes_platform.resolver import LookupContext
+    from workstation.config import WorkstationConfig
+    from workstation.creative_runtime import CreativeEngineObservation
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +37,14 @@ class RuntimeCapabilityReport:
 
 class RuntimeCapabilityRegistry:
     """Discovers and inspects runtime capabilities and installed tools."""
+
+    @classmethod
+    def inspect_creative(
+        cls, config: WorkstationConfig, *, context: LookupContext | None = None,
+    ) -> tuple[CreativeEngineObservation, ...]:
+        from workstation.creative_runtime import inspect_creative_engines
+
+        return inspect_creative_engines(config, context=context)
 
     COMMON_MODULES = (
         "openpyxl",

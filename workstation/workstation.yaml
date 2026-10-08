@@ -1,5 +1,8 @@
 version: 1
 
+creative:
+  enabled: false
+
 workstation:
   enabled: true
   channel: stable

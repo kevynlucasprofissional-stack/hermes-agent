@@ -1,3 +1,11 @@
+# Creative development exception accepted — 2026-10-08
+
+The maintainer explicitly authorized Creative implementation on the unqualified
+baseline, with outstanding issues marked NOT RESOLVED. See
+[scope and provenance](../creative-workstation/DEVELOPMENT_EXCEPTION_2026-10-08.md).
+This is a development exception for the current lane, not baseline qualification
+or main promotion. Security, isolation, licensing and truthful verification remain.
+
 # Architectural Decisions
 
 <!-- creative-workstation-intake:2026-10-08 -->

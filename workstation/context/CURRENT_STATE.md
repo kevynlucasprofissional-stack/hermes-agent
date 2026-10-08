@@ -1,3 +1,13 @@
+# Creative development authorized — 2026-10-08
+
+The maintainer authorized proceeding under the explicit
+[development exception](../creative-workstation/DEVELOPMENT_EXCEPTION_2026-10-08.md).
+Previous statements blocking all CW-02 implementation are superseded for this lane.
+CW-01 baseline gaps remain NOT RESOLVED / NOT QUALIFIED. CW-02 passive opt-in
+discovery is now implemented through RuntimeCapabilityRegistry and hermes_platform;
+2 focused contract tests pass. Lifecycle, UI and Creative end-to-end proof remain
+incomplete. Main is unchanged.
+
 # Current State
 
 ## 2026-10-08 — Creative execution baseline repair candidate

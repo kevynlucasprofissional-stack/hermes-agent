@@ -1,3 +1,21 @@
+# 2026-10-08 — Authorized Creative development exception / CW-02
+
+Maintainer authorization: “Está autorizado”, following the explicit proposal to
+develop with baseline issues recorded as unresolved. Branch:
+codex/creative-cw02-20261008, base 3417d57b5c6dc3b3303052fa0fb34659dfc0e5fe.
+See ../../creative-workstation/DEVELOPMENT_EXCEPTION_2026-10-08.md.
+
+Hypothesis CW02-DISCOVERY: engine presence can be exposed without executing vendor
+code, granting authority, importing packages, caching cross-profile results or
+claiming health. Falsifiers: subprocess launch, opt-out lookup, search-scope leak,
+or presence promoted to readiness. Implementation uses existing resolver and
+RuntimeCapabilityRegistry; config is off by default and requires literal true.
+Canonical scripts/run_tests.sh -j 1 workstation/tests/test_creative_runtime.py:
+PASS, 2 tests. Tests prohibit Popen, prohibit opt-out resolution, and verify
+explicit search A → empty B → A without stale results. This is presence proof only;
+startup/cancellation/restart/port/native render and integrated qualification remain
+NOT_RUN. No engine installed, no main merge, no operational promotion.
+
 # CURRENT — Workstation Engineering Journal
 
 ## 2026-10-08 — Creative execution: combined R1/R2 candidate and Stage A preflight
