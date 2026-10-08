@@ -1,8 +1,8 @@
-  local-checks.txt
-  main-npm-audit-stderr.txt
-  main-npm-audit.json
-  main-workstation-jobs.json
-  pr50-production-audit.txt
-  pr50-windows-jobs.json
-  pr50.json
-  PR_BODY.md
+af10b12715a6697593da72f4279641504a909f3259089747fe6a74eaee43a28a  local-checks.txt
+497ea4c4c786f480eb18f1d4717ad384e64f8cfca9df88c049841f682d6151d0  main-npm-audit-stderr.txt
+36738ff738064add75920c17c313da95b7388c9b3098110a06fec7d41c1ca18b  main-npm-audit.json
+691387de51e1f4017a20f1cda23e44fc216ed10b275e96e5426554574ba16c2b  main-workstation-jobs.json
+5461a00b036d61a3289a4ecedea1ae853e5c0586b2eea088a54dcb3333b0f04d  pr50-production-audit.txt
+a9a74733c5330c775bb7bc773b4e4e1e48996b0524573abf3f66aea241acea2b  pr50-windows-jobs.json
+3ac9ac2a7dd77a43899fb34a13933cc116f76274c0eb385dd0a0d859b78be386  pr50.json
+f83aed1b4383ecaeaee032013896b90529f7389498e70c51cf9b7319ceee5b98  PR_BODY.md

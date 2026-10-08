@@ -1,4 +1,4 @@
-﻿desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0035241Z Severity: critical
+desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0035241Z Severity: critical
 desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0036528Z simple-git: `VISUAL` editor environment variable is omitted from unsafe editor detection - https://github.com/advisories/GHSA-v5rq-49vh-5v5c
 desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0040771Z   Depends on vulnerable versions of @simple-git/argv-parser
 desktop-typecheck	Production dependency audit	2026-10-08T17:37:19.0041837Z Severity: high
