@@ -31,12 +31,12 @@ Candidate runtime/dependency head: 0ae24478bb956e372fc18870e3c62bef11ea62a6.
 | npm.cmd audit --omit=dev --audit-level=moderate | PASS exit 0; 8 LOW KaTeX-related findings remain, not zero vulnerabilities |
 | npm.cmd run typecheck --workspace apps/desktop | PASS exit 0, renderer/Electron/E2E TypeScript |
 | npm.cmd run test:desktop:platforms --workspace apps/desktop -- electron/git-review-ops.test.ts --maxWorkers=2 | PASS, 9 tests / 1 file |
-| scripts/run_tests.sh -j 4 workstation/tests | FAIL exit 1 with shared Python: 7 Laya provenance failures in 4 files; test_canary_recipe_context.py ran no tests. Worktree-local locked environment repair is in progress; this run is not qualified |
+| scripts/run_tests.sh -j 4 workstation/tests | FAIL exit 1 with shared Python: 7 Laya provenance failures in 4 files; test_canary_recipe_context.py ran no tests. Worktree-local locked environment preparation failed initially on Torch download DNS; after DNS recovered, the second attempt was cancelled after about 12 minutes without completion. No locked-environment or full-suite pass is claimed |
 | validate_lock.py; verify_licenses.py; apply_core_integration.py --root . --check | PASS on main preflight; structural/license-policy/anchor proof only |
 | audit_hermes_seams.py --strict | PASS on main preflight: 14 classified / 0 unclassified / 0 budget growth; REMOVE still debt |
 | Initial Vitest --project platform invocation | FAIL before test collection: no such project. Corrected to versioned Electron script above, which passed |
 | Native build/package/Browser/Electron/release/Creative E2E at composed head | NOT_RUN; ignore-scripts install cannot establish native runtime readiness |
-| Exact-head GitHub CI at composed candidate | NOT_RUN at checkpoint creation; source-PR passes are not transferable |
+| Exact-head GitHub CI at composed candidate | PENDING on draft PR #57; source-PR passes are not transferable. Initial evidence head d1b6e3a7b72983f78b817317ff7b990450c5d491 had contracts, core anchors and Windows IN_PROGRESS, Nix QUEUED; final documentation head requires its own readback |
 
 ## Stage A empirical result
 
@@ -72,3 +72,7 @@ User confirmed personal use now, possible company use later and low-probability 
 4. CW-02 through CW-07 cannot bypass those baseline gates. All acceptance scenarios A–D remain NOT_RUN, with no Creative output/artifact/certified capability.
 
 Rollback: discard the isolated candidate only after retaining evidence; source PRs and original checkout remain intact. No destructive operation or main merge is needed. The next eligible functional lane is Stage A / applicable safety repair, followed by CW-02 once GO is demonstrated.
+
+## Delivery readback
+
+Draft [PR #57](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/57), branch codex/creative-stage-a-20261008. Final remote fetch again observed origin/main f21e803b3525b70ee6be2305e579c1cc1f930e74 and upstream/main d94b70f675205c2c046138997819428772cd2678. No main merge or upstream adoption. Local required qualification remains red/incomplete; PR is a repair/preflight candidate, not Creative implementation completion.

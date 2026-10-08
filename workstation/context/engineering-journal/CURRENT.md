@@ -18,6 +18,8 @@ Safety hold remains: KI-024 voice input-authority incident OPEN, KI-025 startup 
 
 Environment experiment: shared Python 3.11 run completed with 7 Laya provenance failures across 4 files and one no-tests file (test_canary_recipe_context.py); preserve failures, no qualification. uv sync --locked --python 3.13 --extra dev --extra anthropic --extra workstation-laya created local venv but failed downloading torch==2.14.1 after DNS os error 11001. A subsequent independent socket.getaddrinfo for files.pythonhosted.org succeeded (IPv4/IPv6), a material connectivity change. Retry the unchanged locked install once under recovered DNS; do not omit torch or weaken provenance. Typecheck and Git tests already passed; npm audit exit 0 with 8 LOW findings.
 
+Final checkpoint: draft PR #57 opened with R1/R2 plus evidence. Second uv locked preparation cancelled after approximately 12 minutes without finishing Torch download; no dependency omission or provenance relaxation. Initial PR CI head d1b6e3a7b72983f78b817317ff7b990450c5d491 contracts/anchors/Windows IN_PROGRESS, Nix QUEUED. Final fetch origin/main f21e803b and upstream d94b70f6 unchanged. Composed virtual merge has 56 conflicts, distinct from 55 at original main; machine receipt preserved. CW-01 remains BLOCKED; CW-02–CW-07 NOT_IMPLEMENTED. Current-state/roadmap/source overlays and the per-phase checkpoint are synchronized.
+
 NEXT: qualify the composed R1/R2 candidate; reconcile the fixed-pin Stage A separately; close applicable R4 safety/product gates; only then release CW-02. Preserve personal Obsidian workspace/note in original checkout. Rollback of this candidate is dropping its branch/worktree after preserving evidence; no project files are removed.
 
 
