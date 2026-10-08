@@ -1,5 +1,17 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — CW-01 post-audit: causal blockers and corrective handoff (DOCUMENTATION ONLY)
+
+**Baseline observado:** `main@f21e803b3525b70ee6be2305e579c1cc1f930e74`; PR #52 `989e4aabd033` OPEN, **não incorporado**. Laya D-038/D-039 foi integrado ao `main` nesse commit, diferindo das notas pré-merge preservadas abaixo.
+
+**Hipótese de diagnóstico R1 (não é qualificação):** falta `--extra workstation-laya` no `.github/workflows/workstation-ci.yml`, embora `pyproject.toml` e `laya-system1-qualification.yml` já o suportem. Falsificador: CI continua falhando em import/proveniência/contrato com extra instalado. Evidência [run main 37826432518](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37826432518): 7 failures por `ModuleNotFoundError: No module named 'laya'`, 893 passed, 2 skipped; core-patch anchors passaram, core seam regressions/replay foram SKIPPED após o erro. **Ação mínima proposta:** workflow-only PR com `uv sync --locked --python 3.13 --extra dev --extra anthropic --extra workstation-laya`, nenhum teste afrouxado, nova execução no HEAD. NÃO EXECUTADA nesta investigação.
+
+**Hipótese R2:** a falha independente Windows é o gate `npm audit --omit=dev --audit-level=moderate`. Evidência [PR #52 run 37829895692](https://github.com/kevynlucasprofissional-stack/hermes-agent/actions/runs/37829895692), **19 findings (2 critical/5 high/4 moderate/8 low)**; os passos de E2E/build subsequentes não correram. Falsificador: novo audit green com árvore pinada corrigida e smoke/regressões. Não confundir com o histórico local de **18** vulnerabilidades. `npm audit` local **NOT_RUN** por rejeição de autorização de envio de metadados; a auditoria remota **FOI executada**. Nenhum `npm audit fix` autorizado ou aplicado.
+
+**R3/R4:** H-079 refresh relata pin `71a2fe399bbd`, tip `517b5e10febd`, 857/10.510 commits downstream/upstream e overlap material. Stage A não executado. KI-024 de voz é P0 de autoridade de entrada e continua OPEN; H-080B.3 Electron e KI-025/H-082 startup são lanes independentes. Falsificadores futuros: ancestry/pin + reconciliação + checks exigidos, testes negativos de voz, Electron/package real, warm-start offline com instalação saudável.
+
+**Decisão de sequenciamento documentada:** R1 correção específica de CI → R2 triagem/remediação npm → R3 Stage A isolada → R4 blockers aplicáveis → R5 CW-02 e verticais. Não inventar exceção H-079, não pular security gates, não substituir prova por mock; manter PRs e rollbacks separados. **Resultado do presente registro:** DOCUMENTED; `NO_RUNTIME_CHANGE / NO_INSTALL / NO_LOCAL_TESTS / NO_MERGE`. Instrução detalhada e comandos: [BASELINE_UNBLOCK_EXECUTION_2026-10-08.md](../../creative-workstation/BASELINE_UNBLOCK_EXECUTION_2026-10-08.md).
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
