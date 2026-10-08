@@ -21,15 +21,16 @@
 11. **Proof:** efeito externo readback + oracle adequado, testes positivos/negativos, restart, revisão concorrente, compatibilidade Windows/Electron, CI HEAD exato.
 12. **Entrega:** PR pequeno, sem merge automático; documentar SHA, testes reais, recebimentos e bloqueios; nunca mudar status para VERIFIED por ter apenas escrito código.
 
-## Primeira unidade de trabalho
+## Primeira unidade de trabalho — AGORA R1
 
-Não implementar "Penpot + Remotion + Three" de uma vez. Na primeira execução:
-1. verificar se a fundação documental foi integrada ao baseline atual ou permanece no PR #50;
-2. cumprir upstream-first e gates obrigatórios;
-3. identificar, em código, os owners já capazes de executar/projetar uma capability criativa;
-4. entregar somente **CW-01** (diagnóstico e plano de arquivos) se existir bloqueio;
-5. se os gates permitirem, prosseguir até a menor entrega da **CW-02** em branch separada, com testes de contrato e prova de processo fake (sem instalar terceiros);
-6. reportar status e parada. A próxima unidade é CW-03A.
+Não implementar “Penpot + Remotion + Three” de uma vez. A auditoria CW-01 terminou BLOCKED. Na próxima execução:
+1. confirmar SHA e PRs atuais, obedecer leituras mandatórias e preflight H-079;
+2. corrigir em **PR isolado** a omissão de `--extra workstation-laya` no job `contracts` de `.github/workflows/workstation-ci.yml`, sem afrouxar testes;
+3. obter prova locked install + Laya import/proveniência + Workstation/contracts/regressões antes puladas + CI no HEAD exato;
+4. seguir R2 audit npm em PR independente; R3 qualificação H-079 Stage A; R4 segurança voz/Electron/bootstrap; preservar documentação de blocos não liberados;
+5. liberar CW-02 somente com baseline H-079 admissível e gates aplicáveis verdes; caso contrário continuar apenas investigação/reparos permitidos e reportar bloqueio.
+
+Sequência completa: [BASELINE_UNBLOCK_EXECUTION_2026-10-08.md](BASELINE_UNBLOCK_EXECUTION_2026-10-08.md) e [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md). Sem merge automático.
 
 ## Distinção entre documentos
 
