@@ -206,15 +206,16 @@ def install_validation_env(fx, tmp_path, *, replay="pass", evaluator="pass"):
     sandbox = tmp_path / "sandbox"
     sandbox.mkdir(exist_ok=True)
 
-    def store_ev(name, body):
-        return fx.artifacts.store(fx.task_id, name, body).ref
+    def store_ev(name, body, task=None):
+        return fx.artifacts.store(task or fx.task_id, name, body).ref
 
     def verifier_evaluator(cand, contract, task_id, run_id):
         if evaluator == "raise":
             raise RuntimeError("verifier backend down")
         target = sandbox / "probe_pos.txt"
         target.write_text("x", encoding="utf-8")
-        pos_ref = store_ev("verifier_pos.json", {"observed": target.read_text(), "task": task_id})
+        pos_ref = store_ev("verifier_pos.json", {"observed": target.read_text(), "task": task_id},
+                           task="someone_elses_task" if evaluator == "foreign" else None)
         neg_ref = store_ev("verifier_neg.json", {"observed_missing": not (sandbox / "absent.txt").exists()})
         pos = {"kind": "positive_replay", "passed": True, "phase": "validation", "evidence_ref": pos_ref,
                "verification_result": _vr(contract.fingerprint(), [pos_ref]).to_dict()}
@@ -234,8 +235,10 @@ def install_validation_env(fx, tmp_path, *, replay="pass", evaluator="pass"):
                 if step["primitive"] == "write_file":
                     (sandbox / args["path"].replace("/", "_")).write_text(args["content"], encoding="utf-8")
             ref = store_ev("replay_result.json", {"candidate": cand.id, "sandbox": True})
-            refs = {"no_refs": [], "ghost_ref": ["artifact://tasks/ghost/replay_missing.json"]}.get(replay, [ref])
-            fp = cand.learning_metadata["verifier_fingerprint"]
+            foreign = store_ev("replay_foreign.json", {"candidate": cand.id}, task="someone_elses_task")
+            refs = {"no_refs": [], "ghost_ref": ["artifact://tasks/ghost/replay_missing.json"],
+                    "foreign_ref": [foreign]}.get(replay, [ref])
+            fp = "0" * 64 if replay == "wrong_fp" else cand.learning_metadata["verifier_fingerprint"]
             return {"passed": True, "verification_result": _vr(fp, refs).to_dict(), "evidence_strength": 2,
                     "evidence_refs": refs, "predicates": {"exists": True}}
         return runner
@@ -387,7 +390,9 @@ def mined_candidate(fx, tmp_path, *, k=3, **env):
 
 @pytest.mark.parametrize("replay,reason", [("raise", "controlled_replay_error"), ("fail", "controlled_replay_failed"),
                                           ("no_refs", "controlled_replay_failed"),
-                                          ("ghost_ref", "replay_evidence_unresolvable")])
+                                          ("ghost_ref", "replay_evidence_unresolvable"),
+                                          ("foreign_ref", "replay_evidence_foreign_run"),
+                                          ("wrong_fp", "controlled_replay_failed")])
 def test_replay_exception_failure_or_missing_refs_yield_no_proof(fx, tmp_path, replay, reason):
     monitor, cand = mined_candidate(fx, tmp_path, replay=replay)
     ok, proof, reasons = monitor.validate_candidate_run_local(cand, task_id=fx.task_id, run_id=fx.run_id)
@@ -406,6 +411,21 @@ def test_missing_validation_environment_and_forged_evidence_yield_no_proof(fx, t
     ok, proof, reasons = monitor.validate_candidate_run_local(cand, task_id=fx.task_id, run_id=fx.run_id)
     assert ok and "forged" not in str(proof.replay_evidence_ref)
     assert fx.artifacts.resolve_structured(proof.replay_evidence_ref)["schema"] == "workstation.run_local_replay_receipt.v1"
+
+
+def test_verifier_receipt_from_another_run_is_rejected(fx, tmp_path):
+    monitor, cand = mined_candidate(fx, tmp_path, evaluator="foreign")
+    ok, proof, reasons = monitor.validate_candidate_run_local(cand, task_id=fx.task_id, run_id=fx.run_id)
+    assert not ok and proof is None and "positive_verifier_receipt_foreign_run" in reasons
+
+
+def test_target_outside_the_admitted_intent_denies(fx, tmp_path):
+    monitor, cand = mined_candidate(fx, tmp_path)
+    ref = fx.artifacts.store(fx.task_id, "objective3.json", {"operation_intent": {
+        "effect_budget": [CREATE("out").to_dict()], "target": "some_other_target"}}).ref
+    fx.store.update_plan_metadata(fx.plan.id, {"objective_ref": ref})
+    ok, _, reasons = monitor.validate_candidate_run_local(cand, task_id=fx.task_id, run_id=fx.run_id)
+    assert not ok and "target_identity_unproven" in reasons
 
 
 def test_verifier_failure_yields_no_proof(fx, tmp_path):

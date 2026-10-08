@@ -51,6 +51,12 @@ def _resolves(artifacts: ArtifactStore, ref: Any) -> bool:
     return True
 
 
+def _owned_by_run_namespace(ref: Any, task_id: str) -> bool:
+    """Evidence must live in the TaskRun's own artifact namespace, never another task's."""
+    safe = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in str(task_id))
+    return isinstance(ref, str) and ref.startswith(f"artifact://tasks/{safe}/")
+
+
 def _families(candidate: OperationalCapability) -> tuple[str, str]:
     fc = candidate.formal_contract
     meta = candidate.learning_metadata or {}
@@ -177,6 +183,8 @@ def validate_run_local_candidate(
     for label, receipt in (("positive", pos), ("negative", neg)):
         if not _resolves(artifacts, receipt.get("evidence_ref")):
             reasons.append(f"{label}_verifier_receipt_unresolvable")
+        elif not _owned_by_run_namespace(receipt.get("evidence_ref"), task_id):
+            reasons.append(f"{label}_verifier_receipt_foreign_run")
     first_vr_raw = pos.get("verification_result")
     if not isinstance(first_vr_raw, dict):
         reasons.append("first_verification_result_missing")
@@ -213,6 +221,8 @@ def validate_run_local_candidate(
         reasons.append("replay_verification_not_verified")
     if not refs or not all(_resolves(artifacts, r) for r in refs):
         reasons.append("replay_evidence_unresolvable")
+    elif not all(_owned_by_run_namespace(r, task_id) for r in refs):
+        reasons.append("replay_evidence_foreign_run")
     if reasons:
         return False, None, reasons, None
     replay_ref = artifacts.store(task_id, f"run_local_replay_{candidate.id}.json", {

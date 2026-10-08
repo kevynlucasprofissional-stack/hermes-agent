@@ -452,7 +452,11 @@ def test_tool_observer_hook_notifies_compilability_monitor(tmp_path, monkeypatch
 
 @pytest.mark.skipif(os.getenv("HERMES_LAYA_LIVE_TEST") != "1", reason="explicit checkpoint opt-in required")
 def test_laya_real_contract_compilability_stage(tmp_path):
-    """Teste com Laya real para o domínio de compilabilidade (opt-in via HERMES_LAYA_LIVE_TEST=1)."""
+    """Laya real: valida apenas o CONTRATO tipado (resposta no esquema fechado, receipt/proveniencia).
+
+    Isto NAO estabelece qualidade semantica nem calibracao da decisao: nao ha conjunto rotulado
+    por verifier/replay suficiente (D-038/C4), por isso o monitor permanece em SHADOW por padrao.
+    """
     store = ArtifactStore(root_dir=tmp_path)
     provider = LayaDecisionProvider(artifact_store=store)
 
