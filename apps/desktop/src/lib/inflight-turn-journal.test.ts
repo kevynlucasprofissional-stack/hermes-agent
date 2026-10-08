@@ -793,6 +793,7 @@ describe('mergeInFlightMessages', () => {
     // base has: matching user, sealed interim row with assistant-stream-1 id, and live assistant-stream-2
     const interimSealed = assistant('assistant-stream-1', 'Step 1 done', { interim: true, pending: false })
     const liveTail = assistant('assistant-stream-2', 'Step 2 working...', { pending: true })
+
     const baseMessages = [
       user('u1', 'run full procedure'),
       interimSealed,
@@ -802,6 +803,7 @@ describe('mergeInFlightMessages', () => {
     // Journal captured tail after matching user:
     // contains interim row 1, plus live tail 2 with tool-call and reasoning
     const journalInterim = assistant('assistant-stream-1', 'Step 1 done', { interim: true })
+
     const journalLive = {
       id: 'assistant-stream-2',
       role: 'assistant' as const,
@@ -812,6 +814,7 @@ describe('mergeInFlightMessages', () => {
         { type: 'text' as const, text: 'Step 2 working...' }
       ]
     }
+
     const tail = [
       user('u1', 'run full procedure'),
       journalInterim,

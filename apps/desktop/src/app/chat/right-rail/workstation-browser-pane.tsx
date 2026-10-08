@@ -211,6 +211,7 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     }
 
     const last = lastAttachedRef.current
+
     const keyChanged =
       !last ||
       last.host !== currentKey.host ||

@@ -108,6 +108,7 @@ const electron = vi.hoisted(() => {
             }
           }
         }
+
         return {
           url: this.url,
           title: this.title,
@@ -239,9 +240,11 @@ const tempRoots: string[] = []
 test('structured inspection reads DOM without invoking mutation or injected code', () => {
   const mutations: string[] = []
   let queried = ''
+
   const document = {
     querySelectorAll: (selector: string) => {
       queried = selector
+
       return [
         {
           tagName: 'TEXTAREA',
@@ -253,6 +256,7 @@ test('structured inspection reads DOM without invoking mutation or injected code
       ]
     }
   }
+
   const selector = 'textarea.description; globalThis.injected = true; //'
   const context = vm.createContext({ document, fetch: () => mutations.push('fetch') })
   const result = vm.runInContext(inspectItemsScript(selector, 1, ['data-card-id']), context)
@@ -791,6 +795,7 @@ test('bulk clear destroys only explicitly eligible idle parked tasks and refuses
   runtime.createTask({ taskId: 'human', sessionHost: 'human-session' })
   runtime.createTask({ taskId: 'waiting', sessionHost: 'waiting-session', leaseState: 'waiting' })
   runtime.takeControl('human', 'human-session')
+
   for (const taskId of ['working', 'idle', 'human', 'waiting']) {
     runtime.parkTask(taskId)
   }
@@ -1144,6 +1149,7 @@ test('concurrent multi-task isolation: background actions do not steal active ta
 test('browser_click and browser_type return structured elements, target metadata, and semantic_effect', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()
+
   const executeControlRequest = (
     runtime as unknown as {
       executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>

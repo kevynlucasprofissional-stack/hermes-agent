@@ -182,6 +182,7 @@ function parsePersistedTask(value: unknown): BrowserTask | null {
 
   if (task.lastReceipt && typeof task.lastReceipt === 'object') {
     const r = task.lastReceipt as Partial<BrowserOwnerReceipt>
+
     if (typeof r.operationId === 'string' && typeof r.taskId === 'string') {
       parsed.lastReceipt = {
         operationId: r.operationId,

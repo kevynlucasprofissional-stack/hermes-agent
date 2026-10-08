@@ -23,6 +23,7 @@ function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
     return null
   }
 }
+
 import { type Translations, useI18n } from '@/i18n'
 import { isDesktopFsRemoteMode } from '@/lib/desktop-fs'
 import { guardGuestPointers } from '@/lib/guest-pointer-guard'

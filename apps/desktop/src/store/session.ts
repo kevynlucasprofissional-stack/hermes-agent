@@ -495,13 +495,15 @@ export function conversationAliases(storedId: string, sessions: readonly Lineage
 
   for (const session of sessions) {
     const lineageIds = session._lineage_ids ?? []
+
     if (
       aliases.includes(session.id) ||
       Boolean(session._lineage_root_id && aliases.includes(session._lineage_root_id)) ||
       lineageIds.some(id => aliases.includes(id))
     ) {
       const parentId = session.parent_session_id?.trim()
-      if (parentId) result.add(parentId)
+
+      if (parentId) {result.add(parentId)}
     }
   }
 
