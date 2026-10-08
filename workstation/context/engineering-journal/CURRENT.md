@@ -1,6 +1,12 @@
 # CURRENT — Workstation Engineering Journal
 
-## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
+## 2026-10-08 — CW-01 refresh after main consolidation (BLOCKED)
+
+Baseline: clean `main=f21e803b3525b70ee6be2305e579c1cc1f930e74`, equal to freshly fetched origin/main. Existing CW-01 evidence is preserved below. Experiment CW01-R1 checks whether consolidation cleared the runtime gate: confirm with adopted upstream ancestry plus green exact-head policy gates; refute with material unadopted overlap, failed CI, unresolved input-authority P0 or dependency audit.
+
+Result: REFUTED / CW-01 BLOCKED. Workstation CI 37826432518 contracts failed (7 missing-Laya failures, 893 passed, 2 skipped); anchors passed. Current workflow omits workstation-laya extra. Pin/merge-base remains 71a2fe399bbd7a219c71f9d9fca2b313b01f2057; upstream candidate 517b5e10febd619ce30bb22580e29b160266eb43, divergence 857/10510, material owner overlap; final fetch unchanged. Local lock/license/anchors/strict seams PASS (14 classified, 0 unclassified, 0 budget regressions, 989 edge refs). Owner tests 22 passed in 1.76s after WinError 5 sandbox failure and authorized rerun. Official external pins/licenses rechecked; metadata scope only. Fresh npm audit NOT_RUN: automatic approval review rejected lockfile metadata disclosure to registry. Historical vulnerabilities are not a fresh audit. KI-024 voice P0 and H-080B.3 remain open. PR APIs show #50/#51 CLOSED with mergedAt=null, while main history contains explicit integration commits. No runtime change, install or merge. Full evidence, owner table and minimal release/CW-02 paths: [refresh report](../../creative-workstation/CW01_REFRESH_2026-10-08.md). Repeat only after material baseline correction; first restore supported exact-head CI profile, then separate Stage A and remaining gates.
+
+## 2026-10-08 — CW-01 Creative Workstation baseline audit (historical pre-consolidation)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
 Baseline: origin/main 920fdda07a74e2f4a6e790fcc6bc3a2d2ab976a7; active user checkout 938d9b2beeafde554b961112bca8ca5af2212df5 is a separate unqualified Laya lane and is preserved.

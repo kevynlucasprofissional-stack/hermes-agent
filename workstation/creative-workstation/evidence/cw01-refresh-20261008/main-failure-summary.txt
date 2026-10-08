@@ -1,0 +1,22 @@
+﻿contracts	Workstation contract tests	2026-10-08T18:46:52.6341871Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:52.6342596Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:52.6375838Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:52.6376373Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:52.6388053Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:52.6388585Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:52.6404503Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:52.6405230Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:52.6421365Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:52.6421891Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:53.4291080Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4291488Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:53.4306080Z E       ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4306639Z workstation/system1/provenance.py:69: ModuleNotFoundError
+contracts	Workstation contract tests	2026-10-08T18:46:53.4325734Z FAILED workstation/tests/test_laya_real_contract.py::test_typed_contract_and_calibrated_gate - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4326847Z FAILED workstation/tests/test_laya_real_contract.py::test_wrong_old_format_and_unbounded_choice_abstain - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4327775Z FAILED workstation/tests/test_laya_vendor_provenance.py::test_laya_vendor_provenance_success - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4328781Z FAILED workstation/tests/test_system1_receipts_provenance.py::test_receipt_roundtrip_unknown_checkpoint_and_request_hash - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4329877Z FAILED workstation/tests/test_system1_receipts_provenance.py::test_actual_router_receipt_certificate_and_verification_lineage - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4330916Z FAILED workstation/tests/test_system1_receipts_provenance.py::test_error_fallback_has_durable_receipt - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4331926Z FAILED workstation/tests/test_system1_telemetry.py::test_actual_provider_supersession_handoff_and_unknown_economics - ModuleNotFoundError: No module named 'laya'
+contracts	Workstation contract tests	2026-10-08T18:46:53.4332625Z 7 failed, 893 passed, 2 skipped in 170.48s (0:02:50)

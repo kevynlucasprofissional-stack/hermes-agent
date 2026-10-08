@@ -1,5 +1,9 @@
 # Current State
 
+## 2026-10-08 — Creative CW-01 refresh on consolidated main: BLOCKED
+
+Fresh audit at `f21e803b3525b70ee6be2305e579c1cc1f930e74`: exact-head Workstation contracts failed (7 missing-Laya failures / 893 passed / 2 skipped); core anchors passed. Workflow install omits the workstation-laya extra required by current tests. Upstream candidate `517b5e10febd619ce30bb22580e29b160266eb43` is unadopted; pin/merge-base remains `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` with material overlap. Existing Creative docs/audit are present via explicit integration commits; PR #50/#51 APIs report CLOSED, mergedAt=null. Local owner tests 22 passed and structural gates passed, without qualifying Creative runtime. Fresh npm audit blocked by automatic approval review; historical findings remain historical. Voice KI-024 P0, H-080B.3 and other production gates remain open. No runtime/install/merge in this refresh. See [full audit and release path](../creative-workstation/CW01_REFRESH_2026-10-08.md).
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
 
