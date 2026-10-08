@@ -1,5 +1,15 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-08 — Auditoria independente da compilabilidade online: verdade e autoridade
+
+**Diagnóstico atualizado:** `c969fbf` implementou monitor, contratos e helpers com testes locais (11/11 novos, 71/71 regressões selecionadas, 14/14 gates declarados). Porém a demonstração positiva chama manualmente `monitor.process_event()` e `attempt_run_local_reuse()` com fake Laya, itens e dispatch sintéticos: não comprova autonomia no TaskRun real. O validador produz referências de replay possivelmente fictícias e constrói `RunClosureProof` com permissões, orçamento de efeitos, identidade e `uncertainty_clear=True` sem origem canônica. O monitor não conecta automaticamente o estágio POSSIBLE_RUN_LOCAL_REUSE, minera o corpus geral antes de filtrar e começa em DIRECT. A contagem de chamadas System-2 evitadas é derivada do número de itens, não de baseline observada.
+
+**Inteligência arquitetural D-038:** learning plane sugere, nunca prova nem autoriza. Replay/Verifier/Policy/TaskRun devem fornecer provas persistidas, lease/authority/effect budget/target/readback; falta de qualquer garantia é negação, não fallback otimista. Mineração por TaskRun **antes** da seleção de candidatas; SHADOW como default até calibração e qualificação; handoff automático somente pelo owner existente; worker bounded; métricas baseadas em execução verificada, não ausência de anomalias. Prioridade é P0 segurança, depois E2E, depois custo/performance.
+
+**Status:** implementado parcialmente, NÃO qualificado para `main`. CI `37783114603` falhou; `37794367952` pendente na revisão. Manter gates H-079/H-081/H-082 distintos. [Auditoria técnica C0–C6](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md). Seções anteriores documentam estágios históricos, não o veredito atual.
+
+
+
 ## 2026-10-08 — Checkout H-081 corrigido com preservação dos temporários locais
 
 A causa do bloqueio era o versionamento de 22.855 artefatos gerados em `.test-tmp`.
