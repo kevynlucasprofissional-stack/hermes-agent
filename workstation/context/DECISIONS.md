@@ -1,5 +1,20 @@
 # Architectural Decisions
 
+## D-039 — Opportunity-preserving adaptive autonomy and derived run-local permission
+
+**Date:** 2026-10-08. **Status:** ACCEPTED PRODUCT DESIGN / CODE IMPLEMENTATION OPEN / NOT PRODUCTION QUALIFIED. **Relationship:** extends D-037/D-038; supersedes **blanket SHADOW as a permanent learning strategy**, NOT their canonical proof/authority, replay or global-promotion requirements.
+
+1. **Prefer autonomous validated reuse, not maximal conservatism.** User accepts extra Laya inference, verification cost and bounded operational risk to avoid missing same-TaskRun opportunities. Capture, evaluate and mine relevant experiences actively; blocking effect admission must not suppress non-effectful learning.
+2. **Automatic derivative delegation:** monitor may request run-local effects from the runtime without repeated prompts if covered by an existing user-granted TaskRun authority/effect budget, fresh lease, bindings and target. Monitor never mints root authority; owner revocation/uncertain prior mutation blocks effect but preserves knowledge.
+3. **Eligible DIRECT as desired steady state:** enable effect-producing run-local reuse by qualified *family/operation*, with actual product ValidationEnvironmentProvider, replay/readback receipts and version-/scope-bound verifiable attestation. SHADOW for unqualified effects, not a blanket freeze on learning. Nonempty qualification string is not proof. Developer dogfood may be narrowly exposed and must not claim production qualification.
+4. **Learning limits are adaptive; resource limits remain real:** per-run hot memory, CPU, inference concurrency, background latency and disk quotas may defer processing; durable canonical refs + prioritized queue + replayable work cursors preserve high-value opportunities. New evidence or recovered verifier unlocks bounded retries. Same evidence/deterministic denial does not spin.
+5. **Idle eviction is not forgetting.** Persist compact run learning checkpoint in existing stores, rehydrate on subsequent events/restart, and never restore authority or lease without runtime revalidation. 100-item batch is a fairness yield with next-checkpoint continuation, not a lifetime TaskRun ceiling.
+6. **Truthful economics and rollout:** instrument latency, evidence yield, retries, lost opportunities, false positives, user-authorized effects and measured System-2 savings. Production qualification still requires H-079/H-081/exact-head CI and relevant real Laya/effect-owner dogfood. H-082 remains separate.
+
+**Implementation owner and acceptance gates:** [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md).
+
+
+
 ## D-038 — Post-implementation compilability must fail closed
 
 **Date:** 2026-10-08. **Status:** ACCEPTED / P0 SAFETY CORRECTION IMPLEMENTED LOCALLY (C0–C6) / RELEASE GATES OPEN / NOT QUALIFIED. **Extends:** D-037, without invalidating its architectural intent.
