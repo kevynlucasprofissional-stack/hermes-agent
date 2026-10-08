@@ -34,12 +34,14 @@ WORKSTATION_BROWSER_CAPABILITIES = (
     "browser_extension_verify",
     "browser_extension_remove",
     "browser_extension_open_options",
+    "browser_creative_render",
 )
 
 
 def dispatch_workstation_browser_authoritative(
     action: str, args: Dict[str, Any], *, task_id: Optional[str] = None,
     session_id: Optional[str] = None, run_id: Optional[str] = None,
+    kanban_card_id: Optional[str] = None,
 ) -> Any:
     """Preserve Workstation route policy and human fencing behind the broker."""
     from workstation.task_compiler import active_constraints, durable_execution_active
@@ -52,8 +54,9 @@ def dispatch_workstation_browser_authoritative(
         BrowserControlLeaseManager.get_instance().assert_action_allowed(
             task_id, action, fence_token=args.get("fence_token"),
         )
+    lineage = {"kanban_card_id": kanban_card_id} if kanban_card_id is not None else {}
     return call_workstation_browser(
-        action, args, task_id=task_id, session_id=session_id, run_id=run_id,
+        action, args, task_id=task_id, session_id=session_id, run_id=run_id, **lineage,
     )
 
 

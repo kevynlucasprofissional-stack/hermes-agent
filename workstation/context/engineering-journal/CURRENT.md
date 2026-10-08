@@ -1,5 +1,18 @@
 # 2026-10-08 — Authorized Creative development exception / CW-02
 
+CW03A-PROJECT follow-up: implemented immutable project revisions, inherited-session
+CLI save/inspect/render, canonical live TaskRun admission and ArtifactStore/journal
+publication. Hypothesis: these owners preserve durable project lineage across
+restart without a new execution store. Falsifiers: source overwrite, cross-profile
+read, terminal/foreign run write, stale owner receipt publication, or automatic
+retry after uncertain dispatch. Contracts: 17 PASS across five files; final three
+affected files after operation-ID durability changes: 6 PASS. Real integrated CLI/
+Electron create and process-restart reopen passed once with the same PNG hash,
+but subsequent final trials and the prior native fixture reproduced paint timeout
+or display-surface capture failure. Native reliability remains NOT QUALIFIED;
+unproven visibility/subscription changes were reverted. No new baseline/CI/phase
+qualification. Details: ../../creative-workstation/CW03A_PROJECT_REVISIONS_2026-10-08.md.
+
 CW03A-NATIVE hypothesis (specified by fixture assertions before execution): typed
 SVG can render in the existing owner-bound WebContentsView, preserve foreground,
 reopen source exactly and reject stale/foreign/human-fenced requests. Initial
