@@ -1,5 +1,10 @@
 # Current State
 
+## 2026-10-08 — Proposed Laya online compilability
+
+**NOT IMPLEMENTED / NOT QUALIFIED.** On `workstation/laya-direct-system1`, progressive `TransitionSample` capture, provider-free compiler, System-1 seam and independently tested run-scoped handoff are existing substrates. The newly approved **bounded event-driven Laya readiness → guarded mining → independent validation → safe same-run reuse** loop is a separate integration target; do not count it as shipped or as evidence closing H-081. See [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). H-082 warm-start readiness and H-081 exact-head qualification remain open independent work.
+
+
 ## 2026-10-07 — One-click startup bootstrap coupling [OPEN — IMPLEMENTATION REQUIRED]
 
 A dogfood launch on `workstation/laya-direct-system1` failed in dependency preparation before
