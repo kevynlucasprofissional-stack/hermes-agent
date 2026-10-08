@@ -1,0 +1,58 @@
+# Hermes Creative Workstation
+
+> **Status (2026-10-08): PROPOSTA DOCUMENTADA / IMPLEMENTAÇÃO NÃO INICIADA.**
+> Esta pasta descreve uma iniciativa futura subordinada aos gates canônicos do Hermes Workstation. Sua existência não comprova a instalação, integração, disponibilidade, teste ou certificação de nenhuma engine criativa.
+
+## Tese e objetivo
+
+O Hermes Work deve orquestrar projetos criativos **editáveis, observáveis, versionáveis e reutilizáveis**, sem reproduzir Photoshop, After Effects ou Blender como aplicações monolíticas. O agente controla operações estruturadas via APIs/MCP/código/CLI; a pessoa revisa e edita nos aplicativos web apresentados pelo Chromium integrado; ambos referenciam a mesma fonte de projeto, preservando a autoridade dos proprietários reais de estado.
+
+**Superfícies prioritárias (P0 de produto, não autorização para iniciar código):**
+- **Penpot:** layouts, componentes e design systems; MCP oficial e interface web; implantação self-hosted opcional.
+- **Remotion:** vídeo e motion por React/TypeScript e CLI, preview via Studio; uso condicionado a uma avaliação de licença antes de qualquer integração de distribuição.
+- **Three.js Editor:** cenas 3D e prévia web; código/scene graph e um adaptador tipado próprio, não movimentos arbitrários do mouse.
+- **FFmpeg:** codificação e composição de mídia, exposta por operações tipadas e parâmetros validados.
+
+**Engines especializadas posteriores:** Inkscape CLI/SVG, Blender Python/headless, GIMP/Krita; pesquisa opt-in em Graphite; Tone.js/Strudel, PixiJS/p5.js, Godot, CAD/PartMode/replicad somente se casos de uso justificarem.
+
+## Onde começar
+
+| Documento | Responsabilidade |
+| --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Limites, proprietários de estado, fluxo de execução e modelo de projeto |
+| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Ordem executável, responsáveis por subsistema, testes, gates e critérios de aceite |
+| [INTEGRATIONS.md](INTEGRATIONS.md) | Candidatos, integração, licenças, MCPs, skills, links e nível de evidência |
+| [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md) | Briefing curto, autocontido e sequencial para uma IA implementadora |
+| [research/2026-10-08-original-analysis.md](research/2026-10-08-original-analysis.md) | Registro curado da análise original da conversa, separado da autoridade técnica |
+| [../ROADMAP.md](../ROADMAP.md) | **Única fonte de verdade para prioridade e liberação da iniciativa** |
+| [../SOURCE_MATRIX.md](../SOURCE_MATRIX.md) | **Único registro canônico de referências externas** |
+
+## Princípios de implementação
+
+1. **Upstream-first.** Antes de tocar código, executar [H-079](../context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md) e qualificar o baseline exato. Sem contornar H-080A/H-080B ou os bloqueios P0 em [CURRENT_STATE](../context/CURRENT_STATE.md).
+2. **Sem autoridades paralelas.** Não criar outro SessionDB, Kanban, Memory, BrowserSessionState, Approval, ExecutionJournal, ArtifactStore ou OperationalCapabilityRegistry.
+3. **Chromium é superfície visual, não motor primário da automação.** Preferir operações tipadas, APIs/MCP, filesystem e CLI. Browser automation é fallback quando essencial.
+4. **Instalação opt-in.** Detectar capacidades e verificar requisitos sem baixar, executar serviços, vazar credenciais ou instalar terceiros automaticamente.
+5. **A imagem final não é o projeto.** Preservar a fonte editável (Penpot file, TSX, scene JSON, GLB, .blend conforme aplicável) e um manifesto com referências e proveniência, sem reivindicar conversão lossless entre formatos.
+6. **Verificação antes da aprendizagem.** Skill instrui; MCP fornece operações; capability certificada exige provas externas, versão/scope e política de promoção canônica do Experience Compiler.
+7. **Licenças e segurança explícitas.** Código aberto não implica MIT. Remotion tem licença própria. MCPs que executam código e apps servidos localmente exigem isolamento, autoridade e auditoria.
+8. **Escopo incremental:** documentar -> investigar contratos existentes -> provar vertical mínima -> estender editores -> integrar aprendizado. Nenhuma P0 criativa prevalece sobre P0 de confiabilidade.
+
+## Caso de uso demonstrativo
+
+> Crie uma logo 3D vertical de oito segundos com luz dramática e entregue um MP4 mais o projeto editável.
+
+Fluxo desejado, **não implementado**:
+`OperationIntent -> Router/Policy -> TaskCompiler -> Three.js scene -> preview Chromium -> Remotion/FFmpeg -> verificação de render/artefato -> accepted outcome -> Experience Compiler candidate -> validação/replay/promoção -> eventual reuso`.
+
+Um único fluxo não prova interoperabilidade geral. Cada transição tem contrato, capacidade efetiva e verificador explícito.
+
+## Estado, prova e governança
+
+- **FACT**: arquivo/função/teste inspecionado ou documentação oficial referenciada com link e ref.
+- **PARTIAL**: interface conhecida, mas compatibilidade no Hermes ainda não verificada.
+- **NV**: não verificado; nunca converter NV em AUSENTE.
+- **PROPOSED**: decisão de produto para experimentação, não arquitetura qualificada.
+- **IMPLEMENTED / VERIFIED / QUALIFIED**: somente com commit, testes, recibos e gates reais.
+
+O código do Hermes e seus documentos canônicos permanecem autoridade. Para começar uma tarefa, leia [AGENTS.md](AGENTS.md), depois [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
