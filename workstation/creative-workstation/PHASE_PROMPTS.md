@@ -1,5 +1,11 @@
 # Prompts enxutos por fase — uso após o briefing
 
+## Primeira mensagem atualizada — R1 baseline repair (2026-10-08)
+
+**Use [BASELINE_UNBLOCK_EXECUTION_2026-10-08.md](BASELINE_UNBLOCK_EXECUTION_2026-10-08.md) antes dos prompts CW-02–CW-07.** A CW-01 preflight de baixo está preservada para referência histórica, porém **já existe e foi BLOCKED**. Não repetir investigação no lugar de corrigir o gate. Primeiro: confirmando HEAD/política H-079, PR isolado de `.github/workflows/workstation-ci.yml` para instalar `--extra workstation-laya`, CI/Laya provenance/contracts + core regressions; depois triagem npm em PR próprio, Stage A upstream pinado, bloqueios de voz/Electron/bootstrap aplicáveis; só liberar CW-02 com gates efetivamente verdes. Nunca assumir waiver ou fazer merge. `NOT_RUN` continua `NOT_RUN`.
+
+**Nota de precedência:** a frase histórica no final “a primeira mensagem deve ser CW-01” se aplica somente ao início da iniciativa, antes da auditoria executada em 2026-10-08. Para a próxima execução, a mensagem é **R1**, com sequência detalhada no plano de desbloqueio.
+
 **Todos os prompts pressupõem acesso ao repositório e obedecem `AGENTS.md`, `workstation/context/README.md`, H-079 e [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md).** Não use esses prompts para burlar os gates; as leituras mandatórias continuam mandatórias.
 
 ## CW-01 — Preflight e auditoria (primeira mensagem recomendada)
