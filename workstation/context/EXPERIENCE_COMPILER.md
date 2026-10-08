@@ -2,7 +2,7 @@
 
 ## 2026-10-08 — Online compilability is a trigger, not a second compiler
 
-The new [Laya Online Compilability Loop](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md) is **design-approved but not implemented**. Existing progressive capture, `ExperienceCorpus`, `ExperienceCompiler.compile()/mine()`, replay/causal checks, `ExperienceValidationPromotionCoordinator` and `ExperiencePromotionPolicy` remain the owners of learning truth.
+The new [Laya Online Compilability Loop](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md) is **design-approved but not implemented**. Existing progressive capture, `ExperienceCorpus`, `ExperienceCompiler.compile()/mine()`, replay/causal checks, `ExperienceValidationPromotionCoordinator` and `ExperiencePromotionPolicy` remain the owners of learning truth. **Caution:** the coordinator's `process_candidate()` may call `compiler.promote()`; early run-local admission must use a validation-only path, never accidentally invoke the global-promotion cycle.
 
 The proposed online monitor runs **after** canonical `TransitionSample` capture; filters/aggregates significant events; asks a bounded Laya/System-1 closed question whether to keep collecting, attempt mining, validate, examine run-local reuse, escalate a genuine reasoning gap or abstain. That answer schedules an optional, bounded **provider-free** compilation attempt, never a side effect, verification result, global promotion or in-band LLM compiler.
 
