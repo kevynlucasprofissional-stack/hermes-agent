@@ -1,5 +1,12 @@
 # Identifier disambiguation index
 
+## D-037 collision observed 2026-10-08
+
+`DECISIONS.md` currently contains both **Laya online compilability is event-driven,
+evidence-gated and run-local first** (2026-10-08) and **Dependency preparation is not
+Workstation startup** (2026-10-07). Cite the full heading when referring to either.
+Neither decision is renumbered or overwritten by this preflight evidence update.
+
 **Status:** canonical index, established 2026-09-20.
 **Scope:** the `H-*` hypothesis/experiment identifiers used by the engineering journal and the
 `KI-*` / `RI-*` identifiers used by `KNOWN_ISSUES.md`.

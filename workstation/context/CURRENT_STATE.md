@@ -1,5 +1,17 @@
 # Current State
 
+## 2026-10-08 — Online loop implementation blocked at pre-change gate
+
+Reference HEAD `3176d97db711a0454de17ca055be956763849838` has red exact-head H-081 CI:
+checkout fails on tracked `.test-tmp` long paths; install and qualification never execute.
+Upstream refresh also shows material overlap, not a qualified new-feature baseline.
+Only audit/verification and evidence documentation proceeded; no new loop code or RED
+tests were added. H-081 and H-082 remain open. See
+[preflight evidence](../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
+The permitted local H-081 focused rerun passed 43 tests (including real Laya), zero
+failures/errors/skips, plus strict seams and core anchors. This does not qualify the new
+online domain, full regression, exact-head CI or the upstream baseline.
+
 ## 2026-10-08 — Proposed Laya online compilability
 
 **NOT IMPLEMENTED / NOT QUALIFIED.** On `workstation/laya-direct-system1`, progressive `TransitionSample` capture, provider-free compiler, System-1 seam and independently tested run-scoped handoff are existing substrates. The newly approved **bounded event-driven Laya readiness → guarded mining → independent validation → safe same-run reuse** loop is a separate integration target; do not count it as shipped or as evidence closing H-081. See [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). H-082 warm-start readiness and H-081 exact-head qualification remain open independent work.

@@ -1,5 +1,18 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-08 — Preflight do loop online: implementação bloqueada
+
+O HEAD documental `3176d97db711` falha no checkout Windows do H-081 por caminhos longos
+versionados em `.test-tmp`; os passos de instalação, testes e proveniência foram pulados.
+Isso não demonstra falha de inferência do Laya, tampouco qualificação. O refresh upstream
+também encontrou overlap material. A execução desta missão ficou em auditoria/verificação
+e documentação, sem novo monitor, testes RED ou promoção. H-082 segue independente.
+[Evidências e limites](../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
+O runner oficial local passou 43 testes, inclusive checkpoint real em CPU, sem falhas ou
+skips. Isso confirma componentes existentes; não demonstra o loop novo nem calibra sua
+decisão de compilabilidade. A suíte de três contratos reais levou 49,375 s com setup,
+medida inadequada para ser tratada como latência isolada de inferência.
+
 ## 2026-10-08 — Online compilability: System-1 como sensor do runtime, não compilador
 
 **Inteligência nova com maior valor esperado:** o Hermes deve perceber, ainda durante a execução, quando a experiência operacional capturada atingiu um estado justificável para mineração e possível reutilização no mesmo TaskRun. A lacuna não é a inexistência de `TransitionSample`: a captura progressiva já ocorre após ferramentas e em checkpoints do OperationalKernel. Tampouco é ausência do `ExperienceCompiler` provider-free ou do handoff run-scoped. Falta conectá-los com uma decisão online de prontidão, observando **eventos semânticos canônicos**, e fechar o ciclo até reutilização segura.

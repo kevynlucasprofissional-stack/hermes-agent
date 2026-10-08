@@ -5,6 +5,11 @@
 **Owner:** Workstation learning/control plane.  
 **Purpose:** Detect sufficiently informative runtime experiences *while a TaskRun executes*, invoke the existing provider-free Experience Compiler at appropriate moments, and safely enable same-run reuse without premature global promotion.
 
+**Execution preflight, 2026-10-08:** target coding is blocked by the mandatory H-079/H-081
+baseline gate at `3176d97db711`; exact-head CI failed in checkout before qualification.
+The permitted local focused rerun passed 43 existing tests including real Laya. No new
+monitor or RED tests were added. See [evidence](../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
+
 ## 1. Source and falsification boundary
 
 Consolidation of the 2026-10-06/07 three conversations about Laya usage, reviewed against branch-local code on 2026-10-08. This is a **new architectural implementation target**, not evidence that it has shipped. Existing H-081 real-provider qualification and H-082 warm-start work remain independent gates.

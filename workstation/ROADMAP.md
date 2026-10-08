@@ -1,5 +1,14 @@
 # Workstation roadmap
 
+## 2026-10-08 — Online loop execution preflight: BLOCKED
+
+At `3176d97db711`, H-081 exact-head CI fails during checkout before tests; H-079 has
+material upstream overlap and no qualified target baseline. P0 audit/verification only;
+new RED tests and P1–P6 remain pending. H-082 stays separate. See
+[evidence and resumption boundary](qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
+Local baseline measurement: 43 focused tests passed including real Laya; strict seams and
+core anchors passed. No new feature acceptance or full-regression qualification claimed.
+
 ## 2026-10-08 — Laya online compilability / Experience Compilation Loop
 
 **Status: DESIGN ACCEPTED / IMPLEMENTATION REQUIRED / H-081 BRANCH-GATED / NOT QUALIFIED.** This is a new feature lane on `workstation/laya-direct-system1`; it does not override H-081 real-provider qualification, H-082 warm-start/installer correction, H-079 upstream-first, or the H-080 Experience Compiler owner.

@@ -1,5 +1,36 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — Online Compilability Loop pre-change gate
+
+**TARGET IMPLEMENTATION BLOCKED / LOCAL FOCUSED BASELINE PASSED.**
+Initial local HEAD `3a8351233b7675024f97d1139382edf28c7e808d` was 14 documentation-only
+commits behind the requested branch. Fast-forwarded to
+`3176d97db711a0454de17ca055be956763849838`, preserving local dogfood state.
+No monitor implementation was found in that delta. The specification is now present.
+
+Hypothesis for the permitted baseline experiment: existing owner contracts and real-Laya
+qualification can be measured locally without implementing the new loop. Run the official
+`workstation.scripts.qualify_laya_system1 --live` runner and strict seam audit; record
+failures/skips separately from live-provider evidence. No local result can override H-079
+or the exact-head H-081 failure: GitHub run `37772751167` failed at checkout with
+`Filename too long` under tracked `.test-tmp`; install and qualification steps were skipped.
+P0 new RED tests and P1–P6 target coding remain deferred under the mandatory pre-change gate.
+First local qualification attempt failed in temporary-directory access/JUnit writes and
+cleanup (`PermissionError` / `WinError 5`); no JSON report was emitted. This is environment
+failure, not RED evidence for the requested feature. Repeat the unchanged official runner
+outside the restricted sandbox with a fresh temporary directory to distinguish environment
+restrictions from actual owner-contract failures. Standalone strict seams passed
+(14 classified, zero unclassified, zero budget growth); core integration anchors passed.
+H-082 installer work remains separate. D-037 currently has two distinct headings; references
+to the online loop must use the full heading rather than silently overwriting the bootstrap decision.
+
+**Experiment result: LOCAL FOCUSED BASELINE PASSED / TARGET STILL BLOCKED.** The repeated
+official runner completed 43 tests, zero failures/errors/skips, including real Laya on CPU
+(checkpoint `7b928d828b7b0e022f929d9bd2e44165aa270148`). Strict seams and core anchors passed.
+No full suite or new online-loop tests ran. Final fetch was unchanged. See
+[preflight report](../../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md) and
+[machine-readable local evidence](../../qualification/online-compilability-baseline-2026-10-08.json).
+
 ## 2026-10-08 — Online Compilability Monitor (new feature hypothesis)
 
 **Classification: PARTIAL / DESIGN ACCEPTED / IMPLEMENTATION & QUALIFICATION PENDING.** Investigation is documentation-only; no new runtime or test result is claimed.
