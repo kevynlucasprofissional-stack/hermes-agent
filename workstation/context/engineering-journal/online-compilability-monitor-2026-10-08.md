@@ -1,8 +1,8 @@
 # Online Compilability Monitor — architectural investigation (2026-10-08)
 
 **Branch:** `workstation/laya-direct-system1`  
-**Classification:** PARTIAL / DESIGN ACCEPTED / IMPLEMENTATION & QUALIFICATION PENDING  
-**Change type:** documentation-only architecture intake, no product code executed or qualified.
+**Classification:** IMPLEMENTED / LOCAL GATES QUALIFIED / CI QUALIFICATION PENDING
+**Change type:** Implementation of Online Compilability Loop (P0–P6), passing 14/14 local gates including real Laya.
 
 ## Question
 
@@ -38,6 +38,15 @@ With `FakeSystem1DecisionProvider` only for control-flow testing:
 
 ## Outcome and next iteration
 
-Design accepted as a distinct extension, **not implemented or validated**. Implement baseline RED tests; add bounded semantic prefilter/monitor; shadow Laya; guarded mining; existing run-local handoff; receipts/labels; exact-head H-081 and H-082 qualifications. No new execution plane.
+Design implemented and verified across P0–P6:
+1. `OnlineCompilabilityMonitor` added with deterministic pre-filter, rate limiting, and bounded queue.
+2. Hooked into `workstation_raw_post_tool_observer` and `OperationalKernel` capture points.
+3. System-1 `CompilabilityStage` domain and schema added with receipts and provenance.
+4. Provider-free `ExperienceCompiler.mine()` triggered conditionally for in-run candidate discovery.
+5. `validate_candidate_run_local` performs validation-only check with `RunClosureProof`.
+6. Run-local reuse executed via `execute_in_flight_handoff()` with zero extra System-2 calls.
+7. 11/11 tests pass in `test_online_compilability_monitor.py` (Cases A–H and real Laya contract).
+8. `qualify_laya_system1 --live` passed all 14 gates (`online-compilability-qualified-2026-10-08.json`).
+9. Remote exact-head CI remains pending on GitHub Actions.
 
 Canonical specification: [../LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](../LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md).

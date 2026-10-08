@@ -21,7 +21,7 @@ core anchors passed. No new feature acceptance or full-regression qualification 
 
 ## 2026-10-08 — Laya online compilability / Experience Compilation Loop
 
-**Status: DESIGN ACCEPTED / IMPLEMENTATION REQUIRED / H-081 BRANCH-GATED / NOT QUALIFIED.** This is a new feature lane on `workstation/laya-direct-system1`; it does not override H-081 real-provider qualification, H-082 warm-start/installer correction, H-079 upstream-first, or the H-080 Experience Compiler owner.
+**Status: IMPLEMENTED ON BRANCH / LOCAL GATES QUALIFIED / EXACT-HEAD CI PENDING.** This feature lane on `workstation/laya-direct-system1` has been implemented across P0–P6 with 14/14 local gates passing (`qualify_laya_system1 --live`); it does not override H-081 real-provider qualification, H-082 warm-start/installer correction, H-079 upstream-first, or the H-080 Experience Compiler owner.
 
 **Highest-impact new idea:** use Laya/System-1 **during canonical runtime execution** as a *bounded, event-driven online compilability detector*. Progressive `TransitionSample` capture, `ExperienceCompiler.compile()/mine()`, verifier/replay gates and run-local handoff already exist independently; the missing product path is **capture → semantic eligibility → Laya readiness → guarded early mining → independent validation → safe same-TaskRun reuse**.
 

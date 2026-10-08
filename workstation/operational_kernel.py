@@ -491,9 +491,27 @@ class OperationalKernel:
         exec_context["operation_id"] = operation_id
         from workstation.experience_compiler.progressive import capture_progressive
         def capture(outcome, verification=None):
-            return capture_progressive(self.artifacts, task_id=task_id, run_id=run_id,
+            ref = capture_progressive(self.artifacts, task_id=task_id, run_id=run_id,
                 operation_id=operation_id, primitive=cap.id, route=cap.route, outcome=outcome,
                 state=exec_context.get("semantic_state"), verification=verification)
+            if ref:
+                try:
+                    from workstation.experience_compiler.compilability_monitor import notify_online_compilability
+                    ev_refs = tuple(verification.evidence_refs) if verification and hasattr(verification, "evidence_refs") else ()
+                    notify_online_compilability(
+                        ref=ref,
+                        task_id=task_id,
+                        run_id=run_id,
+                        operation_id=operation_id,
+                        primitive=cap.id,
+                        route=cap.route,
+                        outcome=outcome,
+                        event_kind="verified_transition" if outcome == "verified_success" else "state_changed",
+                        evidence_refs=ev_refs,
+                    )
+                except Exception:
+                    pass
+            return ref
         capture("observed")
         mutation_attempted = False
         from workstation.telemetry import TelemetryEventType, emit_event

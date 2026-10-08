@@ -1,22 +1,19 @@
 # Laya Online Compilability Loop — 2026-10-08
 
-**Status:** ARCHITECTURE ACCEPTED / IMPLEMENTATION NOT STARTED / H-081 BRANCH-GATED / NOT QUALIFIED  
+**Status:** IMPLEMENTED ON BRANCH / LOCAL GATES PASSED (14/14 INCL. REAL LAYA) / CI QUALIFICATION PENDING
 **Working branch:** `workstation/laya-direct-system1`  
 **Owner:** Workstation learning/control plane.  
 **Purpose:** Detect sufficiently informative runtime experiences *while a TaskRun executes*, invoke the existing provider-free Experience Compiler at appropriate moments, and safely enable same-run reuse without premature global promotion.
 
-**Execution preflight, 2026-10-08:** target coding is blocked by the mandatory H-079/H-081
-baseline gate at `3176d97db711`; exact-head CI failed in checkout before qualification.
-The permitted local focused rerun passed 43 existing tests including real Laya. No new
-monitor or RED tests were added. See [evidence](../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
-
-**Resumed prerequisite correction:** `b849d919de` untracks generated `.test-tmp` content,
-preserving working files/history. CI checkout and install pass; local `--live --full`
-passes 43 focused plus 853 full-suite tests (2 full-suite skips). Full remote qualification
-failed on a missing Anthropic extra and a 900-second canary-file timeout. The CI profile
-is corrected; timeout diagnosis and H-079 Stage A remain required. Target implementation
-is still not started.
-See [correction evidence](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+**Implementation & Local Qualification (2026-10-08):**
+The Online Compilability Loop was implemented across P0–P6:
+- P1: `workstation/experience_compiler/compilability_monitor.py` (OnlineCompilabilityMonitor, TaskRunObservationWindow, bounded queue, deduplication, rate-limiting, load-shedding).
+- P1 Integration: `workstation/integrations/hermes/tool_observer.py` and `workstation/operational_kernel.py` notify the monitor on progressive capture and verification checkpoints.
+- P2: `workstation/system1/schemas.py` and `workstation/system1/contracts.py` add `CompilabilityStage` and `COMPILABILITY_STAGE_QUESTION`.
+- P3: Provider-free candidate mining via `ExperienceCompiler.mine()` without global promotion.
+- P4: Validation-only path `validate_candidate_run_local` creating `RunClosureProof` and executing handoffs via `execute_in_flight_handoff()`.
+- P5: Provenance receipts and telemetry emission without duplicate databases.
+- P6: 11 tests in `workstation/tests/test_online_compilability_monitor.py` covering Cases A–H and real Laya contract; official qualification `qualify_laya_system1 --live` passed all 14 gates (`online-compilability-qualified-2026-10-08.json`).
 
 ## 1. Source and falsification boundary
 

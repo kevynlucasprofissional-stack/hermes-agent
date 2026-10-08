@@ -20,6 +20,17 @@ class NeutralChoice(str, Enum):
     OTHER = "OTHER"
 
 
+class CompilabilityStage(str, Enum):
+    """Closed stages of online operational compilability."""
+
+    KEEP_COLLECTING = "KEEP_COLLECTING"
+    MINE_CANDIDATE = "MINE_CANDIDATE"
+    VALIDATE_CANDIDATE = "VALIDATE_CANDIDATE"
+    POSSIBLE_RUN_LOCAL_REUSE = "POSSIBLE_RUN_LOCAL_REUSE"
+    NEEDS_SYSTEM2 = "NEEDS_SYSTEM2"
+    ABSTAIN = "ABSTAIN"
+
+
 class AmbiguityKind(str, Enum):
     """Classification of reasoning gaps or ambiguity."""
 

@@ -32,6 +32,7 @@ GATES = {
     "dataset_reconstruction": "test_system1_dataset_builder.py",
     "receipt_downstream_lineage": "test_system1_receipts_provenance.py",
     "owner_telemetry": "test_system1_telemetry.py",
+    "online_compilability_loop": "test_online_compilability_monitor.py",
 }
 
 

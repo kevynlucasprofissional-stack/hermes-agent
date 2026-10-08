@@ -48,11 +48,32 @@ def workstation_raw_post_tool_observer(
             import json
             text = raw_result if isinstance(raw_result, str) else json.dumps(raw_result)
             failed = classify_tool_failure(tool_name, text)[0]
-            capture_progressive(ArtifactStore(), task_id=getattr(agent, "_canonical_work_task_id", None),
-                run_id=getattr(agent, "_canonical_work_run_id", None),
-                operation_id=getattr(agent, "_current_operation_id", None) or call_id,
-                primitive=tool_name, route=canonical_route_for_tool(tool_name),
-                outcome="failed" if failed else "observed" if tool_effect(tool_name) in READ_EFFECTS else "uncertain")
+            t_id = getattr(agent, "_canonical_work_task_id", None)
+            r_id = getattr(agent, "_canonical_work_run_id", None)
+            op_id = getattr(agent, "_current_operation_id", None) or call_id
+            c_route = canonical_route_for_tool(tool_name)
+            outcome = "failed" if failed else "observed" if tool_effect(tool_name) in READ_EFFECTS else "uncertain"
+            ref = capture_progressive(ArtifactStore(), task_id=t_id,
+                run_id=r_id,
+                operation_id=op_id,
+                primitive=tool_name, route=c_route,
+                outcome=outcome)
+            if ref:
+                try:
+                    from workstation.experience_compiler.compilability_monitor import notify_online_compilability
+                    notify_online_compilability(
+                        ref=ref,
+                        task_id=t_id,
+                        run_id=r_id,
+                        operation_id=op_id,
+                        primitive=tool_name,
+                        route=c_route,
+                        outcome=outcome,
+                        event_kind="tool_finished",
+                        agent=agent,
+                    )
+                except Exception as mon_exc:
+                    logger.debug("notify_online_compilability skipped: %s", mon_exc)
         try:
             record_mutation(
                 agent,

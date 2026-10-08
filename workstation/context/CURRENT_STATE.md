@@ -27,9 +27,9 @@ The permitted local H-081 focused rerun passed 43 tests (including real Laya), z
 failures/errors/skips, plus strict seams and core anchors. This does not qualify the new
 online domain, full regression, exact-head CI or the upstream baseline.
 
-## 2026-10-08 — Proposed Laya online compilability
+## 2026-10-08 — Laya online compilability implemented on branch
 
-**NOT IMPLEMENTED / NOT QUALIFIED.** On `workstation/laya-direct-system1`, progressive `TransitionSample` capture, provider-free compiler, System-1 seam and independently tested run-scoped handoff are existing substrates. The newly approved **bounded event-driven Laya readiness → guarded mining → independent validation → safe same-run reuse** loop is a separate integration target; do not count it as shipped or as evidence closing H-081. See [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). H-082 warm-start readiness and H-081 exact-head qualification remain open independent work.
+**IMPLEMENTED ON BRANCH / LOCAL GATES QUALIFIED / EXACT-HEAD CI PENDING.** On `workstation/laya-direct-system1`, the **bounded event-driven Laya readiness → guarded mining → independent validation → safe same-run reuse** loop has been implemented across phases P0–P6. `OnlineCompilabilityMonitor` integrates with `tool_observer.py` and `operational_kernel.py`, queries `CompilabilityStage` decisions through System-1, executes bounded in-run mining via provider-free `ExperienceCompiler.mine()`, performs validation-only checks (`validate_candidate_run_local`) producing `RunClosureProof`, and executes safe run-local reuse via `execute_in_flight_handoff()` with zero extra System-2 calls. 11/11 tests pass in `workstation/tests/test_online_compilability_monitor.py` covering Cases A–H and real Laya contract; `qualify_laya_system1 --live` passed all 14 gates (`online-compilability-qualified-2026-10-08.json`). Remote exact-head CI qualification and H-082 remain independent pending items. See [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md).
 
 
 ## 2026-10-07 — One-click startup bootstrap coupling [OPEN — IMPLEMENTATION REQUIRED]

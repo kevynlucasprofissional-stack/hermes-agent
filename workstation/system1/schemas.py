@@ -77,12 +77,27 @@ KNOWN_RECOVERY_PATH_QUESTION = {
     },
 }
 
+# 6. Online Compilability Stage Schema
+COMPILABILITY_STAGE_QUESTION = {
+    "type": "choice",
+    "instructions": "Which operational compilability stage should be investigated for this execution state?",
+    "criteria": {
+        "KEEP_COLLECTING": "Continue collecting observations; evidence is early or insufficient for candidate mining",
+        "MINE_CANDIDATE": "Sufficient repeated, parameterizable evidence exists to mine a candidate capability",
+        "VALIDATE_CANDIDATE": "Candidate capability exists and is ready for independent verifier / replay validation",
+        "POSSIBLE_RUN_LOCAL_REUSE": "Candidate is verified and ready for run-local execution handoff on equivalent remaining work",
+        "NEEDS_SYSTEM2": "Novel strategy, unresolvable ambiguity, or cognitive reasoning gap requiring LLM",
+        NeutralChoice.ABSTAIN.value: "Uncertain or conflicting signals; preserve normal execution without side-effect",
+    },
+}
+
 STANDARD_SCHEMAS: Dict[str, Dict[str, Any]] = {
     "capability_family": {"capability_family": CAPABILITY_FAMILY_QUESTION},
     "needs_system2": {"needs_system2": NEEDS_SYSTEM2_QUESTION},
     "ambiguity_kind": {"ambiguity_kind": AMBIGUITY_KIND_QUESTION},
     "progress_class": {"progress_class": PROGRESS_CLASS_QUESTION},
     "known_recovery_path": {"known_recovery_path": KNOWN_RECOVERY_PATH_QUESTION},
+    "compilability_stage": {"compilability_stage": COMPILABILITY_STAGE_QUESTION},
 }
 
 
@@ -111,3 +126,60 @@ def build_candidate_ranking_schema(
             "criteria": criteria,
         }
     }
+
+
+def build_compilability_decision_request(
+    *,
+    task_id: str,
+    run_id: str,
+    operation_id: str = "",
+    operation_family: str = "",
+    target_family: str = "",
+    recent_experience_refs: List[str] | None = None,
+    repeat_count: int = 1,
+    parameter_variability: bool = False,
+    verified_success_count: int = 0,
+    failure_count: int = 0,
+    has_verifier: bool = False,
+    effect_risk: str = "standard",
+    progress_detected: bool = True,
+    expected_utility: float = 0.0,
+    language: str = "en",
+) -> Any:
+    """Build a versioned, minimal-state DecisionRequest for online compilability assessment."""
+    from agent.system1_decision import DecisionRequest
+    from workstation.system1.contracts import compute_state_hash
+
+    minimal_state = {
+        "task_id": task_id,
+        "run_id": run_id,
+        "operation_family": operation_family,
+        "target_family": target_family,
+        "recent_refs": list(recent_experience_refs or [])[-10:],
+        "repeat_count": repeat_count,
+        "parameter_variability": parameter_variability,
+        "verified_successes": verified_success_count,
+        "failures": failure_count,
+        "has_verifier": has_verifier,
+        "effect_risk": effect_risk,
+        "progress_detected": progress_detected,
+        "expected_utility": expected_utility,
+    }
+
+    return DecisionRequest(
+        domain="compilability",
+        schema_id="hermes.system1.compilability.v1",
+        task_id=task_id,
+        run_id=run_id,
+        operation_id=operation_id,
+        state=minimal_state,
+        minimal_state=minimal_state,
+        state_hash=compute_state_hash(minimal_state),
+        questions={"compilability_stage": COMPILABILITY_STAGE_QUESTION},
+        language=language,
+        risk_class=effect_risk,
+        metadata={
+            "objective": f"Assess online compilability stage for {operation_family}:{target_family}",
+            "task_phase": "execution_monitoring",
+        },
+    )
