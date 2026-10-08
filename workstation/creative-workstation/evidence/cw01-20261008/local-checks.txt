@@ -1,0 +1,8 @@
+Observed locally on main source 920fdda07a74e2f4a6e790fcc6bc3a2d2ab976a7 with documentation-only edits:
+rtk proxy C:/Github/hermes-agent/.venv/Scripts/python.exe workstation/scripts/validate_lock.py -> exit 0
+rtk proxy C:/Github/hermes-agent/.venv/Scripts/python.exe workstation/scripts/verify_licenses.py -> exit 0
+rtk proxy C:/Github/hermes-agent/.venv/Scripts/python.exe workstation/scripts/audit_hermes_seams.py --strict -> exit 0; 14 classified, 0 unclassified, 0 budget regressions; 515 edge references
+rtk proxy C:/Github/hermes-agent/.venv/Scripts/python.exe workstation/scripts/apply_core_integration.py --root . --check -> exit 0; all anchors valid; tracked-doc warning
+rtk proxy C:/Github/hermes-agent/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider workstation/tests/test_artifacts_and_verbosity.py workstation/tests/test_persistent_workers.py workstation/tests/test_operational_capabilities.py --basetemp C:/Github/hermes-agent/.cw01-test-temp -> 22 passed in 2.90s, exit 0
+rtk proxy powershell -NoProfile -Command npm audit --package-lock-only --omit=dev --audit-level=moderate --json -> exit 1 (JSON beside this file)
+This text transcribes tool outputs; it is not a product-owner/TaskRun receipt. Full/new Creative tests NOT_RUN.
