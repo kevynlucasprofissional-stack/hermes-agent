@@ -1,5 +1,18 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-08 — Online Compilability Monitor (new feature hypothesis)
+
+**Classification: PARTIAL / DESIGN ACCEPTED / IMPLEMENTATION & QUALIFICATION PENDING.** Investigation is documentation-only; no new runtime or test result is claimed.
+
+Hypothesis: after canonical progressive capture, a bounded event-driven Laya classifier can select *when* to invoke provider-free Experience Compiler mining, improving same-run verified reuse and reducing unnecessary System-2 reasoning. Branch inspection confirms existing capture/compiler/run-local substrates but not their integration into the proposed complete online loop.
+
+Next smallest RED experiment: given two compatible verified transitions inside one canonical TaskRun, monitor coalesces and invokes bounded mining; after independent replay/verifier approval the *existing* handoff safely processes the next unfinished equivalent item without another System-2 call or duplicate mutation. Negative controls: failed/uncertain/superseded event, unverified candidate, irrelevant event, Laya timeout/abstain, CPU saturation and no shared authority between runs must never promote, blindly retry or block foreground.
+
+Experiment owner and design: [online-compilability-monitor-2026-10-08.md](online-compilability-monitor-2026-10-08.md). Canonical spec: [../LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](../LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md).
+
+H-081 exact-head CI and H-082 installer/readiness remain separate; do not relabel them closed as a side effect of new docs.
+
+
 ## H-082 — One-click warm-start failure is bootstrap/network coupling, not Laya runtime (2026-10-07)
 
 **Classification: VALIDATED / IMPLEMENTATION NEXT.**
