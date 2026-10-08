@@ -10,6 +10,8 @@ Este diretório é **especificação de iniciativa**, não um novo runtime. Apli
 
 ## Protocolo curto de entrada
 
+**Após a CW-01 BLOCKED de 2026-10-08**, use [BASELINE_UNBLOCK_EXECUTION_2026-10-08.md](BASELINE_UNBLOCK_EXECUTION_2026-10-08.md) e [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md). O primeiro reparo é R1 (paridade CI Laya); CW-02 não está liberada. Esta nota não altera leituras mandatórias de H-079 nem permite novas engines/runtime.
+
 - Comece por [EXECUTION_BRIEF.md](EXECUTION_BRIEF.md) **depois** das leituras obrigatórias previstas em `../context/README.md`.
 - Execute apenas a fase atual em [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md); use [PHASE_PROMPTS.md](PHASE_PROMPTS.md) para um handoff compacto.
 - Toda mudança funcional exige a evidência e os testes negativos em [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md).
