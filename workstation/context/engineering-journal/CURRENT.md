@@ -1,5 +1,17 @@
 # 2026-10-08 — Authorized Creative development exception / CW-02
 
+CW02-PROCESS follow-up: implemented shell-free typed adapter primitives using
+ScopedPolicyEngine, canonical command guards/env builder and ProcessRegistry
+adoption. Hypothesis: canonical ownership suffices for timeout, cancellation and
+restart without a separate lifecycle store; falsifiers are orphan, wrong-owner
+control, credential inheritance, missing checkpoint or false CLI-health acceptance.
+Canonical 3-file runner: 6 PASS, 0 failed, 0 skipped. Real Node probe passes;
+Python masquerading as Node exits zero but is unhealthy. Actual checkpoint
+recovery and cancel pass. See ../../creative-workstation/CW02_RUNTIME_2026-10-08.md.
+Electron 40.10.2 was prepared from the existing locked Desktop dependency via
+npm rebuild electron; no Creative engine was installed. CW-03A native fixture
+and project integrity are the next experiment; renders are still NOT_RUN.
+
 Maintainer authorization: “Está autorizado”, following the explicit proposal to
 develop with baseline issues recorded as unresolved. Branch:
 codex/creative-cw02-20261008, base 3417d57b5c6dc3b3303052fa0fb34659dfc0e5fe.
