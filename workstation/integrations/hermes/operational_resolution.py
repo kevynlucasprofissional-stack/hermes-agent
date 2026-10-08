@@ -277,6 +277,14 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
     if agent is None:
         return None
 
+    # Run-local reuse of a just-learned, independently validated procedure. It acts only
+    # on owner-verified pending items and never answers the turn: reasoning continues.
+    try:
+        from workstation.integrations.hermes.run_local_adoption import workstation_run_local_checkpoint
+        workstation_run_local_checkpoint(context)
+    except Exception:
+        logger.warning("run-local adoption checkpoint skipped", exc_info=True)
+
     try:
         task = _canonical_task(agent, str(getattr(context, "session_id", "") or ""))
         if task is None:

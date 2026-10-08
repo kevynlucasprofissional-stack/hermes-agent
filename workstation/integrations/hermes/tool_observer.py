@@ -61,6 +61,7 @@ def workstation_raw_post_tool_observer(
             if ref:
                 try:
                     from workstation.experience_compiler.compilability_monitor import notify_online_compilability
+                    from workstation.integrations.hermes.run_local_adoption import build_run_adoption_owner
                     notify_online_compilability(
                         ref=ref,
                         task_id=t_id,
@@ -71,6 +72,7 @@ def workstation_raw_post_tool_observer(
                         outcome=outcome,
                         event_kind="tool_finished",
                         agent=agent,
+                        owner=build_run_adoption_owner(agent),
                     )
                 except Exception as mon_exc:
                     logger.debug("notify_online_compilability skipped: %s", mon_exc)
