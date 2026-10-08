@@ -1,5 +1,12 @@
 # Hermes Workstation
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## Proposed: Hermes Creative Workstation (documentation-only)
+
+[Hermes Creative Workstation](creative-workstation/README.md) researches human/agent-editable design, 3D and video workflows using Penpot, Three.js Editor, Remotion/React and external FFmpeg/Blender/Inkscape engines on **existing Workstation owners**. See [architecture](creative-workstation/ARCHITECTURE.md), [phases/gates](creative-workstation/IMPLEMENTATION_PLAN.md), [MCP/skills/licenses](creative-workstation/INTEGRATIONS.md). **No creative tool was installed or qualified by this docs-only intake.**
+
+
+
 Hermes Workstation is a thin downstream distribution of
 `NousResearch/hermes-agent`. The upstream Hermes architecture remains the source
 of truth for sessions, Kanban, memory, skills, Gateway, Desktop and Dashboard.

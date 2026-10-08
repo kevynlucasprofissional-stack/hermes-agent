@@ -1,5 +1,12 @@
 # Hermes Workstation — Coding-Agent Context
 
+<!-- creative-workstation-intake:2026-10-08 -->
+### Planned Creative Workstation context — read on demand
+
+For any future creative-tool adaptation read [../creative-workstation/README.md](../creative-workstation/README.md), its [AGENTS.md](../creative-workstation/AGENTS.md), [architecture](../creative-workstation/ARCHITECTURE.md), [implementation plan](../creative-workstation/IMPLEMENTATION_PLAN.md), and [integration matrix](../creative-workstation/INTEGRATIONS.md) **after the mandatory canonical Workstation context and upstream gates**. This is documentation-only; the folder does not install or approve a runtime. Record later experiments/results in the canonical Engineering Journal.
+
+
+
 This directory is the operational entry point for coding agents working on the downstream Hermes Workstation surface. It does **not** replace the repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) or duplicate the architecture documents in `workstation/`.
 
 ## Required reading order

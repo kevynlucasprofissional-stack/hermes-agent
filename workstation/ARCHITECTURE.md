@@ -1,5 +1,12 @@
 # Hermes Workstation Architecture
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## Future Creative Workstation proposal (no runtime implementation)
+
+[Creative Workstation architecture](creative-workstation/ARCHITECTURE.md) studies capability discovery/opt-in lifecycle, typed MCP/API/CLI adapters, shared editable project references and visual previews using **existing** Electron Chromium. Existing BrowserTask, TaskCompiler, Router/Policy/Verifier, ArtifactStore/Journal and Experience Compiler retain their authority. This October 2026 intake changes documentation only; implementation depends on [upstream, security and real-product qualification gates](creative-workstation/IMPLEMENTATION_PLAN.md).
+
+
+
 ## Verified execution admission and continuation (HW-022)
 
 For a multi-item plan containing item mutation steps, the first real WorkItem is
