@@ -1,5 +1,7 @@
 # Registro da análise original — Hermes Creative Workstation (2026-10-08)
 
+**Fonte completa preservada:** [análise textual completa](2026-10-08-full-analysis.md) e [proposta documental completa](2026-10-08-full-documentation-proposal.md), ambas fornecidas no corpo da conversa em 2026-10-08. A presente página permanece uma síntese navegável. A fonte completa preserva as tabelas e o argumento, com escapes Markdown normalizados e artefatos efêmeros de UI omitidos.
+
 **Origem:** análise e recomendações apresentadas na conversa do usuário em 2026-10-08, incluindo os sete arquivos Markdown discutidos. **Natureza:** registro curado, com elementos de interface/citações temporárias removidos; preserva a substância, as propostas, classificações e ressalvas, mas não substitui o texto integral da conversa como transcrição literal. Para decisões normativas consulte os arquivos superiores e documentos canônicos.
 
 ## Tese

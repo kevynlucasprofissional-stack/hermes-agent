@@ -2,6 +2,12 @@
 
 **Status: DESIGN PROPOSTO.** Não é uma descrição do que está em produção. Contratos devem ser reconciliados com o código real antes de implementar.
 
+## Escopo de implementação e evidência
+
+Esta arquitetura é implementada por PRs de **uma unidade** conforme [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), orientados pela [entrada compacta](EXECUTION_BRIEF.md) e provados pela [matriz de qualificação](VERIFICATION_MATRIX.md). A primeira vertical obrigatória é **CW-03A React/SVG → preview Electron real → PNG**, seguida de FFmpeg (CW-03B); Remotion (CW-03C) é condicionado a licença. Penpot (CW-04) e Three.js (CW-05) são módulos independentes; reuso (CW-07) pode começar após uma vertical realmente qualificada.
+
+**Modelos de ameaça mínimos:** consentimento/authority da instalação e dos efeitos, separação de perfis/workspaces, proibição de exfiltração de segredos, proteção de revisões humanas, execução restrita no renderer, resultado externo verificável, e bloqueio de promotion sem proof. Nunca criar status "READY" enquanto só há porta aberta sem health real.
+
 ## 1. Limites e proprietários
 
 ```text

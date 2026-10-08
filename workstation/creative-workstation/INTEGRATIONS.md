@@ -6,7 +6,7 @@
 
 | Prioridade | Engine/ferramenta | Interface pretendida | MCP | Skill | Licença/risco | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| P0 | Penpot | web + MCP oficial | oficial | Penpot AI Kit | MPL-2.0 / plugin com execução de código | PARTIAL (compatibilidade NV) |
+| P0 | Penpot | web + MCP oficial | oficial | Penpot AI Kit (licença separada) | Core MPL-2.0; AI Kit CC-BY-4.0; plugin executa código | PARTIAL (compatibilidade NV) |
 | P0 | Remotion | código TSX, Studio, CLI | comunitário opcional | oficial remotion-dev/skills | licença própria; product/distribution gate | PARTIAL |
 | P0 | Three.js Editor | app web, bridge tipada, scene JSON | oficial não confirmado | comunitárias | MIT; editor internals instáveis | PARTIAL |
 | P0 | FFmpeg/ffprobe | CLI tipada | não necessário | própria futura | LGPL/GPL conforme build/codec | PARTIAL |
@@ -23,6 +23,16 @@
 | P3 | Scribus | script/CLI | não confirmado | não validada | GPL | PESQUISA |
 | baixa | Blockbench/SculptGL | plugin/web | não priorizado | não validada | conferir ref/manutenção | NÃO PRIORIZAR |
 
+## Distinção de licenças por camada
+
+- **Penpot core/server/editor:** MPL-2.0 conforme versão, com obrigações sobre arquivos modificados relevantes.
+- **Penpot AI Kit (skills/workflows):** repositório oficial `penpot/penpot-ai-kit` informa licença **CC-BY-4.0** na metadata GitHub, confirmada durante a revisão documental de 2026-10-08. Essa licença **não é automaticamente a licença do Penpot core**. Conferir LICENSE, fontes/assets compartilhados e atribuição antes de copiar ou redistribuir o kit; autorização da instalação não dispensa atribuição.
+- **Remotion e pacote de skills:** separar licença de código, serviços, templates e materiais; não presumir que a licença do repo de skills conceda direito de redistribuir o Remotion engine.
+- **FFmpeg:** revisar licença da build binária específica, incluindo codecs/flags; a licença do projeto genérico não comprova redistributabilidade da build escolhida.
+- **Graphite e PartMode:** verificar código, dependências e termos de branding, plugins e execução via rede no pin exato.
+
+Licenciamento é um **gate de admissão**, não uma observação superficial em README. A [matriz de segurança e verificação](VERIFICATION_MATRIX.md) exige decisão por cenário de uso/distribuição.
+
 ## Fontes e pontos de entrada
 
 ### MCPs
@@ -37,7 +47,7 @@
 
 ### Skills (candidatas, não instaladas nesta PR)
 - Remotion oficial: https://github.com/remotion-dev/skills — composição, Studio, render, legendas, melhores práticas. Conferir as skills atuais no ref pinado; não assumir toda a lista da conversa como presente.
-- Penpot AI Kit: https://github.com/penpot/penpot-ai-kit — skills/workflows/policies e referências compartilhadas. Instalar preservando dependências internas.
+- Penpot AI Kit: https://github.com/penpot/penpot-ai-kit — skills/workflows/policies e referências compartilhadas; **CC-BY-4.0** (repositório oficial). Instalar preservando dependências e atribuição.
 - Three.js community: https://github.com/noklip-io/agent-skills — verificar path de SKILL.md e compatibilidade antes de sugerir comando `hermes skills install`.
 - Blender bpy community: https://github.com/libevm/agent-skills/blob/main/skills/blender/SKILL.md .
 - Strudel community: https://github.com/eXodes/skills-workspace — confirmar skill/caminho no ref.
