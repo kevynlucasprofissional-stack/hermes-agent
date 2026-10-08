@@ -1,5 +1,13 @@
 # Workstation Known Issues
 
+## KI-026 — Laya online-loop unsafe proof and missing autonomous closure [OPEN — P0/P1]
+
+Observed on `workstation/laya-direct-system1` code `c969fbf`, audited 2026-10-08. **Release blocker.** `workstation/experience_compiler/compilability_monitor.py:validate_candidate_run_local()` can substitute fictitious replay references for failed/missing proof, construct `AuthorityScope(LOCAL_MUTATION)`, effect budget and `uncertainty_clear=True` outside canonical owners. `process_event()` lacks automatic `POSSIBLE_RUN_LOCAL_REUSE` continuation. `mine_candidate_in_run()` mines globally before filtering and may admit empty run provenance. DIRECT is default, aborted model inference may trigger deterministic mining, and absence of anomalies can inflate both reuse and avoided-System2 counters. `drain(timeout)` does not bound the wait; no explicit per-run state TTL. Positive test manually invokes helper with fake Laya and fake dispatcher.
+
+**Close only when:** fail-closed replay/verifier and canonical authority/readback RED/GREEN; scoped mining; actual TaskRun automatic verified handoff without manual helper; guarded shadow-to-direct rollout; honest measured metrics; bounded worker shutdown; full exact-head CI + H-079/H-081 qualification. H-082 is independent. No promotion/main merge while open. Details: [ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
 ## KI-025 — Healthy warm start can fail on package-registry availability [OPEN — STARTUP RELIABILITY]
 
 Observed on `workstation/laya-direct-system1` during real one-click dogfood.
