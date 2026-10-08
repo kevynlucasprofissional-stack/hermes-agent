@@ -1,5 +1,57 @@
 # Workstation Known Issues
 
+## KI-027 — Rigid online learning limits discard valuable same-run opportunities [OPEN — OPPORTUNITY/PRODUCT]
+
+**Observed design gap (2026-10-08):** At `938d9b2beeaf`, SHADOW mode suppresses mining and validation entirely. DIRECT is unlocked by any nonempty `direct_qualification_ref` (not a verified attestation). `OnlineCompilabilityMonitor` discards queued events on saturation/stop and evicts 900s-idle hot windows; attempt budgets (3 compilation attempts per segment; 3 validations per candidate), 4 offers and 64 windows do not re-open based on genuine new evidence or rehydrate persistent opportunity state. The existing 100-item checkpoint limit is a fairness budget but does not independently ensure next-checkpoint continuation. Long-running TaskRuns are not intentionally cancelled by these learning limits; loss is missed or postponed compilation/reuse.
+
+**Decision D-039:** user accepts higher learning/operational expense to gain autonomy. Make capture/mining active even if effect admission remains shadow, derive narrow permissions automatically from TaskRun (never mint authority), use genuine version-bound family qualification for DIRECT, prioritized durable event pointers, retry after material evidence changes or dependency recovery, rehydratable `run_learning_checkpoint.v1`, fair cross-run backpressure and next-checkpoint continuation. Never bypass verifier, owner effect budgets, uncertainty/lease fences, or global promotion criteria. Production ValidationEnvironmentProvider and real Laya dogfood required for effect-qualified scopes.
+
+**Closure:** A0–A7 RED/GREEN tests in [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md), real TaskRun >100-item and multi-hour/restart test, measured opportunity-loss reduction without duplicate effects or latency regression, exact-head H-081 and H-079 qualifications. Status OPEN / NOT QUALIFIED; no main merge.
+
+
+
+## KI-026 — Laya online-loop unsafe proof and missing autonomous closure [CODE PATHS CORRECTED LOCALLY — RELEASE GATES OPEN]
+
+Observed on `workstation/laya-direct-system1` code `c969fbf`, audited 2026-10-08. **Release blocker.** `workstation/experience_compiler/compilability_monitor.py:validate_candidate_run_local()` can substitute fictitious replay references for failed/missing proof, construct `AuthorityScope(LOCAL_MUTATION)`, effect budget and `uncertainty_clear=True` outside canonical owners. `process_event()` lacks automatic `POSSIBLE_RUN_LOCAL_REUSE` continuation. `mine_candidate_in_run()` mines globally before filtering and may admit empty run provenance. DIRECT is default, aborted model inference may trigger deterministic mining, and absence of anomalies can inflate both reuse and avoided-System2 counters. `drain(timeout)` does not bound the wait; no explicit per-run state TTL. Positive test manually invokes helper with fake Laya and fake dispatcher.
+
+**Corrective status (2026-10-08, see audit doc "Corrective execution result"):** P0 proof/authority paths, scoped mining, automatic checkpoint adoption, SHADOW default, bounded worker and honest metrics are implemented and locally green (37 new safety/E2E tests, 900/0/2 full Workstation, 16 local gates). **Not closed:** exact-head CI (baseline fails on two runner file timeouts), H-079 upstream pin, H-082, calibration data, and production owners for the validation environment/verifier contract. Keep this issue open until those close; do not merge or default DIRECT.
+
+
+**Close only when:** fail-closed replay/verifier and canonical authority/readback RED/GREEN; scoped mining; actual TaskRun automatic verified handoff without manual helper; guarded shadow-to-direct rollout; honest measured metrics; bounded worker shutdown; full exact-head CI + H-079/H-081 qualification. H-082 is independent. No promotion/main merge while open. Details: [ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
+## KI-025 — Healthy warm start can fail on package-registry availability [OPEN — STARTUP RELIABILITY]
+
+Observed on `workstation/laya-direct-system1` during real one-click dogfood.
+
+Fingerprint:
+
+```text
+START-HERMES-WORKSTATION.bat
+-> install.cmd
+-> install.ps1
+-> uv pip install --python ... -e .
+-> PyPI pillow-heif simple index
+-> timeout after retries
+-> launcher abort
+```
+
+This is not a Laya/System-1 runtime exception. The package is locked with a compatible CPython
+3.13 Windows x64 wheel, and `install.ps1` is shared with `main`.
+
+Root problem:
+- warm start unconditionally enters dependency preparation;
+- existing healthy `.venv` does not suppress Python resolution/install;
+- `npm ci` is also unconditional;
+- Laya branch local setup does not explicitly match CI's `workstation-laya` profile.
+
+Do not "fix" by removing `pillow-heif`, weakening the lock, or blindly skipping install.
+Close with a deterministic local readiness proof plus lock-based repair/bootstrap.
+
+Canonical:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## KI-024 — Dictation can activate unintentionally while listening mode is armed and submit ambient transcripts as user turns [OPEN — P0 SAFETY / ROOT CAUSE OPEN]
 
 **Confirmed 2026-10-03:** Hermes Work was directly reproduced activating its voice/dictation
@@ -41,7 +93,48 @@ upstream/downstream ownership remain open.
 Detailed evidence, hypotheses and acceptance criteria:
 [VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md](VOICE_AUTOSTART_INPUT_AUTHORITY_INCIDENT_2026-10-03.md).
 
+## 2026-10-02 — H-081 corrective runtime closure
 
+**LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
+Supported vendored Laya install, real checkpoint bounded influence, immutable stale-run
+fencing with canonical adoption/readback, verified no-System2 reprobe, verifier-grounded
+labels, durable progressive samples/reconstructible dataset, receipts and owner telemetry
+are proven locally. Final focused dogfood: **43 passed including live**, plus full
+Workstation regression and adjacent owner/core gates. H-079 material drift is classified;
+no new upstream pin or main merge was performed. CI remains the external qualification gate.
+Latest complete runtime regression: **853 passed, 0 failed, 2 skipped**.
+
+See [H-081 closure evidence](../qualification/H081_CLOSURE_2026-10-02.md) for exact scope, counts and reproducer.
+
+The following audit/state entries are historical; their local P0/P1 findings are
+superseded by that closure evidence, while release/promotion scope remains bounded.
+
+## KI-024 (Laya) — H-081 Laya branch is not production-qualified [OPEN — P0/P1]
+
+Post-implementation audit of
+`workstation/laya-direct-system1@736be5b9cebc8ffcb1c02a084a4bdba3755a5074`
+retracted the branch-local qualification claim while preserving the architecture.
+
+Open blockers:
+- real Laya 0.3.23 response parsing is incompatible with the current adapter;
+- supported packaging does not yet prove `import laya` resolves from the approved subtree,
+  and runtime registration is not fail-closed on provenance;
+- `AUTHORITY_SUPERSEDED` checkpoint helpers are not wired to a normal-runtime
+  adopt/resume/reconcile continuation path;
+- `needs_system2=False` does not generally prevent TaskCompiler from returning
+  `WAKE_LLM`;
+- LearningReview completion cannot be used as `VERIFIED_SUCCESS` without canonical
+  verifier evidence;
+- progressive durable TransitionSample/System-1 dataset capture is not closed;
+- DecisionReceipt/provenance and System-1/authority telemetry are not fully linked to
+  canonical owner observations;
+- H-079 refresh/classification, real-provider dogfood and exact-head CI remain open.
+
+Do not weaken Router/Policy/Verifier, ExperiencePromotionPolicy, uncertain-mutation
+reconciliation or cancellation/revocation semantics to close this issue.
+
+Canonical audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
 ## KI-023 — Browser owner receipt enforced as causal proof [RESOLVED IN H-080B.2]
 
 Resolved in H-080B.2:

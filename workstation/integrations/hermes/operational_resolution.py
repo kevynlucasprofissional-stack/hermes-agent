@@ -247,6 +247,8 @@ def _dispatch_intent(agent: Any, context: Any, task: Any, objective: dict, runti
         compiler.trusted_authority = trusted_effect_authority_from_agent(
             agent, str(context.session_id), task
         )
+        from workstation.task_compiler_recovery import bind_native_reprobe
+        bind_native_reprobe(compiler, objective, task, str(context.session_id))
         dispatch = workstation_durable_dispatch(agent)
         with workstation_scoped_execution(agent, task.id, context.messages):
             return compiler.execute(
@@ -274,6 +276,14 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
     agent = getattr(context, "agent", None)
     if agent is None:
         return None
+
+    # Run-local reuse of a just-learned, independently validated procedure. It acts only
+    # on owner-verified pending items and never answers the turn: reasoning continues.
+    try:
+        from workstation.integrations.hermes.run_local_adoption import workstation_run_local_checkpoint
+        workstation_run_local_checkpoint(context)
+    except Exception:
+        logger.warning("run-local adoption checkpoint skipped", exc_info=True)
 
     try:
         task = _canonical_task(agent, str(getattr(context, "session_id", "") or ""))
@@ -348,13 +358,6 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
                    payload={"certificate_hash": result.get("certificate_hash"),
                             "intent_family": result.get("intent_family"),
                             "target_family": result.get("target_family")})
-        if decision == "WAKE_LLM":
-            emit_event(TelemetryEventType.LLM_WOKEN,
-                       source_owner="workstation.operational_resolution",
-                       session_id=str(getattr(context, "session_id", "") or ""),
-                       task_id=task.id,
-                       run_id=str(task.current_run_id) if task.current_run_id is not None else None,
-                       status="WAKE_LLM", reason_code=str(result.get("reason") or "unspecified"))
 
     outcome, text = _outcome_for(result)
     if outcome is None:

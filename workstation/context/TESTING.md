@@ -1,5 +1,37 @@
 # Workstation Testing
 
+## 2026-10-08 H-081 clean-profile and timeout qualification
+
+The H-081 complete suite includes real Anthropic SDK construction. Its clean CI install
+must include `--extra dev --extra anthropic --extra workstation-laya` under `uv sync --locked`.
+The checkout correction passed Windows checkout/install, but its full CI run failed on
+the omitted SDK and a 900-second canary-file timeout. Keep 4 workers, timeout and assertions
+unchanged while collecting verbose/fault-handler diagnostics. A local full pass (853 passed,
+2 skipped) and isolated 1,000-item pass (80.08 seconds) do not close the remote failure.
+Real Laya remains a separate explicit `--live` measurement. See
+[current evidence](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
+## 2026-10-07 bootstrap/startup reliability gate
+
+Any change that claims to close warm-start bootstrap coupling must prove all of the following
+before promotion:
+
+1. healthy prepared one-click start succeeds with PyPI access blocked;
+2. healthy prepared one-click start succeeds with npm registry access blocked;
+3. the warm path executes neither Python dependency sync nor `npm ci`;
+4. clean install uses `uv sync --locked` and installs the required Workstation profile;
+5. on `workstation/laya-direct-system1`, strict imported Laya provenance passes after bootstrap;
+6. relevant `uv.lock`/dependency metadata drift invalidates readiness and triggers sync;
+7. `package-lock.json`/workspace dependency drift invalidates Node readiness and triggers `npm ci`;
+8. ordinary source-only edits do not cause dependency resolution;
+9. broken/missing environments produce explicit repair behavior and actionable error classes;
+10. checkout cleanliness and existing integration/license/component-lock validations remain intact;
+11. H-081 real-provider/provenance/no-System2/supersession/learning/receipt/telemetry gates do not regress;
+12. exact-head CI and final upstream-drift classification remain required.
+
+Canonical design:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
 ## H-079.2 exact-head dogfood and platform qualification gate — LOCAL GREEN / CI BLOCKING
 
 Before H-079.2 can close, one exact candidate head must prove all of the following:

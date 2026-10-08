@@ -46,6 +46,14 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # Foundry Entra ID auth; only when model.auth_mode=entra_id.
     "provider.azure_identity": ("azure-identity==1.25.3",),
 
+    # ─── System-1 Decision Engine (Laya) ───────────────────────────────────
+    "system1.laya": (
+        "torch==2.14.1",
+        "transformers==5.18.0",
+        "safetensors==0.8.0",
+        "huggingface-hub==1.33.0",
+    ),
+
     # ─── Web search backends ───────────────────────────────────────────────
     "search.exa": ("exa-py==2.10.2",),
     "search.firecrawl": ("firecrawl-py==4.17.0",),

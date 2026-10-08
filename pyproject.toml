@@ -322,6 +322,17 @@ otlp = ["opentelemetry-sdk==1.39.1", "opentelemetry-exporter-otlp-proto-http==1.
 bedrock = ["boto3==1.42.89"]
 vertex = ["google-auth==2.55.1"]
 azure-identity = ["azure-identity==1.25.3"]
+# Workstation / System-1 Laya decision engine (optional extra)
+system1-laya = [
+  "laya==0.3.23",
+  "torch==2.14.1",
+  "transformers==5.18.0",
+  "safetensors==0.8.0",
+  "huggingface_hub==1.33.0",
+]
+workstation-laya = [
+  "hermes-agent[system1-laya]",
+]
 termux = [
   # Baseline Android / Termux path for reliable fresh installs.
   "python-telegram-bot[webhooks]==22.8",
@@ -578,6 +589,7 @@ requests = false
 rich = false
 ruamel-yaml = false
 ruff = false
+safetensors = false
 sentencepiece = false
 setuptools = false
 setuptools-rust = false
@@ -590,6 +602,8 @@ sounddevice = false
 starlette = false
 supermemory = false
 tenacity = false
+torch = false
+transformers = false
 ty = false
 tzdata = false
 unpaddedbase64 = false
@@ -699,3 +713,6 @@ select = ["PLW1514", "ASYNC210", "ASYNC220", "ASYNC221", "ASYNC251"]
 # Legacy blocking spawn sites in platform adapters, pending their own fixes.
 "plugins/platforms/whatsapp/adapter.py" = ["ASYNC220", "ASYNC221"]
 "plugins/platforms/photon/adapter.py" = ["ASYNC220"]
+
+[tool.uv.sources]
+laya = { path = "workstation/third_party/laya", editable = false }

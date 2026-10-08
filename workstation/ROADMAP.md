@@ -16,6 +16,129 @@ Reuse existing Hermes Session/TaskRun, Browser, control plane, ArtifactStore, Jo
 
 
 
+## 2026-10-08 — D-039 opportunity-preserving autonomy (current direction / NOT IMPLEMENTED)
+
+**Approved priority:** do not discard opportunities to compile and reuse verified operations during a TaskRun because of static attempt counters, queue overflow or 900-second hot-window eviction. User prefers benefit of autonomous same-run reuse and accepts extra inference/resource expense and qualified operational risk. **Do not** reinterpret acceptance of risk as authority expansion or fake verifier proof.
+
+**Follow-up track A0–A7 (after mandatory H-079 upstream-first baseline, H-081 CI and H-082 classification):** A1 evidence-bound DIRECT for *eligible* effect families and active learning/mining for unsupported ones even when mutating adoption stays SHADOW; A2 durable rehydratable learning checkpoints + retries reopened by new evidence; A3 prioritized, fair, bounded resource queue with recoverable important event refs; A4 automatically derived short-lived authority under existing TaskRun grant, without duplicate user prompts; A5 real product ValidationEnvironmentProvider, real Laya and real safe workload dogfood; A6 resumable >100-item checkpoint yields instead of TaskRun cancellation; A7 measured outcome savings, calibration, exact-head CI and product release gates.
+
+**Current code gaps:** binary SHADOW suppresses compilation entirely; `resolve_policy` treats any nonempty `direct_qualification_ref` as proof; `TaskRunObservationWindow` has 3 compile attempts/segment, 3 validations/candidate, 4 offers, 64 hot events; queue sheds new arrivals, 64 windows expire after 900s without hydration; `stop()` discards pending events; `RunLocalAdopter(item_limit=100)` lacks a durable, explicitly re-scheduled continuation policy. Production validation provider absent. **Future design, not current behavior.** The latest audited code was `938d9b2beeaf`; CI run `37804714508` was FAILURE (two full-suite runner timeouts). Do not merge.
+
+**Exact owners, acceptance matrix and implementation prompt context:** [context/LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](context/LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md). Prior D-038 P0 proof/authority boundaries remain mandatory, but D-039 supersedes a *blanket permanent* SHADOW policy for non-effectful mining and qualified eligible scopes.
+
+
+
+## 2026-10-08 — D-038 corrective execution C0–C6: code paths corrected locally, release gates still OPEN
+
+**Status: CORRECTED LOCALLY / NOT QUALIFIED / NO MAIN MERGE.** Corrective commits on `workstation/laya-direct-system1` start from documentation reference `c5cc11c0c9`; the local qualification below was taken at code commit `fd3085f087`. Exact-head CI, H-079 and H-082 were not closed by this work (see "Still open").
+
+**What changed (owners reused, nothing duplicated):**
+- **C1 proof/authority.** `OnlineCompilabilityMonitor.validate_candidate_run_local()` delegates to `experience_compiler/compilability_validation.py`. It consumes a `RunAdoptionOwner` snapshot (`workstation/run_adoption.py`: canonical task/run identity, trusted `AuthorityScope` ceiling, admitted-intent effect budget, lease/supersession via `classify_run_authority`, real pending `WorkItem`s, outstanding uncertain mutations), owner verifier receipts (`validate_verifier_candidate`) and the existing `controlled_replay()` result. Missing/failed/raising replay, unresolvable or foreign-run evidence, absent owner/identity, or authority/budget not covering the next item all deny. The proof is produced only by `evaluate_run_local_closure()` (its empty-budget bypass is fixed: `effect_budget_missing`). No synthetic `artifact://replay_*`, `LOCAL_MUTATION`, budget, default ids or `uncertainty_clear=True` remain in the monitor.
+- **C2 scoped mining.** `ExperienceCompiler.mine(**scope)` selects `task_id/run_id` through `ExperienceCorpus.traces()` before compilation; `ExperienceCorpus.refresh_task()` indexes the task's persisted samples; candidates with empty or other-run lineage are excluded from run-local use. Global cross-run promotion policy is untouched.
+- **C3 automatic handoff.** `POSSIBLE_RUN_LOCAL_REUSE`/`MINE_CANDIDATE`/`VALIDATE_CANDIDATE` yield an `AdoptionOffer` (it grants nothing). `workstation_operational_resolution` calls `integrations/hermes/run_local_adoption.py::workstation_run_local_checkpoint` at the pre-reasoning boundary; `RunLocalAdopter` re-reads the canonical snapshot per item, executes only the NEXT fresh equivalent pending item through `execute_in_flight_handoff(max_retries=0, can_start_item=...)`, requires independent readback for every mutating step and persists a `workstation.run_local_reuse_receipt.v1` before considering another item. An unverified item revokes the offer and halts the checkpoint; nothing is retried. The checkpoint never answers the turn.
+- **C4 bounded/shadow.** SHADOW default; DIRECT only with an explicit qualification ref (`workstation.online_compilability.mode` + `direct_qualification_ref` in config.yaml, no env vars), otherwise downgraded; `enabled: false` kill switch (no worker thread); Laya abstain/timeout/exception/invalid stage never mines (the deterministic MINE fallback was removed); bounded `drain(timeout)`, joinable `stop(timeout)`, window TTL/LRU caps, per-run attempt/offer budgets. Decision receipts now actually persist (the previous call had reversed arguments and invalid fields and failed silently).
+- **C5 honest metrics.** Separate `items_attempted/completed/verified/failed`, `reconciliations`, `system2_calls_observed`, `system2_baseline_calls_per_item`, measured `system2_calls_avoided` (status `unknown` unless there is an instrumented baseline of >=2 verified adaptive items and an observed adoption counter) and a separately labelled `system2_calls_avoided_estimated`. Verifier-grounded `workstation.compilability_label.v1` artifacts are written for later calibration; Laya confidence is never used as a label.
+
+**Evidence:**
+- RED on the previous monitor: 4/4 new proof tests failed (no replay provider, no steps, forged replay URI, missing identity each returned a valid `RunClosureProof`).
+- GREEN: `workstation/tests/test_online_compilability_safety.py` 37 passed. It uses a real kanban task/run, a `DurableTaskStore` plan, real filesystem effects, the batch runner as adaptive executor (3 items), the real worker/mining/validation/closure/handoff and the production checkpoint; the test never calls `attempt_run_local_reuse()` (removed). Negative coverage: replay raise/fail/no-ref/ghost-ref/foreign-ref/wrong-fingerprint, verifier failure/foreign receipt, authority READ/narrow, budget missing/not containing, target outside the intent, uncertain mutation, cancelled/superseded/policy-revoked run, cross-run mining, merged-lineage candidate, readback failure not counted and never retried, no re-execution, unknown System-2 savings, shadow/kill switch/abstain/raise/invalid stage, saturation + shutdown without deadlock, window eviction, single-run candidate never promoted, boundary invokes checkpoint. `test_online_compilability_monitor.py`: 9 passed, plus the real-Laya contract test passed with `HERMES_LAYA_LIVE_TEST=1` (response shape only, NOT decision quality).
+- Local official qualification `python -m workstation.scripts.qualify_laya_system1 --live --full` at `fd3085f087`: 16 gates passed (incl. real typed contract and strict seam audit: 14 classified core seams, 0 unclassified, 0 budget regressions; no `agent/` or other core file edited); full Workstation regression 103 files / 900 passed / 0 failed / 2 skipped in 387 s. Report: `workstation/qualification/online-compilability-corrective-2026-10-08.json`.
+
+**Still open / not claimed:**
+1. Exact-head GitHub CI is not green: baseline `c5cc11c0c9` (run 37796556859) failed only in `full_workstation` because two files hit the 900 s runner budget (`test_canary_recipe_context.py`, `test_durable_hardening.py`; both pass locally). That is H-081 runner performance, not an assertion in this work. Recheck on the final pushed HEAD.
+2. H-079: the branch merge-base is still the frozen pin `71a2fe399b`; upstream is ~10.5k commits ahead and no new pin was adopted. The gate's pre-change record was made, Stage A was not executed. This corrective stays behind the SHADOW default and touches Workstation owners only; it is not a promotion candidate.
+3. H-082 untouched.
+4. No calibration: there is no verifier/replay-labelled held-out set, so DIRECT stays unqualified and no Laya threshold is tuned or claimed.
+5. Production wiring is deliberately narrow: the Hermes owner certifies `write_file` with read-after-write through `read_file`; no production `ValidationEnvironmentProvider`/verifier-contract owner is registered, so in production candidates are denied `validation_environment_unavailable` until an owner supplies one. Tool-observer events carry `observed/uncertain/failed` only; mining needs verified, rich `TransitionSample`s from the kernel/acceptance paths.
+6. The end-to-end test uses doubles only for the System-1 model, the SafeEnvironment replay runner/verifier evaluator and the filesystem dispatch/readback owner.
+
+## 2026-10-08 — CURRENT PRIORITY: Online compilability safety correction (C0–C6)
+
+**STATUS: PARTIALLY IMPLEMENTED / P0 SAFETY AND REAL E2E OPEN / NOT QUALIFIED / NO MAIN MERGE.** The `c969fbf` implementation introduced the monitor and locally reported 11/11 new tests, 71/71 selected regressions and 14/14 gates. Those counts do not prove end-to-end autonomous reuse. Independent code audit on `b13a2424` found fabricated replay/evidence and LOCAL_MUTATION authority/budgets in `validate_candidate_run_local()`, missing `POSSIBLE_RUN_LOCAL_REUSE` automatic continuation, mining global corpus before post-hoc run filtering, direct-by-default uncalibrated Laya, inaccurate success/avoided-call metrics, and bounded-worker gaps. CI `37783114603` failed; `37794367952` was pending at audit. Historic “implemented/qualified” entries below are snapshots, not release closure.
+
+**Do in order:** C0 default SHADOW/contain + H-079/H-081 baseline; C1 RED/GREEN fail-closed replay/verification/TaskRun authority; C2 source-scoped corpus mining; C3 automatic TaskRun handoff under existing run_closure owners; C4 bounded shadow calibration/fallback/worker lifecycle; C5 terminal verified receipts and measured System-2 impact; C6 integrated adversarial tests, real Laya, full suite and exact-head CI. Do not duplicate compiler/registry or close H-082 by this work.
+
+**Single implementation specification:** [context/ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](context/ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
+## 2026-10-08 — Checkout prerequisite corrected; loop implementation still blocked
+
+`b849d919de` untracks generated test artifacts without deleting local files/history.
+Windows checkout/install now pass; official local H-081 full regression: 853 passed,
+0 failed, 2 skipped; 43 focused passed including real Laya. Remote qualification FAILED:
+missing Anthropic extra and canary-file timeout. CI profile corrected; timeout diagnosis
+remains pending without changing budgets or assertions. H-081 is NOT QUALIFIED.
+H-079 qualified upstream baseline is still required before P0 RED/P1–P6 target coding;
+H-082 remains separate. [Evidence](qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
+## 2026-10-08 — Online loop execution preflight: BLOCKED
+
+At `3176d97db711`, H-081 exact-head CI fails during checkout before tests; H-079 has
+material upstream overlap and no qualified target baseline. P0 audit/verification only;
+new RED tests and P1–P6 remain pending. H-082 stays separate. See
+[evidence and resumption boundary](qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
+Local baseline measurement: 43 focused tests passed including real Laya; strict seams and
+core anchors passed. No new feature acceptance or full-regression qualification claimed.
+
+## 2026-10-08 — Laya online compilability / Experience Compilation Loop
+
+**Status: IMPLEMENTED ON BRANCH / LOCAL GATES QUALIFIED / EXACT-HEAD CI PENDING.** This feature lane on `workstation/laya-direct-system1` has been implemented across P0–P6 with 14/14 local gates passing (`qualify_laya_system1 --live`); it does not override H-081 real-provider qualification, H-082 warm-start/installer correction, H-079 upstream-first, or the H-080 Experience Compiler owner.
+
+**Highest-impact new idea:** use Laya/System-1 **during canonical runtime execution** as a *bounded, event-driven online compilability detector*. Progressive `TransitionSample` capture, `ExperienceCompiler.compile()/mine()`, verifier/replay gates and run-local handoff already exist independently; the missing product path is **capture → semantic eligibility → Laya readiness → guarded early mining → independent validation → safe same-TaskRun reuse**.
+
+**Implementation order, with RED tests before code:**
+
+1. **Baseline/gates:** pin branch SHA, run required upstream-first preflight, classify H-081/H-082 release blockers; do not mix with installer remediation or merge upstream ad hoc.
+2. **Observer:** add `workstation/experience_compiler/compilability_monitor.py`; trigger only after durable sample capture and canonical verifier/state events, apply deterministic prefilter, per-run coalescing, dedup, bounded queue and budget; avoid raw clicks/tokens and raw text.
+3. **Laya shadow:** register a versioned closed decision in `workstation/system1/schemas.py` with KEEP_COLLECTING, MINE_CANDIDATE, VALIDATE_CANDIDATE, POSSIBLE_RUN_LOCAL_REUSE, NEEDS_SYSTEM2, ABSTAIN; use generic provider and DecisionReceipt, then calibrate from independent verifier/replay labels.
+4. **Early mining:** drive existing provider-free `ExperienceCompiler.compile()/mine()` and **validation-only** verifier/replay primitives from bounded canonical evidence (do not call the lifecycle coordinator's potentially promoting `process_candidate()/coordinate_all()` for run-local reuse); fail-safe fallback on abstention/timeout/insufficient evidence.
+5. **Run-local activation:** adopt only independently verified executable segments through the **existing** TaskCompiler/OperationalKernel/handoff, checking scope, authority, pre/post conditions, idempotence, lease, effect budget and unresolved uncertainty; **never** insert a one-run candidate in the globally promoted index.
+6. **Measurement and gates:** prove same-run later-item verified reuse without unnecessary System-2 calls; collect classifier errors, candidate yield, verifier/replay, latency/cost per verified outcome; run focused/full tests, real Laya smoke, exact-head CI and drift audit before any promotion decision.
+
+No parallel LLM-owned compiler, executor, corpus or capability ontology; no background model polling by time or token count; no authority from confidence. Main user execution has priority over the nonblocking learning plane. `H-081` remains NOT QUALIFIED until its own required exact-head gates pass.
+
+Detailed canonical specification: [context/LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](context/LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). Investigation: [context/engineering-journal/online-compilability-monitor-2026-10-08.md](context/engineering-journal/online-compilability-monitor-2026-10-08.md).
+
+
+## 2026-10-07 — Warm-start bootstrap decoupling / local-CI environment parity
+
+**Status: DESIGN ACCEPTED / IMPLEMENTATION REQUIRED on `workstation/laya-direct-system1`.**
+
+A real dogfood start exposed a startup-availability defect before Laya/System-1 runtime execution:
+the one-click launcher always enters `install.ps1`; a healthy existing `.venv` still executes
+`uv pip install -e .`, and the same phase runs `npm ci`. A transient timeout while reading
+the PyPI `pillow-heif` index therefore aborts Hermes Work. The locked package already has a
+CPython 3.13 Windows x64 wheel, and the installer is identical on `main` and this branch, so
+this is not a Laya or Python-compatibility regression.
+
+The branch also has an environment-parity gap: H-081 CI/qualification uses
+`uv sync --locked ... --extra workstation-laya`, while local one-click setup uses
+`uv pip install -e .` and does not explicitly request the Laya Workstation profile.
+
+Required order:
+
+```text
+RED warm-start/offline regressions
+-> local environment readiness/fingerprint contract
+-> uv sync --locked repair/bootstrap
+-> workstation-laya profile parity
+-> Python fast path
+-> Node fast path (no unconditional npm ci)
+-> doctor/launcher error classification
+-> offline warm-start dogfood
+-> H-081 focused + full regressions
+-> exact-head CI / final drift
+```
+
+Target invariant: **an unchanged healthy Workstation must start without contacting PyPI or the
+npm registry; network/package resolution belongs only to first install, dependency drift,
+explicit repair/update, or a locally proven broken environment.**
+
+Canonical design and acceptance:
+[context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](context/WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
+
 ## Strategic map — 2026-09-28 conversation-derived intake
 
 This section is the **current navigation layer** for Hermes Workstation development.
@@ -71,14 +194,19 @@ policy, D-002/D-007 canonical ownership or the Canonical Execution Reliability G
    remain the current highest-priority blockers. Do not dilute them with parallel feature
    work.
 
-2. **Direct Laya System-1 experimental lane — begin now, branch-gated.**  
-   Freeze current main, create an isolated `workstation/laya-direct-system1`-style branch,
-   vendor a pinned Laya upstream by git subtree, and activate a generic System-1 Decision Plane
-   on bounded closed-schema decisions rather than keeping Laya permanently shadow-only. The lane
-   must remove the `stale_task_run` dead end through resumable TaskRun handoff, add
-   outcome-oriented telemetry, preserve Router/Policy/Verifier sovereignty, and connect
-   progressive + retrospective experience to Laya training/evaluation. Canonical context:
+2. **Direct Laya System-1 experimental lane — remediate before qualification.**  
+   The isolated branch exists and the architectural direction remains accepted, but the
+   2026-10-02 post-implementation audit falsified the branch-local qualification claim.
+   Preserve the generic System-1 seam, non-authoritative candidate ranking, subtree
+   governance and Router/Policy/Verifier sovereignty. Before merge, close in order:
+   supported vendored-Laya packaging + fail-closed provenance; real Laya response parsing;
+   end-to-end TaskRun authority supersession/resume; `needs_system2=False` deterministic
+   closure; verifier-grounded learning labels; progressive durable TransitionSamples;
+   complete receipts/provenance; owner-event telemetry; then H-079, dogfood and exact-head
+   CI. Focused FakeSystem1/unit tests are not product qualification. Canonical design:
    [context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](context/LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md).
+   Post-implementation audit and merge gates:
+   [context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
 
 
 3. **Operational authority and effect safety.**  
@@ -190,7 +318,11 @@ The strategic map treats the following as active truth, not historical footnotes
 - canonical TaskRun identity/fencing is not yet universally proven through every
   completion, event, evidence and effect boundary;
 - product-level release evidence remains narrower than some contract-layer claims and must
-  never be inferred from unit/contract success alone.
+  never be inferred from unit/contract success alone;
+- H-081/Laya corrective runtime gates are proven locally, including real checkpoint
+  influence, canonical continuation/readback, no-System2 recovery and durable learning.
+  H-079 drift is classified and dogfood passed; exact-head CI remains the qualification
+  gate. See [closure evidence](qualification/H081_CLOSURE_2026-10-02.md).
 
 Use [context/CURRENT_STATE.md](context/CURRENT_STATE.md),
 [context/KNOWN_ISSUES.md](context/KNOWN_ISSUES.md) and the active Engineering Journal for

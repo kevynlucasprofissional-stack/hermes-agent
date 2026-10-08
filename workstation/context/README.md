@@ -7,6 +7,23 @@ For any future creative-tool adaptation read [../creative-workstation/README.md]
 
 
 
+## 2026-10-08 — New approved autonomy optimization lane (D-039)
+
+**For the NEXT requested work on Laya/adaptive learning, begin with** [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md). That accepted-but-unimplemented A0–A7 corrective optimization explicitly favors early qualified run-local reuse, derived automatic permissions and persistent adaptive learning over blanket SHADOW and fixed budget dropouts. It does **not** waive D-038 evidence/authority, production verifier, one-pin H-079 upstream-first, exact-head H-081 or separate H-082. Latest inspected baseline: `938d9b2beeaf` / CI `37804714508` failure. Read the existing D-038 audit for historical fixed problems, not as a mandate to permanently suppress all mining. The D-039 task is docs-only today; code change must run upstream-first gate and RED tests.
+
+
+
+## 2026-10-08 — Current online-loop correction entrypoint
+
+**Read first:** [ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md) for current P0 safety defects, exact runtime files, C0–C6 RED/GREEN sequence, automatic E2E criteria and H-079/H-081/H-082 constraints. The earlier [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md) is foundational architectural context; implementation was subsequently added but is **NOT QUALIFIED**. Preserve prior notes, do not fabricate replay or authority, do not mistake a manual fake-Laya handoff for automatic execution and do not merge to main.
+
+
+
+## 2026-10-08 — New implementation context: Laya online compilability
+
+For the **new, not-yet-implemented** event-driven Laya/Experience Compiler feature, begin at [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). It has the concrete P0–P5 implementation order, exact file touchpoints, safety gates, acceptance scenarios and upstream/qualification dependencies. Also inspect [engineering-journal/online-compilability-monitor-2026-10-08.md](engineering-journal/online-compilability-monitor-2026-10-08.md), the H-081 source [LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md), and [IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md](IN_FLIGHT_OPERATIONALIZATION_2026-09-19.md). Do not mistake existing progressive observation for an online compilation/handoff loop.
+
+
 This directory is the operational entry point for coding agents working on the downstream Hermes Workstation surface. It does **not** replace the repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) or duplicate the architecture documents in `workstation/`.
 
 ## Required reading order
@@ -63,6 +80,7 @@ changing or reviewing that lane:
 - [`IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md`](IDENTITY_OWNERSHIP_AND_TENANT_ISOLATION_2026-09-28.md) — identity vocabulary, ownership projection, cross-tenant falsification and allowlist-first MCP environments.
 - [`LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md`](LIVENESS_PROGRESS_AND_BUDGET_GOVERNANCE_2026-09-28.md) — progress watchdog, circuit breakers, capability health, typed operational failures and Cost per Verified Outcome.
 - [`LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md`](LAYA_SYSTEM1_DIRECT_INTEGRATION_2026-10-02.md) — active branch-gated System-1 provider, DecisionReceipts, progressive/retrospective learning and second upstream policy.
+- [`WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md`](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md) — warm-start/offline readiness, lock-based repair/bootstrap, local/CI Laya profile parity and Python/Node dependency preparation boundaries.
 
 These documents extend existing owners and gates. They do not authorize parallel stores,
 a second control plane, a second scheduler or bypass of H-080/H-079/H-078.

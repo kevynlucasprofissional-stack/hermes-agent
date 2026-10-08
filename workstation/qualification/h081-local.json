@@ -1,0 +1,351 @@
+{
+  "schema": "hermes.h081.qualification.v1",
+  "tested_head": "8be8bd29b2a23a7613b1d7b8a623ca42bde2a14b",
+  "created_at": "2026-10-03T00:33:17.323565+00:00",
+  "python": "3.11.15 (main, Aug  7 2026, 02:24:19) [MSC v.1944 64 bit (AMD64)]",
+  "live_checkpoint_enabled": true,
+  "gates": {
+    "vendor_provenance": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_laya_vendor_provenance.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\vendor_provenance",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\vendor_provenance.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.438,
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 5,
+      "properties": {},
+      "status": "passed"
+    },
+    "real_typed_contract": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_laya_real_contract.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\real_typed_contract",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\real_typed_contract.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 16.766,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 3,
+      "properties": {
+        "laya_model_revision": "55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851",
+        "laya_version": "0.3.23",
+        "laya_source_revision": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+        "selected_candidate": "read_file",
+        "calibrated_confidence": "0.9703",
+        "calibration_id": "calib-v1-20261002",
+        "certificate_valid": "True"
+      },
+      "status": "passed"
+    },
+    "bounded_candidate_influence": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_capability_routing.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\bounded_candidate_influence",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\bounded_candidate_influence.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.953,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 3,
+      "properties": {},
+      "status": "passed"
+    },
+    "authority_safety": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_safety.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\authority_safety",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\authority_safety.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 3.031,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "properties": {},
+      "status": "passed"
+    },
+    "no_system2_verified_recovery": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_taskcompiler_system1_recovery.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\no_system2_verified_recovery",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\no_system2_verified_recovery.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 5.547,
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 4,
+      "properties": {},
+      "status": "passed"
+    },
+    "abstention_handoff": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_reasoning_handoff.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\abstention_handoff",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\abstention_handoff.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.765,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "properties": {},
+      "status": "passed"
+    },
+    "supersession_uncertain_reconciliation": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_taskcompiler_supersession_e2e.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\supersession_uncertain_reconciliation",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\supersession_uncertain_reconciliation.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 14.391,
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 6,
+      "properties": {},
+      "status": "passed"
+    },
+    "nonresumable_authority": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_taskrun_authority_supersession.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\nonresumable_authority",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\nonresumable_authority.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.906,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 3,
+      "properties": {},
+      "status": "passed"
+    },
+    "verifier_grounded_learning": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_learning_review_bridge.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\verifier_grounded_learning",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\verifier_grounded_learning.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.891,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "properties": {},
+      "status": "passed"
+    },
+    "durable_progressive_experience": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_progressive_experience_capture.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\durable_progressive_experience",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\durable_progressive_experience.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.796,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "properties": {},
+      "status": "passed"
+    },
+    "dataset_reconstruction": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_dataset_builder.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\dataset_reconstruction",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\dataset_reconstruction.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.547,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "properties": {},
+      "status": "passed"
+    },
+    "receipt_downstream_lineage": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_receipts_provenance.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\receipt_downstream_lineage",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\receipt_downstream_lineage.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.719,
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 3,
+      "properties": {},
+      "status": "passed"
+    },
+    "owner_telemetry": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "workstation/tests/test_system1_telemetry.py",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\owner_telemetry",
+        "--junitxml=C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-h081-qualification-abgf5s8b\\owner_telemetry.xml"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 3.891,
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "properties": {},
+      "status": "passed"
+    },
+    "strict_seam_audit": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "workstation/scripts/audit_hermes_seams.py",
+        "--strict"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 9.515,
+      "status": "passed"
+    },
+    "full_workstation": {
+      "command": [
+        "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+        "scripts/run_tests_parallel.py",
+        "workstation/tests",
+        "-j",
+        "4",
+        "--file-timeout",
+        "900",
+        "--file-retries",
+        "0",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 311.75,
+      "status": "passed"
+    }
+  },
+  "exact_head_ci": "external_pending",
+  "provenance": {
+    "provider": "laya",
+    "source_path": "C:\\Github\\hermes-agent\\.venv\\Lib\\site-packages\\laya\\__init__.py",
+    "laya_version": "0.3.23",
+    "laya_source_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+    "lock_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+    "is_vendored": true,
+    "locked_version": "0.3.23",
+    "locked_role": "system1-runtime-upstream",
+    "expected_subtree_dir": "C:\\Github\\hermes-agent\\workstation\\third_party\\laya",
+    "model": "multilingual",
+    "checkpoint_revision": null,
+    "checkpoint_digest": null,
+    "device": "cpu",
+    "calibration_id": "laya-v1-20261002",
+    "question_schema_version": "1.0.0",
+    "source_bytes_verified": true
+  },
+  "status": "LOCAL_GATES_PASSED"
+}

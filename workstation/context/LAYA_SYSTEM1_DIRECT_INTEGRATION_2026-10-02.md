@@ -1,8 +1,47 @@
 # Laya Direct System-1 Integration — 2026-10-02
 
-**Status:** APPROVED EXPERIMENTAL IMPLEMENTATION / BRANCH-GATED  
+## 2026-10-08 — Online compilability extension (design-only)
+
+Follow-on architecture: [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). The new System-1 use case is **event-driven online compilability readiness**, not raw UI observation or continuous polling. Existing post-tool progressive capture and OperationalKernel verifier checkpoints become a bounded nonblocking learning-plane input; Laya recommends the next investigation stage; existing provider-free `ExperienceCompiler` may mine early; independently verified candidates may enter existing safe run-scoped handoff. A single-run candidate cannot bypass global `ExperiencePromotionPolicy`.
+
+This does not supersede H-081 real-provider adapter/provenance, TaskRun authority semantics, calibration/receipts, exact-head CI requirements or H-082 warm-start remediation. No claim of implementation/qualification is made for this extension.
+
+
+**Status:** ARCHITECTURE APPROVED / BRANCH IMPLEMENTATION AUDITED / REMEDIATION REQUIRED / NOT QUALIFIED  
 **Reviewed Laya pin:** `NandhaKishorM/laya@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` — Laya 0.3.23, Apache-2.0, Python >=3.10.  
 **Scope:** Hermes Agent + Hermes Workstation reasoning amortization, TaskRun continuity, outcome telemetry, Experience Compiler feedback, self-improvement review and secondary Laya upstream.
+
+
+## 2026-10-02 post-implementation audit — qualification reopened
+
+The first implementation pass preserved the intended authority architecture but did not
+close the real-provider/runtime/learning proof. Audited implementation head:
+`workstation/laya-direct-system1@736be5b9cebc8ffcb1c02a084a4bdba3755a5074`
+against `main@e4d079f005ba6b324316e70bb4f9915460f555aa`.
+
+The following are merge blockers, not optional polish:
+
+1. fix the Laya 0.3.23 response adapter to read typed values from
+   `result["answers"][qid]` rather than a generic top-level `answer`;
+2. make supported Hermes installation import the approved vendored Laya and enforce
+   fail-closed provenance when that provider is expected;
+3. connect typed authority supersession to real TaskRun adoption/resume/reconciliation,
+   eliminating the product dead end rather than merely checkpointing it;
+4. make `needs_system2=False` capable of selecting an admitted deterministic recovery or
+   continuation without waking the LLM;
+5. forbid background-review completion from becoming positive training truth without
+   canonical verifier evidence;
+6. implement progressive durable TransitionSample/dataset capture through existing owners;
+7. complete DecisionReceipt/provenance/downstream linkage and derive System-1 economics from
+   observed owner events;
+8. run H-079 preflight, affected regressions, real-Laya dogfood, long-run resume proof and
+   exact-head CI before promotion.
+
+Focused FakeSystem1/unit tests demonstrate useful contracts but are not evidence that the
+real Laya provider is active or that the end-to-end learning/continuation loops are closed.
+
+Canonical detailed audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
 
 ## Decision
 
@@ -185,3 +224,17 @@ freeze main SHA
 Merge only if task completion does not regress, Router/Policy/Verifier authority remains intact, stale TaskRuns become safely resumable, uncertain mutations are not duplicated, decisions are reproducible, fallback/abstention works, and at least one meaningful slice improves System-2 cost/latency or Cost per Verified Outcome.
 
 Rollback is the frozen branch baseline, not a permanent shadow-only architecture.
+
+
+## 2026-10-02 corrective closure below the original findings
+
+**P0-A through P0-E and P1-A through P1-C: CLOSED LOCALLY WITH RUNTIME EVIDENCE.**
+**Exact-head CI: PENDING; H-081 remains NOT QUALIFIED until that run is green.**
+
+[H-081 closure evidence](../qualification/H081_CLOSURE_2026-10-02.md) records the supported install, real checkpoint decision (confidence 0.9703),
+39 focused passing proofs, complete Workstation regression, canonical supersession and
+uncertain readback, verifier-grounded learning, durable reconstruction, receipts and
+actual owner events. The audit above is preserved as the record of the original defects.
+H-079 was refreshed/classified against `46904a3b467f62616f5b3ee247adce30b1b277a0`
+(7,336 upstream-only commits; material file overlap); the original adopted pin remains
+immutable. This evidence does not claim latest-upstream alignment or authorize a main merge.

@@ -94,6 +94,7 @@ def workstation_scoped_execution(
         canonical_task_id=getattr(agent, "_canonical_work_task_id", None),
         mutation_evidence=getattr(agent, "_work_mutation_evidence", {}),
         capabilities=work_capabilities,
+        canonical_run_id=getattr(agent, "_canonical_work_run_id", None),
     )
 
     with work_context:

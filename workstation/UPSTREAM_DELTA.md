@@ -1,5 +1,34 @@
 # Hermes Workstation upstream delta
 
+## HW-033 — Laya direct System-1 integration and dual upstream governance (2026-10-02)
+
+**Status:** **IMPLEMENTATION PARTIAL / POST-IMPLEMENTATION AUDIT OPEN / NOT QUALIFIED** on branch `workstation/laya-direct-system1`.
+
+Accepted delta:
+1. Laya `0.3.23@4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c` is present as a
+   secondary vendored git subtree and recorded in `components.lock.json`.
+2. Generic core seams were added for System-1 decisions and LearningReview without
+   introducing direct Workstation/Laya imports into generic core.
+3. Router-level System-1 candidate ordering is subordinate to the existing
+   contract/authority/policy/verifier proof chain.
+4. Typed authority-supersession/checkpoint machinery exists and preserves stale-run
+   write fencing.
+
+Qualification blockers:
+- real Laya output is parsed with the wrong payload contract;
+- root packaging does not prove the approved subtree is the actual `import laya` source,
+  and provider registration is not fail-closed on provenance;
+- production execution still surfaces `stale_task_run` rather than adopting/resuming
+  pending work in the canonical run;
+- `needs_system2=False` does not generally close to a non-LLM runtime action;
+- learning labels/progressive capture are not yet verifier-grounded and durable end to end;
+- receipt provenance and System-1 economics are incompletely linked to observed owners;
+- H-079 refresh, dogfood and exact-head CI remain open.
+
+Canonical audit:
+[context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](context/LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
+
 ## HW-032 — H-080 abstraction accepted; production authority/dispatch qualification remains open (2026-09-22)
 
 The generic pre-reasoning intervention has survived the second audit and remains the intended architecture.
@@ -509,3 +538,17 @@ core imports no Workstation code; `workstation/integrations/hermes/telemetry.py`
 owns the local SQLite projection. No prompts, messages, responses, URLs, DOM or
 credentials cross this boundary. Classified as `SEAM-RUNTIME-TELEMETRY` /
 `UPSTREAM_ABSTRACT` and recorded as UPINT-005 through UPINT-007.
+
+
+## 2026-10-02 corrective closure below the original findings
+
+**P0-A through P0-E and P1-A through P1-C: CLOSED LOCALLY WITH RUNTIME EVIDENCE.**
+**Exact-head CI: PENDING; H-081 remains NOT QUALIFIED until that run is green.**
+
+[H-081 closure evidence](qualification/H081_CLOSURE_2026-10-02.md) records the supported install, real checkpoint decision (confidence 0.9703),
+39 focused passing proofs, complete Workstation regression, canonical supersession and
+uncertain readback, verifier-grounded learning, durable reconstruction, receipts and
+actual owner events. The audit above is preserved as the record of the original defects.
+H-079 was refreshed/classified against `46904a3b467f62616f5b3ee247adce30b1b277a0`
+(7,336 upstream-only commits; material file overlap); the original adopted pin remains
+immutable. This evidence does not claim latest-upstream alignment or authorize a main merge.

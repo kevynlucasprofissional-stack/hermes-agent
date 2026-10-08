@@ -160,6 +160,7 @@ class ExecutableDecision(RoutingDecision):
 
     capability: OperationalCapability
     certificate: RoutingCertificate
+    system1_receipt_ref: str | None = None
 
     @property
     def is_dispatchable(self) -> bool:
@@ -202,6 +203,8 @@ class ReasoningDecision(RoutingDecision):
     attention_packet: Any = None
     requires_reconciliation: bool = False
     reason: str = ""
+    ambiguity_kind: str = "none"
+    needs_system2: bool = True
 
 
 def revalidate_certificate(
@@ -350,6 +353,7 @@ class CapabilityRouter:
         authority = authority_scope or AuthorityScope(level=AuthorityLevel.READ)
         intent_h = operation_intent_hash(operation_intent)
         state_h = _state_hash(semantic_state)
+        ranking_receipt_ref = None
 
         # 1. Check outstanding uncertain mutations in relevant domain
         uncertain_mutations = runtime_state.get("outstanding_uncertain_mutations", [])
@@ -384,6 +388,44 @@ class CapabilityRouter:
         if not candidates:
             # Fall back to all promoted capabilities in registry
             candidates = self.registry.list_capabilities(lifecycle=CapabilityLifecycle.PROMOTED)
+
+        # 3.1 System-1 Candidate Ranking
+        if len(candidates) > 1:
+            try:
+                from agent.system1_decision import decide_system1, DecisionRequest
+                from workstation.system1.schemas import build_candidate_ranking_schema
+                from workstation.system1.contracts import NeutralChoice
+
+                candidate_ids = [c.id for c in candidates]
+                ranking_schema = build_candidate_ranking_schema(candidate_ids)
+                s1_req = DecisionRequest(
+                    domain="control_plane.router",
+                    schema_id="candidate_ranking",
+                    questions=ranking_schema,
+                    state={
+                        "objective": operation_intent.metadata.get("objective") or operation_intent.target,
+                        "target": operation_intent.target,
+                        "candidates": candidate_ids[:20],
+                    },
+                    context={"task_id": runtime_state.get("task_id", ""), "run_id": run_id, "operation_id": operation_id},
+                    candidate_sets={"preferred_candidate": candidate_ids[:20]},
+                )
+                s1_res = decide_system1(s1_req)
+                if s1_res and s1_res.provider != "deterministic_fallback" and not s1_res.fallback_recommended and not s1_res.is_abstained("preferred_candidate"):
+                    from workstation.system1.calibration import default_calibration_policy
+                    if not default_calibration_policy.evaluate_confidence("preferred_candidate", s1_res.confidence.get("preferred_candidate", 0.0)):
+                        s1_res = None
+                if s1_res and not s1_res.fallback_recommended and not s1_res.is_abstained("preferred_candidate"):
+                    ranking_receipt_ref = s1_res.details.get("receipt_ref")
+                    preferred = s1_res.decisions.get("preferred_candidate")
+                    if preferred and preferred not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
+                        matched = [c for c in candidates if c.id == preferred]
+                        rest = [c for c in candidates if c.id != preferred]
+                        if matched:
+                            candidates = matched + rest
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception("System-1 ranking failed; preserving bounded candidate order")
 
         authority_shortfalls: list[tuple[OperationalCapability, AuthorityScope]] = []
 
@@ -534,7 +576,13 @@ class CapabilityRouter:
                 operation_id=operation_id,
             )
 
-            return ExecutableDecision(capability=cap, certificate=cert)
+            if ranking_receipt_ref:
+                from workstation.system1.receipts import link_decision_receipt
+                cert_ref = self.registry.artifacts.store(runtime_state.get("task_id") or "system1",
+                    "routing_certificate_" + cert.certificate_hash() + ".json", cert.to_dict(), schema="workstation.routing_certificate.v1").ref
+                link_decision_receipt(ranking_receipt_ref, self.registry.artifacts,
+                    task_id=runtime_state.get("task_id"), run_id=run_id, operation_id=operation_id, certificate_ref=cert_ref)
+            return ExecutableDecision(capability=cap, certificate=cert, system1_receipt_ref=ranking_receipt_ref)
 
         # 4. If any candidate had an authority shortfall, yield to human
         if authority_shortfalls:
@@ -558,11 +606,65 @@ class CapabilityRouter:
         if runtime_state.get("await_condition"):
             return WaitDecision(await_condition=runtime_state["await_condition"])
 
-        # 7. Unresolved semantic choice -> WAKE_LLM
+        # 7. Unresolved semantic choice -> System-1 reasoning gap check before WAKE_LLM
+        ambiguity_kind = "novel_strategy"
+        needs_system2 = True
+        try:
+            from agent.system1_decision import decide_system1, DecisionRequest
+            from workstation.system1.schemas import (
+                AMBIGUITY_KIND_QUESTION,
+                NEEDS_SYSTEM2_QUESTION,
+                KNOWN_RECOVERY_PATH_QUESTION,
+            )
+            from workstation.system1.contracts import NeutralChoice
+
+            s1_req = DecisionRequest(
+                domain="control_plane.router",
+                schema_id="reasoning_gap",
+                questions={
+                    "ambiguity_kind": AMBIGUITY_KIND_QUESTION,
+                    "needs_system2": NEEDS_SYSTEM2_QUESTION,
+                    "known_recovery_path": KNOWN_RECOVERY_PATH_QUESTION,
+                },
+                state={
+                    "target": operation_intent.target,
+                    "goal": operation_intent.goal.to_dict() if hasattr(operation_intent.goal, "to_dict") else str(operation_intent.goal),
+                    "authority_shortfalls": len(authority_shortfalls),
+                    "has_candidates": len(candidates) > 0,
+                    "runtime_state": {k: str(v) for k, v in runtime_state.items() if k != "baseline_state"},
+                },
+                context={"task_id": runtime_state.get("task_id", ""), "run_id": run_id, "operation_id": operation_id},
+            )
+            s1_res = decide_system1(s1_req)
+            if s1_res and s1_res.provider != "deterministic_fallback" and not s1_res.fallback_recommended:
+                from workstation.system1.calibration import default_calibration_policy
+                def admitted(question):
+                    confidence = s1_res.calibrated_confidences.get(question, s1_res.confidence.get(question, 0.0))
+                    return not s1_res.is_abstained(question) and default_calibration_policy.evaluate_confidence(question, confidence)
+                ak = s1_res.decisions.get("ambiguity_kind")
+                if admitted("ambiguity_kind") and ak and ak not in (NeutralChoice.NO_MATCH.value, NeutralChoice.ABSTAIN.value):
+                    ambiguity_kind = ak
+                ns2_raw = s1_res.decisions.get("needs_system2")
+                if admitted("needs_system2") and ns2_raw == "no":
+                    needs_system2 = False
+                elif ns2_raw == "yes":
+                    needs_system2 = True
+
+                recovery = s1_res.decisions.get("known_recovery_path")
+                if not needs_system2 and admitted("known_recovery_path") and recovery == "reprobe_state":
+                    return WaitDecision(
+                        await_condition={"type": "reprobe_state", "target": operation_intent.target},
+                        reason="System-1 identified reprobe_state recovery path without requiring System-2",
+                    )
+        except Exception:
+            pass
+
         return ReasoningDecision(
             reason="no_certifiable_capability_found",
             open_condition={
                 "target": operation_intent.target,
-                "goal": operation_intent.goal.to_dict(),
+                "goal": operation_intent.goal.to_dict() if hasattr(operation_intent.goal, "to_dict") else str(operation_intent.goal),
             },
+            ambiguity_kind=ambiguity_kind,
+            needs_system2=True,
         )

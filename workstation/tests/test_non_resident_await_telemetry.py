@@ -66,7 +66,7 @@ def test_wait_persists_releases_executor_and_resumes_after_restart(temp_env):
 
     # Mock or provide router returning WaitDecision
     class MockRouterWait:
-        def route(self, intent, current_state, authority, *, runtime_state=None):
+        def route(self, intent, current_state, authority, *, runtime_state=None, run_id=None, operation_id=None):
             return WaitDecision(
                 await_condition=wait_cond,
                 reason="waiting_for_ci_build",

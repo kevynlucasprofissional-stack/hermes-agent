@@ -31,6 +31,14 @@ class ExperienceCorpus:
             self.refs = self.refs[-self.max_samples:]
         return ref
 
+    def refresh_task(self, task_id):
+        """Index samples another corpus instance persisted for ``task_id`` (same artifact projection)."""
+        known = set(self.refs)
+        for artifact in self.artifacts.list_artifacts(task_id):
+            if artifact.schema == 'hermes.transition_sample.v1' and artifact.ref not in known:
+                self.refs.append(artifact.ref)
+        self.refs = self.refs[-self.max_samples:]
+
     def ingest_journal(self, journal):
         for event in journal.read_events():
             ref = event.metadata.get('transition_ref')
@@ -116,6 +124,7 @@ class ExperienceCorpus:
         return ref
 
     def query(self, **dimensions):
+        include_history = dimensions.pop('include_history', False)
         observations = {}
         for ref in self.refs:
             sample = TransitionSample.from_dict(self.artifacts.read_json(ref))
@@ -125,7 +134,10 @@ class ExperienceCorpus:
                 'effect': sample.operation.effect_class, 'scope': sample.operation.scope,
                 'outcome': sample.outcome.value, 'trust_class': sample.provenance.trust_class,
                 'run_id': sample.provenance.run_id, 'task_id': sample.provenance.task_id}
-            key = (sample.provenance.task_id, sample.provenance.run_id, sample.provenance.operation_id or ref)
+            if include_history or 'outcome' in dimensions:
+                key = ref
+            else:
+                key = (sample.provenance.task_id, sample.provenance.run_id, sample.provenance.operation_id or ref)
             previous = observations.get(key)
             if previous is None or previous[0].outcome.value != 'verified_success' or sample.outcome.value == 'verified_success':
                 observations[key] = (sample, dims)

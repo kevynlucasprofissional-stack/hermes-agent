@@ -565,6 +565,8 @@ def test_infrastructure_spawn_refusal_never_charges_the_card(
     failure on the same card still counts."""
     import tools.process_registry as process_registry
 
+    monkeypatch.setattr(process_registry, "_IS_LINUX", True)
+    monkeypatch.setattr(process_registry.os, "getuid", lambda: 1000, raising=False)
     monkeypatch.setattr(process_registry, "_is_supervised_gateway_process", lambda: True)
     monkeypatch.setenv("INVOCATION_ID", "managed-gateway")
     monkeypatch.setattr(process_registry, "_systemd_run_user_scope_available", lambda: False)
@@ -804,7 +806,7 @@ def test_worktree_workspace_explicit_target_materializes_linked_worktree(kanban_
         capture_output=True,
         text=True,
     ).stdout
-    assert f"worktree {target}" in listed
+    assert f"worktree {target.as_posix()}" in listed
     assert f"branch refs/heads/{branch}" in listed
 
 
@@ -1115,6 +1117,9 @@ class TestSharedBoardPaths:
                 captured["cmd"] = cmd
                 captured["env"] = kwargs.get("env", {})
                 self.pid = 4242
+
+            def poll(self):
+                return 0
 
         monkeypatch.setattr("subprocess.Popen", _FakePopen)
 

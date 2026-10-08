@@ -2388,6 +2388,8 @@ def claim_task(
             return None
         claimed = get_task(conn, task_id)
     _fire_task_hook("kanban_task_claimed", claimed, task_id, run_id)
+    from hermes_cli.kanban_db_runtime_events import notify_claimed_run
+    notify_claimed_run(conn, task_id, run_id)
     return claimed
 
 

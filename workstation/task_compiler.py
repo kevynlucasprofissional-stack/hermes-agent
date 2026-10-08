@@ -40,6 +40,7 @@ class WorkClass(str, Enum):
 _dispatch_context: ContextVar[Any] = ContextVar("workstation_work_dispatch", default=None)
 _constraints: ContextVar[Any] = ContextVar("workstation_work_constraints", default=None)
 _execution_active: ContextVar[bool] = ContextVar("workstation_durable_active", default=False)
+_canonical_caller_run: ContextVar[Any] = ContextVar("workstation_caller_run", default=None)
 
 
 def batch_intent(prompt: Any) -> bool:
@@ -116,7 +117,8 @@ def discovery_guidance(agent=None):
 def execution_context(dispatch: Callable, session_id: str, progress: Callable | None = None,
                       constraints: dict | None = None, provider_usage: dict | None = None,
                       completed_mutations: dict | None = None, event_bus=None, canonical_task_id=None,
-                      mutation_evidence=None, capabilities=None):
+                      mutation_evidence=None, capabilities=None, canonical_run_id=None):
+    run_token = _canonical_caller_run.set(canonical_run_id)
     token = _dispatch_context.set((dispatch, session_id, {}, [], progress, provider_usage,
         completed_mutations or {}, event_bus, canonical_task_id, mutation_evidence or {},
         capabilities if capabilities is not None else {}))
@@ -126,6 +128,7 @@ def execution_context(dispatch: Callable, session_id: str, progress: Callable | 
     finally:
         _constraints.reset(constraint_token)
         _dispatch_context.reset(token)
+        _canonical_caller_run.reset(run_token)
 
 
 def active_constraints() -> dict:
@@ -481,6 +484,31 @@ class TaskCompiler:
         metadata["canonical_identity_status"] = "resolved" if metadata["canonical_task_id"] else "unresolved"
         metadata['canonical_run_id'] = str(canonical.current_run_id) if metadata['canonical_task_id'] and canonical.current_run_id is not None else None
         metadata['run_id'] = metadata['canonical_run_id']
+        caller_run = _canonical_caller_run.get() or getattr(self, "canonical_run_id", None)
+        if caller_run is not None and str(caller_run) != metadata['canonical_run_id']:
+            return {"status": "AUTHORITY_SUPERSEDED", "code": "AUTHORITY_SUPERSEDED", "plan_id": durable_id,
+                    "continuation_run_id": metadata['canonical_run_id'], "dispatched": False}
+        if plan and plan.status == "cancelled":
+            return {"status": "CANCELLED", "dispatched": False, "plan_id": plan.id}
+        if plan and plan.run_id and plan.run_id != metadata['canonical_run_id'] and canonical:
+            from workstation.authority_supersession import classify_run_authority, checkpoint_superseded_execution
+            classification = classify_run_authority(canonical, plan.run_id, connection=conn)
+            items = self.store.get_work_items(plan.id)
+            record = checkpoint_superseded_execution(canonical.id, plan.run_id, classification.current_run_id,
+                [{"item_id": i.id, "result_ref": i.normalized_output_ref} for i in items if i.status.value == "completed"],
+                [{"item_id": i.id, "operation_id": i.operation_id} for i in items if i.status.value != "completed"],
+                uncertain_effects=self.store.outstanding_uncertain_mutations(plan.id), artifact_store=self.artifacts,
+                termination_kind=classification.termination_kind)
+            if not record.continuation_allowed:
+                return {"status": record.termination_kind.value, "authority_superseded": record.to_dict(), "dispatched": False}
+            # Adoption belongs to the new canonical invocation, never the stale worker.
+            if caller_run is None:
+                return {"status": "AUTHORITY_SUPERSEDED", "authority_superseded": record.to_dict(), "dispatched": False}
+            self.store.adopt_superseded_plan(plan.id, canonical_task_id=canonical.id,
+                new_run_id=str(caller_run), checkpoint=record.to_dict())
+            plan = self.store.get_plan(plan.id)
+        # A concurrent adoption must never lend the new run's authority to this worker.
+        execution_run_id = plan.run_id if plan else metadata['canonical_run_id']
         metadata["session_id"] = session_id
         from workstation.journal import execution_provenance
         metadata.update(execution_provenance())
@@ -616,7 +644,30 @@ class TaskCompiler:
                         bindings[phase if phase != "fan_out" else "steps"][step["id"]] = bindings["steps"][step["id"]]
                     continue
                 if current.checkpoints.get(f"step_{index}_dispatch") and tool_effect(step["tool"]) not in READ_EFFECTS:
-                    return {"valid": False, "code": "uncertain_mutation_requires_review", "results": results}
+                    if not self.store.get_plan(item.plan_id).metadata.get("supersession", {}).get("continuation_allowed"):
+                        return {"valid": False, "code": "uncertain_mutation_requires_review", "results": results}
+                    # Reconcile by the already-admitted independent readback, never
+                    # by reissuing the uncertain mutation or accepting prediction.
+                    reconcilers = [v for v in phase_steps[index + 1:] if step.get("id") in v.get("verifies", []) and tool_effect(v["tool"]) in READ_EFFECTS]
+                    for verifier in reconcilers:
+                        try:
+                            read_args = _bind(verifier.get("args", {}), payload, bindings)
+                            expected_readback = _bind(verifier["expect"], payload, bindings)
+                        except ValueError:
+                            continue  # A lost response cannot supply a readback target binding.
+                        require_browser_scope(read_args, scope)
+                        observed = dispatch(verifier["tool"], read_args, task_id, f"{item.id}_{index}_reconcile")
+                        metrics["tool_calls"] += 1
+                        if _validate(observed, expected_readback):
+                            evidence = content_reference(self.artifacts, durable_id, blob_references(self.artifacts, durable_id, observed))
+                            self.store.update_item_checkpoint(item.id, f"step_{index}", metadata={"result_ref": evidence["artifact_ref"], "reconciled": True})
+                            results.append(evidence)
+                            if graph:
+                                bindings["steps"][step["id"]] = _decode_output(observed)
+                            break
+                    else:
+                        return {"valid": False, "code": "uncertain_mutation_requires_review", "results": results}
+                    continue
                 args = _bind(step.get("args", {}), payload, bindings)
                 if step.get('semantic_anchor') and step['tool'] in {'browser_click', 'browser_type'}:
                     from workstation.routines import semantic_browser_elements
@@ -638,9 +689,36 @@ class TaskCompiler:
                 effect, contract = tool_contract(step["tool"])
                 if effect in WRITE_EFFECTS and metadata['canonical_task_id']:
                     live_task = kanban_db.get_task(self.store.get_connection(), metadata['canonical_task_id'])
-                    pinned_run = self.store.get_plan(item.plan_id).run_id
-                    if not live_task or str(live_task.current_run_id) != str(pinned_run) or live_task.status in {'done', 'cancelled'}:
-                        return {'valid': False, 'code': 'stale_task_run', 'results': results}
+                    pinned_run = execution_run_id
+                    from workstation.authority_supersession import (
+                        classify_run_authority,
+                        checkpoint_superseded_execution,
+                    )
+                    auth_eval = classify_run_authority(live_task, pinned_run, connection=self.store.get_connection(),
+                        plan_status=self.store.get_plan(item.plan_id).status)
+                    if auth_eval is not None:
+                        all_items = self.store.get_work_items(item.plan_id)
+                        pending_items = [
+                            {"id": it.id, "plan_id": it.plan_id, "state": it.status.value}
+                            for it in all_items if it.status.value != "completed"
+                        ]
+                        record = checkpoint_superseded_execution(
+                            task_id=metadata['canonical_task_id'],
+                            stale_run_id=pinned_run,
+                            current_run_id=auth_eval.current_run_id,
+                            completed_results=results,
+                            pending_items=pending_items,
+                            uncertain_effects=self.store.outstanding_uncertain_mutations(item.plan_id),
+                            artifact_store=self.artifacts,
+                            termination_kind=auth_eval.termination_kind,
+                        )
+                        self.store.update_plan_metadata(item.plan_id, {"supersession": record.to_dict()})
+                        return {
+                            'valid': False,
+                            'code': 'AUTHORITY_SUPERSEDED' if record.continuation_allowed else record.termination_kind.value,
+                            'authority_superseded': record.to_dict(),
+                            'results': results,
+                        }
                 if effect == ToolEffect.IDEMPOTENT_WRITE and not args.get(contract["idempotency_key"]):
                     return {"valid": False, "code": "idempotency_key_required", "results": results}
                 from workstation.batch_detection import call_key, mutation_identity
@@ -653,7 +731,7 @@ class TaskCompiler:
                     return {"valid": False, "code": "uncertain_mutation_requires_review", "results": results}
                 identity_record = mutation_identity(step["tool"], args,
                     task_id=metadata.get("canonical_task_id") or task_id,
-                    run_id=self.store.get_plan(item.plan_id).run_id) if effect in WRITE_EFFECTS else None
+                    run_id=execution_run_id) if effect in WRITE_EFFECTS else None
                 if identity_record:
                     identity_record.update({"status": "uncertain", "persisted": None, "verifier_status": "pending"})
                 self.store.update_item_checkpoint(item.id, f"step_{index}_dispatch", metadata={"mutation_identity": identity_record})
@@ -992,9 +1070,10 @@ class TaskCompiler:
         # baseline state — is offered to the router rather than decided here. The
         # router owns reconciliation gating; a caller that observes nothing passes
         # nothing and routing behaves exactly as before.
-        runtime_state = request.get("runtime_state")
+        runtime_state = {**(request.get("runtime_state") or {}), "task_id": canonical_task_id or task_id}
         decision = router.route(intent, semantic_state, authority,
-                                runtime_state=runtime_state if isinstance(runtime_state, dict) else None)
+                                runtime_state=runtime_state, run_id=getattr(self, "canonical_run_id", None) or _canonical_caller_run.get(),
+                                operation_id=request.get("operation_id") or intent.id)
         try:
             self.metrics_collector.on_routing_decision(decision)
         except Exception:
@@ -1047,6 +1126,13 @@ class TaskCompiler:
                     },
                 )
                 exec_res = dispatch_res.get("result", {})
+                if decision.system1_receipt_ref and exec_res.get("verification_result"):
+                    from workstation.system1.receipts import link_decision_receipt
+                    verification_ref = self.artifacts.store(canonical_task_id or task_id,
+                        "routing_verification_" + cert_hash + ".json", exec_res["verification_result"], schema="workstation.verification_result.v1").ref
+                    link_decision_receipt(decision.system1_receipt_ref, self.artifacts,
+                        task_id=canonical_task_id or task_id, run_id=getattr(self, "canonical_run_id", None),
+                        operation_id=request.get("operation_id") or intent.id, verification_ref=verification_ref)
                 if not dispatch_res.get("success", True):
                     return {
                         **exec_res,
@@ -1223,6 +1309,13 @@ class TaskCompiler:
                     "certificate_hash": cert_hash,
                 }
 
+        if isinstance(decision, WaitDecision) and isinstance(decision.await_condition, dict) and decision.await_condition.get("type") == "reprobe_state":
+            from workstation.task_compiler_recovery import resolve_reprobe
+            recovered = resolve_reprobe(self, intent, task_id, session_id)
+            if recovered is not None:
+                return recovered
+            decision = ReasoningDecision(reason="known_recovery_unavailable", needs_system2=True)
+
         if isinstance(decision, WaitDecision):
             from workstation.control_plane.waiting import (
                 AwaitCondition,
@@ -1315,6 +1408,8 @@ class TaskCompiler:
             else decision.attention_packet
         )
         context_payload = {
+            "run_id": getattr(self, "canonical_run_id", None) or _canonical_caller_run.get(),
+            "operation_id": request.get("operation_id") or intent.id,
             "intent_id": intent.id,
             "open_condition": open_cond,
             "attention_packet": attention,
@@ -1354,6 +1449,9 @@ class TaskCompiler:
         if (canonical_task_id and not canonical) or (canonical and canonical.session_id != session_id):
             raise ValueError('Canonical task does not belong to the owning conversation')
         run_id = str(canonical.current_run_id) if canonical and canonical.current_run_id is not None else None
+        caller_run = _canonical_caller_run.get() or getattr(self, "canonical_run_id", None)
+        if caller_run is not None and str(caller_run) != run_id:
+            return {"status": "AUTHORITY_SUPERSEDED", "continuation_run_id": run_id, "dispatched": False}
         inputs = request.get('capability_inputs') or request.get('inputs') or {}
         identity = 'cap_exec_' + digest({'owner': owner, 'run_id': run_id, 'session_id': session_id,
             'capability_id': request['capability_id'], 'inputs': sanitize(inputs),
@@ -1361,8 +1459,22 @@ class TaskCompiler:
         plan = self.store.get_plan(request.get('_capability_plan_id') or identity)
         if plan and plan.session_id != session_id:
             raise ValueError('Capability plan belongs to another conversation')
+        if plan and plan.status == "cancelled":
+            return {"status": "CANCELLED", "dispatched": False, "plan_id": plan.id}
         if plan and plan.run_id != run_id:
-            raise ValueError('stale_task_run: capability resume belongs to a superseded run')
+            from workstation.authority_supersession import classify_run_authority, checkpoint_superseded_execution
+            classification = classify_run_authority(canonical, plan.run_id, connection=conn)
+            items = self.store.get_work_items(plan.id)
+            record = checkpoint_superseded_execution(owner, plan.run_id, run_id,
+                [{"item_id": i.id, "result_ref": i.normalized_output_ref} for i in items if i.status.value == "completed"],
+                [{"item_id": i.id, "operation_id": i.operation_id} for i in items if i.status.value != "completed"],
+                uncertain_effects=self.store.outstanding_uncertain_mutations(plan.id), artifact_store=self.artifacts,
+                termination_kind=classification.termination_kind)
+            if not record.continuation_allowed or caller_run is None:
+                return {"status": record.termination_kind.value, "authority_superseded": record.to_dict(), "dispatched": False}
+            self.store.adopt_superseded_plan(plan.id, canonical_task_id=canonical.id,
+                new_run_id=str(caller_run), checkpoint=record.to_dict())
+            plan = self.store.get_plan(plan.id)
         if plan and plan.metadata.get('capability_result_ref'):
             result = self.artifacts.read_json(plan.metadata['capability_result_ref'])
             return {**result, 'plan_id': plan.id, 'results_ref': plan.metadata['capability_result_ref']}
@@ -1389,8 +1501,30 @@ class TaskCompiler:
                 require_allowed_route(route, {k.removeprefix('mutation_'): v for k, v in constraints.items() if k.startswith('mutation_')})
             if mutating and canonical:
                 live = kanban_db.get_task(self.store.get_connection(), canonical.id)
-                if not live or str(live.current_run_id) != str(plan.run_id) or live.status in {'done', 'cancelled'}:
-                    raise ValueError('stale_task_run')
+                from workstation.authority_supersession import (
+                    classify_run_authority,
+                    checkpoint_superseded_execution,
+                )
+                auth_eval = classify_run_authority(live, plan.run_id, connection=self.store.get_connection(),
+                    plan_status=self.store.get_plan(plan.id).status)
+                if auth_eval is not None:
+                    all_items = self.store.get_work_items(plan.id)
+                    pending_items = [
+                        {"id": it.id, "plan_id": it.plan_id, "state": it.status.value}
+                        for it in all_items if it.status.value != "completed"
+                    ]
+                    record = checkpoint_superseded_execution(
+                        task_id=canonical.id,
+                        stale_run_id=plan.run_id,
+                        current_run_id=auth_eval.current_run_id,
+                        completed_results=[],
+                        pending_items=pending_items,
+                        uncertain_effects=self.store.outstanding_uncertain_mutations(plan.id),
+                        artifact_store=self.artifacts,
+                        termination_kind=auth_eval.termination_kind,
+                    )
+                    self.store.update_plan_metadata(plan.id, {"supersession": record.to_dict()})
+                    raise ValueError('AUTHORITY_SUPERSEDED' if record.continuation_allowed else record.termination_kind.value)
         # Browser actions retain the caller's scoped tool dispatcher/approval/lease.
         def scoped_dispatch(name, args):
             return dispatch(name, args, task_id, f'{item.id}_{name}')

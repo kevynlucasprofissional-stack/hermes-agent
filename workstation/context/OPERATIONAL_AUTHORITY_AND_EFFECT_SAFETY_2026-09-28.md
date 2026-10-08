@@ -1,5 +1,11 @@
 # Operational Authority & Effect Safety — 2026-09-28
 
+## 2026-10-08 — D-039 automatic derivative scope for run-local adoption (ACCEPTED DESIGN, NOT IMPLEMENTED)
+
+D-039 favors maximal qualified same-TaskRun autonomy without repeated user prompts. `OnlineCompilabilityMonitor` may generate a **proposal** to use a learned procedure, but `RunAdoptionOwner` and Policy derive a narrower short-lived operation grant only from the *existing* active user's task authority, effect budget, target identity, live lease, verifier/replay/readback receipts and unresolved-uncertainty status. A missing grant yields a HELD learning opportunity, never fabricated `LOCAL_MUTATION`; non-effectful evidence capture/mining continues. Revocation, stale leases, cross-run identities, unverified mutation and mismatched effect budgets remain hard denials. Revalidate at each item checkpoint. Do not create a new permission root; do not confuse user acceptance of **bounded operational risk** with authority to exceed consent. User-visible consent is unnecessary only if the original scope already includes the exact effects. Canonical owner and A0–A7 tests: [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md).
+
+
+
 **Status:** PLANNED / HARDENING INITIATIVE  
 **Roadmap role:** high-priority cross-cutting hardening after the current H-080A/H-080B gates; some parts may be pulled forward only when they directly close a current blocker.  
 **Canonical owners reused:** `OperationIntent`, `TaskRun`, `OperationalCapability`, Policy Engine, Verification Contracts, Execution Journal, Run Closure and Human Handoff.  

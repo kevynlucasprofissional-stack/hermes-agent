@@ -38,6 +38,44 @@ def workstation_raw_post_tool_observer(
     if agent is not None:
         dispatched = context.get("dispatched", True)
         duration_ms = duration * 1000 if duration is not None else None
+        from workstation.task_compiler import durable_execution_active
+        if dispatched and durable_execution_active():
+            from workstation.experience_compiler.progressive import capture_progressive
+            from workstation.artifacts import ArtifactStore
+            from tools.effects import tool_effect, READ_EFFECTS
+            from workstation.routing import canonical_route_for_tool
+            from agent.tool_guardrails import classify_tool_failure
+            import json
+            text = raw_result if isinstance(raw_result, str) else json.dumps(raw_result)
+            failed = classify_tool_failure(tool_name, text)[0]
+            t_id = getattr(agent, "_canonical_work_task_id", None)
+            r_id = getattr(agent, "_canonical_work_run_id", None)
+            op_id = getattr(agent, "_current_operation_id", None) or call_id
+            c_route = canonical_route_for_tool(tool_name)
+            outcome = "failed" if failed else "observed" if tool_effect(tool_name) in READ_EFFECTS else "uncertain"
+            ref = capture_progressive(ArtifactStore(), task_id=t_id,
+                run_id=r_id,
+                operation_id=op_id,
+                primitive=tool_name, route=c_route,
+                outcome=outcome)
+            if ref:
+                try:
+                    from workstation.experience_compiler.compilability_monitor import notify_online_compilability
+                    from workstation.integrations.hermes.run_local_adoption import build_run_adoption_owner
+                    notify_online_compilability(
+                        ref=ref,
+                        task_id=t_id,
+                        run_id=r_id,
+                        operation_id=op_id,
+                        primitive=tool_name,
+                        route=c_route,
+                        outcome=outcome,
+                        event_kind="tool_finished",
+                        agent=agent,
+                        owner=build_run_adoption_owner(agent),
+                    )
+                except Exception as mon_exc:
+                    logger.debug("notify_online_compilability skipped: %s", mon_exc)
         try:
             record_mutation(
                 agent,

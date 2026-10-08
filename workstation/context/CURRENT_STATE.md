@@ -14,6 +14,146 @@ Próxima implementação só após preflight upstream-first com SHA pinado, base
 
 
 
+## 2026-10-08 — D-039 approved: adaptive autonomous learning, not yet implemented
+
+**Current factual state:** `workstation/laya-direct-system1@938d9b2beeaf` retains the earlier D-038 local fixes (37 safety/E2E tests and 16 local qualification gates recorded at `fd3085f`; full local 900 passed/0 failed/2 skipped) but H-081 exact HEAD CI `37804714508` FAILED on `full_workstation` runner timeouts, H-079 upstream pin qualification is open and H-082/bootstrap separate. Product `ValidationEnvironmentProvider` and Laya compilability calibration are absent; DIRECT gate trusts any nonempty qualification ref; SHADOW prevents active mining; work windows/attempts/offers are fixed and not checkpoint-rehydrated.
+
+**Approved D-039 direction, NOT CODED:** minimize opportunity loss through active evidence capture and provider-free mining regardless of effect mode; prioritize qualified same-run DIRECT rather than permanent SHADOW; allow automatic *derived* authority from existing TaskRun grants without re-prompt, with real verification. Make 3 compilation / 3 validation failures reopen on new evidence, preserve high-value event pointers despite queue saturation, rehydrate candidate/window checkpoints after 900s TTL, shutdown/restart, and yield/resume after 100 items/checkpoint. Keep worker CPU/memory/backpressure caps, valid receipt and cancellation/lease/uncertainty fences. Track actual lost opportunities, result verifications and measured System-2 savings.
+
+**Release:** unchanged, NOT QUALIFIED / NO MAIN MERGE. These are new requirements, not implementation results. Architecture/owners/tests: [LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md](LAYA_ADAPTIVE_AUTONOMY_AND_DURABLE_LEARNING_2026-10-08.md); D-039 supersedes only overly rigid learning suppression, not D-038 proof/authority safeguards.
+
+
+
+## 2026-10-08 — D-038 corrective execution C0–C6: code paths corrected locally, release gates still OPEN
+
+**Status: CORRECTED LOCALLY / NOT QUALIFIED / NO MAIN MERGE.** Corrective commits on `workstation/laya-direct-system1` start from documentation reference `c5cc11c0c9`; the local qualification below was taken at code commit `fd3085f087`. Exact-head CI, H-079 and H-082 were not closed by this work (see "Still open").
+
+**What changed (owners reused, nothing duplicated):**
+- **C1 proof/authority.** `OnlineCompilabilityMonitor.validate_candidate_run_local()` delegates to `experience_compiler/compilability_validation.py`. It consumes a `RunAdoptionOwner` snapshot (`workstation/run_adoption.py`: canonical task/run identity, trusted `AuthorityScope` ceiling, admitted-intent effect budget, lease/supersession via `classify_run_authority`, real pending `WorkItem`s, outstanding uncertain mutations), owner verifier receipts (`validate_verifier_candidate`) and the existing `controlled_replay()` result. Missing/failed/raising replay, unresolvable or foreign-run evidence, absent owner/identity, or authority/budget not covering the next item all deny. The proof is produced only by `evaluate_run_local_closure()` (its empty-budget bypass is fixed: `effect_budget_missing`). No synthetic `artifact://replay_*`, `LOCAL_MUTATION`, budget, default ids or `uncertainty_clear=True` remain in the monitor.
+- **C2 scoped mining.** `ExperienceCompiler.mine(**scope)` selects `task_id/run_id` through `ExperienceCorpus.traces()` before compilation; `ExperienceCorpus.refresh_task()` indexes the task's persisted samples; candidates with empty or other-run lineage are excluded from run-local use. Global cross-run promotion policy is untouched.
+- **C3 automatic handoff.** `POSSIBLE_RUN_LOCAL_REUSE`/`MINE_CANDIDATE`/`VALIDATE_CANDIDATE` yield an `AdoptionOffer` (it grants nothing). `workstation_operational_resolution` calls `integrations/hermes/run_local_adoption.py::workstation_run_local_checkpoint` at the pre-reasoning boundary; `RunLocalAdopter` re-reads the canonical snapshot per item, executes only the NEXT fresh equivalent pending item through `execute_in_flight_handoff(max_retries=0, can_start_item=...)`, requires independent readback for every mutating step and persists a `workstation.run_local_reuse_receipt.v1` before considering another item. An unverified item revokes the offer and halts the checkpoint; nothing is retried. The checkpoint never answers the turn.
+- **C4 bounded/shadow.** SHADOW default; DIRECT only with an explicit qualification ref (`workstation.online_compilability.mode` + `direct_qualification_ref` in config.yaml, no env vars), otherwise downgraded; `enabled: false` kill switch (no worker thread); Laya abstain/timeout/exception/invalid stage never mines (the deterministic MINE fallback was removed); bounded `drain(timeout)`, joinable `stop(timeout)`, window TTL/LRU caps, per-run attempt/offer budgets. Decision receipts now actually persist (the previous call had reversed arguments and invalid fields and failed silently).
+- **C5 honest metrics.** Separate `items_attempted/completed/verified/failed`, `reconciliations`, `system2_calls_observed`, `system2_baseline_calls_per_item`, measured `system2_calls_avoided` (status `unknown` unless there is an instrumented baseline of >=2 verified adaptive items and an observed adoption counter) and a separately labelled `system2_calls_avoided_estimated`. Verifier-grounded `workstation.compilability_label.v1` artifacts are written for later calibration; Laya confidence is never used as a label.
+
+**Evidence:**
+- RED on the previous monitor: 4/4 new proof tests failed (no replay provider, no steps, forged replay URI, missing identity each returned a valid `RunClosureProof`).
+- GREEN: `workstation/tests/test_online_compilability_safety.py` 37 passed. It uses a real kanban task/run, a `DurableTaskStore` plan, real filesystem effects, the batch runner as adaptive executor (3 items), the real worker/mining/validation/closure/handoff and the production checkpoint; the test never calls `attempt_run_local_reuse()` (removed). Negative coverage: replay raise/fail/no-ref/ghost-ref/foreign-ref/wrong-fingerprint, verifier failure/foreign receipt, authority READ/narrow, budget missing/not containing, target outside the intent, uncertain mutation, cancelled/superseded/policy-revoked run, cross-run mining, merged-lineage candidate, readback failure not counted and never retried, no re-execution, unknown System-2 savings, shadow/kill switch/abstain/raise/invalid stage, saturation + shutdown without deadlock, window eviction, single-run candidate never promoted, boundary invokes checkpoint. `test_online_compilability_monitor.py`: 9 passed, plus the real-Laya contract test passed with `HERMES_LAYA_LIVE_TEST=1` (response shape only, NOT decision quality).
+- Local official qualification `python -m workstation.scripts.qualify_laya_system1 --live --full` at `fd3085f087`: 16 gates passed (incl. real typed contract and strict seam audit: 14 classified core seams, 0 unclassified, 0 budget regressions; no `agent/` or other core file edited); full Workstation regression 103 files / 900 passed / 0 failed / 2 skipped in 387 s. Report: `workstation/qualification/online-compilability-corrective-2026-10-08.json`.
+
+**Still open / not claimed:**
+1. Exact-head GitHub CI is not green: baseline `c5cc11c0c9` (run 37796556859) failed only in `full_workstation` because two files hit the 900 s runner budget (`test_canary_recipe_context.py`, `test_durable_hardening.py`; both pass locally). That is H-081 runner performance, not an assertion in this work. Recheck on the final pushed HEAD.
+2. H-079: the branch merge-base is still the frozen pin `71a2fe399b`; upstream is ~10.5k commits ahead and no new pin was adopted. The gate's pre-change record was made, Stage A was not executed. This corrective stays behind the SHADOW default and touches Workstation owners only; it is not a promotion candidate.
+3. H-082 untouched.
+4. No calibration: there is no verifier/replay-labelled held-out set, so DIRECT stays unqualified and no Laya threshold is tuned or claimed.
+5. Production wiring is deliberately narrow: the Hermes owner certifies `write_file` with read-after-write through `read_file`; no production `ValidationEnvironmentProvider`/verifier-contract owner is registered, so in production candidates are denied `validation_environment_unavailable` until an owner supplies one. Tool-observer events carry `observed/uncertain/failed` only; mining needs verified, rich `TransitionSample`s from the kernel/acceptance paths.
+6. The end-to-end test uses doubles only for the System-1 model, the SafeEnvironment replay runner/verifier evaluator and the filesystem dispatch/readback owner.
+
+## 2026-10-08 — Independent online compilability release hold (authoritative)
+
+Code landed in `c969fbf`: monitor, post-tool and OperationalKernel notification, typed Laya domain, `ExperienceCompiler.mine()` trigger, validation helper and manually invoked run-local handoff. Local log reports 11/11 new tests, 71/71 selected regressions and 14/14 gates, but static code review found **P0 safety issues**: fabricated replay refs on missing/error replay; self-issued LOCAL_MUTATION scope, effect budget, identities and `uncertainty_clear=True`. **P1**: `process_event()` has no automatic POSSIBLE_RUN_LOCAL_REUSE path; corpus mined globally then filtered, mode defaults DIRECT; success and avoided-System2 telemetry overstates actual verified outcome. **P2**: worker lifetime/drain and end-to-end evidence gaps. The test's positive case manually calls handoff with fake Laya, injected steps/items/dispatcher; real model smoke verifies typed response shape, not calibrated accuracy.
+
+**Status:** PARTIALLY IMPLEMENTED / SAFETY RED GATES OPEN / NOT QUALIFIED. CI `37783114603` FAILED, `37794367952` was IN_PROGRESS when observed; recheck exact current HEAD. H-079/H-081/H-082 are separate gates. Earlier notes below describe historical stages and must not override this release hold. Corrective C0–C6 owner: [ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md](ONLINE_COMPILABILITY_POST_IMPLEMENTATION_AUDIT_2026-10-08.md).
+
+
+
+## 2026-10-08 — H-081 checkout corrected; upstream baseline still required
+
+Commit `b849d919de` removes generated `.test-tmp` artifacts from Git tracking while
+preserving local files and history. Its Windows CI passed checkout and supported locked
+installation. Local official `--live --full`: 43 focused tests passed including real Laya;
+full Workstation 853 passed / 0 failed / 2 skipped. Seams, anchors, lock and licenses passed.
+Remote full qualification FAILED: missing `anthropic` in the CI install profile and a
+900-second canary-file timeout. The profile correction adds the existing Anthropic extra;
+the timeout remains unresolved, with diagnostic logging added and budgets preserved.
+Main `contracts` and `core-patch-dry-run` are
+green; the separately reported Install & Update E2E failure does not negate those checks.
+H-079 Stage A for the new loop remains unqualified across material upstream overlap;
+H-082 and P0 RED/P1–P6 target work remain pending. See
+[resumed evidence](../qualification/H081_CHECKOUT_CORRECTION_2026-10-08.md).
+
+## 2026-10-08 — Online loop implementation blocked at pre-change gate
+
+Reference HEAD `3176d97db711a0454de17ca055be956763849838` has red exact-head H-081 CI:
+checkout fails on tracked `.test-tmp` long paths; install and qualification never execute.
+Upstream refresh also shows material overlap, not a qualified new-feature baseline.
+Only audit/verification and evidence documentation proceeded; no new loop code or RED
+tests were added. H-081 and H-082 remain open. See
+[preflight evidence](../qualification/ONLINE_COMPILABILITY_PREFLIGHT_2026-10-08.md).
+The permitted local H-081 focused rerun passed 43 tests (including real Laya), zero
+failures/errors/skips, plus strict seams and core anchors. This does not qualify the new
+online domain, full regression, exact-head CI or the upstream baseline.
+
+## 2026-10-08 — Laya online compilability implemented on branch
+
+**IMPLEMENTED ON BRANCH / LOCAL GATES QUALIFIED / EXACT-HEAD CI PENDING.** On `workstation/laya-direct-system1`, the **bounded event-driven Laya readiness → guarded mining → independent validation → safe same-run reuse** loop has been implemented across phases P0–P6. `OnlineCompilabilityMonitor` integrates with `tool_observer.py` and `operational_kernel.py`, queries `CompilabilityStage` decisions through System-1, executes bounded in-run mining via provider-free `ExperienceCompiler.mine()`, performs validation-only checks (`validate_candidate_run_local`) producing `RunClosureProof`, and executes safe run-local reuse via `execute_in_flight_handoff()` with zero extra System-2 calls. 11/11 tests pass in `workstation/tests/test_online_compilability_monitor.py` covering Cases A–H and real Laya contract; `qualify_laya_system1 --live` passed all 14 gates (`online-compilability-qualified-2026-10-08.json`). Remote exact-head CI qualification and H-082 remain independent pending items. See [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md).
+
+
+## 2026-10-07 — One-click startup bootstrap coupling [OPEN — IMPLEMENTATION REQUIRED]
+
+A dogfood launch on `workstation/laya-direct-system1` failed in dependency preparation before
+Desktop or System-1 runtime execution. `uv pip install -e .` timed out reading the PyPI
+`pillow-heif` index after retries. The branch lock contains `pillow-heif==1.5.0` with a
+CPython 3.13 Windows x64 wheel, so this is not evidence of package/Python incompatibility.
+
+Current one-click behavior always runs install; `install.ps1` still resolves Python
+dependencies and runs `npm ci` even when the local environment already exists. This makes
+registry availability a warm-start dependency.
+
+H-081-specific parity gap: exact qualification uses
+`uv sync --locked --extra workstation-laya`; local one-click setup does not explicitly install
+that profile.
+
+Required correction: offline local readiness fast path; lock-based repair/bootstrap;
+`workstation-laya` parity; no unconditional `npm ci`; actionable failure classification.
+Canonical design:
+[WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md).
+
+## 2026-10-02 — H-081 corrective runtime closure
+
+**LOCAL RUNTIME GATES PASSED / EXACT-HEAD CI PENDING / NOT QUALIFIED.**
+Supported vendored Laya install, real checkpoint bounded influence, immutable stale-run
+fencing with canonical adoption/readback, verified no-System2 reprobe, verifier-grounded
+labels, durable progressive samples/reconstructible dataset, receipts and owner telemetry
+are proven locally. Final focused dogfood: **43 passed including live**, plus full
+Workstation regression and adjacent owner/core gates. H-079 material drift is classified;
+no new upstream pin or main merge was performed. CI remains the external qualification gate.
+Latest complete runtime regression: **853 passed, 0 failed, 2 skipped**.
+
+See [H-081 closure evidence](../qualification/H081_CLOSURE_2026-10-02.md) for exact scope, counts and reproducer.
+
+The following audit/state entries are historical; their local P0/P1 findings are
+superseded by that closure evidence, while release/promotion scope remains bounded.
+
+## 2026-10-02 H-081 Laya direct System-1 — POST-IMPLEMENTATION AUDIT / NOT QUALIFIED
+
+Audited branch `workstation/laya-direct-system1` at
+`736be5b9cebc8ffcb1c02a084a4bdba3755a5074`, based directly on
+`main@e4d079f005ba6b324316e70bb4f9915460f555aa` (9 commits ahead / 0 behind at audit).
+
+Accepted:
+- generic System-1 seam and Laya-as-non-authoritative-provider architecture;
+- candidate ranking remains subordinate to Router/Policy/Verifier;
+- Laya subtree governance and typed authority-supersession concepts are useful;
+- focused tests establish several contract/safety properties.
+
+Open:
+- current Laya adapter does not match the real 0.3.23 answer shape;
+- supported environment does not prove the vendored subtree is the active import and
+  adapter registration is not fail-closed on provenance;
+- TaskRun supersession is checkpointed but not resumed end-to-end;
+- `needs_system2=False` does not generally eliminate `WAKE_LLM`;
+- background-review success is not admissible positive verifier truth;
+- progressive durable learning/data capture, complete receipts and observed telemetry
+  remain incomplete;
+- H-079 current preflight, real-Laya dogfood and exact-head GitHub CI remain required.
+
+Previous branch-local **QUALIFIED** wording is superseded. Focused local tests are not full
+qualification.
+
+Canonical audit:
+[LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md](LAYA_SYSTEM1_BRANCH_AUDIT_2026-10-02.md).
+
+
 ## 2026-09-23 External Reference Code-to-Code Audit — PLANNED / READINESS-GATED
 
 Documentation-only planning update. No implementation or qualification claim is added by this entry.

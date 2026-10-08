@@ -109,7 +109,8 @@ def test_action_capture_persists_transition_reference():
     trace = agent._work_procedure_trace[-1]
     sample = ArtifactStore().read_json(trace['transition_ref'])
     assert sample['state_after']['semantic_predicates']['host'] == 'example.com'
-    assert sample['outcome'] == 'uncertain'
+    assert sample['outcome'] == 'observed'
+    assert sample['verification']['status'] != 'VERIFIED'
     assert sample['verification']['evidence_strength'] <= 1
 
 

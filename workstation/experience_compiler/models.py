@@ -25,10 +25,12 @@ def normalized(value):
 
 
 class TransitionOutcome(str, Enum):
+    OBSERVED = 'observed'
     VERIFIED_SUCCESS = 'verified_success'
     FAILED = 'failed'
     UNCERTAIN = 'uncertain'
     INTERRUPTED = 'interrupted'
+    AUTHORITY_SUPERSEDED = 'authority_superseded'
 
 
 class AuthorityOrigin(str, Enum):
@@ -136,6 +138,7 @@ class CapabilityInvocation:
     verifier_status: str = 'INCONCLUSIVE'
     verifier_fingerprint: str = ''
     verification_evidence_refs: list[str] = field(default_factory=list)
+    verification_record_ref: str | None = None
     covered_predicates: list[str] = field(default_factory=list)
     freshness_satisfied: bool = False
     verification_reason: str = ''
