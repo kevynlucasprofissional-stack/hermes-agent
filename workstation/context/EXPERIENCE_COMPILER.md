@@ -1,5 +1,16 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-10-08 — Online compilability is a trigger, not a second compiler
+
+The new [Laya Online Compilability Loop](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md) is **design-approved but not implemented**. Existing progressive capture, `ExperienceCorpus`, `ExperienceCompiler.compile()/mine()`, replay/causal checks, `ExperienceValidationPromotionCoordinator` and `ExperiencePromotionPolicy` remain the owners of learning truth.
+
+The proposed online monitor runs **after** canonical `TransitionSample` capture; filters/aggregates significant events; asks a bounded Laya/System-1 closed question whether to keep collecting, attempt mining, validate, examine run-local reuse, escalate a genuine reasoning gap or abstain. That answer schedules an optional, bounded **provider-free** compilation attempt, never a side effect, verification result, global promotion or in-band LLM compiler.
+
+`OBSERVED`, `FAILED`, `UNCERTAIN`, `INTERRUPTED` and `AUTHORITY_SUPERSEDED` must not become positive verified labels. Distinguish early candidate mining, independent validation, verified run-scoped adoption and eventual global promotion; cross-run and causal/replay/verifier gates remain sovereign. Where run-local handoff already exists, reuse it rather than implementing a separate execution plane.
+
+Proof must cover full `capture → decision → mining → verifier/replay → same-TaskRun safe reuse` and show fewer unnecessary System-2 calls without degrading verified outcomes. No new dataset truth without canonical receipts. H-081/H-082 remain separately unqualified until exact-head release gates pass.
+
+
 ## 2026-10-02 — duas capacidades candidatas de uma run verificada (ACIRV/Instagram)
 
 O caminho canônico de aprendizado é o de sempre: run verificada -> corpus -> replay/ablação ->
