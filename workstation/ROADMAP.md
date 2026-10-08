@@ -3,6 +3,9 @@
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 
+**Documentation-review refinement (2026-10-08):** Explicit delivery units **CW-03A** React/SVG→Electron preview→PNG, **CW-03B** FFmpeg/ffprobe and **CW-03C** optional Remotion after license gate; CW-04 Penpot/CW-05 Three.js in independent PRs; CW-07 may begin once one vertical is verified. See [Execution Brief](creative-workstation/EXECUTION_BRIEF.md), [Verification Matrix](creative-workstation/VERIFICATION_MATRIX.md) and [Phase Prompts](creative-workstation/PHASE_PROMPTS.md). The two original texts are preserved under [research/](creative-workstation/research/) alongside the curatorial synopsis. These remain subordinate to H-079/H-080/critical safety gates.
+
+
 **Status: PLANNED / DOCS ONLY / NOT IMPLEMENTED.** Candidate P0 (Penpot, Remotion, Three.js, FFmpeg) denotes priority *inside the creative initiative*, not priority above H-079 upstream-first, H-080A/H-080B, KI-024 or current safety/reliability blockers.
 
 [Initiative entry](creative-workstation/README.md) · [Architecture](creative-workstation/ARCHITECTURE.md) · [Implementation phases](creative-workstation/IMPLEMENTATION_PLAN.md) · [MCP/skills/licenses](creative-workstation/INTEGRATIONS.md) · [Implementer handoff](creative-workstation/IMPLEMENTER_PROMPT.md).

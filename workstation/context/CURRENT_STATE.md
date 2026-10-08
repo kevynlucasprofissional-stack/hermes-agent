@@ -3,6 +3,9 @@
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
 
+**Document-review refinement:** Added [Execution Brief](../creative-workstation/EXECUTION_BRIEF.md), [Verification Matrix](../creative-workstation/VERIFICATION_MATRIX.md), [Phase Prompts](../creative-workstation/PHASE_PROMPTS.md) and two full textual source records in [research/](../creative-workstation/research/). No code, package lock, engine install or E2E qualification was done. PR #50 prior head `97fa2d17` failed Workstation Browser Windows at `npm audit --omit=dev --audit-level=moderate` (19 production vulnerabilities); recheck required CI at the final exact HEAD and address separately without concealing the gate.
+
+
 Nova iniciativa **PLANNED / DOCUMENTATION ONLY / NOT IMPLEMENTED**: [../creative-workstation/README.md](../creative-workstation/README.md), [arquitetura](../creative-workstation/ARCHITECTURE.md), [plano e gates](../creative-workstation/IMPLEMENTATION_PLAN.md), [integrações](../creative-workstation/INTEGRATIONS.md), [prompt implementador](../creative-workstation/IMPLEMENTER_PROMPT.md).
 
 CW-00 registra proposta, ferramentas candidatas, riscos/licenças, proprietários e fases. Não instalou Penpot/Remotion/Three.js/FFmpeg nem lançou MCPs, apps Electron ou capacidades criativas; nenhum teste de implementação ou H-080/H-079 qualification foi realizado nesta iniciativa. Compatibilidade de engines e skills no Hermes é **NV**.

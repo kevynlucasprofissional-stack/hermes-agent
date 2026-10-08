@@ -3,6 +3,9 @@
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation external-reference intake — 2026-10-08
 
+**Licensing refinement (2026-10-08):** Penpot **core** MPL-2.0 and `penpot/penpot-ai-kit` **CC-BY-4.0** (official GitHub repository metadata) are distinct; skills/assets reuse and attribution need an individual license audit. Remotion, FFmpeg codec builds, community MCP trust, Graphite assets and source pins each require their own admission decision. [Security and verification matrix](creative-workstation/VERIFICATION_MATRIX.md).
+
+
 **RESEARCH LEADS ONLY; runtime compatibility NOT VERIFIED.** See [Creative Workstation integrations](creative-workstation/INTEGRATIONS.md) for links, skills, license caveats and status. This matrix alone does not approve vendoring/installation; pin exact upstream SHA and inspect code/headers before implementation.
 
 | Reference | Disposition | Research target / status |
