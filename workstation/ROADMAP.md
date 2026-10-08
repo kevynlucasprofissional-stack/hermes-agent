@@ -1,5 +1,25 @@
 # Workstation roadmap
 
+## 2026-10-08 — Laya online compilability / Experience Compilation Loop
+
+**Status: DESIGN ACCEPTED / IMPLEMENTATION REQUIRED / H-081 BRANCH-GATED / NOT QUALIFIED.** This is a new feature lane on `workstation/laya-direct-system1`; it does not override H-081 real-provider qualification, H-082 warm-start/installer correction, H-079 upstream-first, or the H-080 Experience Compiler owner.
+
+**Highest-impact new idea:** use Laya/System-1 **during canonical runtime execution** as a *bounded, event-driven online compilability detector*. Progressive `TransitionSample` capture, `ExperienceCompiler.compile()/mine()`, verifier/replay gates and run-local handoff already exist independently; the missing product path is **capture → semantic eligibility → Laya readiness → guarded early mining → independent validation → safe same-TaskRun reuse**.
+
+**Implementation order, with RED tests before code:**
+
+1. **Baseline/gates:** pin branch SHA, run required upstream-first preflight, classify H-081/H-082 release blockers; do not mix with installer remediation or merge upstream ad hoc.
+2. **Observer:** add `workstation/experience_compiler/compilability_monitor.py`; trigger only after durable sample capture and canonical verifier/state events, apply deterministic prefilter, per-run coalescing, dedup, bounded queue and budget; avoid raw clicks/tokens and raw text.
+3. **Laya shadow:** register a versioned closed decision in `workstation/system1/schemas.py` with KEEP_COLLECTING, MINE_CANDIDATE, VALIDATE_CANDIDATE, POSSIBLE_RUN_LOCAL_REUSE, NEEDS_SYSTEM2, ABSTAIN; use generic provider and DecisionReceipt, then calibrate from independent verifier/replay labels.
+4. **Early mining:** drive existing provider-free `ExperienceCompiler.compile()/mine()` and lifecycle coordinator from bounded canonical evidence; fail-safe fallback on abstention/timeout/insufficient evidence.
+5. **Run-local activation:** adopt only independently verified executable segments through the **existing** TaskCompiler/OperationalKernel/handoff, checking scope, authority, pre/post conditions, idempotence, lease, effect budget and unresolved uncertainty; **never** insert a one-run candidate in the globally promoted index.
+6. **Measurement and gates:** prove same-run later-item verified reuse without unnecessary System-2 calls; collect classifier errors, candidate yield, verifier/replay, latency/cost per verified outcome; run focused/full tests, real Laya smoke, exact-head CI and drift audit before any promotion decision.
+
+No parallel LLM-owned compiler, executor, corpus or capability ontology; no background model polling by time or token count; no authority from confidence. Main user execution has priority over the nonblocking learning plane. `H-081` remains NOT QUALIFIED until its own required exact-head gates pass.
+
+Detailed canonical specification: [context/LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](context/LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). Investigation: [context/engineering-journal/online-compilability-monitor-2026-10-08.md](context/engineering-journal/online-compilability-monitor-2026-10-08.md).
+
+
 ## 2026-10-07 — Warm-start bootstrap decoupling / local-CI environment parity
 
 **Status: DESIGN ACCEPTED / IMPLEMENTATION REQUIRED on `workstation/laya-direct-system1`.**
