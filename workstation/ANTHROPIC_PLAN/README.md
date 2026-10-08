@@ -34,7 +34,7 @@ Packets must be self-sufficient enough to begin implementation immediately. **Do
 
 ## Files in this planning workspace
 - [REPO_AUDIT.md](REPO_AUDIT.md): evidence inventory, file/code/source audit coverage and current known blockers.
-- [INVENTORY_SNAPSHOT.md](INVENTORY_SNAPSHOT.md): verified partial tracked Git-tree counts for 12 of 30 root directories; not semantic reading.
+- [INVENTORY_SNAPSHOT.md](INVENTORY_SNAPSHOT.md): verified Git-tree census of all 30 root directories (16,190 entries including root files); not semantic source reading.
 - [CANDIDATES.md](CANDIDATES.md): ranked preliminary frontier work candidates, alternatives and dependencies.
 - [PACKETS.md](PACKETS.md): reproducible context packet template and seed backlog.
 - [BUDGET.md](BUDGET.md): observed pricing, cost controls and provisional allocation.
