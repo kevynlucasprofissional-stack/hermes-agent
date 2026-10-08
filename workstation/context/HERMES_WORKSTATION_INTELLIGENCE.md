@@ -1,5 +1,24 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-08 — Online compilability: System-1 como sensor do runtime, não compilador
+
+**Inteligência nova com maior valor esperado:** o Hermes deve perceber, ainda durante a execução, quando a experiência operacional capturada atingiu um estado justificável para mineração e possível reutilização no mesmo TaskRun. A lacuna não é a inexistência de `TransitionSample`: a captura progressiva já ocorre após ferramentas e em checkpoints do OperationalKernel. Tampouco é ausência do `ExperienceCompiler` provider-free ou do handoff run-scoped. Falta conectá-los com uma decisão online de prontidão, observando **eventos semânticos canônicos**, e fechar o ciclo até reutilização segura.
+
+**Separação de quatro funções:**
+- **Observer/prefiltro determinístico:** coleta amostras verificáveis, descarta ruído, agrega janelas e preserva referência/linhagem.
+- **Laya/System-1:** responde perguntas tipadas sobre **quando minerar, continuar observando, validar, investigar reutilização ou escalar um gap**. Não observa tela, não cria planos e não tem autoridade para promover ou executar.
+- **Experience Compiler:** efetua segmentação, anti-unificação, inferência de parâmetros, slicing causal e produção de candidatas **sem LLM por padrão**.
+- **Router / Policy / Runtime / Verifier / ExperiencePromotionPolicy:** provam aplicabilidade, autorizam efeitos, executam, confirmam verdade e determinam promoção global. Reutilização efêmera run-local possui portões distintos e mantém o estado pendente/effect budget.
+
+Ciclo proposto: `runtime event -> progressive capture -> bounded semantic aggregation -> Laya stage decision -> provider-free compilation -> independent validation -> run-local admission -> verified in-run reuse -> canonical label for Laya`.
+
+**Aprendizados críticos das três avaliações:** frequência bruta de invocação não é eficiência; medir inteligência operacional por unidade de compute e custo por resultado verificado. `Compilability != repetition`: causalidade, estabilidade, parametrizabilidade, observabilidade, verificabilidade e risco são dimensões diferentes. `answer_confidence != probabilidade de compilabilidade`; `noul` tipado pode modelar uma proposição, porém requer calibração contra labels reais. Experiência de uma run pode gerar candidata, não promoção global. Falha/UNCERTAIN/supersessão entram como contraprova. CPU é default na implementação Laya atual; exigir budgets, backpressure, fallback e testes reais, jamais assumir chamada gratuita por token/mouse move.
+
+**Status de evidência:** arquitetura proposta documentada em 2026-10-08, não implementada/qualificada; H-081 permanece branch-gated e H-082 warm-start tem trabalho independente. A ausência do loop completo foi identificada nos pontos de integração inspecionados; qualquer implementação deve revalidar esse gap contra o HEAD antes de criar código.
+
+Canônico: [LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md](LAYA_ONLINE_COMPILABILITY_LOOP_2026-10-08.md). Journal: [engineering-journal/online-compilability-monitor-2026-10-08.md](engineering-journal/online-compilability-monitor-2026-10-08.md).
+
+
 ## 2026-10-07 — Bootstrap não é startup: warm start deve ser offline-capable
 
 Uma falha real de dogfood corrigiu a interpretação do problema: o timeout em
