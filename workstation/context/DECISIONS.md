@@ -1,5 +1,20 @@
 # Architectural Decisions
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## D-036 — Creative Workstation documentation scope, not new runtime authority (2026-10-08)
+
+**Status: DOCUMENTATION DECISION ACCEPTED; RUNTIME ARCHITECTURE PROPOSED, NOT QUALIFIED.**
+
+1. `workstation/creative-workstation/` is the scoped design and engineering-handoff entry point. `ROADMAP.md` remains priority authority; `SOURCE_MATRIX.md` remains external-reference authority; `CURRENT_STATE.md` and Engineering Journal remain evidence and investigation owners.
+2. Penpot, Remotion, Three.js Editor, FFmpeg and specialized creative engines are **candidates**, not approved installs, runtime capabilities or product E2E claims. No new browser, SessionDB, Kanban, Memory, TaskRun, approval, artifact, verifier or operational registry owner is authorized by this decision.
+3. Chromium is a human visual surface; Control Plane / TaskCompiler / verified owner receipts / Experience Compiler retain execution and promotion authority. A Creative Project Manifest is a *candidate project provenance artifact*, not parallel execution state.
+4. All product code requires upstream-first H-079 baseline qualification and relevant reliability/security gates. External software requires permission, exact pinned source/license/security review, scoped process management and empirical outputs.
+5. The chosen integration design, any new first-party seam, schema, commercial license eligibility and product release **remain unapproved** pending independent experiment and evidence.
+
+Detail: [../creative-workstation/README.md](../creative-workstation/README.md), [../creative-workstation/ARCHITECTURE.md](../creative-workstation/ARCHITECTURE.md). D-036 accepts documentation organization and non-duplication constraints only; it does not close any H-079/H-080/KI issue.
+
+
+
 ## D-032 — Productize Experience validation/promotion without creating a parallel authority plane
 
 **Decision date:** 2026-09-23

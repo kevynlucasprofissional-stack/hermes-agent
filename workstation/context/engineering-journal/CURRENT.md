@@ -1,5 +1,31 @@
 # CURRENT — Workstation Engineering Journal
 
+### CW-00.1 — Creative documentation-review audit (2026-10-08)
+
+**Status:** DOCUMENTATION-ONLY, NOT_RUNTIME_IMPLEMENTED. New compact execution brief, per-phase prompts, explicit security/test matrix, CW-03A/B/C split, and preserved full textual versions of both source passages (Markdown escaping normalized; transient UI chips omitted). Penpot core and AI Kit licensed separately (MPL vs AI Kit CC-BY-4.0 per GitHub repository metadata).
+
+**Observed CI:** PR #50 prior head `97fa2d17c58e...` Windows Browser workflow `37798816939` failed `npm audit --omit=dev --audit-level=moderate` with 19 production vulnerabilities (8 low, 4 moderate, 5 high, 2 critical). Later Desktop/Browser tests were skipped. Workstation CI, Docker and Nix passed on that head; later heads need independent checks. No package/lock/code changed, and no causality is inferred from a docs-only PR. Do not auto-force dependency upgrades or waive required gates.
+
+**Next:** CW-01 upstream preflight, pinned/qualified baseline, affected owners, source/license audit and GO/BLOCKED report. No creative feature claim.
+
+
+<!-- creative-workstation-intake:2026-10-08 -->
+## CW-00 — Creative Workstation research intake (2026-10-08)
+
+**Classificação:** DOCUMENTATION-ONLY / NO EXPERIMENT EXECUTED / NO RUNTIME IMPLEMENTED. Branch de documentação: `docs/creative-workstation-foundation-20261008`. Registro de hipótese do produto, não prova técnica.
+
+**Hipótese:** incorporar Penpot (MCP/web), Three.js (bridge/web) e Remotion/React/FFmpeg (código/CLI) como engines externas, com capacidade de edição humana e por agentes em um projeto referenciado, permite outputs verificados e aprendizado operacional mantendo owners do Hermes.
+
+**Falsificadores para futuras CW-01+ (ainda não executados):** necessidade de outro Browser/TaskRun/authority owner; licença Remotion incompatível; WebContentsView não preserva revisão/usuário; MCP vaza segredos; edição manual sobrescrita; restart reexecuta mutação incerta; testes de render/projeto não verificam resultado externamente; custo/complexidade supera ganho.
+
+**Menor experimento proposto:** após H-079, baseline e segurança liberados, React/SVG -> preview Electron real -> PNG verificado; FFmpeg e Remotion apenas com license gate, depois Penpot/Three.js. Registrar ID de experimento e matriz de sucesso/refutação antes de testar.
+
+**Evidência atual:** documentos e links de pesquisa, sem tests/CI/receipts próprios; `FACT` externo não equivale a Hermes `VERIFIED`. Reportar futuras evidências com SHA, testes negativos e head exato; não anotar PASS antecipado.
+
+**Referências:** [../../creative-workstation/README.md](../../creative-workstation/README.md), [../../creative-workstation/IMPLEMENTATION_PLAN.md](../../creative-workstation/IMPLEMENTATION_PLAN.md), [../../ROADMAP.md](../../ROADMAP.md) e [../../SOURCE_MATRIX.md](../../SOURCE_MATRIX.md).
+
+
+
 ## Voice auto-start / input-authority incident — 2026-10-03
 
 **Classification:** REPRODUCED / P0 SAFETY BUG / ROOT CAUSE OPEN.

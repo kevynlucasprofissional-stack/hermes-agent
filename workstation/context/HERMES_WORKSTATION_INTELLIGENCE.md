@@ -1,5 +1,18 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- creative-workstation-intake:2026-10-08 -->
+## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
+
+Transformar o Hermes Work em ambiente de criação humana + agentes sobre projetos editáveis, reutilizando as capacidades do Hermes em vez de replicar Photoshop/After Effects/Blender. Superfícies candidatas: Penpot MCP/web, Three.js Editor + bridge tipada, React/Remotion/FFmpeg para vídeo (Remotion depende de análise de licença); engines auxiliares via Inkscape CLI e Blender headless. Graphite/node graph, áudio, CAD e Godot ficam em pesquisa sem dependência.
+
+Tese arquitetural: `OperationIntent -> Router/Policy -> TaskCompiler -> API/MCP/código/CLI -> artefato editável/preview no Chromium -> evidência/verificação -> accepted outcome -> Experience Compiler candidate -> validação empírica + replay + promoção -> reuso`. Projeto fonte + manifest/proveniência importam mais que PNG/MP4 final. Skills instruem; ferramentas executam; capacidades operacionais requerem promoção verificável. Laya/System-1 propõe decisões dentro de limites já autorizados, nunca direitos de instalação/efeito/promoção.
+
+Owners canônicos permanecem Session/TaskRun, BrowserTask, Control Plane, ArtifactStore, ExecutionJournal, OperationalCapabilityRegistry e Experience Compiler. Preferir controle tipado a clicks, instalar ferramentas somente após permissão e isolamento. Nenhum motor criativo, MCP ou skill foi instalado/qualificado por esta inclusão documental. H-079/H-080 e riscos P0 como KI-024 antecedem implementação funcional.
+
+Entrada e execução: [../creative-workstation/README.md](../creative-workstation/README.md) e [../creative-workstation/IMPLEMENTATION_PLAN.md](../creative-workstation/IMPLEMENTATION_PLAN.md). ROADMAP governa liberação; SOURCE_MATRIX governa research evidence.
+
+
+
 ## Laya como System-1 ativo + continuidade de runs — 2026-10-02
 
 A análise de runs longas muda a política anterior. `stale_task_run: mutation authority no longer belongs to this run` foi isolado como perda de lease/lineage de TaskRun, não como simples teto de chamadas: uma nova run no mesmo ambiente continuou executando. O fence contra a run stale permanece; o dead end deve virar checkpoint + handoff/resume quando a autoridade do usuário continua válida.
