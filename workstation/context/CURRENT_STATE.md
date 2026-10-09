@@ -1,5 +1,12 @@
 # Creative development authorized — 2026-10-08
 
+CW-03B incremental export now produces bounded still-image MP4 via explicitly
+pinned installed FFmpeg/ffprobe. A real ephemeral TaskRun trial yielded eight
+seconds, 240 decoded frames, 360×640 H.264 with independently compared preview.
+Four video contracts pass, including actual child cleanup on lost run authority.
+CLI media E2E and full phase qualification remain pending; this does not close
+CW-03A capture failures. See [video evidence](../creative-workstation/CW03B_VIDEO_2026-10-08.md).
+
 The maintainer authorized proceeding under the explicit
 [development exception](../creative-workstation/DEVELOPMENT_EXCEPTION_2026-10-08.md).
 Previous statements blocking all CW-02 implementation are superseded for this lane.

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "operation_id": "e41783a44fe4467592a9164a1ccb4699",
+  "task_id": "t_3b9c8c63",
+  "run_id": 1,
+  "session_id": "creative-video-fixture-session",
+  "project_id": "0f9e1d92e16e41a096bdc4c9678b23cd",
+  "revision_id": "02e515d234ad4b148b32e43e7f001709",
+  "project_source_sha256": "7dfe7e033ad4d16bb5f78345c7a7b106f3f5dc74a621f7e6ef5e93fa06cfe5b7",
+  "source_png_sha256": "00c50e99b20f10586005d88db6bd2fceb29acc0d55ac707a089eea5defefb6fd",
+  "video": {
+    "codec": "h264",
+    "pixel_format": "yuv420p",
+    "container": "mp4",
+    "width": 360,
+    "height": 640,
+    "fps": 30,
+    "decoded_frames": 240,
+    "duration_seconds": 8.0,
+    "size_bytes": 15242,
+    "probe_kind": "ffprobe-count-frames"
+  },
+  "decoded_preview": {
+    "decoder": "Pillow",
+    "mean_absolute_rgb_error": 2.029427083333333,
+    "source_sha256": "00c50e99b20f10586005d88db6bd2fceb29acc0d55ac707a089eea5defefb6fd",
+    "preview_sha256": "0740e446fa9bcb4c670b92528e8fa93bd7d22b41525fdd351dc42fa28851cd7f"
+  },
+  "video_artifact": {
+    "ref": "artifact://tasks/t_3b9c8c63/creative-video-e41783a44fe4467592a9164a1ccb4699.mp4",
+    "name": "creative-video-e41783a44fe4467592a9164a1ccb4699.mp4",
+    "task_id": "t_3b9c8c63",
+    "local_path": "C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-creative-video-3zsyj0kw\\profile\\workstation\\artifacts\\t_3b9c8c63\\creative-video-e41783a44fe4467592a9164a1ccb4699.mp4",
+    "size_bytes": 15242,
+    "sha256": "a4a43ed0027ef58baf13c169ef22e5ce6e0ff4bfa837428a9354a0de0672c50c",
+    "schema": null,
+    "summary": {},
+    "created_at": "2026-10-09T00:17:08.158116+00:00",
+    "media_type": "video/mp4",
+    "encoding": null
+  },
+  "preview_artifact": {
+    "ref": "artifact://tasks/t_3b9c8c63/creative-video-preview-e41783a44fe4467592a9164a1ccb4699.png",
+    "name": "creative-video-preview-e41783a44fe4467592a9164a1ccb4699.png",
+    "task_id": "t_3b9c8c63",
+    "local_path": "C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-creative-video-3zsyj0kw\\profile\\workstation\\artifacts\\t_3b9c8c63\\creative-video-preview-e41783a44fe4467592a9164a1ccb4699.png",
+    "size_bytes": 35732,
+    "sha256": "0740e446fa9bcb4c670b92528e8fa93bd7d22b41525fdd351dc42fa28851cd7f",
+    "schema": null,
+    "summary": {},
+    "created_at": "2026-10-09T00:17:08.161116+00:00",
+    "media_type": "image/png",
+    "encoding": null
+  },
+  "build": {
+    "engines": {
+      "ffmpeg": {
+        "version": "8.1.1-full_build-www.gyan.dev",
+        "executable_sha256": "09948d4cdd0650da6ff5a87577469f2a218dc2615ae379f8f734d24c49de0f73",
+        "provider_ref": "installed:ffmpeg-full:8.1.1:gyan",
+        "process_id": "proc_1886aa3681e8",
+        "version_output": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with gcc 15.2.0 (Rev13, Built by MSYS2 project)\nconfiguration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-cairo --enable-fontconfig --enable-iconv --enable-gnutls --enable-lcms2 --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-sdl2 --enable-libaribb24 --enable-libaribcaption --enable-libdav1d --enable-libdavs2 --enable-libopenjpeg --enable-libquirc --enable-libuavs3d --enable-libxevd --enable-libzvbi --enable-liboapv --enable-libqrencode --enable-librav1e --enable-libsvtav1 --enable-libvvenc --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxeve --enable-libxvid --enable-libaom --enable-libjxl --enable-libsvtjpegxs --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-openal --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-liblc3 --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint --enable-whisper\nlibavutil      60. 26.101 / 60. 26.101\nlibavcodec     62. 28.101 / 62. 28.101\nlibavformat    62. 12.101 / 62. 12.101\nlibavdevice    62.  3.101 / 62.  3.101\nlibavfilter    11. 14.101 / 11. 14.101\nlibswscale      9.  5.101 /  9.  5.101\nlibswresample   6.  3.101 /  6.  3.101\n\nExiting with exit code 0"
+      },
+      "ffprobe": {
+        "version": "8.1.1-full_build-www.gyan.dev",
+        "executable_sha256": "a6618e99bb58869ded3c6f37b53aa1a8d701c3591dbb7b5b317d47369c112be2",
+        "provider_ref": "installed:ffmpeg-full:8.1.1:gyan",
+        "process_id": "proc_2138891f365a",
+        "version_output": "ffprobe version 8.1.1-full_build-www.gyan.dev Copyright (c) 2007-2026 the FFmpeg developers\nbuilt with gcc 15.2.0 (Rev13, Built by MSYS2 project)\nconfiguration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-cairo --enable-fontconfig --enable-iconv --enable-gnutls --enable-lcms2 --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-sdl2 --enable-libaribb24 --enable-libaribcaption --enable-libdav1d --enable-libdavs2 --enable-libopenjpeg --enable-libquirc --enable-libuavs3d --enable-libxevd --enable-libzvbi --enable-liboapv --enable-libqrencode --enable-librav1e --enable-libsvtav1 --enable-libvvenc --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxeve --enable-libxvid --enable-libaom --enable-libjxl --enable-libsvtjpegxs --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-openal --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-liblc3 --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint --enable-whisper\nlibavutil      60. 26.101 / 60. 26.101\nlibavcodec     62. 28.101 / 62. 28.101\nlibavformat    62. 12.101 / 62. 12.101\nlibavdevice    62.  3.101 / 62.  3.101\nlibavfilter    11. 14.101 / 11. 14.101\nlibswscale      9.  5.101 /  9.  5.101\nlibswresample   6.  3.101 /  6.  3.101"
+      }
+    },
+    "ffmpeg_license": "GPL-3.0-or-later",
+    "license_output": "ffmpeg version 8.1.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers\n  built with gcc 15.2.0 (Rev13, Built by MSYS2 project)\n  configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-cairo --enable-fontconfig --enable-iconv --enable-gnutls --enable-lcms2 --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-sdl2 --enable-libaribb24 --enable-libaribcaption --enable-libdav1d --enable-libdavs2 --enable-libopenjpeg --enable-libquirc --enable-libuavs3d --enable-libxevd --enable-libzvbi --enable-liboapv --enable-libqrencode --enable-librav1e --enable-libsvtav1 --enable-libvvenc --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxeve --enable-libxvid --enable-libaom --enable-libjxl --enable-libsvtjpegxs --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-openal --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-liblc3 --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint --enable-whisper\n  libavutil      60. 26.101 / 60. 26.101\n  libavcodec     62. 28.101 / 62. 28.101\n  libavformat    62. 12.101 / 62. 12.101\n  libavdevice    62.  3.101 / 62.  3.101\n  libavfilter    11. 14.101 / 11. 14.101\n  libswscale      9.  5.101 /  9.  5.101\n  libswresample   6.  3.101 /  6.  3.101\nffmpeg is free software; you can redistribute it and/or modify\nit under the terms of the GNU General Public License as published by\nthe Free Software Foundation; either version 3 of the License, or\n(at your option) any later version.\n\nffmpeg is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU General Public License for more details.\n\nYou should have received a copy of the GNU General Public License\nalong with ffmpeg.  If not, see <http://www.gnu.org/licenses/>.",
+    "license_process_id": "proc_3cb8e2328559",
+    "distribution_scope": "externally installed executable; not bundled or redistributed"
+  },
+  "process_ids": [
+    "proc_cd371651c8a3",
+    "proc_d0f40cc31f78",
+    "proc_309f9bedcc70"
+  ],
+  "receipt_artifact": {
+    "ref": "artifact://tasks/t_3b9c8c63/creative-video-receipt-e41783a44fe4467592a9164a1ccb4699.json",
+    "name": "creative-video-receipt-e41783a44fe4467592a9164a1ccb4699.json",
+    "task_id": "t_3b9c8c63",
+    "local_path": "C:\\Users\\KEVYNL~1\\AppData\\Local\\Temp\\hermes-creative-video-3zsyj0kw\\profile\\workstation\\artifacts\\t_3b9c8c63\\creative-video-receipt-e41783a44fe4467592a9164a1ccb4699.json",
+    "size_bytes": 10779,
+    "sha256": "30edc8805c7b5f6f5dceb20eb66a0381084ec5127661a560f431e3df3afcc9f4",
+    "schema": "creative.video.v1",
+    "summary": {
+      "item_count": 15,
+      "type": "dict"
+    },
+    "created_at": "2026-10-09T00:17:08.165115+00:00",
+    "media_type": "application/json",
+    "encoding": "utf-8"
+  }
+}

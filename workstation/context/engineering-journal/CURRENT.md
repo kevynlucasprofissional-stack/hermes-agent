@@ -1,5 +1,17 @@
 # 2026-10-08 — Authorized Creative development exception / CW-02
 
+CW03B-VIDEO hypothesis: canonical process ownership plus repeated live TaskRun
+readback can bound media execution without a new lifecycle store. Falsifiers:
+orphan on revoked authority, accepted truncated probe, mismatched decoded frames,
+foreign workspace input or retry after uncertain output. Real installed FFmpeg
+trial produced 360×640 H.264/MP4, eight seconds, 240 decoded frames at 30 fps.
+Decoded preview error 2.0294/255; inspected layout preserved. Initial version
+probe failed on owner wait-tail truncation; bounded complete read_log corrected
+it. Four video contracts PASS including real authority-loss child cleanup and
+header readback. Four existing process/project regressions PASS. Evidence and
+remaining qualification: ../../creative-workstation/CW03B_VIDEO_2026-10-08.md.
+CW03A native reliability and baseline remain NOT QUALIFIED.
+
 CW03A-PROJECT follow-up: implemented immutable project revisions, inherited-session
 CLI save/inspect/render, canonical live TaskRun admission and ArtifactStore/journal
 publication. Hypothesis: these owners preserve durable project lineage across
