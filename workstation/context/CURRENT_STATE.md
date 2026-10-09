@@ -1,5 +1,14 @@
 # Current State
 
+## 2026-10-09 — HyperFrames-first Creative decision / current state (D-041)
+
+**FACT (GitHub at review):** `main=f21e803b3525b70ee6be2305e579c1cc1f930e74`. Draft chain is **OPEN, UNMERGED**: #57 Stage A `3417d57` (base main) → #58 Creative Runtime `480d809` → #59 revisioned project/PNG `bd22814` → #60 FFmpeg still-to-MP4 `6f784ad` → #61 Remotion TSX sources `426f736`. HyperFrames Studio is **NOT integrated in main or proven operational in Hermes**. Native capture fix was reportedly uncommitted on the user's separate Windows worktree and cannot be verified from GitHub; preserve/recover locally before destructive actions. The historical 2026-10-08 `DOCS ONLY` heading **below** described the then-main intake, not these later draft implementations.
+
+**Decision:** HyperFrames Studio self-hosted inside existing Hermes Chromium with Studio source-native projects; OpenReel/Diffusion Studio reference-only; first milestones M1a real editor launch and M1b human↔agent editable roundtrip/export. [Authoritative spec](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md). Candidate HyperFrames upstream observed `6ae1af7470133db72de6d9bbceeaf80e85695c68` (Apache-2.0 repo), Studio package `0.8.143`; integration/license/provenance **NOT QUALIFIED**.
+
+**Observed #61 CI:** aggregate `desktop-typecheck` failed while its Desktop TS typecheck step succeeded; `workstation_smoke` timed out after 1800s with Laya missing-provenance test failures. This is **not a demonstrated Creative regression or fixed issue**. H-079, exact-head release gates, H-081/082, KI and other relevant holds remain OPEN until proven. No merges or installations performed by this documentation lane. [Implementer handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
 
