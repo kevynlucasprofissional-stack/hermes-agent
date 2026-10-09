@@ -1,5 +1,10 @@
 # Hermes Workstation — Coding-Agent Context
 
+## 2026-10-09 — D-041: Creative Workstation reading route (current)
+
+**Para qualquer nova tarefa de Creative**, depois de cumprir **a ordem obrigatória de leitura abaixo e o gate H-079** (não anulados), use primeiro [o handoff HyperFrames-first](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md), depois [a especificação D-041](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md), [matriz de verificação](../creative-workstation/VERIFICATION_MATRIX.md) e os arquivos de código específicos. O bloco 2026-10-08 `Planned Creative` abaixo é histórico. Nova prioridade: **HyperFrames Studio self-hosted dentro do Chromium/Electron existente**, OpenReel e Diffusion apenas referências; preservar #57–61 como drafts e não importar a cadeia sem revisão. Status: decisão documentada, integração não qualificada.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ### Planned Creative Workstation context — read on demand
 
