@@ -1,5 +1,18 @@
 # Workstation roadmap
 
+## 2026-10-09 — D-041 HYPERFRAMES-FIRST / Hermes Workstation priority (accepted product direction, NOT qualified)
+
+**Current Creative priority is a working Hermes Workstation Creative Studio**: self-hosted **HyperFrames Studio** running within the existing Electron/Chromium BrowserTask/WebContentsView, with persistent source projects and eventual typed Hermes agent edits. **OpenReel** (NLE operations) and **Diffusion Studio** (code↔UI/agent edits) are architectural references only. Penpot/Remotion/Three.js are **no longer competing P0 editors**; Remotion source PR #61 is preserved but paused, Three.js and specialized design engines remain optional later stages.
+
+**Status now:** D-041 **DOCUMENTED / APPROVED DESIGN**; HyperFrames–Hermes runtime **NOT IMPLEMENTED, NOT E2E, NOT QUALIFIED**. Historical Creative work exists on unmerged draft PRs #57 Stage A, #58 Creative Runtime, #59 revisioned source/PNG, #60 still-image MP4, #61 editable Remotion TSX; do not mistake old `DOCS ONLY` paragraphs below for current *whole initiative* status or assume these drafts are in main. Native capture repair was reported local/uncommitted and must be recovered on that machine, not inferred from GitHub.
+
+**Sequence (one independently reviewable unit per stage):** **P0** recover draft work, preserve local uncommitted changes, H-079/CI baseline triage and pinned HyperFrames proof → **P1** local owned HyperFrames service in the **existing** Hermes Chromium (M1a) → **P2** editable HTML/CSS/JS/media project, ETag/revision persistence, independently checked PNG+MP4 → **P3** human+Hermes agent typed edits with conflict/readback (M1b) → **P4** targeted NLE/design gaps → **P5** optional Three.js and specialist engines → **P6** complete native qualification, owner-verified Experience Compiler capture/reuse. P1 isolated experiment may run under recorded 2026-10-08 *development exception* while Stage A remediation proceeds separately, without waiving H-079 preflight or unsafe-code/release holds.
+
+**NO MAIN MERGE / NO PROMOTION while H-079 upstream-aligned baseline, required H-080/H-081/H-082/KI checks or exact-head CI remain red.** Preserve canonical Session/TaskRun, Control Plane, Browser, ProcessRegistry, ArtifactStore, Journal and Experience Compiler; Studio is UI, not effect authority. Source security/ports/license must be checked per pinned revision.
+
+**Authoritative spec:** [D-041 HyperFrames adoption](creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md) · [step-by-step implementer handoff](creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) · [phase verification](creative-workstation/VERIFICATION_MATRIX.md). Older CW-00–CW-07 sequencing below is **historical/superseded only for Creative tool selection and ordering**, not a cancellation of baseline security rules.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 
