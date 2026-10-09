@@ -1,5 +1,16 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-09 — D-041: HyperFrames-first Hermes Creative Studio (APPROVED DESIGN / NOT IMPLEMENTED IN PRODUCT)
+
+**Vision:** Hermes Workstation is the product; Creative Studio is an integrated operating surface, **not** a separate competing application. The user and agent operate **the same editable HyperFrames composition** (HTML/CSS/JS, assets, seekable animations, timeline), moving seamlessly from 2D design to animation/video without flattening source projects. Self-host `heygen-com/hyperframes` Studio in the existing Electron/Chromium BrowserTask/WebContentsView. OpenReel informs NLE UX (trim/split/audio); Diffusion Studio informs bidirectional agent/code/visual editing. Penpot/Remotion/Three.js remain secondary/specialist or optional, not M1 prerequisites.
+
+**Architecture:** Session/TaskRun + Control Plane/TaskCompiler admission → owned loopback HyperFrames Studio service via existing Creative ProcessRegistry → existing WebContentsView UI → ETag-scoped Creative Bridge and native HyperFrames project → render worker/FFmpeg → ArtifactStore/ExecutionJournal/independent readback → Experience Compiler only after verified replay. Renderer/Studio can't mint authority; human edits must survive concurrent agent requests. Source files remain native and a *thin* Hermes manifest holds provenance; do not duplicate project DB, Browser owner or arbitrary-JS privileged execution.
+
+**Value sequence:** P0 recovery/precise upstream&CI gap map; P1 embedded Studio (M1a); P2 persistence and PNG/MP4; P3 Hermes agent controls same editable project (M1b); P4 targeted editor gaps; P5 optional 3D; P6 full verification/operational reuse. P1 experiments separated from Stage A under the already recorded development exception; no merge/promotion while H-079, H-080/H-081/H-082 and related hold gates fail.
+
+**Evidence boundaries:** five Creative draft PRs #57–61 are unmerged; #58/#59/#60 contain reusable contracts, #61 Remotion source is preserved/paused; reported local native-capture improvements are not recoverable from GitHub alone. The new HyperFrames integration is a **target**, not accomplished fact. See [D-041 spec](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md), [handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) and [current state](CURRENT_STATE.md). Prior 2026-10-08 Creative block below is **historical** for tool order, not the current plan.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
 
