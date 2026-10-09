@@ -1,5 +1,19 @@
 # Architectural Decisions
 
+## D-041 — HyperFrames Studio as the single default Creative UI (2026-10-09)
+
+**Status: PRODUCT ARCHITECTURE APPROVED; IMPLEMENTATION NOT YET QUALIFIED.** Applies to Hermes Creative Workstation, not to general autonomous runtime permissions. Supersedes D-040's *candidate tooling order* but retains D-040 non-duplication and all H-079/H-080/H-081/H-082/KI safety gates.
+
+1. **Self-hosted HyperFrames Studio** is the default integrated creative editor inside Hermes Workstation's **existing** Electron/Chromium BrowserTask/WebContentsView. Use OpenReel only as an NLE code/UX reference and Diffusion Studio as an agent↔code↔UI pattern reference; no assumption of drop-in compatibility or license clearance.
+2. Use HyperFrames source HTML/CSS/JS/media as the **editable project** and add a **thin Hermes provenance/revision manifest**. Do not create a competing universal scene schema, TaskRun owner or project-state authority. Preserve Studio ETag/409 semantics, human edits and immutable output receipts.
+3. **Sidecar-first**: run an audited pinned HyperFrames Studio service on restricted loopback, owned by the existing Creative Runtime/ProcessRegistry with consent, session auth, origin/CSRF fence, scoped workspaces and strict file/code isolation. Preview in existing Electron view; an owned headless render worker is distinct from a parallel interactive browser.
+4. Keep Remotion #61 source work **preserved/paused**; selectively salvage existing #58 runtime, #59 project/PNG, #60 FFmpeg/ffprobe. Do not merge dependent draft PRs wholesale. Three.js and additional designer/NLE engines follow only after the first usable Studio+agent vertical.
+5. Deliver **P0 salvage/preflight → P1 Studio-in-Hermes (M1a) → P2 persistent editable project/export → P3 typed Hermes agent roundtrip (M1b) → P4 selective NLE/design → P5 optional 3D → P6 verification and Experience Compiler**. Each stage evidence-gated and separate from Stage A baseline remediation.
+6. No permission to install any external executable, bypass upstream-first H-079, disable security tests, expand effect authority, promote a compiler candidate, or merge/qualify on red exact-head CI is granted by this design decision. The 2026-10-08 development exception allows only bounded separate experiments.
+
+**Implementation source:** [D-041 technical specification](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md) and [operational handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md). Historical D-040 below remains traceable for rationale and safeguards.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## D-040 — Creative Workstation documentation scope, not new runtime authority (2026-10-08)
 
