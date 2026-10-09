@@ -1,5 +1,16 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-09 — D-041 Creative Workstation change of strategy (documentation / inspection only)
+
+**Question:** can a single self-hosted HyperFrames Studio surface satisfy user+agent editing inside Hermes without creating a second execution authority? **Decision:** yes as prioritized *candidate architecture*, **NOT** as proven integration. Previous multi-editor-first order is superseded; choose Studio-first, OpenReel NLE and Diffusion Studio code/agent/UI as **references**. P0–P6 and exact candidate seams in [D-041 adoption specification](../../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md); concrete implementation task in [handoff](../../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
+**Source observations / exact identifiers:** downstream `main f21e803b3525b70ee6be2305e579c1cc1f930e74`; draft #57`3417d57` -> #58`480d809` -> #59`bd22814` -> #60`6f784ad` -> #61`426f736`, unmerged. HyperFrames GitHub `heygen-com/hyperframes`, observed candidate `6ae1af7470133db72de6d9bbceeaf80e85695c68`, Apache-2.0 root; observed Studio v`0.8.143`, React 19/Vite 6, `packages/studio/src/index.ts`, `packages/studio-server/src/createStudioApi.ts`, `packages/studio/src/hooks/useProjectFileWriter.ts` ETag/409. Hermes Desktop React 19/Electron 40/Vite 8. OpenReel MIT listing, Diffusion Studio MPL-2.0 listing. No integration/build/proof on this new plan.
+
+**Evidence of old work:** #58 owned CLI process/health; #59 persisted a restricted project model and PNG; #60 independently verified 8s static MP4; #61 persisted TSX without running Remotion. The native capture compositor fix (47 tests reportedly passed) was *local/uncommitted* in `C:\Users\Kevyn Lucas\.codex\worktrees\creative-stage-a\hermes-agent`, **not inspected now**. Actual #61 CI release-gate `workstation_smoke` timeout (1800s) and `laya` absence observed; aggregate job fails despite TS typecheck pass. Current gate = NOT QUALIFIED; no false extrapolation across SHA.
+
+**Actions in this documentation PR:** introduce D-041, pin-source-intake and P0–P6 plan, supersession notices and handoff; **NO runtime or installation changes, NO test execution, NO merge**. Next: preserve local worktree, H-079/upstream/baseline triage, isolated HyperFrames Windows proof, then BrowserTask/ProcessRegistry adapter in controlled stage PRs. Keep one-pin, agent authority, journal and rollback. Report pending blockers instead of silent code skipping.
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
