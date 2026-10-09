@@ -94,3 +94,10 @@ resolver (`C:\ProgramData\chocolatey\bin`). Version, actual shim target/build,
 license, health and video rendering are not yet verified. Inkscape and Blender
 were absent from this discovery scope. No engine was installed or executed by
 discovery, and no support claim is inferred from presence.
+
+Follow-up policy correction: the adapter initially named its filesystem action
+`write_file`, while ScopedPolicyEngine's containment contract recognizes `write`.
+A real-task negative control proved RED: a different task workspace allowed a
+revision file to be created before publication refused it. Changed the caller to
+canonical `write`; the negative now requires policy refusal before project I/O,
+without bypassing REQUIRE_APPROVAL. This is an adapter fix, not a policy change.

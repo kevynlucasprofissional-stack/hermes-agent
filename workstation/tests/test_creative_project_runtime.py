@@ -71,6 +71,15 @@ def test_disabled_wrong_session_profile_stale_and_terminal_runs_refuse_before_pr
             finally:
                 reset_hermes_home_override(token_b)
             assert context.validate(config).is_dir()
+            different_workspace = home / "workstation" / "creative" / "another-project"
+            different_workspace.mkdir()
+            with connect_closing() as connection:
+                connection.execute("UPDATE tasks SET workspace_path=? WHERE id=?",
+                                   (str(different_workspace), context.task_id))
+                connection.commit()
+            with pytest.raises(PermissionError, match="policy"):
+                save_project_for_run(config, context, {"title": "outside task workspace"})
+            assert list((home / "workstation" / "creative" / "projects").iterdir()) == []
             with connect_closing() as connection:
                 connection.execute("UPDATE tasks SET status='done' WHERE id=?", (context.task_id,))
                 connection.commit()

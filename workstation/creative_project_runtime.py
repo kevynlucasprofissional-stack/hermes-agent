@@ -87,7 +87,7 @@ def save_project_for_run(
         destination = load_creative_revision(project_id, parent_revision).manifest_path.parent.parent.parent
     evaluation = ScopedPolicyEngine().evaluate(ActionScope(
         task_id=context.task_id, session_id=context.session_id, capability="filesystem",
-        action_name="write_file", target=str(destination), workspace_root=str(workspace),
+        action_name="write", target=str(destination), workspace_root=str(workspace),
     ))
     if evaluation.decision is not PolicyDecision.ALLOW:
         raise PermissionError(f"Creative project policy: {evaluation.decision.value}")
