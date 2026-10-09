@@ -21,6 +21,8 @@ class CreativeProjectRevision:
     source_sha256: str
     parent_revision: str | None
     operation_id: str
+    engine: str = "electron-svg"
+    native_files: tuple[tuple[str, str], ...] = ()
 
 
 def _identifier(value: str) -> str:
@@ -42,7 +44,7 @@ def _json_bytes(value: dict) -> bytes:
                        separators=(",", ":")) + "\n").encode("utf-8")
 
 
-def _source_bytes(source: dict) -> bytes:
+def creative_source_bytes(source: dict) -> bytes:
     if not isinstance(source, dict):
         raise ValueError("Creative source must be an object")
     data = _json_bytes(source)
@@ -63,10 +65,12 @@ def load_creative_revision(project_id: str, revision_id: str) -> CreativeProject
             raise ValueError("Creative revision file is missing, redirected or oversized")
     manifest = json.loads(manifest_path.read_bytes())
     expected = {"schema_version", "project_id", "revision_id", "parent_revision", "engine", "source", "operation_id"}
+    if isinstance(manifest, dict) and manifest.get("engine") == "remotion":
+        expected.add("native_files")
     if (not isinstance(manifest, dict) or set(manifest) != expected
             or type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1
             or manifest["project_id"] != project_id or manifest["revision_id"] != revision_id
-            or manifest["engine"] != "electron-svg"):
+            or manifest["engine"] not in {"electron-svg", "remotion"}):
         raise ValueError("Invalid Creative manifest")
     parent = manifest["parent_revision"]
     operation_id = _identifier(manifest["operation_id"])
@@ -82,23 +86,43 @@ def load_creative_revision(project_id: str, revision_id: str) -> CreativeProject
         raise ValueError("Creative source was changed outside its recorded revision")
     if not isinstance(json.loads(data), dict):
         raise ValueError("Invalid Creative source")
-    return CreativeProjectRevision(project_id, revision_id, manifest_path, source_path, digest, parent, operation_id)
+    native_files = manifest.get("native_files", {})
+    if not isinstance(native_files, dict) or (manifest["engine"] == "remotion" and
+            set(native_files) != {"Invitation.tsx", "index.tsx", "package.json"}):
+        raise ValueError("Invalid Creative native source references")
+    for name, expected_hash in native_files.items():
+        native = directory / name
+        if (native.is_symlink() or not native.is_file() or native.stat().st_size > 262_144
+                or hashlib.sha256(native.read_bytes()).hexdigest() != expected_hash):
+            raise ValueError("Creative native source was changed outside its recorded revision")
+    return CreativeProjectRevision(project_id, revision_id, manifest_path, source_path, digest, parent, operation_id,
+                                   manifest["engine"], tuple(sorted(native_files.items())))
 
 
 def save_creative_revision(source: dict, *, project_id: str | None = None,
                            parent_revision: str | None = None,
-                           operation_id: str | None = None) -> CreativeProjectRevision:
+                           operation_id: str | None = None, engine: str = "electron-svg",
+                           native_files: dict[str, bytes] | None = None) -> CreativeProjectRevision:
     """Append immutable files; never overwrite a human-edited source or a head pointer.
 
     Callers must perform canonical TaskRun admission before invoking this file store.
     This function supplies persistence, never approval or execution certification.
     """
-    data = _source_bytes(source)
+    data = creative_source_bytes(source)
+    if engine not in {"electron-svg", "remotion"}:
+        raise ValueError("Unsupported Creative project engine")
+    native_files = native_files or {}
+    expected_native = {"Invitation.tsx", "index.tsx", "package.json"} if engine == "remotion" else set()
+    if (set(native_files) != expected_native or any(not isinstance(data, bytes) or len(data) > 262_144
+                                                 for data in native_files.values())):
+        raise ValueError("Invalid Creative native source files")
     operation_id = _identifier(operation_id) if operation_id is not None else uuid.uuid4().hex
     if (project_id is None) != (parent_revision is None):
         raise ValueError("Existing projects require an explicit parent revision")
     if project_id is not None:
-        load_creative_revision(project_id, parent_revision)
+        parent = load_creative_revision(project_id, parent_revision)
+        if parent.engine != engine:
+            raise ValueError("Creative project engine cannot change within a revision lineage")
     else:
         project_id = uuid.uuid4().hex
     revision_id = uuid.uuid4().hex
@@ -113,12 +137,20 @@ def save_creative_revision(source: dict, *, project_id: str | None = None,
     digest = hashlib.sha256(data).hexdigest()
     manifest = {"schema_version": 1, "project_id": project_id, "revision_id": revision_id,
                 "operation_id": operation_id,
-                "parent_revision": parent_revision, "engine": "electron-svg",
+                "parent_revision": parent_revision, "engine": engine,
                 "source": {"path": "source.creative.json", "sha256": digest}}
+    if native_files:
+        manifest["native_files"] = {name: hashlib.sha256(content).hexdigest()
+                                    for name, content in native_files.items()}
     with (directory / "source.creative.json").open("xb") as stream:
         stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
+    for name, content in native_files.items():
+        with (directory / name).open("xb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
     # Manifest is the commit marker: incomplete source-only revisions cannot reopen.
     with (directory / "manifest.json").open("xb") as stream:
         stream.write(_json_bytes(manifest))

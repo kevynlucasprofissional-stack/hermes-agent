@@ -1,5 +1,12 @@
 # Creative development authorized — 2026-10-08
 
+CW-03C source foundation now persists typed invitation props and original TSX
+sources with explicit engine lineage, native hashes and ArtifactStore readback.
+Nine focused source/project/render/fault contracts pass. Remotion was not installed
+or executed; selected 4.0.534 renderer defaults require network/sandbox reconciliation
+before real use. Installation consent is pending. See
+[Remotion checkpoint](../creative-workstation/CW03C_REMOTION_2026-10-08.md).
+
 CW-03B incremental export now produces bounded still-image MP4 via explicitly
 pinned installed FFmpeg/ffprobe. A real ephemeral TaskRun trial yielded eight
 seconds, 240 decoded frames, 360×640 H.264 with independently compared preview.

@@ -44,6 +44,14 @@ def test_real_task_run_persists_source_artifacts_and_correct_session_journal(tmp
             assert all(event.session_id == "durable-session" for event in events)
             assert events[-1].metadata["run_id"] == context.run_id
             assert events[-1].metadata["operation_id"] == second["operation_id"]
+            from workstation.creative_remotion_source import RemotionInvitation
+            remotion = save_project_for_run(config, context,
+                RemotionInvitation("Hermes", "Invitation", "08 October").to_source(), engine="remotion")
+            assert remotion["engine"] == "remotion"
+            assert set(remotion["native_artifacts"]) == {"Invitation.tsx", "index.tsx", "package.json"}
+            for artifact in remotion["native_artifacts"].values():
+                readback = ArtifactStore().resolve_structured(artifact["ref"])
+                assert readback["sha256"] == artifact["sha256"]
     finally:
         reset_current_session_key(session_token)
         reset_hermes_home_override(home_token)

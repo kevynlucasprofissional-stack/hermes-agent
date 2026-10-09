@@ -17,7 +17,7 @@ from workstation.authority_supersession import classify_run_authority
 from workstation.config import WorkstationConfig
 from workstation.contracts import ExecutionEventKind
 from workstation.creative_project_store import (
-    CreativeProjectRevision, load_creative_revision, save_creative_revision,
+    CreativeProjectRevision, creative_source_bytes, load_creative_revision, save_creative_revision,
 )
 from workstation.journal import ExecutionJournal
 from workstation.policy import ActionScope, PolicyDecision, ScopedPolicyEngine
@@ -77,14 +77,27 @@ class CreativeRunContext:
 
 def save_project_for_run(
     config: WorkstationConfig, context: CreativeRunContext, source: dict, *,
-    project_id: str | None = None, parent_revision: str | None = None,
+    project_id: str | None = None, parent_revision: str | None = None, engine: str = "electron-svg",
 ) -> dict:
     workspace = context.validate(config)
+    creative_source_bytes(source)
+    if engine not in {"electron-svg", "remotion"}:
+        raise ValueError("Unsupported Creative project engine")
+    if (project_id is None) != (parent_revision is None):
+        raise ValueError("Existing projects require an explicit parent revision")
+    native_files = None
+    if engine == "remotion":
+        from workstation.creative_remotion_source import RemotionInvitation, remotion_native_files
+        RemotionInvitation.from_source(source)
+        native_files = remotion_native_files()
     # The canonical task workspace must include the destination, not merely share
     # the same profile. This preserves filesystem policy for concurrent projects.
     destination = Path(context.profile_home).resolve() / "workstation" / "creative" / "projects"
     if project_id is not None:
-        destination = load_creative_revision(project_id, parent_revision).manifest_path.parent.parent.parent
+        parent = load_creative_revision(project_id, parent_revision)
+        if parent.engine != engine:
+            raise ValueError("Creative project engine cannot change within a revision lineage")
+        destination = parent.manifest_path.parent.parent.parent
     evaluation = ScopedPolicyEngine().evaluate(ActionScope(
         task_id=context.task_id, session_id=context.session_id, capability="filesystem",
         action_name="write", target=str(destination), workspace_root=str(workspace),
@@ -96,9 +109,9 @@ def save_project_for_run(
     journal = ExecutionJournal(task_id=context.task_id, session_id=context.session_id)
     journal.record(ExecutionEventKind.ACTION, "Creative source revision prepared",
                    metadata={"operation_id": operation_id, "run_id": context.run_id})
-    revision = save_creative_revision(source, project_id=project_id, parent_revision=parent_revision,
-                                     operation_id=operation_id)
     try:
+        revision = save_creative_revision(source, project_id=project_id, parent_revision=parent_revision,
+                                         operation_id=operation_id, engine=engine, native_files=native_files)
         return publish_project_revision(config, context, revision, operation_id=operation_id)
     except Exception as error:
         raise CreativeEffectUncertain(operation_id) from error
@@ -122,10 +135,19 @@ def publish_project_revision(config: WorkstationConfig, context: CreativeRunCont
     manifest = store.store(context.task_id, f"creative-manifest-{operation_id}.json",
                            manifest_bytes, media_type="application/json",
                            schema="creative.project-revision.v1")
+    native_artifacts = {}
+    for name, digest in current.native_files:
+        native_data = (current.source_path.parent / name).read_bytes()
+        if hashlib.sha256(native_data).hexdigest() != digest:
+            raise ValueError("Creative native source changed before publication")
+        native_artifacts[name] = store.store(context.task_id, f"creative-native-{operation_id}-{name}",
+                                             native_data, media_type="text/plain").to_dict()
     context.validate(config)
     receipt = {"project_id": revision.project_id, "revision_id": revision.revision_id,
+               "engine": revision.engine,
                "parent_revision": revision.parent_revision, "source_sha256": revision.source_sha256,
                "source_artifact": source.to_dict(), "manifest_artifact": manifest.to_dict(),
+               "native_artifacts": native_artifacts,
                "task_id": context.task_id, "run_id": context.run_id,
                "session_id": context.session_id, "operation_id": operation_id}
     ExecutionJournal(task_id=context.task_id, session_id=context.session_id).record(

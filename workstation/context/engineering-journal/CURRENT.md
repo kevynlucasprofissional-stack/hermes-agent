@@ -1,5 +1,15 @@
 # 2026-10-08 — Authorized Creative development exception / CW-02
 
+CW03C-SOURCE hypotheses encoded in tests before execution: engine identity survives
+revision append/reopen; human TSX edits refuse silent overwrite; executable source
+fields/invalid timeline refuse; partial native write cannot publish a deliverable.
+Nine focused contracts PASS, including actual filesystem write-fault injection and
+real TaskRun/ArtifactStore source readback. TSX syntax bundles with installed esbuild,
+vendor imports external. Static renderer 4.0.534 archive matched npm SHA-512; no
+vendor import/install/execution. Audited defaults bind wildcard interfaces and pass
+no-sandbox; runtime boundary must reconcile these before engine use. Installation
+consent pending. See ../../creative-workstation/CW03C_REMOTION_2026-10-08.md.
+
 CW03B-VIDEO hypothesis: canonical process ownership plus repeated live TaskRun
 readback can bound media execution without a new lifecycle store. Falsifiers:
 orphan on revoked authority, accepted truncated probe, mismatched decoded frames,

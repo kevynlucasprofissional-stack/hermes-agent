@@ -56,6 +56,8 @@ def render_project_for_run(config: WorkstationConfig, context: CreativeRunContex
                            project_id: str, revision_id: str, browser_task_id: str) -> dict:
     workspace = context.validate(config)
     revision = load_creative_revision(project_id, revision_id)
+    if revision.engine != "electron-svg":
+        raise ValueError("Native SVG renderer cannot render this project engine")
     if not revision.source_path.is_relative_to(workspace):
         raise PermissionError("Creative source is outside the TaskRun workspace")
     if not browser_task_id or len(browser_task_id) > 256:

@@ -26,13 +26,14 @@ def _execute(args, config, context, workspace):
                 or source_path.stat().st_size > 262_144):
             raise PermissionError("Creative input source is outside workspace or oversized")
         return save_project_for_run(config, context, json.loads(source_path.read_bytes()),
-                                    project_id=args.project_id, parent_revision=args.parent_revision)
+                                    project_id=args.project_id, parent_revision=args.parent_revision, engine=args.engine)
 
     def inspect():
         revision = load_creative_revision(args.project_id, args.revision_id)
         if not revision.source_path.is_relative_to(workspace):
             raise PermissionError("Creative project is outside TaskRun workspace")
         return {"project_id": revision.project_id, "revision_id": revision.revision_id,
+                "engine": revision.engine,
                 "source_sha256": revision.source_sha256, "parent_revision": revision.parent_revision,
                 "source": json.loads(revision.source_path.read_bytes())}
 
@@ -56,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     save.add_argument("--source", required=True, type=Path)
     save.add_argument("--project-id")
     save.add_argument("--parent-revision")
+    save.add_argument("--engine", choices=("electron-svg", "remotion"), default="electron-svg")
     inspect = commands.add_parser("inspect", help="Read a recorded project revision")
     render = commands.add_parser("render", help="Render through an already-owned native BrowserTask")
     video = commands.add_parser("video", help="Encode an owned PNG using explicitly pinned media engines")
