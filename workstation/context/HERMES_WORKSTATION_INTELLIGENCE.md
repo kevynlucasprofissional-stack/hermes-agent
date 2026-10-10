@@ -1,5 +1,20 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 — D-042: Dogfood is the product's executable acceptance contract
+
+**Canonical synthesis:** The maintainer's handwritten `workstation/dogfood/` files are the highest-priority source for what Hermes Work *should demonstrably do*. The architecture already has ExperienceCorpus/Compiler, hierarchical OperationalCapabilities, BrowserTask/BrowserControlBroker, System-1/Laya and RunLocalAdopter; the remaining strategic gap is **causal closure across a real product run**.
+
+The required trajectory is **novel user intent -> LLM resolves via native Browser/Tool/Creative -> independently verified post-effect result -> accepted, provenance-bound TransitionSample -> early safe mining while effects remain SHADOW -> independently validated candidate/replay -> existing authority admits next run-local equivalent item or promotion policy accepts cross-run proof -> deterministic verified re-execution, with measured System-2 reduction**. A recorded trace alone, source code generation by the LLM, or a Laya suggestion is not reuse.
+
+**User-critical corrections:** separate observe/mine from effect authorization; preserve high-value learning through queue saturation, idle TTL and shutdown in canonical stores; retry when evidence materially changes; replace "DIRECT has some nonempty string" with genuine scoped attestation; bootstrap narrow real verifier owner; verify at goal-appropriate strength (opening ChatGPT need not verify login); allow scoped native BrowserTask to subagents and make them visible in Browser Hub; offer safe opt-in human browser recorder, versioned preprocessed site operations, UI-to-typed-service adapters, historical conversation/trace backfill, and evidence-based missed-opportunity accounting. Never falsely claim exhaustive learning; measured denominators and true-negative ground truth are essential.
+
+**HyperFrames is an especially useful learning vertical, not a separate compiler:** user reports Studio functional locally; remote audited main/PRs do not establish its exact implementation. Preserve local work, assess shared edit/ETag, editable source, genuine motion export and same Experience Compiler observations using existing Hermes TaskRun and process/artifact owners. Actual native Windows Electron test is mandatory. D-041 HyperFrames-first design remains in draft PR #62 as of this dated audit.
+
+**Scope discipline:** D-038 fail-closed authority is immutable; D-039 active learning drives this lane; D-042 adds a real-use release gate, not permission to bypass H-079/H-081/H-082. The lower priority K-Tools, X-cursos runner, ECO, ATOM, Agora/Mirofish/random forest and Google AI Studio-as-adapter ideas require distinct feasibility/legal/security evaluations after core causal proof.
+
+**Execution source of truth:** [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md) and [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md); status/evidence in [engineering-journal/dogfood-gap-audit-2026-10-09.md](engineering-journal/dogfood-gap-audit-2026-10-09.md).
+
 ## 2026-10-09 — D-041: HyperFrames-first Hermes Creative Studio (APPROVED DESIGN / NOT IMPLEMENTED IN PRODUCT)
 
 **Vision:** Hermes Workstation is the product; Creative Studio is an integrated operating surface, **not** a separate competing application. The user and agent operate **the same editable HyperFrames composition** (HTML/CSS/JS, assets, seekable animations, timeline), moving seamlessly from 2D design to animation/video without flattening source projects. Self-host `heygen-com/hyperframes` Studio in the existing Electron/Chromium BrowserTask/WebContentsView. OpenReel informs NLE UX (trim/split/audio); Diffusion Studio informs bidirectional agent/code/visual editing. Penpot/Remotion/Three.js remain secondary/specialist or optional, not M1 prerequisites.

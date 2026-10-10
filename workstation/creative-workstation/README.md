@@ -1,5 +1,12 @@
 # Hermes Creative Workstation
 
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 Dogfood qualification supersedes mock-only creative milestones
+
+**Implementation validation gate:** [DOGFOOD_CREATIVE_GATE_2026-10-09.md](DOGFOOD_CREATIVE_GATE_2026-10-09.md) + [Dogfood product requirements DF-024/025](../context/DOGFOOD_PRODUCT_GATE_2026-10-09.md). The maintainer reports HyperFrames already running in local Work; the remote consulted `main@f21e803b` does not contain that auditable new implementation. **Inspect and preserve local edits first**; never restart creative from scratch because GitHub is behind.
+
+Human and agent must edit the **same** project; typed owner-scoped bridge, ETag 409 conflict, save/reopen, native Electron Studio, independently validated **animated** MP4 and canonical ExperienceCompiler capture are the success conditions. PNG-to-still-MP4, Remotion invitation source, HyperFrames design doc or non-native mocks do not close them. D-041 HyperFrames-first source and full initial handoff are in draft PR #62 (`docs/creative-hyperframes-first-20261009`), not assumed merged. H-079/H-081/H-082 release gates remain.
+
 ## ATUALIZAÇÃO CANÔNICA — 2026-10-09 (D-041, HyperFrames-first)
 
 **Esta é a direção atual do produto.** A seção de "superfícies prioritárias" de 2026-10-08 **abaixo é histórica/superada**: HyperFrames Studio auto-hospedado é o **único editor-base padrão** a ser lançado dentro do Chromium/Electron do Hermes Work; OpenReel e Diffusion Studio são **referências**, não editores padrão. Remotion #61 preservado/pausado; Penpot e Three.js opcionais posteriores. Reaproveitar a infraestrutura existente dos PRs draft #58–#60, sem presumir que foram incorporados à main.

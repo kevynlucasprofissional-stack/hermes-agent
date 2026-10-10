@@ -1,5 +1,17 @@
 # Workstation roadmap
 
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 — D-042 Dogfood-first product acceptance, native learning and HyperFrames qualification
+
+**Status: PRODUCT DIRECTION ACCEPTED / IMPLEMENTATION OPEN / NOT RELEASE-QUALIFIED.** The maintainer's **all seven** Markdown entries in `workstation/dogfood/` are mandatory product outcome requirements, not a suggestions appendix. Exact observed main `f21e803b` is behind the reported local HyperFrames installation; audit local WIP before any reset/replacement. D-041 HyperFrames-first is documented in **unmerged draft PR #62**, not confirmed on main. This documentation gate does not install a studio or change runtime.
+
+**Critical path (upstream-first remains first):** DF0 preserve local checkout + H-079 fixed pin and baseline qualification -> DF1 semantic verified capture and **OBSERVE_ACTIVE mining even when external effects are SHADOW** -> DF2 durable fair adaptive candidate/queue/checkpoint survival -> DF3 verifiable scoped DIRECT attestation + actual isolated validation owner + automatically derived owner-scoped same-run handoff -> DF4 native browser route and subagent Browser-Hub E2E -> DF5 retroactive missed-opportunity evaluation, opt-in recorder, site prebake and typed adapters -> DF6 repair/qualify actual local HyperFrames human+agent studio -> DF7 causal E1 Browser, E2 12 Trello cards, E3 animated HyperFrames native-product tests + exact-head Windows/Workstation CI -> DF8 optional integrations as **separate backlog**. DF4 and DF6 may proceed in parallel after shared ownership/proof is stable.
+
+**Top blockers from dated static audit:** `compilability_monitor.py` SHADOW return before mining, loss of queued events on saturation/shutdown/900s eviction, permanent 3-attempt budgets and nonempty-string DIRECT mode selection. Preserve D-038 proof/authority and D-039 desired active learning; no replay/receipt synthesis. H-080B real-use verification/readback and BrowserTask delegation need **native E2E**. Do not promote mock-only tests, static architecture, still-PNG MP4 or documentation to production DONE.
+
+**Acceptance source and implementer order:** [Dogfood requirement ledger DF-001..026](context/DOGFOOD_PRODUCT_GATE_2026-10-09.md) · [exact implementation handoff DF0–DF8](context/DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md) · [independent audit journal](context/engineering-journal/dogfood-gap-audit-2026-10-09.md) · [creative native qualification](creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md). Preserve existing roadmap sections as historical snapshots. `main` release claim remains **OPEN**.
+
+
 ## 2026-10-09 — D-041 HYPERFRAMES-FIRST / Hermes Workstation priority (accepted product direction, NOT qualified)
 
 **Current Creative priority is a working Hermes Workstation Creative Studio**: self-hosted **HyperFrames Studio** running within the existing Electron/Chromium BrowserTask/WebContentsView, with persistent source projects and eventual typed Hermes agent edits. **OpenReel** (NLE operations) and **Diffusion Studio** (code↔UI/agent edits) are architectural references only. Penpot/Remotion/Three.js are **no longer competing P0 editors**; Remotion source PR #61 is preserved but paused, Three.js and specialized design engines remain optional later stages.
