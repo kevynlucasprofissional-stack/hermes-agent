@@ -18,6 +18,14 @@ class WorkstationConfig:
         return bool(self.raw.get("workstation", {}).get("enabled", True))
 
     @property
+    def creative_enabled(self) -> bool:
+        return self.enabled and self.raw.get("creative", {}).get("enabled", False) is True
+
+    @property
+    def creative_hyperframes_enabled(self) -> bool:
+        return self.creative_enabled and self.raw.get("creative", {}).get("hyperframes", {}).get("enabled", True) is True
+
+    @property
     def browser_routing_enabled(self) -> bool:
         return bool(self.raw.get("browser", {}).get("routing", {}).get("enabled", False))
 

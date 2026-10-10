@@ -1,93 +1,118 @@
+# 2026-10-08 — Authorized Creative development exception / CW-02
+
+CW03A-CAPTURE experiment pending: current integrated real Electron fixture
+reproduced creative_paint_timeout on the source-foundation HEAD. Hypothesis:
+Page.captureScreenshot on the same canonical WebContentsView can request a full
+surface without a visibility-dependent requestAnimationFrame barrier. Falsifiers:
+wrong/empty pixels, foreground/focus change, owner-fence bypass, failure to restore
+bounds/zoom, restart hash drift or a hidden fallback/new renderer. Use the existing
+runtime CDP owner and retain both lineage guards. No reliability claim before
+actual create/reopen/variation and negative tests pass.
+Experiments: CDP surface capture passed create/reopen but timed out on the later
+variation, including with captureBeyondViewport=false. View capture fromSurface=false
+returned a white image and the pixel oracle correctly failed. Next hypothesis:
+temporarily place the SAME owner-bound view fully within its EXISTING host at the
+bottom of the child stack, then restore its original bounds/order. This must not
+create a window/view, activate a tab, move focus or weaken owner checks.
+
+CW03C-SOURCE hypotheses encoded in tests before execution: engine identity survives
+revision append/reopen; human TSX edits refuse silent overwrite; executable source
+fields/invalid timeline refuse; partial native write cannot publish a deliverable.
+Nine focused contracts PASS, including actual filesystem write-fault injection and
+real TaskRun/ArtifactStore source readback. TSX syntax bundles with installed esbuild,
+vendor imports external. Static renderer 4.0.534 archive matched npm SHA-512; no
+vendor import/install/execution. Audited defaults bind wildcard interfaces and pass
+no-sandbox; runtime boundary must reconcile these before engine use. Installation
+consent pending. See ../../creative-workstation/CW03C_REMOTION_2026-10-08.md.
+
+CW03B-VIDEO hypothesis: canonical process ownership plus repeated live TaskRun
+readback can bound media execution without a new lifecycle store. Falsifiers:
+orphan on revoked authority, accepted truncated probe, mismatched decoded frames,
+foreign workspace input or retry after uncertain output. Real installed FFmpeg
+trial produced 360×640 H.264/MP4, eight seconds, 240 decoded frames at 30 fps.
+Decoded preview error 2.0294/255; inspected layout preserved. Initial version
+probe failed on owner wait-tail truncation; bounded complete read_log corrected
+it. Four video contracts PASS including real authority-loss child cleanup and
+header readback. Four existing process/project regressions PASS. Evidence and
+remaining qualification: ../../creative-workstation/CW03B_VIDEO_2026-10-08.md.
+CW03A native reliability and baseline remain NOT QUALIFIED.
+
+CW03A-PROJECT follow-up: implemented immutable project revisions, inherited-session
+CLI save/inspect/render, canonical live TaskRun admission and ArtifactStore/journal
+publication. Hypothesis: these owners preserve durable project lineage across
+restart without a new execution store. Falsifiers: source overwrite, cross-profile
+read, terminal/foreign run write, stale owner receipt publication, or automatic
+retry after uncertain dispatch. Contracts: 17 PASS across five files; final three
+affected files after operation-ID durability changes: 6 PASS. Real integrated CLI/
+Electron create and process-restart reopen passed once with the same PNG hash,
+but subsequent final trials and the prior native fixture reproduced paint timeout
+or display-surface capture failure. Native reliability remains NOT QUALIFIED;
+unproven visibility/subscription changes were reverted. No new baseline/CI/phase
+qualification. Details: ../../creative-workstation/CW03A_PROJECT_REVISIONS_2026-10-08.md.
+
+CW03A-NATIVE hypothesis (specified by fixture assertions before execution): typed
+SVG can render in the existing owner-bound WebContentsView, preserve foreground,
+reopen source exactly and reject stale/foreign/human-fenced requests. Initial
+trial failed creative_empty_frame; font readiness did not imply compositor paint.
+Added a bounded two-frame barrier using the existing parked view. Final native
+trial PASS on Electron 40.10.2 / Chromium 144.0.7559.236. Independently decoded
+PNG and verified palette, text pixels, dimensions, source/SVG/output hashes with
+Pillow; same source reopened to the same PNG hash and variation changed it.
+Five native negative controls pass without export. 43 owner regressions and
+2 media-verifier tests pass. No claim of full CW-03A/project entrypoint, restart,
+CI or baseline qualification. See ../../creative-workstation/CW03A_NATIVE_2026-10-08.md.
+
+CW02-PROCESS follow-up: implemented shell-free typed adapter primitives using
+ScopedPolicyEngine, canonical command guards/env builder and ProcessRegistry
+adoption. Hypothesis: canonical ownership suffices for timeout, cancellation and
+restart without a separate lifecycle store; falsifiers are orphan, wrong-owner
+control, credential inheritance, missing checkpoint or false CLI-health acceptance.
+Canonical 3-file runner: 6 PASS, 0 failed, 0 skipped. Real Node probe passes;
+Python masquerading as Node exits zero but is unhealthy. Actual checkpoint
+recovery and cancel pass. See ../../creative-workstation/CW02_RUNTIME_2026-10-08.md.
+Electron 40.10.2 was prepared from the existing locked Desktop dependency via
+npm rebuild electron; no Creative engine was installed. CW-03A native fixture
+and project integrity are the next experiment; renders are still NOT_RUN.
+
+Maintainer authorization: “Está autorizado”, following the explicit proposal to
+develop with baseline issues recorded as unresolved. Branch:
+codex/creative-cw02-20261008, base 3417d57b5c6dc3b3303052fa0fb34659dfc0e5fe.
+See ../../creative-workstation/DEVELOPMENT_EXCEPTION_2026-10-08.md.
+
+Hypothesis CW02-DISCOVERY: engine presence can be exposed without executing vendor
+code, granting authority, importing packages, caching cross-profile results or
+claiming health. Falsifiers: subprocess launch, opt-out lookup, search-scope leak,
+or presence promoted to readiness. Implementation uses existing resolver and
+RuntimeCapabilityRegistry; config is off by default and requires literal true.
+Canonical scripts/run_tests.sh -j 1 workstation/tests/test_creative_runtime.py:
+PASS, 2 tests. Tests prohibit Popen, prohibit opt-out resolution, and verify
+explicit search A → empty B → A without stale results. This is presence proof only;
+startup/cancellation/restart/port/native render and integrated qualification remain
+NOT_RUN. No engine installed, no main merge, no operational promotion.
+
 # CURRENT — Workstation Engineering Journal
 
-## 2026-10-09 — HyperFrames Creative Workstation execution: P0 Recovery, P1 Studio, P2 Native Persistence, P3 Agent Edits
+## 2026-10-08 — Creative execution: combined R1/R2 candidate and Stage A preflight
 
-**Status: EXPERIMENTAL RUNTIME IMPLEMENTED ON BRANCH `codex/creative-hyperframes-20261009` / NOT MERGED TO MAIN.**
-Development authorized under maintainer Development Exception of 2026-10-08 ("Está autorizado"). Baseline debts (H-079 pin advancement, aggregate CI release qualification timeouts, missing laya) remain open and merge to `main` is strictly held.
+Status: CW-01 BLOCKED; CW-02 through CW-07 NOT_IMPLEMENTED / baseline-blocked. No main merge or external engine installation.
 
-**P0 Recovery & Stabilize:**
-- Audited downstream `main f21e803b3525...`, upstream pin `71a2fe399bbd...`, upstream `NousResearch:main b624a38f...`. Seams audited: 14 core seams (0 unclassified).
-- Diagnosed PR #61 red CI: `workstation_smoke` timeout at 1800s and missing `laya` package in provenance tests. Desktop TypeScript typecheck had passed independently.
-- Preserved uncommitted native compositor capture repair from local worktree `codex/creative-native-capture-20261008` and backed up to `workstation/creative-workstation/evidence/hyperframes-20261009-p0/native-capture-backup/`.
-- Audited HyperFrames: `hyperframes@0.8.143`, `@hyperframes/studio@0.8.143`, Apache-2.0. Proved standalone execution in isolated scratch environment: scaffolding blank project, boot loopback server on port 3032 (HTTP 200 on `/__hyperframes_config` and `/api/environment/ffmpeg`), rendered verified 60-frame 1920x1080 30fps H.264 MP4 in 9.4s, and verified clean child exit. Recovery matrix written.
+Main: f21e803b3525b70ee6be2305e579c1cc1f930e74. Adopted upstream/merge-base: 71a2fe399bbd7a219c71f9d9fca2b313b01f2057. Cycle pin: 517b5e10febd619ce30bb22580e29b160266eb43 (not adopted). Fresh observed tip: d94b70f675205c2c046138997819428772cd2678; one later CLI reasoning-effort change is observed drift, not a reason to repin. Main divergence from observed tip: 857/10511.
 
-**P1 Studio Service & Desktop WebContentsView Integration:**
-- Implemented `workstation/creative_studio_service.py`: typed `hyperframes.studio` service.
-  - Port negotiation on `127.0.0.1` (`allocate_studio_port`, testing loopback bind with collision avoidance).
-  - Session token generation (`secrets.token_hex(24)`) and origin/CSRF validation (`validate_studio_origin`).
-  - Sanitized child environment (`_child_env` + `HYPERFRAMES_SKIP_SKILLS=1`, `HYPERFRAMES_TELEMETRY=0`, isolated `.tmp`, zero credential leakage).
-  - Adoption by canonical `ProcessRegistry` (`adopt_local`).
-  - Health and readiness readback polling `/__hyperframes_config` and `/api/environment/ffmpeg`.
-  - Supervised termination (`stop_studio_service`) killing process tree without orphans; crash detection and restart.
-- Updated `apps/desktop/electron/workstation-browser-runtime.ts`:
-  - Added `browser_creative_studio_open` action strictly enforcing loopback `127.0.0.1`, activating task-bound `WebContentsView`, redacting session tokens from safeUrl receipts.
-  - Added `renderCreativeFrame` capture fix using `withCreativeCaptureLayout` and CDP `Page.captureScreenshot`.
-- Desktop tests: `workstation-creative-studio.test.ts`, `workstation-creative-capture.test.ts`, `workstation-creative-layout.test.ts` (6 passed in 439ms); `tsc -p tsconfig.electron.json` passed with 0 errors.
+Hypothesis R12-COMPOSITION: existing R1 and R2 repairs can close the missing Laya CI profile and production npm audit on one candidate, without weakening gates. Falsifiers: locked install, production audit, import/build/typecheck or owner regression failure. Existing source PRs #54 and #56 remain separate; cherry-picks retain authorship and provenance. Candidate before evidence commit: 0ae24478bb, with R1 aefba46a91 and R2 8a206565c6/0ae24478bb. Combined-head CI and local install are NOT_RUN at registration. Reusing main node_modules would not prove the changed lockfile.
 
-**P2 Single Project Persistence & Export:**
-- Enhanced `workstation/creative_project_store.py`:
-  - Added `engine="hyperframes"` native project storage preserving raw `index.html`, `hyperframes.json`, and assets.
-  - Implemented HTTP-compatible `etag` property (`f'"{revision_id[:16]}-{source_sha256[:16]}"'`).
-  - Implemented `CreativeConflictError` raising 409 Conflict when conditional write `if_match` does not match parent revision's ETag.
-- Implemented `workstation/creative_hyperframes_render.py`:
-  - Supervised motion render via `ProcessRegistry` executing `hyperframes render -o motion.mp4`.
-  - Independent ffprobe verification via `inspect_video_probe` (dimensions, fps, decoded frame count, H.264 codec).
-  - Extracted decoded preview snapshot frame via ffmpeg.
-  - Persisted video and preview deliverables to `ArtifactStore` and recorded in `ExecutionJournal`.
+Observed source-PR evidence: #54 c43dfef787cafe255769af9911846e3bc14c222b contracts and core-patch-dry-run SUCCESS. #56 36f49d7b2e15f0d9af10220f9c5fef011e47b6a7 Windows run 37837955981 production audit, install, doctor and production build SUCCESS; release qualification IN_PROGRESS at inspection. These receipts do not qualify the composed head or main.
 
-**P3 Agent Edits via Typed CreativeOperation:**
-- Implemented `workstation/creative_operations.py`:
-  - Typed operations: `inspect_project`, `add_element`, `update_element`, `set_style`.
-  - Safe DOM tree parser and serializer (`parse_html_tree`, `render_html_tree`).
-  - Input sanitization strictly rejecting `<script>`, `<iframe>`, `javascript:` URIs, and executable event attributes (`onclick`, `onerror`).
-  - Sequential human/agent co-editing roundtrip tested and verified.
+Stage A virtual merge experiment: git merge-tree --write-tree main 517b5e10 returned exit 1 and 55 conflict paths, without changing checkout/index. Conflicts include pre-I/O guardrails, compressor, session persistence, registry, Browser broker, native Electron, preview and uv.lock. Result tree a32d27996d8c1b41603f105cce4e20dd315d81c5 is a conflicted diagnostic object, never a baseline. No actual upstream merge performed. No blanket ours/theirs resolution authorized by this result.
 
-**P4 NLE, Multi-track Video Timeline, Audio, Transitions & Design Depth:**
-- Implemented `workstation/creative_nle.py`:
-  - Multi-track timeline model (`Timeline`, `Track`, `Clip`) supporting video, audio, text, and vector tracks embedded in HyperFrames compositions.
-  - Trim with optional ripple (`trim_nle_clip`): accurately recalculates clip in/out boundaries and shifts all subsequent clips on track.
-  - Clip split (`split_nle_clip`): divides an existing clip into two sequential sub-clips, recomputing source in/out offsets.
-  - Clip deletion with ripple (`delete_nle_clip`): removes clips and closes gaps by pulling downstream clips earlier.
-  - Sequential clip packing and reordering (`reorder_nle_clips`).
-  - Transition support (`add_nle_transition`): crossfade, fade, wipe, and slide configurations between adjacent clips.
-  - Mixed audio volume control and mute (`set_clip_audio`), plus normalized waveform peak sampling (`generate_waveform_peaks`).
-  - Strict SVG and typography sanitization (`sanitize_svg_markup`, `sanitize_typography`), strictly rejecting `<script>`, `<iframe>`, `<foreignObject>`, `on*` event attributes, and remote URL schemes.
-- Integrated into `workstation/creative_operations.py`:
-  - Typed operations: `add_nle_track`, `add_nle_clip`, `trim_nle_clip`, `split_nle_clip`, `delete_nle_clip`, `reorder_nle_clips`, `add_nle_transition`, `set_nle_audio`, `add_svg_element`.
-  - Atomically syncs `hyperframes.json["timeline"]` and HTML DOM tree (`index.html`) under ETag optimistic concurrency control.
-- Test suite in `workstation/tests/test_creative_nle.py` (10 tests):
-  - Serialization, trimming, ripple trimming, splitting, deleting, reordering, transitions, waveforms, typography, SVG sanitization, and end-to-end multi-track workflow with 409 conflict detection.
+Read-only main checks this execution: component-lock validation PASS; license policy PASS; core anchors PASS (personal tracked edits warning). Strict seam audit PASS: 14 classified direct seams, 0 unclassified, 0 budget regressions, 650 edge references; REMOVE remains debt. Full canonical runtime read order, semantic reconciliation, exact-head qualification and native product proof remain prerequisites before target implementation.
 
-**P5 3D / Three.js and GLB Asset Support (HyperFrames Composition Embedded):**
-- Implemented `workstation/creative_3d.py`:
-  - Bounded Three.js 3D viewport configuration (`ThreeJsSceneConfig`) embedded directly within HyperFrames compositions (`<canvas data-hf-3d="true" ...>`), avoiding competing standalone 3D editor applications.
-  - Standard-compliant glTF 2.0 Binary (GLB) generation (`create_minimal_valid_glb`) and strict security parser (`inspect_glb_bytes`).
-  - Strict resource budgets enforced: 16MB file limit (`MAX_GLB_BYTE_SIZE`), max 1,000 nodes, 500 meshes, 500 materials, 50 animations.
-  - Path traversal and network exfiltration defenses: all buffer and image URIs inside the GLB JSON chunk inspected and rejected on remote schemes (`http://`, `https://`, `data:text/html`), absolute paths (`/`, `C:\`), and traversal sequences (`..`).
-  - Extracted immutable metadata receipt (`GLBAssetMetadata`) with SHA-256 fingerprint, animation clip names, and buffer lengths.
-  - Non-blocking Blender specialist discovery probe (`inspect_blender_specialist`), confirming role as optional conversion/rendering assistant without blocking Three.js runtime.
-- Integrated 3D operations into `workstation/creative_operations.py`:
-  - `add_3d_canvas`: inserts configured Three.js canvas DOM element into HTML and serializes scene metadata into `hyperframes.json["scenes_3d"]`.
-  - `import_3d_asset`: validates raw or base64 GLB payload, places asset into `assets/<name>.glb`, registers metadata in `hyperframes.json["assets_3d"]`, and optionally binds to a 3D canvas.
-  - `update_3d_transform`: updates position, rotation, scale, and active animation clips for 3D models with ETag concurrency control.
-  - Enhanced native project files preservation to recursively capture subdirectories (`assets/`) across all revision saves.
-- Comprehensive test suite in `workstation/tests/test_creative_3d.py` (10 tests):
-  - Valid binary generation & inspection, 16MB budget enforcement, header validation, URI traversal/exfiltration rejection, geometry budgets, Three.js DOM generation, Blender inspection, and end-to-end add/import/transform/ETag operations with roundtrip disk persistence.
+Safety hold remains: KI-024 voice input-authority incident OPEN, KI-025 startup reliability OPEN, H-080B.3 native proof not established here. User confirmed personal use for now; official license/FAQ support individual image/video creation and automation. Record PERSONAL_USE_ELIGIBLE only, no redistribution/company approval; see ../../creative-workstation/REMOTION_USE_CASE_2026-10-08.md. Existing CW01 audit contains reusable owners and external intake, but its historical main/PR status is superseded by the live observations above.
 
-**Test Receipts:**
-- Python test suite: **51 passed in 41.95s across 13 test files** (`workstation/tests/test_creative*.py`).
-- Desktop Vitest: **6 passed in 985ms across 3 test files** (`workstation-creative-studio.test.ts`, `workstation-creative-capture.test.ts`, `workstation-creative-layout.test.ts`).
-- Desktop Typecheck: `tsc -p tsconfig.electron.json --noEmit` clean (**0 errors**).
+Environment experiment: shared Python 3.11 run completed with 7 Laya provenance failures across 4 files and one no-tests file (test_canary_recipe_context.py); preserve failures, no qualification. uv sync --locked --python 3.13 --extra dev --extra anthropic --extra workstation-laya created local venv but failed downloading torch==2.14.1 after DNS os error 11001. A subsequent independent socket.getaddrinfo for files.pythonhosted.org succeeded (IPv4/IPv6), a material connectivity change. Retry the unchanged locked install once under recovered DNS; do not omit torch or weaken provenance. Typecheck and Git tests already passed; npm audit exit 0 with 8 LOW findings.
 
-## 2026-10-09 — D-041 Creative Workstation change of strategy (documentation / inspection only)
+Final checkpoint: draft PR #57 opened with R1/R2 plus evidence. Second uv locked preparation cancelled after approximately 12 minutes without finishing Torch download; no dependency omission or provenance relaxation. Initial PR CI head d1b6e3a7b72983f78b817317ff7b990450c5d491 contracts/anchors/Windows IN_PROGRESS, Nix QUEUED. Final fetch origin/main f21e803b and upstream d94b70f6 unchanged. Composed virtual merge has 56 conflicts, distinct from 55 at original main; machine receipt preserved. CW-01 remains BLOCKED; CW-02–CW-07 NOT_IMPLEMENTED. Current-state/roadmap/source overlays and the per-phase checkpoint are synchronized.
 
-**Question:** can a single self-hosted HyperFrames Studio surface satisfy user+agent editing inside Hermes without creating a second execution authority? **Decision:** yes as prioritized *candidate architecture*, **NOT** as proven integration. Previous multi-editor-first order is superseded; choose Studio-first, OpenReel NLE and Diffusion Studio code/agent/UI as **references**. P0–P6 and exact candidate seams in [D-041 adoption specification](../../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md); concrete implementation task in [handoff](../../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md).
-
-**Source observations / exact identifiers:** downstream `main f21e803b3525b70ee6be2305e579c1cc1f930e74`; draft #57`3417d57` -> #58`480d809` -> #59`bd22814` -> #60`6f784ad` -> #61`426f736`, unmerged. HyperFrames GitHub `heygen-com/hyperframes`, observed candidate `6ae1af7470133db72de6d9bbceeaf80e85695c68`, Apache-2.0 root; observed Studio v`0.8.143`, React 19/Vite 6, `packages/studio/src/index.ts`, `packages/studio-server/src/createStudioApi.ts`, `packages/studio/src/hooks/useProjectFileWriter.ts` ETag/409. Hermes Desktop React 19/Electron 40/Vite 8. OpenReel MIT listing, Diffusion Studio MPL-2.0 listing. No integration/build/proof on this new plan.
-
-**Evidence of old work:** #58 owned CLI process/health; #59 persisted a restricted project model and PNG; #60 independently verified 8s static MP4; #61 persisted TSX without running Remotion. The native capture compositor fix (47 tests reportedly passed) was *local/uncommitted* in `C:\Users\Kevyn Lucas\.codex\worktrees\creative-stage-a\hermes-agent`, **not inspected now**. Actual #61 CI release-gate `workstation_smoke` timeout (1800s) and `laya` absence observed; aggregate job fails despite TS typecheck pass. Current gate = NOT QUALIFIED; no false extrapolation across SHA.
-
-**Actions in this documentation PR:** introduce D-041, pin-source-intake and P0–P6 plan, supersession notices and handoff; **NO runtime or installation changes, NO test execution, NO merge**. Next: preserve local worktree, H-079/upstream/baseline triage, isolated HyperFrames Windows proof, then BrowserTask/ProcessRegistry adapter in controlled stage PRs. Keep one-pin, agent authority, journal and rollback. Report pending blockers instead of silent code skipping.
+NEXT: qualify the composed R1/R2 candidate; reconcile the fixed-pin Stage A separately; close applicable R4 safety/product gates; only then release CW-02. Preserve personal Obsidian workspace/note in original checkout. Rollback of this candidate is dropping its branch/worktree after preserving evidence; no project files are removed.
 
 
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)

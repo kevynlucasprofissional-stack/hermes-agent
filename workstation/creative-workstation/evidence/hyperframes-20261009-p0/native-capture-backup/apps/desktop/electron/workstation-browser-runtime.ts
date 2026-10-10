@@ -2159,10 +2159,9 @@ export class WorkstationBrowserRuntime {
       return this.removeExtensionForController(String(args.extension_id ?? ''))
     }
 
-    if (action === 'browser_creative_render' || action === 'browser_creative_studio_open') {
+    if (action === 'browser_creative_render') {
       const task = this.taskLifecycle().task(taskId)
-      if (!sessionHost || !runId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
-      if (action === 'browser_creative_render' && !operationId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      if (!sessionHost || !runId || !operationId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
       if (!task || task.sessionHost !== sessionHost || task.runId !== runId) {
         throw workstationControllerFault('NO_BOUND_TAB', 'creative_owner_mismatch')
       }
@@ -2176,8 +2175,7 @@ export class WorkstationBrowserRuntime {
       'browser_back',
       'browser_press',
       'browser_extension_open_options',
-      'browser_creative_render',
-      'browser_creative_studio_open'
+      'browser_creative_render'
     ])
 
     if (mutating.has(action)) {
@@ -2186,49 +2184,6 @@ export class WorkstationBrowserRuntime {
 
     if (sessionHost || kanbanCardId || runId) {
       this.bindControllerSessionIdentity(taskId, sessionHost, kanbanCardId, runId)
-    }
-
-    if (action === 'browser_creative_studio_open') {
-      if (!sessionHost || !runId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
-      const targetUrl = String(args.url ?? '')
-      let parsedUrl: URL
-      try {
-        parsedUrl = new URL(targetUrl)
-      } catch {
-        throw workstationControllerFault('INVALID_ARGUMENT', 'invalid_creative_studio_url')
-      }
-      if (parsedUrl.hostname !== '127.0.0.1' && parsedUrl.hostname !== 'localhost') {
-        throw workstationControllerFault('INVALID_ARGUMENT', 'creative_studio_loopback_required')
-      }
-      const entry = this.entryForTask(taskId, true, sessionHost, kanbanCardId, runId)!
-      await entry.view.webContents.loadURL(targetUrl)
-      if (!this.activeTabId || this.activeTabId === entry.id || (this.preferredTaskId && this.preferredTaskId === taskId)) {
-        this.activateTab(entry.id)
-      }
-      const opId = operationId ?? `op_${action}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
-      const rawReceipt: BrowserOwnerReceipt = {
-        operationId: opId,
-        taskId,
-        runId: runId ?? '',
-        browserTaskId: taskId,
-        tabId: entry.id,
-        revision: 0,
-        action,
-        safeUrl: `http://127.0.0.1:${parsedUrl.port}/#project`,
-        executedAt: new Date().toISOString()
-      }
-      const updatedTask = this.taskLifecycle().recordReceipt(taskId, rawReceipt)
-      this.persistBrowserSessionState()
-      return {
-        success: true,
-        runtime: 'electron-chromium',
-        task_id: taskId,
-        tab_id: entry.id,
-        url: targetUrl,
-        port: Number(parsedUrl.port),
-        operation_id: opId,
-        receipt: updatedTask.lastReceipt
-      }
     }
 
     if (action === 'browser_creative_render') {
