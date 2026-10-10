@@ -1,5 +1,21 @@
 # Architectural Decisions
 
+<!-- operational-speed:2026-10-10 -->
+## D-043 — Verified-outcome speed and cost take precedence over operational rediscovery (2026-10-10)
+
+**Status: ACCEPTED AS IMPLEMENTATION PRIORITY / CODE CHANGE AND REAL-PRODUCT QUALIFICATION OPEN.** Complements D-037..D-042 without replacing Dogfood E1–E3, HyperFrames-first Creative, D-038 effect authorization, or H-079 upstream-first. No claim of verified runtime speedup.
+
+1. **Economy per truthful result:** rank work by measurable `user_to_verified_ms`, provider rounds, actual billable tokens/cost, distinct tool operations and `cost_per_verified_outcome`; incomplete/incorrect side effects never count as successful cheap execution. Baselines must isolate cold/warm, same native app/user state and unique call IDs.
+2. **Already-known requests first:** before System-2, deterministic alias resolution of *fresh utterances*, then optional System-1 semantic match, then existing TaskCompiler/CapabilityRouter/policy. Confidence is not authorization. Missing proof or ambiguity goes to reasoning; potentially mutating uncertainty goes to WAIT/HANDOFF, not replay. Preserve prompt-cache byte stability.
+3. **Composed native operations, not scattered model clicks:** reuse OperationalKernel, BrowserReadiness, BatchDetection and ArtifactStore transport `text_ref/artifact_ref`, with per-effect independent verification/checkpoint. Avoid arbitrary scripts, one-off HTTP servers and excessive login/snapshot/DOM probes. Do not add core tool schema unnecessarily.
+4. **Owned Studio without rediscovery:** offer a typed `creative.hyperframes.open` composing existing installation discovery, ProcessRegistry service lifecycle, health and Electron BrowserTask. Binding only localhost is insufficient: verify exact owned StudioInstance/port/token/run.
+5. **Human writes win on conflict:** Trello card #012's 2567→2480 human edit overwritten by synchronization is a confirmed failure; protect last-synced version/provider precondition, fail closed under concurrency, no blind retry or invented `33/33` exactness.
+6. **Authenticated qualification and honest learning:** unkeyed `digest(payload)[:32]` is not a trusted DIRECT signature. Require verifiable issuer/scoped attestation. SHADOW may mine but not effect; checkpointed queue pointers are not evaluated opportunities. Real System-2 savings require observed actual provider calls, not number of reused items.
+7. **One existing ownership plane:** no duplicate Browser/runtime/Experience Compiler/TaskRun/authority/DB/scheduler. Keep upstream changes minimal, classified, tested; release only with exact-HEAD CI and native Windows/Electron E1/E2/E3 evidence.
+
+**Source of truth:** [audit and prioritization](OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md) · [file-level action sequence](OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md) · [journal](engineering-journal/operational-speed-audit-2026-10-10.md). The 2026-10-09 static dogfood audit predates code-level corrections present in the branch inspected here; validate each supposed gap against that code before patching.
+
+
 <!-- dogfood-gate:2026-10-09 -->
 ## D-042 — Dogfood is a first-class, empirical product gate (2026-10-09)
 
