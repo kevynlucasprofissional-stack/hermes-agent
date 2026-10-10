@@ -1,5 +1,14 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — Creative Workstation D-043: inteligência arquitetura + evidências
+**Decisão documental; nenhuma integração foi qualificada neste update.** O usuário rejeitou privilégio para HyperFrames: era a primeira escolha de ferramenta, não a arquitetura soberana. EffectCraft oferece referência para comando único UI/CLI/MCP, `engine.batch`, Graph Editor e versões; OpenReel oferece NLE/clip actions, EditingHost, chat/MCP/headless com riscos de time map, linked ripple, history e partial turns a validar; HyperFrames já suporta `hf-seek` para Canvas/Three/WebGPU. Nenhum é o dono obrigatório do arquivo canônico.
+**Síntese:** Creative Document com IDs e rational media map; Command Bus + transações, histórico/Undo; split/trim/ripple/slip/slide/roll verificáveis; Semantic Edit Plan com diff/revisões, real preview e aprovação parcial; camada freeform com parâmetros ou opacidade explícita; adaptadores de renderização qualificados por métricas; UX contextual que permite cortar, animar e fazer design/3D sobre o mesmo projeto; Experience Compiler existente pode compilar procedimentos criativos com prova real. Não criar outro BrowserTask, TaskRun, ArtifactStore, Control Plane ou registry de aprendizagem.
+**Gates:** D-038/D-039, H-079, D-042/PR #63, licenças, opt-in, sandbox e exact-HEAD CI. PR #62 D-041 é histórico supersedido para escolha do motor. Ordem CWN-00..09 em [arquitetura](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md); [prompt executável](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
 

@@ -1,5 +1,19 @@
 # Architectural Decisions
 
+<!-- creative-D043-overlay -->
+## D-043 — Creative Workstation independente de motor, documento e edição compartilhada humano/IA (2026-10-10)
+**Status: ARQUITETURA ACEITA PELO USUÁRIO; NÃO IMPLEMENTADA/QUALIFICADA.** Substitui a seleção HyperFrames-first de D-041 no PR #62 (ainda draft) como regra de motor/editor, **sem** invalidar D-042 dogfood (PR #63), D-038 segurança, D-039 aprendizagem, H-079 upstream-first, H-080, H-081/082, segurança/consentimento e CI exato. PR #62 não pode ser mergeado como autoridade atual sem reconciliação.
+1. Creative Document versionado com IDs estáveis, referências à mídia e mapa de tempo racional é candidato a autoridade de *edição*, não um segundo TaskRun/DB/Browser/ArtifactStore. Engines externas continuam atrás de adaptadores.
+2. Ações manuais, de IA, API, MCP e headless utilizam o mesmo Command Registry tipado, owner fence, expected revision, idempotência, transação, readback e Undo/Redo; falha parcial nunca declara DONE.
+3. Cortes NLE devem preservar tempos de mídia, velocidade reversa/variável, linked audio, bloqueios de faixa e sincronização; propostas de IA usam revisões de preview reais, diff semântico, escolha parcial e rollback.
+4. SVG/Canvas/Three/WebGL livres exigem seek determinístico e parâmetros expostos; conteúdos opacos são identificados como tais. Não executar JS não confiável no Electron privilegiado.
+5. UI contextual/adaptativa não precisa clonar After Effects/Premiere; workspaces e timeline são projeções do mesmo documento. HyperFrames, EffectCraft, OpenReel, Remotion/Penpot são referências/candidatos, sem privilégio permanente.
+6. Experience Compiler existente só reutiliza transformações verificadas; segurança e admissões já estabelecidas são preservadas.
+**Execução:** [D-043 arquitetura](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) e [handoff CWN-00..09](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md). Alteração documental, sem claims de execução.
+
+<!-- /creative-D043-overlay -->
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## D-040 — Creative Workstation documentation scope, not new runtime authority (2026-10-08)
 

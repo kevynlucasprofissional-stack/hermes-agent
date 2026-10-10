@@ -1,5 +1,13 @@
 # CURRENT — Workstation Engineering Journal
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — D-043: EffectCraft/OpenReel/HyperFrames -> CW engine-neutral
+**CLASSIFICAÇÃO: PESQUISA/DESIGN, NÃO RUNTIME QUALIFICADO.** Evidências: fontes EffectCraft `crates/engine/src/commands/batch.rs`, `history.rs`/Graph Editor; OpenReel `packages/core/src/actions/action-executor.ts`, `packages/agent/src/{host,loop}.ts`; HyperFrames adaptadores `three.ts`/`typegpu.ts`. Anexo da conversa `ChatGPT-Comparar Opções De Motion-20261010-1444.md`. Snapshot GitHub `main@f21e803b`, drafts #57..#61, draft D-041 #62 e D-042 #63 (rever antes de executar).
+**Hipótese:** mesmo documento e comando para humanos/IA; motores intercambiáveis. **Falsificadores:** alteração UI/IA divergente, split speed incorreto, ripple quebra sync, preview não determinístico, produção não corresponde ao export, usuário perde revisão, JS ultrapassa trust boundary. **Próximo experimento:** CWN-00/01/02 seguido por NLE e Semantic Edit Plan, testes RED/negativos e E2E real. A decisão D-043 substitui o lock-in D-041 mas não D-042 nem segurança. [Jornal completo](creative-engine-neutral-2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.

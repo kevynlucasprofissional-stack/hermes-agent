@@ -1,5 +1,13 @@
 # Current State
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — D-043 Creative Workstation: somente documentação
+**Estado observado:** `main@f21e803b`; PRs #57–#61 cadeia Creative aberta, PR #62 D-041 HyperFrames-first draft e PR #63 D-042 dogfood draft. O presente update não executou testes/CI/render ou inspecionou runtime local do usuário. **Nada aqui qualifica implementação.**
+**Decisão nova:** HyperFrames não é motor canônico mandatório; D-043 projeta Creative Document, Command Bus comum UI/IA/headless, timebase racional, NLE linked A/V, Semantic Edit Plan, freeform seek e adapters. H-079/D-038/D-039/D-042/licença/permissão/CI exato mantidos; PR #62 requer reconciliação antes de merge. [Arquitetura](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) · [Handoff](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
 

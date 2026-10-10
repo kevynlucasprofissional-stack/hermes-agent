@@ -1,5 +1,14 @@
 # Workstation roadmap
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — NOVA PRIORIDADE CW: D-043, engine-neutral
+**STATUS: DECISÃO DE ARQUITETURA / IMPLEMENTAÇÃO NÃO QUALIFICADA.** O usuário retirou a preferência arquitetural por HyperFrames. A decisão HyperFrames-first no [PR #62](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/62) D-041 é substituída para seleção de motor, projeto e UX; preservar código/ativos úteis, mas não tomar HyperFrames como núcleo obrigatório. D-042/PR #63 dogfood e gates D-038/D-039, H-079/H-081/H-082 continuam. PRs #57–#61 são drafts, não código de `main` (snapshot main `f21e803b`).
+**Ordem executiva (CWN-00→CWN-09):** CWN-00 inventário/PRs/baseline e licença → CWN-01 Creative Document com IDs estáveis, racional timecode/source map → CWN-02 Command Bus, transações e Undo comuns à UI/IA/headless → CWN-03 NLE split/trim/ripple/slip/slide/roll com linked A/V → CWN-04 Semantic Edit Plan e preview de revisão/rebase/aceitação parcial → CWN-05 autoria freeform SVG/Canvas/WebGL/Three.js com seek determinístico → CWN-06 renderizadores intercambiáveis, paridade preview/export e áudio → CWN-07 Graph Editor e workspaces adaptativos → CWN-08 Experience Compiler com reuso verificado → CWN-09 efeitos/engines especializados conforme benchmark.
+**Autoridade do trabalho criativo:** [Arquitetura D-043](creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md), [prompt integral de implementação](creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md), [journal](context/engineering-journal/creative-engine-neutral-2026-10-10.md). Sequências antigas CW-01..07 abaixo são contexto histórico/salvage, não a ordem atual. Não fazer merge ou alegar testes não executados.
+
+<!-- /creative-D043-overlay -->
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 
