@@ -1,5 +1,18 @@
 # Hermes Workstation — Coding-Agent Context
 
+<!-- dogfood-gate:2026-10-09 -->
+## Priority read — 2026-10-09 D-042 Dogfood-first implementation
+
+The maintainer's timestamped Markdown entries under `../dogfood/` are **mandatory first-class product requirements**. For any Browser, System-1/Laya, Experience Compiler, subagent, web workflow or Creative/HyperFrames work, after the existing root `AGENTS.md` / Workstation upstream-first gate read:
+
+1. [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md) — complete human-note-to-owner/test ledger DF-001..026;
+2. [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md) — fast, ordered DF0..DF8 implementation handoff and exact touchpoints;
+3. [engineering-journal/dogfood-gap-audit-2026-10-09.md](engineering-journal/dogfood-gap-audit-2026-10-09.md) — dated findings and evidentiary limits;
+4. the **original seven** `../dogfood/*.md` notes themselves (not just summaries), then D-039, D-038 and affected runtime owner/tests; for HyperFrames also [../creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md](../creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md) and draft PR #62 D-041.
+
+Respect existing required context-reading order, H-079 upstream-first baseline and D-038 authority. The dated static audit does not certify newer local HyperFrames code; inventory user worktrees and preserve uncommitted changes before coding. **This note is a documentation handoff, not a completed runtime fix.**
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ### Planned Creative Workstation context — read on demand
 

@@ -1,5 +1,11 @@
 # Matriz de verificação e segurança — Hermes Creative Workstation
 
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 Additional *product* verifier — DF-024 / HC-01..08
+
+This older creative verification matrix is supplemented by [DOGFOOD_CREATIVE_GATE_2026-10-09.md](DOGFOOD_CREATIVE_GATE_2026-10-09.md) and [D-042 main dogfood product gate](../context/DOGFOOD_PRODUCT_GATE_2026-10-09.md). A fixture PNG, still-PNG-derived MP4, static source test or HyperFrames dev-server screenshot may support a stage but **cannot** stand in for native product qualification. Must prove shared human+agent editing, safe concurrent revision 409, exact editable-source reopen, physical Electron/WebContentsView owner, animated frame variation, verified artifact/TaskRun lineage and same ExperienceCompiler; include unauthorized session, crashed renderer, stale lease, canceled run and failed readback negatives. Until the user's actual installed HyperFrames checkout is inspected and native tests are run, mark implementation status UNKNOWN / NOT VERIFIED, not absent or done. Release still depends on upstream-first baseline and exact-head Windows CI.
+
+
 **Status: CRITÉRIOS PROPOSTOS / NENHUM TESTE AQUI FOI EXECUTADO.** Os nomes/owners reais dos comandos de teste devem ser confirmados no HEAD antes de rodar. Esta matriz não substitui as suítes existentes, release gates ou os controles do Workstation.
 
 ## Escala de evidência e bloqueio

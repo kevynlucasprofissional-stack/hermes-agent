@@ -1,5 +1,22 @@
 # Architectural Decisions
 
+<!-- dogfood-gate:2026-10-09 -->
+## D-042 — Dogfood is a first-class, empirical product gate (2026-10-09)
+
+**Status: ACCEPTED AS PRODUCT DIRECTION AND DOCUMENTATION CONTRACT / IMPLEMENTATION UNVERIFIED.** Relates to D-037 (event-driven learning), D-038 (fail-closed authority), D-039 (active non-effectful mining, durable opportunities) and D-041 (HyperFrames-first design in unmerged PR #62). This is not a claim D-041 or any new code reached `main`.
+
+1. **Human dogfood intent has maximal product priority:** all timestamped notes in `workstation/dogfood/` map to stable DF-001..DF-026 IDs, owners, RED/GREEN tests, normal-product evidence and truthfully classified completion status. Do not edit original notes to fit implementation.
+2. **Causal learning before feature breadth:** a useful system learns from verified real Browser/Tool/Creative action, recognizes a subsequent compatible request, executes a safe deterministic capability with existing owners and proves the result. Mere capture, classes, Laya typed response or mock-only unit tests are insufficient.
+3. **Effect shadow != learning paralysis:** observe and mine safe candidates continuously via meaningful semantic events while unqualified side effects remain shadow/held; never issue permission from model confidence. Durable provenance survives hot-cache eviction/backpressure/shutdown, with prioritized work and adaptive retry only when evidence changes.
+4. **DIRECT qualification must be real:** mode permission is bound to verifiable, revocable scoped attestations and live owner-verified sandbox/replay/readback; a string is not a certificate. Same-run reuse may be admitted by existing user authority only for next equivalent pending work, rechecking effect budget/lease; global promotion remains stricter.
+5. **Shared native BrowserTask:** principal and subagents must use the same Electron/Chromium platform and broker with child identity/explicit delegated scope and visible Browser Hub runs. Recorder/site prep/Chrome extension/typed browser services are gated separately and may not leak account sessions or bypass third-party access restrictions.
+6. **Real Creative product gate:** audit installed local HyperFrames Work before coding; user+agent editing same source, ETag conflicts, save/reopen and independently verified animated video with existing Session/TaskRun/ProcessRegistry/ArtifactStore/ExperienceCompiler owners. D-041's prior still-video is not an animated-render proof.
+7. **Truthful economics/completeness:** report opportunity eligible/detected/held/missed/unknown/true-negative against a bounded labeled benchmark; never assert exhaustive compilation of every conceivable procedure. System-2 savings measured against instrumented baseline, unknown otherwise.
+8. **Release control:** upstream-first H-079 + H-081/H-082 + separate security/CI gates remain. Native packaged Electron evidence and three real dogfood scenarios required. Never force main merge; optional K-Tools/ECO/ATOM/Agora etc stay researched/triaged until core gates close.
+
+Canonical scope/owners [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md), phased implementation [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md). D-042 adds product acceptance, not a new runtime authority subsystem.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## D-040 — Creative Workstation documentation scope, not new runtime authority (2026-10-08)
 

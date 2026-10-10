@@ -1,5 +1,19 @@
 # CURRENT — Workstation Engineering Journal
 
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 — D-042 Dogfood-first audit and handoff (DOCS ONLY)
+
+**Observation:** independent source+code review of all seven `workstation/dogfood/*.md` notes + supplied 2026-10-09 audit, on remote `main@f21e803b`; no runtime implementation, CI rerun or local-installed HyperFrames inspection. The user reports functioning HyperFrames in their local Hermes Work; exact code/branch remains unverified remotely. Original dogfood notes remain unchanged.
+
+**Hypothesis:** Workstation's primary quality bottleneck is failure to prove real causal learning/reuse rather than missing more infrastructure. **Falsifiers:** a native E2E showing verified post-effect sample -> compiler candidate -> production verifier/replay -> automatic run-local next item or cross-run promotion -> safe deterministic route with observed savings; the opposite failures are no accepted sample, permanent SHADOW no mining, queue opportunity loss, weak DIRECT qualification and hidden Browser Hub child runs.
+
+**Code observations:** `compilability_monitor.py` SHADOW returns without mining, queue full/stop drops events, hot windows expire 900s and fixed 3-attempt budgets exhaust; `resolve_policy` trusts nonempty qualification string. Existing D-038 owner/readback checks mitigate unauthorized effect risk; **do not** weaken them. Native subagent BrowserTask and HyperFrames packaged work remain **not independently qualified**, not classified absent.
+
+**Decision:** adopt D-042 empirical dogfood release gate, IDs DF-001..026; D-039 implementation DF1–DF3 first, native browser child E2E and retro missed-opportunity evidence, audit installed HyperFrames and prove actual animated shared-edit exports, qualify all three real scenarios. Preserve mandatory H-079 baseline and H-081/H-082. **Outcome of this entry: documentation only.**
+
+**Full journal:** [dogfood-gap-audit-2026-10-09.md](dogfood-gap-audit-2026-10-09.md). **Owners:** [../DOGFOOD_PRODUCT_GATE_2026-10-09.md](../DOGFOOD_PRODUCT_GATE_2026-10-09.md) / [../DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](../DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
