@@ -3604,6 +3604,7 @@ export const frOverrides = {
     deliverNeedsHomeChannel: "définissez d'abord un canal d'accueil",
     modelLabel: 'Modèle',
     modelDefault: 'Par défaut (modèle global)',
+    modelPinCurrent: 'Épingler le modèle global actuel',
     customScheduleLabel: 'Planning personnalisé',
     customPlaceholder: '0 9 * * * ou jours ouvrés à 9h',
     customHint: 'Expression cron ou phrases comme « toutes les heures » ou « jours ouvrés à 9h ». ',

@@ -518,6 +518,7 @@ export const arCommandCenter = {
     failedRename: 'فشل إعادة التسمية'
   },
   cron: {
+    modelPinCurrent: 'تثبيت النموذج العام الحالي',
     close: 'إغلاق',
     search: 'بحث',
     loading: 'جار التحميل...',

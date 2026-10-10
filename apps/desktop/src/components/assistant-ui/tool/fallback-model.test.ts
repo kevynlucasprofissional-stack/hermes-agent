@@ -520,7 +520,7 @@ describe('clampForDisplay', () => {
 
     expect(clamped.length).toBeLessThan(oversized.length)
     expect(clamped.startsWith('x'.repeat(MAX_TOOL_RENDER_CHARS))).toBe(true)
-    expect(clamped).toContain(`${new Intl.NumberFormat().format(5_000)} more characters truncated`)
+    expect(clamped).toContain(`${new Intl.NumberFormat('en-US').format(5_000)} more characters truncated`)
   })
 })
 

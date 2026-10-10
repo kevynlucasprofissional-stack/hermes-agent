@@ -3596,6 +3596,7 @@ export const deOverrides = {
     deliverNeedsHomeChannel: 'zuerst einen Home-Channel festlegen',
     modelLabel: 'Modell',
     modelDefault: 'Standard (globales Modell)',
+    modelPinCurrent: 'Aktuelles globales Modell festlegen',
     customScheduleLabel: 'Benutzerdefinierter Zeitplan',
     customPlaceholder: '0 9 * * * oder weekdays at 9am',
     customHint: 'Cron-Ausdruck oder Ausdrücke wie „every hour“ oder „weekdays at 9am“.',

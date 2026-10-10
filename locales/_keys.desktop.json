@@ -1328,6 +1328,7 @@
     "cron.manage",
     "cron.modelDefault",
     "cron.modelLabel",
+    "cron.modelPinCurrent",
     "cron.monthlyOnDayAt",
     "cron.nameLabel",
     "cron.namePlaceholder",

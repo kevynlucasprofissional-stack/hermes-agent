@@ -2460,6 +2460,7 @@ export const ruOverrides = {
     deliverNeedsHomeChannel: 'сначала задайте домашний канал',
     modelLabel: 'Модель',
     modelDefault: 'По умолчанию (глобальная модель)',
+    modelPinCurrent: 'Закрепить текущую глобальную модель',
     customScheduleLabel: 'Своё расписание',
     customPlaceholder: '0 9 * * * или будни в 9:00',
     customHint: 'Cron-выражение или фразы вроде «каждый час» или «будни в 9:00».',

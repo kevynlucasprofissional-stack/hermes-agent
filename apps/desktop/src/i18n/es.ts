@@ -3589,6 +3589,7 @@ export const esOverrides = {
     deliverNeedsHomeChannel: 'configura primero un canal principal',
     modelLabel: 'Modelo',
     modelDefault: 'Predeterminado (modelo global)',
+    modelPinCurrent: 'Fijar el modelo global actual',
     customScheduleLabel: 'Programación personalizada',
     customPlaceholder: '0 9 * * * o días laborables a las 9',
     customHint: 'Expresión cron, o frases como "cada hora" o "días laborables a las 9".',
