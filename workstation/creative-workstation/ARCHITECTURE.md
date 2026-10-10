@@ -1,20 +1,10 @@
 # Creative Runtime — arquitetura candidata
 
-## D-041 — Arquitetura atual selecionada (2026-10-09; alvo, não runtime existente)
+<!-- creative-D043-overlay -->
+## Arquitetura corrente — D-043, 2026-10-10
+O projeto presente é **engine-neutral**: Creative Document versionado/IDs estáveis/rational time → mesmo registro de comandos UI/IA/headless com transações e Undo → Semantic Edit Plan sobre revisões → adaptadores independentes de produção/render → workspaces contextuais. Nenhum source schema, Studio ou motor é obrigatório; preservar HyperFrames existente como candidato e o código útil dos PRs #57–#61. As opções de Remotion/Penpot/Three.js e o manifest antigo abaixo são **históricos**, não prescrição arquitetural. Esta decisão **não é runtime implementado**. [Especificação completa](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) | [execução](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
 
-**Supersession:** os parágrafos abaixo de 2026-10-08 que especificam React/SVG→Remotion→Penpot/Three como primeira vertical são **históricos** para seleção/ordem. A arquitetura aprovada é **HyperFrames Studio self-hosted como superfície primária** no WebContentsView/BrowserTask existente, com serviço local controlado por ProcessRegistry e Creative Runtime existentes (PR #58); fontes HTML/CSS/JS/media editáveis; revisões/ETag, proveniência Hermes, PNG/MP4 via render verificável e FFmpeg sob os owners atuais. Agent ↔ operação tipada ↔ arquivo/projeto compartilhado; OpenReel/Diffusion apenas referências de padrões.
-
-```text
-Hermes Session/TaskRun/Policy → Creative Bridge tipada
-        |                             |
- BrowserTask/WebContentsView → HyperFrames Studio (loopback, scoped)
-        |                             |
-     UI humana ← ETag/conflict/file project → HyperFrames renderer + FFmpeg
-                                      |
-                            ArtifactStore/Journal + verifier → Experience Compiler
-```
-
-**Sem nova autoridade:** Studio/HTTP/renderer não controlam grants, execução arbitrária, browser privilegiado ou promoção; preservam-se Control Plane, ProcessRegistry, TaskCompiler, Browser, ArtifactStore e Journal. Separar processo headless de render da visualização humana, se necessário, com lifecycle/isolamento herdados. Portas loopback com sessão/token/origem/CSRF; proibir leitura/escrita fora do workspace e scripts não confiáveis em Electron privilegiado. HyperFrames root Apache-2.0, versão upstream deve ser pinada, dependências/licenças auditadas. Veja [D-041 — especificação completa](HYPERFRAMES_ADOPTION_2026-10-09.md).
+<!-- /creative-D043-overlay -->
 
 
 **Status: DESIGN PROPOSTO.** Não é uma descrição do que está em produção. Contratos devem ser reconciliados com o código real antes de implementar.

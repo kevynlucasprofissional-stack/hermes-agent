@@ -1,16 +1,16 @@
 # Source reuse matrix
 
-## 2026-10-09 — D-041 Creative reference matrix (HyperFrames-first)
-
-| Source (observed repository) | Role / disposition | License observation | Qualification |
+<!-- creative-D043-overlay -->
+## 2026-10-10 — D-043 Creative source status / no preselected engine
+| Referência | Código/contrato a investigar | Uso no CW | Evidência |
 | --- | --- | --- | --- |
-| [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | **ADOPT AS CANDIDATE PRIMARY STUDIO/RENDER ENGINE**, audit and pin exact SHA `6ae1af7470133db72de6d9bbceeaf80e85695c68` before code. `packages/studio` React 19 editor, `studio-server` Hono routes, `cli` preview/render; source ETags and history hooks | Apache-2.0 repository root; transitive deps, media, fonts, FFmpeg separate | **FACT at source / Hermes integration NV** |
-| [Augani/openreel-video](https://github.com/Augani/openreel-video) | **REFERENCE ONLY** for NLE trim/split/reorder, multi-track/audio, UX; gap-driven code review after P3 | MIT repository metadata observed; per-file verification before import | **REFERENCE / not integrated** |
-| [diffusionstudio/editor](https://github.com/diffusionstudio/editor) | **REFERENCE ONLY** for bidirectional code↔UI and agent edit interfaces; no wholesale import | MPL-2.0 repository metadata observed; per-file obligations before copying | **REFERENCE / not integrated** |
-| [remotion-dev/remotion](https://github.com/remotion-dev/remotion) | **PAUSED OPTIONAL ADAPTER**; preserve #61 TSX, no runtime/rendering claim | Source-available; license/use case review independently | **Source-only draft, not executed** |
-| [penpot/penpot](https://github.com/penpot/penpot), [mrdoob/three.js](https://github.com/mrdoob/three.js), [GraphiteEditor/Graphite](https://github.com/GraphiteEditor/Graphite) | **OPTIONAL SPECIALIST BACKLOG**, no competing default editor | Audit specific scope/package at adoption | **NOT P1 dependencies** |
+| [EffectCraft](https://github.com/storytold/effectcraft) | `crates/engine/src/commands/batch.rs`, `history.rs`, `docs/architecture.md`, Graph Editor | Command Registry, edição atômica, Undo/histórico, keyframes | referência; NÃO incorporada |
+| [OpenReel](https://github.com/Augani/openreel-video) | `packages/core/src/actions/action-executor.ts`, `packages/agent/src/{host,loop}.ts` | NLE, UI/AI shared actions e controle de propostas | referência; NÃO incorporada |
+| [HyperFrames](https://github.com/heygen-com/hyperframes) | `packages/core/src/runtime/adapters/{three,typegpu}.ts`, Studio e producer | Seekable freeform/possível backend | candidato, sem autoridade de projeto |
+| Remotion/Penpot/Three.js e outros | antigos estudos | adapters opcionais por métricas, licença e sandbox | pesquisa |
+**D-043:** nenhum é dono obrigatório do Creative Document. As prioridades por ferramenta nas seções anteriores são históricas; confirmar pins/licenças/transitivas e benchmark antes de importar/instalar. [Decisão atual](creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md).
 
-Selection is a **product architecture decision**, not an upstream code transplant, a sanctioned auto-install or a claim of interoperability. Prefer HyperFrames native files and thin Hermes project provenance, use existing BrowserTask/ProcessRegistry/TaskRun/ArtifactStore/Journal. Full contract, risks and checkpoints: [D-041](creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md). Earlier Creative reference section below is historical to the 2026-10-08 multi-editor exploration.
+<!-- /creative-D043-overlay -->
 
 
 <!-- creative-workstation-intake:2026-10-08 -->

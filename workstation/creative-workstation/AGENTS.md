@@ -1,8 +1,10 @@
 # Creative Workstation — orientações para agentes
 
-## Contexto vigente da iniciativa — D-041 (2026-10-09)
+<!-- creative-D043-overlay -->
+## Contrato D-043 vigente (2026-10-10)
+Leia a [arquitetura engine-neutral](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) e o [handoff CWN-00→09](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md) após os arquivos obrigatórios do Workstation. HyperFrames-first D-041/PR #62 está supersedida como escolha de motor, não como evidência; D-042/PR #63, H-079 e D-038/D-039 seguem. Não classificar drafts #57–#61 como merged/qualified. Não criar outro owner do Browser/TaskRun/artefatos ou priorizar UI tradicional sobre o documento compartilhado.
 
-O **ponto de entrada criativo atual** é [HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md), com a decisão/arquitetura em [HYPERFRAMES_ADOPTION_2026-10-09.md](HYPERFRAMES_ADOPTION_2026-10-09.md). HyperFrames Studio auto-hospedado é o editor-base do Hermes Workstation. A antiga sequência Remotion/Penpot/Three CW-01→07 foi substituída apenas para seleção e ordem de produto; **root AGENTS, workstation AGENTS, leituras canônicas e gate H-079 continuam obrigatórios**. Não chamar nenhum runtime de instalado, funcional ou qualificado sem prova. Desenvolvimento isolado segue a exceção registrada; sem merge automático.
+<!-- /creative-D043-overlay -->
 
 
 Este diretório é **especificação de iniciativa**, não um novo runtime. Aplicam-se `../../AGENTS.md`, `../AGENTS.md`, `../context/README.md` e as políticas de qualificação e journal canônicos.

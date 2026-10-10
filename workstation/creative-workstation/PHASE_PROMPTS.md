@@ -1,8 +1,10 @@
 # Prompts enxutos por fase — uso após o briefing
 
-## D-041: Nova sequência por estágio (2026-10-09; antiga sequência CW abaixo é histórica)
+<!-- creative-D043-overlay -->
+## Precedência 2026-10-10 — D-043
+**NÃO usar isoladamente os prompts CW-01..07 abaixo**: registram uma arquitetura de ferramenta e ordem antigas. O prompt vigente e autossuficiente está em [ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md). Executar CWN-00..09 em PRs pequenos e comprovados, respeitando gates; não parar após produzir um plano nem fazer merge automático.
 
-Para execução atual, use [o handoff completo](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md); **não** use os prompts antigos para criar Remotion/Penpot/Three como editores concorrentes. Estágios: **P0** inventário draft #57–#61 + recuperação local se acessível + H-079/CI + HyperFrames pin; **P1** Studio loopback/ProcessRegistry + WebContentsView nativo (M1a); **P2** projeto fonte editável, ETag e PNG/MP4 verificados; **P3** Hermes agent typed Bridge preservando humano e conflitos (M1b); **P4** NLE/design gaps com OpenReel/Diffusion como referências; **P5** 3D opcional; **P6** CI exato/release gates/Experience Compiler com verifier real. Tests/rollbacks: [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md). Leitura root/workstation/context e H-079 continuam obrigatórias; development exception não autoriza merge inseguro.
+<!-- /creative-D043-overlay -->
 
 
 **Todos os prompts pressupõem acesso ao repositório e obedecem `AGENTS.md`, `workstation/context/README.md`, H-079 e [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md).** Não use esses prompts para burlar os gates; as leituras mandatórias continuam mandatórias.
