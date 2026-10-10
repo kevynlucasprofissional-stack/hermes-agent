@@ -76,6 +76,14 @@ class CommandRegistry:
         self.register("keyframe.remove", self._handle_keyframe_remove)
         self.register("asset.import", self._handle_asset_import)
         self.register("asset.remove", self._handle_asset_remove)
+        self.register("clip.split", self._handle_clip_split)
+        self.register("clip.trim", self._handle_clip_trim)
+        self.register("clip.rippleDelete", self._handle_clip_ripple_delete)
+        self.register("clip.slip", self._handle_clip_slip)
+        self.register("clip.slide", self._handle_clip_slide)
+        self.register("clip.roll", self._handle_clip_roll)
+        self.register("clip.setSpeed", self._handle_clip_set_speed)
+        self.register("timeline.restoreTracks", self._handle_timeline_restore_tracks)
 
     # --- Handlers ---
 
@@ -422,6 +430,124 @@ class CommandRegistry:
                 "width": old_asset.width,
                 "height": old_asset.height,
             },
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _snapshot_tracks(self, comp: Composition) -> list[dict[str, Any]]:
+        from workstation.creative_document import track_to_dict
+        return [track_to_dict(t) for t in comp.tracks]
+
+    def _handle_timeline_restore_tracks(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_document import track_from_dict
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        current_tracks = self._snapshot_tracks(comp)
+        new_tracks = [track_from_dict(td) for td in cmd.params.get("tracks", [])]
+        comp.tracks = new_tracks
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": current_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_split(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import split_clip_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        split_time = CanonicalTime.from_seconds(Fraction(cmd.params["split_time"]))
+        split_clip_op(doc, comp.composition_id, cmd.params["clip_id"], split_time)
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_trim(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import trim_clip_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        n_start = CanonicalTime.from_seconds(Fraction(cmd.params["new_start"])) if "new_start" in cmd.params else None
+        n_end = CanonicalTime.from_seconds(Fraction(cmd.params["new_end"])) if "new_end" in cmd.params else None
+        ripple = bool(cmd.params.get("ripple", False))
+        trim_clip_op(doc, comp.composition_id, cmd.params["clip_id"], new_start=n_start, new_end=n_end, ripple=ripple)
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_ripple_delete(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import ripple_delete_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        ripple_delete_op(doc, comp.composition_id, cmd.params["clip_id"])
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_slip(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import slip_clip_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        delta = CanonicalTime.from_seconds(Fraction(cmd.params["delta_seconds"]))
+        slip_clip_op(doc, comp.composition_id, cmd.params["clip_id"], delta)
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_slide(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import slide_clip_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        delta = CanonicalTime.from_seconds(Fraction(cmd.params["delta_seconds"]))
+        slide_clip_op(doc, comp.composition_id, cmd.params["clip_id"], delta)
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_roll(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import roll_clip_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        new_split = CanonicalTime.from_seconds(Fraction(cmd.params["new_split_time"]))
+        roll_clip_op(doc, comp.composition_id, cmd.params["left_clip_id"], cmd.params["right_clip_id"], new_split)
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
+            actor=cmd.actor,
+            idempotency_key=f"inv_{cmd.idempotency_key}",
+        )
+        return CommandResult(success=True, inverse_command=inverse)
+
+    def _handle_clip_set_speed(self, doc: CreativeDocument, cmd: CreativeCommand) -> CommandResult:
+        from workstation.creative_timeline import set_clip_speed_op
+        comp = self._find_comp(doc, cmd.params.get("composition_id"))
+        old_tracks = self._snapshot_tracks(comp)
+        speed = float(cmd.params["speed"])
+        keep_dur = bool(cmd.params.get("keep_duration", False))
+        set_clip_speed_op(doc, comp.composition_id, cmd.params["clip_id"], speed=speed, keep_duration=keep_dur)
+        inverse = CreativeCommand(
+            command_id="timeline.restoreTracks",
+            params={"composition_id": comp.composition_id, "tracks": old_tracks},
             actor=cmd.actor,
             idempotency_key=f"inv_{cmd.idempotency_key}",
         )

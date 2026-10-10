@@ -180,6 +180,75 @@ def create_empty_project(
     )
 
 
+def track_to_dict(trk: Track) -> dict[str, Any]:
+    return {
+        "track_id": trk.track_id,
+        "name": trk.name,
+        "kind": trk.kind,
+        "z_index": trk.z_index,
+        "locked": trk.locked,
+        "muted": trk.muted,
+        "solo": trk.solo,
+        "clips": [
+            {
+                "clip_id": clip.clip_id,
+                "track_id": clip.track_id,
+                "asset_id": clip.asset_id,
+                "name": clip.name,
+                "timeline_range": {
+                    "start": str(clip.timeline_range.start.to_seconds()),
+                    "end": str(clip.timeline_range.end.to_seconds()),
+                },
+                "source_in": str(clip.source_in.to_seconds()),
+                "speed": clip.speed,
+                "reverse": clip.reverse,
+                "freeze": clip.freeze,
+                "linked_clip_ids": clip.linked_clip_ids,
+                "properties": clip.properties,
+            }
+            for clip in trk.clips
+        ],
+    }
+
+
+def track_from_dict(t_data: dict[str, Any]) -> Track:
+    track_id = _validate_id(t_data.get("track_id", ""), "track_id")
+    clips: list[Clip] = []
+    for cl_data in t_data.get("clips", []):
+        clip_id = _validate_id(cl_data.get("clip_id", ""), "clip_id")
+        tr_data = cl_data.get("timeline_range", {})
+        t_range = TimeRange(
+            CanonicalTime.from_seconds(Fraction(tr_data["start"])),
+            CanonicalTime.from_seconds(Fraction(tr_data["end"])),
+        )
+        source_in = CanonicalTime.from_seconds(Fraction(cl_data.get("source_in", "0")))
+        clips.append(
+            Clip(
+                clip_id=clip_id,
+                track_id=track_id,
+                asset_id=_validate_id(cl_data.get("asset_id", ""), "asset_id"),
+                name=str(cl_data.get("name", "")),
+                timeline_range=t_range,
+                source_in=source_in,
+                speed=float(cl_data.get("speed", 1.0)),
+                reverse=bool(cl_data.get("reverse", False)),
+                freeze=bool(cl_data.get("freeze", False)),
+                linked_clip_ids=list(cl_data.get("linked_clip_ids", [])),
+                properties=dict(cl_data.get("properties", {})),
+            )
+        )
+    return Track(
+        track_id=track_id,
+        name=str(t_data.get("name", "")),
+        kind=str(t_data.get("kind", "video")),
+        z_index=int(t_data.get("z_index", 0)),
+        locked=bool(t_data.get("locked", False)),
+        muted=bool(t_data.get("muted", False)),
+        solo=bool(t_data.get("solo", False)),
+        clips=clips,
+    )
+
+
 def document_to_dict(doc: CreativeDocument) -> dict[str, Any]:
     """Serialize CreativeDocument to a pure JSON-serializable dictionary."""
     return {
@@ -212,37 +281,7 @@ def document_to_dict(doc: CreativeDocument) -> dict[str, Any]:
                 "duration": str(comp.duration.to_seconds()),
                 "sample_rate": comp.sample_rate,
                 "background_color": comp.background_color,
-                "tracks": [
-                    {
-                        "track_id": trk.track_id,
-                        "name": trk.name,
-                        "kind": trk.kind,
-                        "z_index": trk.z_index,
-                        "locked": trk.locked,
-                        "muted": trk.muted,
-                        "solo": trk.solo,
-                        "clips": [
-                            {
-                                "clip_id": clip.clip_id,
-                                "track_id": clip.track_id,
-                                "asset_id": clip.asset_id,
-                                "name": clip.name,
-                                "timeline_range": {
-                                    "start": str(clip.timeline_range.start.to_seconds()),
-                                    "end": str(clip.timeline_range.end.to_seconds()),
-                                },
-                                "source_in": str(clip.source_in.to_seconds()),
-                                "speed": clip.speed,
-                                "reverse": clip.reverse,
-                                "freeze": clip.freeze,
-                                "linked_clip_ids": clip.linked_clip_ids,
-                                "properties": clip.properties,
-                            }
-                            for clip in trk.clips
-                        ],
-                    }
-                    for trk in comp.tracks
-                ],
+                "tracks": [track_to_dict(trk) for trk in comp.tracks],
                 "layers": [
                     {
                         "layer_id": layer.layer_id,
@@ -337,45 +376,7 @@ def load_document_from_dict(data: dict[str, Any]) -> CreativeDocument:
         duration = CanonicalTime.from_seconds(Fraction(dur_str))
 
         # Tracks & Clips
-        tracks: list[Track] = []
-        for t_data in c_data.get("tracks", []):
-            track_id = _validate_id(t_data.get("track_id", ""), "track_id")
-            clips: list[Clip] = []
-            for cl_data in t_data.get("clips", []):
-                clip_id = _validate_id(cl_data.get("clip_id", ""), "clip_id")
-                tr_data = cl_data.get("timeline_range", {})
-                t_range = TimeRange(
-                    CanonicalTime.from_seconds(Fraction(tr_data["start"])),
-                    CanonicalTime.from_seconds(Fraction(tr_data["end"])),
-                )
-                source_in = CanonicalTime.from_seconds(Fraction(cl_data.get("source_in", "0")))
-                clips.append(
-                    Clip(
-                        clip_id=clip_id,
-                        track_id=track_id,
-                        asset_id=_validate_id(cl_data.get("asset_id", ""), "asset_id"),
-                        name=str(cl_data.get("name", "")),
-                        timeline_range=t_range,
-                        source_in=source_in,
-                        speed=float(cl_data.get("speed", 1.0)),
-                        reverse=bool(cl_data.get("reverse", False)),
-                        freeze=bool(cl_data.get("freeze", False)),
-                        linked_clip_ids=list(cl_data.get("linked_clip_ids", [])),
-                        properties=dict(cl_data.get("properties", {})),
-                    )
-                )
-            tracks.append(
-                Track(
-                    track_id=track_id,
-                    name=str(t_data.get("name", "")),
-                    kind=str(t_data.get("kind", "video")),
-                    z_index=int(t_data.get("z_index", 0)),
-                    locked=bool(t_data.get("locked", False)),
-                    muted=bool(t_data.get("muted", False)),
-                    solo=bool(t_data.get("solo", False)),
-                    clips=clips,
-                )
-            )
+        tracks = [track_from_dict(t_data) for t_data in c_data.get("tracks", [])]
 
         # Layers & Keyframes
         layers: list[Layer] = []
