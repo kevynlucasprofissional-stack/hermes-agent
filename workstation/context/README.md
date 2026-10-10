@@ -1,5 +1,12 @@
 # Hermes Workstation — Coding-Agent Context
 
+<!-- creative-D043-overlay -->
+### D-043 Creative Workstation — entrada atual (2026-10-10)
+Após as regras upstream/segurança obrigatórias desta página, qualquer agente CW deve seguir [arquitetura engine-neutral](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) e [implementer handoff CWN-00→09](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md). O draft D-041 HyperFrames-first (PR #62) está supersedido como regra de motor; D-042 dogfood/PR #63 e H-079/D-038/D-039 continuam. Ordem CW-01..CW-07 antiga é histórico para recuperação e não deve conduzir novas mudanças.
+
+<!-- /creative-D043-overlay -->
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ### Planned Creative Workstation context — read on demand
 

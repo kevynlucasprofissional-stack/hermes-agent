@@ -1,5 +1,12 @@
 # Prompts enxutos por fase — uso após o briefing
 
+<!-- creative-D043-overlay -->
+## Precedência 2026-10-10 — D-043
+**NÃO usar isoladamente os prompts CW-01..07 abaixo**: registram uma arquitetura de ferramenta e ordem antigas. O prompt vigente e autossuficiente está em [ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md). Executar CWN-00..09 em PRs pequenos e comprovados, respeitando gates; não parar após produzir um plano nem fazer merge automático.
+
+<!-- /creative-D043-overlay -->
+
+
 **Todos os prompts pressupõem acesso ao repositório e obedecem `AGENTS.md`, `workstation/context/README.md`, H-079 e [VERIFICATION_MATRIX.md](VERIFICATION_MATRIX.md).** Não use esses prompts para burlar os gates; as leituras mandatórias continuam mandatórias.
 
 ## CW-01 — Preflight e auditoria (primeira mensagem recomendada)

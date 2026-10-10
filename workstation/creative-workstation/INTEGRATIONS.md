@@ -1,5 +1,12 @@
 # Integrações e skills — catálogo de descoberta
 
+<!-- creative-D043-overlay -->
+## Nova política de seleção D-043 (2026-10-10)
+As prioridades por engine da matriz antiga abaixo não são mandatos de instalação ou formato. **HyperFrames, OpenReel, EffectCraft, Penpot, Remotion e Three.js competem como candidatos/implementações específicas**, nunca como soberanos do documento. Primeiro validar Creative Document+Command Bus+tempo e cortes; engines são selecionadas via capacidade, medição de paridade, custo, licenças e sandbox, com referências editáveis preservadas. [Autoridade](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 **Data-base da pesquisa:** 2026-10-08. **Importante:** nomes e links são candidatos; existência de integração pública não prova funcionamento no Hermes fork. Fixar commits e auditar código/licença antes de instalação. O registro oficial de referências e decisão de adoção é [SOURCE_MATRIX.md](../SOURCE_MATRIX.md).
 
 ## Matriz de ferramentas

@@ -1,5 +1,18 @@
 # Source reuse matrix
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — D-043 Creative source status / no preselected engine
+| Referência | Código/contrato a investigar | Uso no CW | Evidência |
+| --- | --- | --- | --- |
+| [EffectCraft](https://github.com/storytold/effectcraft) | `crates/engine/src/commands/batch.rs`, `history.rs`, `docs/architecture.md`, Graph Editor | Command Registry, edição atômica, Undo/histórico, keyframes | referência; NÃO incorporada |
+| [OpenReel](https://github.com/Augani/openreel-video) | `packages/core/src/actions/action-executor.ts`, `packages/agent/src/{host,loop}.ts` | NLE, UI/AI shared actions e controle de propostas | referência; NÃO incorporada |
+| [HyperFrames](https://github.com/heygen-com/hyperframes) | `packages/core/src/runtime/adapters/{three,typegpu}.ts`, Studio e producer | Seekable freeform/possível backend | candidato, sem autoridade de projeto |
+| Remotion/Penpot/Three.js e outros | antigos estudos | adapters opcionais por métricas, licença e sandbox | pesquisa |
+**D-043:** nenhum é dono obrigatório do Creative Document. As prioridades por ferramenta nas seções anteriores são históricas; confirmar pins/licenças/transitivas e benchmark antes de importar/instalar. [Decisão atual](creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation external-reference intake — 2026-10-08
 

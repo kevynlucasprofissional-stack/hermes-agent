@@ -1,5 +1,12 @@
 # CW — Execution Brief (entrada compacta para coding agents)
 
+<!-- creative-D043-overlay -->
+## Entrada atual (2026-10-10) — D-043 CWN-00→CWN-09
+**A ordem CW-01..CW-07/R1..R5 neste briefing antigo está SUPERSEDIDA apenas quanto à estratégia do produto.** Execução atual: [ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md), com documento+tempo → Command Bus → NLE/linked sync → Semantic Edit Plan → freeform → render adaptável → UX/Graph Editor → reuso verificado. H-079, política D-038/D-039, dogfood D-042 e gates exato HEAD preservados. HyperFrames não é escolha obrigatória.
+
+<!-- /creative-D043-overlay -->
+
+
 **Estado em 2026-10-08:** documentos, não runtime. **Prioridade efetiva:** `workstation/ROADMAP.md` e gates atuais; CW-P0 não substitui H-079/H-080/KI-024. **Referência desta iniciativa:** [README](README.md) → [plano](IMPLEMENTATION_PLAN.md) → [matriz de aprovação](VERIFICATION_MATRIX.md).
 
 ## Contrato em 12 linhas
