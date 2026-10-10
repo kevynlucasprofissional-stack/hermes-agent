@@ -13,9 +13,9 @@ See [Stage A evidence](context/engineering-journal/operational-speed-stage-a-202
 
 ## Historical snapshot — 2026-10-09
 
-**Date:** 2026-10-09  
-**Branch:** `codex/dogfood-causal-closure-20261009`  
-**Adopted Upstream Pin:** `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` (`HW-032`/`HW-033`)  
+**Date:** 2026-10-09\
+**Branch:** `codex/dogfood-causal-closure-20261009`\
+**Adopted Upstream Pin:** `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` (`HW-032`/`HW-033`)\
 **Status:** QUALIFIED / IMPLEMENTATION COMPLETE (DF0–DF7)
 
 ---
