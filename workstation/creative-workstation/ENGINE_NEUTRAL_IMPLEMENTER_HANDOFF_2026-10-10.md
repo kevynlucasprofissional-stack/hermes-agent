@@ -1,5 +1,8 @@
 # EXECUTE — Hermes CW engine-neutral human+AI workstation (D-043, 2026-10-10)
 
+**Where to read it now:** This specification is in draft [PR #64](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/64), branch `docs/cw-engine-neutral-human-ai-20261010`, NOT merged in `main` at publication. First `git fetch origin docs/cw-engine-neutral-human-ai-20261010` (or fetch PR #64) and read the files from that ref without overwriting local changes. Select a separate, admitted implementation baseline/branch under H-079; do not assume the draft branch is production-qualified. The user may paste this handoff independently; verify remote status before coding.
+
+
 **Authority:** `workstation/context/DECISIONS.md` D-043, `workstation/ROADMAP.md`, [architecture](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md), `workstation/creative-workstation/VERIFICATION_MATRIX.md`. **Status: implementation request only; no runtime is hereby qualified.**
 
 ## Mission — do not redesign it
