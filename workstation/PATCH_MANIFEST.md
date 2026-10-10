@@ -1,5 +1,20 @@
 # Hermes Workstation foundation patch manifest
 
+## Operational speed Stage A (2026-10-10) — candidate, not qualified
+
+Immutable upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`.
+Integration changes are separate from the target speed feature:
+- Agent/tool lifecycle and browser seams semantically composed with upstream owners.
+- Desktop upstream CJS configuration/identity retains native Browser and Hermes Work branding.
+- Existing prepared-packaging owner now supplies and authenticates NSIS/WiX inputs;
+  missing or changed inputs are rejected without child downloads.
+- Shared huggingface-hub pin reconciled to 1.33.0; dev dependencies use the upstream group.
+- Named-board test fixtures explicitly create boards; deleted-board resurrection stays blocked.
+- Installer version validation follows upstream Python 3.14 and preserves unsupported venvs.
+- Workstation CI environment corrections remain independently inspectable.
+Evidence and outstanding native/exact-head gates: [Stage A journal](context/engineering-journal/operational-speed-stage-a-2026-10-10.md).
+
+
 ## HW-033 — Laya direct System-1 and resumable authority supersession patch lane (2026-10-02)
 
 Implemented on isolated branch `workstation/laya-direct-system1`:

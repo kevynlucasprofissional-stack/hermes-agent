@@ -6,6 +6,14 @@
   "rule": "Classify semantic concerns, not whole files. Preserve causal properties in the narrowest modern upstream owner.",
   "invariant": "UPSTREAM STRUCTURE + WORKSTATION SEMANTICS + MINIMUM NECESSARY FIRST-PARTY SEAMS + NO CAPABILITY REGRESSION FOR PURITY",
   "research_baselines": {
+    "stage_a_2026_10_10": {
+      "downstream_base": "f21e803b3525b70ee6be2305e579c1cc1f930e74",
+      "upstream_pin": "66605471e9f0b0832abbefaf625ce08e948ca540",
+      "common_ancestor": "71a2fe399bbd7a219c71f9d9fca2b313b01f2057",
+      "status": "integration candidate; exact-head CI and native qualification pending",
+      "seam_audit": "14 classified; 0 unclassified; 0 growth; not a parity attestation",
+      "reconciliation": "Existing generic lifecycle contracts retained; native Browser ownership preserved; unused lazy Laya installer table retired with upstream. No new core-to-Workstation seam."
+    },
     "common_ancestor": "057dcdf236f8a6a26721c10fcc6ccb72726e272a",
     "downstream_audit_snapshot": "92a3acb51e87af85a9f380ee04d2cf47d7900ca5",
     "downstream_main_latest_observed": "9f4ce89e56e204b3c8119d4b937be4462d0dfeaf",

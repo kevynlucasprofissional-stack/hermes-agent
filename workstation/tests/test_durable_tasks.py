@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from hermes_cli.kanban_db_boards import create_board
 
 from workstation.durable_tasks import (
     AtomicPersistenceViolation,
@@ -12,6 +13,7 @@ from workstation.durable_tasks import (
 @pytest.fixture
 def store(tmp_path):
     board_name = f"test_board_{tmp_path.name}"
+    create_board(board_name)
     return DurableTaskStore(board=board_name)
 
 

@@ -54,7 +54,7 @@ function Resolve-Python {
   }
 
   if (Get-Command py -ErrorAction SilentlyContinue) {
-    foreach ($selector in @("-3.13", "-3.12", "-3.11")) {
+    foreach ($selector in @("-3.14")) {
       $candidate = Test-PythonCandidate -Command "py" -Prefix @($selector)
       if ($candidate) { return $candidate }
     }
@@ -65,7 +65,7 @@ function Resolve-Python {
     if ($candidate) { return $candidate }
   }
 
-  throw "Python was not found. Hermes requires Python >=3.11,<3.14. Install Python 3.13, 3.12, or 3.11 and retry."
+  throw "Python was not found. Hermes requires Python >=3.14,<3.15. Install Python 3.14 and retry."
 }
 
 $Python = Resolve-Python
@@ -84,16 +84,16 @@ function Invoke-HermesPython {
 
 function Ensure-WorkstationVenv {
   if (Test-Path $VenvPython) {
-    $probe = & $VenvPython -c "import sys; assert (3, 11) <= sys.version_info[:2] < (3, 14); print('HERMES_VENV_OK')" 2>$null | Select-Object -Last 1
+    $probe = & $VenvPython -c "import sys; print('HERMES_VENV_OK' if (3, 14) <= sys.version_info[:2] < (3, 15) else 'HERMES_VENV_UNSUPPORTED')" | Select-Object -Last 1
     if ($LASTEXITCODE -ne 0 -or $probe -ne "HERMES_VENV_OK") {
-      throw "Existing Workstation venv is invalid or unsupported: $VenvRoot. Remove .venv and rerun install.cmd."
+      throw "Existing Workstation venv is invalid or unsupported: $VenvRoot. Preserve it and prepare a Python 3.14 environment in a separate checkout."
     }
     Write-Host "Using existing isolated Python environment: $VenvRoot" -ForegroundColor Green
     return
   }
 
-  if ($Python.Version -lt [version]"3.11.0" -or $Python.Version -ge [version]"3.14.0") {
-    throw "Hermes dependency installation requires Python >=3.11,<3.14, but selected Python is $($Python.Version)."
+  if ($Python.Version -lt [version]"3.14.0" -or $Python.Version -ge [version]"3.15.0") {
+    throw "Hermes dependency installation requires Python >=3.14,<3.15, but selected Python is $($Python.Version)."
   }
 
   Write-Host "Creating isolated Python environment: $VenvRoot" -ForegroundColor Cyan

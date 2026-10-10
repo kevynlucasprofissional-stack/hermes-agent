@@ -1,5 +1,10 @@
 # Workstation Known Issues
 
+
+## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
+
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`. Integration and CI repairs precede target P0–P3. Desktop typecheck/build and focused contracts pass; exact-head CI, native qualification and audit-branch reconciliation remain pending. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+
 ## KI-027 — Rigid online learning limits discard valuable same-run opportunities [OPEN — OPPORTUNITY/PRODUCT]
 
 **Observed design gap (2026-10-08):** At `938d9b2beeaf`, SHADOW mode suppresses mining and validation entirely. DIRECT is unlocked by any nonempty `direct_qualification_ref` (not a verified attestation). `OnlineCompilabilityMonitor` discards queued events on saturation/stop and evicts 900s-idle hot windows; attempt budgets (3 compilation attempts per segment; 3 validations per candidate), 4 offers and 64 windows do not re-open based on genuine new evidence or rehydrate persistent opportunity state. The existing 100-item checkpoint limit is a fairness budget but does not independently ensure next-checkpoint continuation. Long-running TaskRuns are not intentionally cancelled by these learning limits; loss is missed or postponed compilation/reuse.

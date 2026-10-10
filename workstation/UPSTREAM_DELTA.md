@@ -1,5 +1,20 @@
 # Hermes Workstation upstream delta
 
+## Operational speed Stage A — upstream reconciliation (2026-10-10)
+
+Candidate only, **NOT QUALIFIED**. True merge of upstream pin
+`66605471e9f0b0832abbefaf625ce08e948ca540` into downstream base
+`f21e803b3525b70ee6be2305e579c1cc1f930e74`; target P0–P3 implementation has not begun.
+SEMANTIC_PORT preserves batch admission, scoped execution, mutation checkpoints,
+BrowserTask/native IPC and preview ownership using upstream structural owners.
+ADOPT_UPSTREAM retires the unused lazy Laya installer table, with approved local
+Laya dependency/provenance preserved. Desktop product/configuration moves to
+upstream CJS owners while retaining Hermes Work display and stable installation
+identity. NSIS/MSI suppliers use the existing prepared-input owner and fail closed
+on missing or modified input; the build child cannot acquire a replacement.
+See [Stage A evidence](context/engineering-journal/operational-speed-stage-a-2026-10-10.md).
+
+
 ## HW-033 — Laya direct System-1 integration and dual upstream governance (2026-10-02)
 
 **Status:** **IMPLEMENTATION PARTIAL / POST-IMPLEMENTATION AUDIT OPEN / NOT QUALIFIED** on branch `workstation/laya-direct-system1`.

@@ -1,5 +1,10 @@
 # Workstation Testing
 
+
+## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
+
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`. Integration and CI repairs precede target P0–P3. Desktop typecheck/build and focused contracts pass; exact-head CI, native qualification and audit-branch reconciliation remain pending. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+
 ## 2026-10-08 H-081 clean-profile and timeout qualification
 
 The H-081 complete suite includes real Anthropic SDK construction. Its clean CI install

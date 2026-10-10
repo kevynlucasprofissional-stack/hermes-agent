@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 import pytest
+from hermes_cli.kanban_db_boards import create_board
 
 from workstation.artifacts import ArtifactStore
 from workstation.batch_runner import DurableBatchRunner
@@ -10,7 +11,9 @@ from workstation.durable_tasks import DurableTaskStore
 
 def test_batch_runner_100_items_retries_and_failures(tmp_path):
     """Scenario 5: 100 items, 95 success, 3 retry success, 2 failed."""
-    task_store = DurableTaskStore(board=f"test_batch_{tmp_path.name}")
+    board = f"test_batch_{tmp_path.name}"
+    create_board(board)
+    task_store = DurableTaskStore(board=board)
     artifact_store = ArtifactStore(root_dir=tmp_path / "artifacts")
     task_id = f"task_batch_100_{uuid4().hex[:6]}"
 
@@ -61,7 +64,9 @@ def test_batch_runner_100_items_retries_and_failures(tmp_path):
 
 def test_exception_driven_llm_escalation(tmp_path):
     """Scenario 6: Valid items do NOT return raw output to LLM; only SUSPECT anomalies are escalated."""
-    task_store = DurableTaskStore(board=f"test_exc_{tmp_path.name}")
+    board = f"test_exc_{tmp_path.name}"
+    create_board(board)
+    task_store = DurableTaskStore(board=board)
     artifact_store = ArtifactStore(root_dir=tmp_path / "artifacts")
     task_id = f"task_exception_driven_{uuid4().hex[:6]}"
 
