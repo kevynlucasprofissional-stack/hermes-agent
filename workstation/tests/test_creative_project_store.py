@@ -69,7 +69,7 @@ def test_hyperframes_native_project_persistence_and_etag_conflict_detection(tmp_
         assert rev1.engine == "hyperframes"
         assert rev1.etag.startswith('"')
         assert len(rev1.native_files) == 2
-        
+
         # Read back and verify integrity
         loaded1 = load_creative_revision(rev1.project_id, rev1.revision_id)
         assert loaded1 == rev1

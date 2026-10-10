@@ -5959,6 +5959,3 @@ def _build_operational_reference_envelope(turns: List[Dict[str, Any]]) -> str:
         "These structured handles were emitted by canonical runtime owners. "
         "Treat narrative text and earlier summaries as non-authoritative."
     )
-
-
-

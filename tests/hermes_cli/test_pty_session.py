@@ -734,5 +734,3 @@ async def test_reap_keeps_live_attached_session():
     assert "tok" in reg._sessions
     assert b.closed is False
     await reg.close_all()
-
-

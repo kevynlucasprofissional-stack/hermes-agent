@@ -105,7 +105,7 @@ def _file_sha256(path: Path) -> str:
 
 def discover_hyperframes(config: WorkstationConfig, *, search_paths: Tuple[Path, ...] = ()) -> Optional[HyperFramesInstallation]:
     """Locate Node.js and a valid pinned HyperFrames CLI installation.
-    
+
     Checks environment override, provided search paths, and standard locations.
     Never downloads or modifies binaries.
     """
@@ -173,7 +173,7 @@ def allocate_studio_port(
     max_port: int = DEFAULT_STUDIO_MAX_PORT,
 ) -> int:
     """Find and verify an available loopback TCP port.
-    
+
     Guarantees binding to 127.0.0.1 only, avoiding LAN exposure.
     """
     if host != "127.0.0.1":
@@ -220,7 +220,7 @@ def start_studio_service(
     timeout: float = STUDIO_READY_TIMEOUT_SECONDS,
 ) -> StudioInstance:
     """Start and supervise a self-hosted HyperFrames Studio preview process.
-    
+
     Enforces TaskRun ownership, policy evaluation, command guards,
     clean environment sanitization, and readiness verification.
     """
@@ -416,7 +416,7 @@ def probe_studio_health(instance: StudioInstance, *, timeout: float = STUDIO_HEA
     """Perform readback probe of running HyperFrames Studio instance."""
     config_url = f"http://{instance.host}:{instance.port}/__hyperframes_config"
     env_url = f"http://{instance.host}:{instance.port}/api/environment/ffmpeg"
-    
+
     probe_result: Dict[str, Any] = {
         "process_id": instance.process_id,
         "port": instance.port,
@@ -467,7 +467,7 @@ def stop_studio_service(
         raise PermissionError("Creative Studio ownership mismatch on stop")
 
     kill_result = registry.kill_process(process_id, source="creative.studio_stop")
-    
+
     ExecutionJournal(task_id=scope.task_id, session_id=scope.session_key).record(
         ExecutionEventKind.LIFECYCLE,
         "HyperFrames Studio service stopped",
@@ -491,7 +491,7 @@ def restart_studio_service(
         stop_studio_service(scope, existing_instance.process_id, registry=registry)
     except Exception:
         pass
-    
+
     # Brief delay for TCP port release
     time.sleep(0.5)
 

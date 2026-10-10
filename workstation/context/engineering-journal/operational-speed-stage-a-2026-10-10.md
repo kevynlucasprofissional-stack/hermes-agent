@@ -67,14 +67,25 @@ descriptor rejection without repair/download. Native installer parity remains op
 
 The audit branch `8e64b38a81adcf8a01dc2ed05aa3eb078adc9f9f` contains 23 commits
 beyond the main used for Stage A, including existing HyperFrames and learning
-runtime. They must be reconciled as a separate existing-owner migration slice
-before target coding; no creative capability may be silently lost by using main.
+runtime. Reconciled through true merge `88a6166`, with both sections retained in
+five documentary conflicts; runtime composed automatically without conflicts.
 The RED attestation reproduction remains preserved on the separate evidence branch.
 
 ## Remaining gates
 
-Exact-head Actions, clean-machine installer, native Electron product proof and
-audit-branch reconciliation remain pending. No P0–P3 target runtime implementation
+Local native smoke passed: four real Electron/Chromium BrowserTasks aligned across
+controller and IPC (7.0s test, 1.0m including bootstrap). The inference provider and
+pages are local fixtures. This build preceded the audit-branch merge and is not
+final-candidate E1 or product-economics evidence. Audit-branch Desktop typecheck passes.
+
+Diff hygiene: remove inherited whitespace findings in code and ordinary docs;
+preserve original dogfood notes and captured evidence byte-for-byte. The Windows
+formatting gate explicitly excludes only those historical records, not runtime.
+The intentional conflict-marker fixture constructs identical marker bytes at
+runtime so diff hygiene does not misclassify its Python source as an unresolved merge.
+
+Exact-head Actions, clean-machine installer and final native product proof remain
+pending. No P0–P3 target runtime implementation
 is authorized by a local focused GREEN alone. No external Trello write was made.
 
 No product latency, token, model-call or monetary savings have been measured.

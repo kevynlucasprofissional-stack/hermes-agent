@@ -18,5 +18,3 @@ capabilities:
   requires_env:
     - HYDRADB_API_KEY
     - HYDRADB_DATABASE
-
-

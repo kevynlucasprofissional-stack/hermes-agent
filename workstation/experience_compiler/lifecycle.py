@@ -656,4 +656,3 @@ def create_local_canary_validation_provider(
         replay_runner_factory=replay_runner_factory,
         safe_env_factory=safe_env_factory,
     )
-

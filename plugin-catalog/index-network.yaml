@@ -31,4 +31,3 @@ capabilities:
   provides_middleware: []
   requires_env:
     - INDEX_SESSION_TOKEN
-

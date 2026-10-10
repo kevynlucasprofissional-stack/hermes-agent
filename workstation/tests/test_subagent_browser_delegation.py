@@ -139,4 +139,3 @@ def test_delegate_tool_stamps_canonical_child_task_id_and_lineage(monkeypatch):
 
     mgr = BrowserControlLeaseManager.get_instance()
     assert mgr.get_parent_task(child._canonical_work_task_id) == "task_parent_root"
-

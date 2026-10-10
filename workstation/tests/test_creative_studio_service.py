@@ -111,7 +111,7 @@ def test_discovery_respects_configuration_and_detects_package(tmp_path):
     assert discover_hyperframes(disabled_config) is None
 
     enabled_config = WorkstationConfig({"creative": {"enabled": True, "hyperframes_enabled": True}})
-    
+
     # Fake package in search paths
     fake_pkg = tmp_path / "node_modules" / "hyperframes"
     fake_pkg.mkdir(parents=True)

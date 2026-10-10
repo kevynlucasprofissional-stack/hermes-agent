@@ -1,4 +1,18 @@
 # Hermes Workstation — DF-BASELINE (DF0–DF7 Dogfood Causal Closure Matrix)
+
+## Current evidence — operational speed, 2026-10-10
+
+**NOT QUALIFIED.** The historical status below is not evidence for this candidate.
+Stage A pins upstream `66605471e9f0b0832abbefaf625ce08e948ca540` and preserves the
+audited branch through a separate merge. Exact-head CI and native E1/E2/E3 remain
+open. Two real RED contracts on evidence commit `d6ba10c7` demonstrate that a
+forged unkeyed digest can admit DIRECT; the target fix has not begun while H-079
+is pending. Product latency, real model calls, tokens and monetary cost remain
+UNKNOWN. No external write or measured speedup is claimed.
+See [Stage A evidence](context/engineering-journal/operational-speed-stage-a-2026-10-10.md).
+
+## Historical snapshot — 2026-10-09
+
 **Date:** 2026-10-09  
 **Branch:** `codex/dogfood-causal-closure-20261009`  
 **Adopted Upstream Pin:** `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` (`HW-032`/`HW-033`)  

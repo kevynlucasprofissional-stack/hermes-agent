@@ -49,7 +49,7 @@ def render_hyperframes_video(
     registry: ProcessRegistry | None = None,
 ) -> dict:
     """Render a seekable motion MP4 from a HyperFrames project revision.
-    
+
     Supervised by canonical TaskRun ownership, ProcessRegistry, ArtifactStore,
     and independently verified using ffprobe and decoded preview extraction.
     """
@@ -173,7 +173,7 @@ def render_hyperframes_video(
             registry=registry,
         )
         probe = json.loads(probe_result["output"])
-        
+
         # Read stream facts
         video_stream = next((s for s in probe.get("streams", []) if s.get("codec_type") == "video"), None)
         if not video_stream:

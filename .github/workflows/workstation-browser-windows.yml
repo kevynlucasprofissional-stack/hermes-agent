@@ -259,7 +259,9 @@ jobs:
             git fetch --no-tags origin $base
             if ($LASTEXITCODE -ne 0) { throw "Unable to fetch exact candidate base $base." }
           }
-          git diff --check "$base...HEAD"
+          # Historical dogfood notes and captured evidence are immutable source
+          # records. Check all product/code paths without reformatting originals.
+          git diff --check "$base...HEAD" -- . ":(exclude)workstation/dogfood/**" ":(exclude)workstation/creative-workstation/evidence/**"
       - name: Desktop typecheck
         run: npm run typecheck --workspace apps/desktop
       - name: BrowserSessionState ESLint

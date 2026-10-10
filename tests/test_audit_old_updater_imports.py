@@ -216,13 +216,13 @@ def test_malformed_historical_entrypoint_fails_closed(audit, malformed):
 
 def test_committed_merge_conflict_audits_both_arms_and_records_recovery(audit):
     root = audit.REPO_ROOT
-    put(root, "old.py", """<<<<<<< HEAD
+    put(root, "old.py", f"""<<<<<<< HEAD
 def cmd_update():
     from hermes_constants import ours
-=======
+{'=' * 7}
 def cmd_update():
     from hermes_constants import theirs
->>>>>>> incoming
+{'>' * 7} incoming
 """)
     commit(root, "accidentally committed conflict")
     put(root, "old.py", "def cmd_update():\n    pass\n")
