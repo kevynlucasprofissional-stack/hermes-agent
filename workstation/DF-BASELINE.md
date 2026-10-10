@@ -3,6 +3,10 @@
 ## Current evidence — operational speed, 2026-10-10
 
 **NOT QUALIFIED.** The historical status below is not evidence for this candidate.
+Local code candidate `749e2f9`: Workstation 970 passed / 4 skipped; Desktop
+typecheck/build passed; three UI failures repaired with 87 focused passes.
+Remaining Desktop failures and GitHub Actions dispatch HTTP 422 prevent H-079
+closure. Detailed results are in the Stage A engineering journal.
 Stage A pins upstream `66605471e9f0b0832abbefaf625ce08e948ca540` and preserves the
 audited branch through a separate merge. Exact-head CI and native E1/E2/E3 remain
 open. Two real RED contracts on evidence commit `d6ba10c7` demonstrate that a

@@ -89,3 +89,61 @@ pending. No P0–P3 target runtime implementation
 is authorized by a local focused GREEN alone. No external Trello write was made.
 
 No product latency, token, model-call or monetary savings have been measured.
+
+## Local closure attempt at code candidate 749e2f9
+
+Code SHA: `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`. Draft PR #66:
+https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/66
+
+- Official Workstation runner: **970 passed, 0 failed, 4 skipped**, 122 files,
+  565.5s with four workers. This is local regression evidence, not product latency.
+- Full Electron contracts: **3556 passed, 34 failed, 138 skipped**, 308.81s.
+  Rechecks with the prepared Python 3.14 and Windows PowerShell module path
+  distinguish environment problems from incomplete upstream fixture composition.
+  Repaired fixtures preserve production publication, artifact and path checks.
+  Native SDK side-by-side packaging proof passes after copying required modules;
+  channel manifest recorder contracts pass using their explicit version sidecar.
+- Full UI: **10753 passed, 3 failed, 1 skipped**, 938.95s. RED failures were six
+  missing translations and two host-locale expectations inconsistent with the
+  established downstream en-US transcript format. GREEN: all 87 tests in the
+  three affected files pass (6.82s); the full UI suite was not rerun after repair.
+- Desktop typecheck and production build pass at this code candidate. Build
+  stamp records the clean code SHA; renderer build 9.94s is a build duration,
+  not an application performance measurement.
+- Integrated native smoke at clean code `749e2f9`: **1 passed**, four real
+  Electron/Chromium BrowserTasks aligned across controller and IPC, 7.0s test /
+  31.0s including bootstrap. Local pages and mock inference provider; this
+  supersedes the pre-audit smoke for this narrow contract, not full product E1.
+- Desktop failures still open: checkout source handoff times out at 30s after
+  fixing reentrant fixture transport; repair-lock race times out; update-marker
+  lock cleanup reports EBUSY; Windows remote probe rejects its configured path;
+  native PTY cleanup reports EPERM; symlink tests lack Windows symlink privilege;
+  three simulated-Linux entry config tests fail on Windows; three Git review
+  tests return empty/null. A diagnostic direct Git call confirmed inherited
+  EDITOR rejection by simple-git, but clearing editor variables did not close
+  those tests. Signing verification also timed out in the prepared environment.
+  None of these failures is relabeled VERIFIED or silently skipped.
+- Controlled Trello benchmark completes seven local fixture scenarios. The
+  corrected known 12-item path reports 2 mock-provider calls, 53 tool calls,
+  0 replayed mutations, and 1 cache hit in the known case. Tokens, cache tokens
+  and monetary cost are null. `baseline_modeled` uses 14 modeled calls; it is
+  not a measured before-run and cannot establish savings or calls avoided.
+
+GitHub accepted pushes but rejected dispatch of both `workstation-ci.yml` and
+`workstation-browser-windows.yml` at `921e224` with **HTTP 422: Actions has been
+disabled for this repository**. Read-only Actions permissions reported enabled
+and workflows active; that does not override the actual dispatch rejection.
+Repository/account-side investigation is required. The user has been informed.
+No exact-head CI ran, no gate exception was granted, and no main merge occurred.
+Final upstream fetch after local qualification still resolves to the fixed pin
+`66605471e9f0b0832abbefaf625ce08e948ca540`; no second upstream merge was started.
+
+| FASE | BASE_SHA | HEAD_SHA | ARQUIVOS | RED | GREEN | EVIDÊNCIA NATIVA | LATÊNCIA | CHAMADAS LLM | CUSTO | BLOQUEIOS |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Stage A integration | f21e803 | 749e2f9 | upstream merge + baseline fixture/CI/docs reconciliation | dependency conflict, installer range, 34 Electron + 3 UI failures | Workstation 970; focused UI 87; typecheck/build; SDK fixture | Electron smoke recorded separately below; full E1/E2/E3 open | product UNKNOWN | real UNKNOWN; benchmark provider mocked | UNKNOWN | Actions HTTP 422, remaining Desktop failures, clean-machine installer, H-079 |
+
+P0.2 RED evidence remains on separate commit `d6ba10c7`: 7 passed / 2 failed
+demonstrating forged DIRECT attestations. It has not been hidden inside the
+baseline suite. Authenticated correction and P0–P3 remain pending the mandatory
+qualified-baseline gate. Original dogfood files and concurrent user work remain
+outside this isolated branch.
