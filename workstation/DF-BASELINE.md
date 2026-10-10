@@ -1,4 +1,8 @@
 # Hermes Workstation — DF-BASELINE (DF0–DF7 Dogfood Causal Closure Matrix)
+
+<!-- operational-speed:2026-10-10 -->
+> **2026-10-10 independent audit qualification warning (D-043):** This file's historical `QUALIFIED / IMPLEMENTATION COMPLETE` and per-DF `verified` claims reflect the recorded **local/unit/mock suite**, not an independently demonstrated native packaged Windows/Electron + live Trello + human/agent HyperFrames E2E qualification. The 61/61 count does not establish D-042 product release criteria; `test_trello_benchmark_qualification.py` uses `MockTrelloEnvironment`; E3 backend tests do not replace UI coediting; a still-frame-only video check does not prove motion. DIRECT `signature` uses an unkeyed digest, and new utterance fast path/true System-2 savings remain unproven. Treat native status as **NOT QUALIFIED/OPEN** until exact-head receipts and green required CI. Do not delete historical reported test results. See [D-043 forensic audit](context/OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md) and [implementation handoff](context/OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
 **Date:** 2026-10-09  
 **Branch:** `codex/dogfood-causal-closure-20261009`  
 **Adopted Upstream Pin:** `71a2fe399bbd7a219c71f9d9fca2b313b01f2057` (`HW-032`/`HW-033`)  
