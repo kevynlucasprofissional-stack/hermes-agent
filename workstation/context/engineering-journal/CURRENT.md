@@ -1,5 +1,15 @@
 # CURRENT — Workstation Engineering Journal
 
+<!-- operational-speed:2026-10-10 -->
+## 2026-10-10 — D-043 Operational-speed and cost-per-verified-outcome audit (DOCS ONLY)
+
+**Hypothesis SPEED-01..06:** known commands and repetitive native browser tasks are slow primarily because intent is rediscovered and individual primitives require avoidable System-2 turns; reduction must be measured at equal correctness/authorization. The small discriminating experiments are recorded in [operational-speed-audit-2026-10-10.md](operational-speed-audit-2026-10-10.md). **Evidence:** 09/10 Trello 837 exported messages, 386 requested tool calls, 163 console logged (122 unique call IDs), 76 terminal; HyperFrames 301 messages, 53 terminal, ~5m40s to first confirmed opening. Median matched Trello console ~0.06s; logs have duplicate IDs; no real cost/tokens comparison. Human edit overwritten on card #012 demonstrates a write-integrity block.
+
+**Findings:** already implemented hooks/owners for pre-provider resolution, Browser primitives, readiness, ArtifactStore refs, Studio lifecycle, SHADOW mining and run-local offers. Gaps to reproduce: new utterance resolution (vs established objective), typed Studio start-health-open and loopback ownership, unnecessary browser probe turns, Trello CAS/checkpoint, qualification attestation using unkeyed hash, queue pointer durability/reprocessing, actual System-2 count. `DF-BASELINE.md` has local/mock evidence, **not normal-product Windows proof**. Documentation-only update on branch based `codex/dogfood-causal-closure-20261009@8e64b38a`; no tests, code or main merges claimed.
+
+**Decision/next experiments:** P0 instrument exact unique calls/real provider latency and RED forged DIRECT; P1 RED new user phrase no `objective_ref` and owner-bound Studio; P2 Trello #012 human-edit race + real run-local adoption; P3 paired cold/warm native E1/E2/E3 + CI. Follow H-079 and RED before GREEN; track each result with HEAD and receipt. [Spec](../OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md), [implementer](../OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+
 <!-- dogfood-gate:2026-10-09 -->
 ## 2026-10-09 — D-042 Dogfood-first audit and handoff (DOCS ONLY)
 
