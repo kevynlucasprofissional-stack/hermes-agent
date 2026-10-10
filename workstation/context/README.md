@@ -1,5 +1,11 @@
 # Hermes Workstation — Coding-Agent Context
 
+<!-- operational-speed:2026-10-10 -->
+## PRIORITY UPDATE — 2026-10-10: D-043 operational speed + cost
+
+After root `AGENTS.md`, `workstation/AGENTS.md`, mandatory H-079 upstream-first and this context's required reading order, consult [OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md](OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md) and [OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md](OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md) **before any Workstation Browser, operational-resolution, Laya, Experience Compiler, Trello batching or HyperFrames speed change**. D-043 prioritizes user-to-VERIFIED latency and cost, first-choice pre-provider typed capability, conditioned readiness, safe artifact transport, human edit preservation and measured native E2E. The 2026-10-09 D-042 source is immutable historical intent, not proof every earlier missing code path remains missing in the branch. Audited branch `codex/dogfood-causal-closure-20261009@8e64b38a`, not main. [Experiment ledger](engineering-journal/operational-speed-audit-2026-10-10.md). This change is documentation-only, no new runtime qualification.
+
+
 <!-- dogfood-gate:2026-10-09 -->
 ## Priority read — 2026-10-09 D-042 Dogfood-first implementation
 
