@@ -1,5 +1,17 @@
 # Workstation roadmap
 
+<!-- operational-speed:2026-10-10 -->
+## 2026-10-10 — D-043 PRIORIDADE IMEDIATA: Hermes Work rápido, menos redundante e mais econômico
+
+**Status: DIREÇÃO DEFINIDA / IMPLEMENTAÇÃO EM ABERTO / SEM E2E NATIVO DESTA RODADA.** Repriorização transversal de D-042 e D-041: a métrica principal é **tempo/custo por resultado realmente VERIFICADO**, não a contagem de ferramentas ou funcionalidades. Sessões reais 09/10 indicam desperdício por redescoberta de capacidades, alternância LLM↔browser, sondagens de DOM, transporte de textos e verificações excessivas; `browser_console` mediano ~0,06s em Trello, logo Chromium isolado não é o alvo primário. `Open Trello`: 837 mensagens, 386 tool calls registradas, 163 console (122 IDs), 76 terminal; `Abrir HyperFrames`: 301 mensagens, 146 tool calls, 53 terminal e ~5m40s até abrir. IDs duplicados não são operações únicas; economias ainda **não foram medidas**.
+
+**Execução prioritária:** **P0** baseline instrumentado (unique calls, modelo+ferramenta, tokens, latência e cost/verified outcome) + autenticar atestação DIRECT (hash sem chave não autentica) + bloqueios de efeitos perigosos; **P1** pre-LLM de novas frases inequívocas por aliases e Laya apenas se necessário, COMPOSE operacional parametrizado, BrowserReadiness sem polling por LLM, transporte nativo `text_ref/artifact_ref`, `creative.hyperframes.open` service→health→BrowserTask sem terminal; **P2** lote Trello com conflito de edição humana #012, readback exato, checkpoint/restart sem duplicação, Experience Compiler run-local com oportunidades duráveis; **P3** E1 Browser, E2 Trello e E3 HyperFrames no Electron/Windows, bench frio/quente, CI do SHA exato, upstream drift e gates de segurança. A primeira experiência validada é preferível a construir outra framework.
+
+**Não refazer:** TaskCompiler, OperationalKernel, RunLocalAdopter, `browser_readiness.py`, `resolve_browser_type_text`, `creative_studio_service.py`, ExperienceCorpus/Compiler e pre-provider hook já existem na branch auditada `codex/dogfood-causal-closure-20261009@8e64b38a`. O antigo dogfood gate descreve lacunas que já tiveram correção parcial (ex.: SHADOW já minera); reconciliar **código x docs** antes de marcar faltas. `DF-BASELINE.md` com testes mock/locais **não prova produto nativo**. Não trocar segurança por velocidade, não adicionar Browser/DB/scheduler duplicado, não mergear main com CI vermelho. H-079 upstream-first permanece obrigatório para qualquer implementação.
+
+**Implementador:** [handoff com owners, RED/GREEN e critérios fechados](context/OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md) · [decisão e evidências](context/OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md) · [journal/experimentos](context/engineering-journal/operational-speed-audit-2026-10-10.md). Histórico anterior preservado.
+
+
 <!-- dogfood-gate:2026-10-09 -->
 ## 2026-10-09 — D-042 Dogfood-first product acceptance, native learning and HyperFrames qualification
 
