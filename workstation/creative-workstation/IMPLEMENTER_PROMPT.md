@@ -1,5 +1,10 @@
 # Hermes Creative Workstation — prompt inicial para IA implementadora
 
+## ACTIVE PROMPT (D-041, 2026-10-09)
+
+**The previous "Execute only CW-01" prompt below is obsolete as a creative tool strategy.** For new Creative work, send the **complete latest prompt** at [HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md), which names exact main/draft SHAs, files, external APIs, ordering P0→P6, relevant permissions, negative tests, CI/reporting requirements and progress continuation. Do not ask the coding agent to repeat an open-ended tool benchmark. Primary product: **Hermes Workstation + local HyperFrames Studio in existing Chromium**. OpenReel / Diffusion Studio = architectural references only. No merge without qualified base; no auto-install.
+
+
 **Repositório:** `kevynlucasprofissional-stack/hermes-agent`. **Iniciativa:** `workstation/creative-workstation/`. **Status:** planejamento; **NENHUM runtime criativo qualificado**. Documentação no PR #50 (`docs/creative-workstation-foundation-20261008`) até ser incorporada.
 
 ## Missão e ponto de partida

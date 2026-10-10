@@ -1,5 +1,19 @@
 # Hermes Creative Workstation
 
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 Dogfood qualification supersedes mock-only creative milestones
+
+**Implementation validation gate:** [DOGFOOD_CREATIVE_GATE_2026-10-09.md](DOGFOOD_CREATIVE_GATE_2026-10-09.md) + [Dogfood product requirements DF-024/025](../context/DOGFOOD_PRODUCT_GATE_2026-10-09.md). The maintainer reports HyperFrames already running in local Work; the remote consulted `main@f21e803b` does not contain that auditable new implementation. **Inspect and preserve local edits first**; never restart creative from scratch because GitHub is behind.
+
+Human and agent must edit the **same** project; typed owner-scoped bridge, ETag 409 conflict, save/reopen, native Electron Studio, independently validated **animated** MP4 and canonical ExperienceCompiler capture are the success conditions. PNG-to-still-MP4, Remotion invitation source, HyperFrames design doc or non-native mocks do not close them. D-041 HyperFrames-first source and full initial handoff are in draft PR #62 (`docs/creative-hyperframes-first-20261009`), not assumed merged. H-079/H-081/H-082 release gates remain.
+
+## ATUALIZAÇÃO CANÔNICA — 2026-10-09 (D-041, HyperFrames-first)
+
+**Esta é a direção atual do produto.** A seção de "superfícies prioritárias" de 2026-10-08 **abaixo é histórica/superada**: HyperFrames Studio auto-hospedado é o **único editor-base padrão** a ser lançado dentro do Chromium/Electron do Hermes Work; OpenReel e Diffusion Studio são **referências**, não editores padrão. Remotion #61 preservado/pausado; Penpot e Three.js opcionais posteriores. Reaproveitar a infraestrutura existente dos PRs draft #58–#60, sem presumir que foram incorporados à main.
+
+**Leia agora** [especificação D-041](HYPERFRAMES_ADOPTION_2026-10-09.md) e [prompt executor P0–P6](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) em vez da instrução histórica "Execute somente CW-01". Marcos M1a (Studio real no Hermes) e M1b (projeto único editável humano/IA + PNG/MP4 verificados). **Não implementado/qualificado ainda**. Leitura canônica obrigatória, H-079/CI/segurança e ausência de merge automático permanecem. Estudos e documentos CW anteriores são fontes históricas de contratos, não ordens concorrentes.
+
+
 > **Status (2026-10-08): PROPOSTA DOCUMENTADA / IMPLEMENTAÇÃO NÃO INICIADA.**
 > Esta pasta descreve uma iniciativa futura subordinada aos gates canônicos do Hermes Workstation. Sua existência não comprova a instalação, integração, disponibilidade, teste ou certificação de nenhuma engine criativa.
 

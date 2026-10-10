@@ -83,6 +83,8 @@ class BrowserControlLeaseManager:
 
     def __init__(self) -> None:
         self._leases: Dict[str, BrowserControlLease] = {}
+        self._parent_map: Dict[str, str] = {}
+        self._children_map: Dict[str, set[str]] = {}
         self._mutex = threading.Lock()
 
     @classmethod
@@ -91,6 +93,20 @@ class BrowserControlLeaseManager:
             if cls._instance is None:
                 cls._instance = cls()
             return cls._instance
+
+    def register_child_task(self, child_task_id: str, parent_task_id: str) -> None:
+        """Register child task under parent task for lease lineage and fence propagation."""
+        with self._mutex:
+            self._parent_map[child_task_id] = parent_task_id
+            self._children_map.setdefault(parent_task_id, set()).add(child_task_id)
+
+    def get_parent_task(self, child_task_id: str) -> Optional[str]:
+        with self._mutex:
+            return self._parent_map.get(child_task_id)
+
+    def get_child_tasks(self, parent_task_id: str) -> set[str]:
+        with self._mutex:
+            return set(self._children_map.get(parent_task_id, set()))
 
     def get_lease(self, task_id: str) -> BrowserControlLease:
         with self._mutex:
@@ -161,14 +177,24 @@ class BrowserControlLeaseManager:
                 f"Action '{action}' is BLOCKED: Stale fence token for task '{task_id}'. "
                 f"Execution authority was revoked or superseded by generation {lease.generation}."
             )
+        normalized_action = action.strip().lower()
         if lease.mode == BrowserControlMode.HUMAN and lease.lock_destructive:
-            normalized_action = action.strip().lower()
             if normalized_action in DESTRUCTIVE_ACTIONS:
                 raise HumanTakeoverActiveError(
                     f"Action '{action}' is BLOCKED: Human Takeover is active for task '{task_id}'. "
                     f"Reason: {lease.reason or 'User manual intervention in progress'}. "
                     f"Please wait for user to complete interaction or call resume_agent_control()."
                 )
+        parent_id = self.get_parent_task(task_id)
+        if parent_id:
+            parent_lease = self.get_lease(parent_id)
+            if parent_lease.mode == BrowserControlMode.HUMAN and parent_lease.lock_destructive:
+                if normalized_action in DESTRUCTIVE_ACTIONS:
+                    raise HumanTakeoverActiveError(
+                        f"Action '{action}' is BLOCKED on child task '{task_id}': Human Takeover is active on parent task '{parent_id}'. "
+                        f"Reason: {parent_lease.reason or 'User manual intervention in progress'}. "
+                        f"Please wait for user to complete interaction or call resume_agent_control()."
+                    )
 
 
 class BrowserProvider(ABC):

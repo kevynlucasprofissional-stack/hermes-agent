@@ -1,5 +1,22 @@
 # Creative Runtime — arquitetura candidata
 
+## D-041 — Arquitetura atual selecionada (2026-10-09; alvo, não runtime existente)
+
+**Supersession:** os parágrafos abaixo de 2026-10-08 que especificam React/SVG→Remotion→Penpot/Three como primeira vertical são **históricos** para seleção/ordem. A arquitetura aprovada é **HyperFrames Studio self-hosted como superfície primária** no WebContentsView/BrowserTask existente, com serviço local controlado por ProcessRegistry e Creative Runtime existentes (PR #58); fontes HTML/CSS/JS/media editáveis; revisões/ETag, proveniência Hermes, PNG/MP4 via render verificável e FFmpeg sob os owners atuais. Agent ↔ operação tipada ↔ arquivo/projeto compartilhado; OpenReel/Diffusion apenas referências de padrões.
+
+```text
+Hermes Session/TaskRun/Policy → Creative Bridge tipada
+        |                             |
+ BrowserTask/WebContentsView → HyperFrames Studio (loopback, scoped)
+        |                             |
+     UI humana ← ETag/conflict/file project → HyperFrames renderer + FFmpeg
+                                      |
+                            ArtifactStore/Journal + verifier → Experience Compiler
+```
+
+**Sem nova autoridade:** Studio/HTTP/renderer não controlam grants, execução arbitrária, browser privilegiado ou promoção; preservam-se Control Plane, ProcessRegistry, TaskCompiler, Browser, ArtifactStore e Journal. Separar processo headless de render da visualização humana, se necessário, com lifecycle/isolamento herdados. Portas loopback com sessão/token/origem/CSRF; proibir leitura/escrita fora do workspace e scripts não confiáveis em Electron privilegiado. HyperFrames root Apache-2.0, versão upstream deve ser pinada, dependências/licenças auditadas. Veja [D-041 — especificação completa](HYPERFRAMES_ADOPTION_2026-10-09.md).
+
+
 **Status: DESIGN PROPOSTO.** Não é uma descrição do que está em produção. Contratos devem ser reconciliados com o código real antes de implementar.
 
 ## Escopo de implementação e evidência

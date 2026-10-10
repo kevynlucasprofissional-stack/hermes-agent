@@ -300,8 +300,12 @@ def _build_child_agent(
     # reference), and no parent teardown can close it out from under a background child (#81267).
     child_session_ref["session_id"] = getattr(child, "session_id", "") or ""
     child._progress_identity_ref = child_session_ref
-    child._delegate_depth, child._delegate_role = child_depth, effective_role  # post-degrade role
     child._subagent_id, child._parent_subagent_id = subagent_id, parent_subagent_id
+    parent_canonical_task = getattr(parent_agent, "_canonical_work_task_id", None)
+    if parent_canonical_task:
+        child_canonical_task = f"{parent_canonical_task}_sub_{subagent_id[:8]}"
+        child._canonical_work_task_id = child_canonical_task
+        child._parent_canonical_work_task_id = parent_canonical_task
     _apply_child_compression_cap(child, delegation_cfg)
     # Ownership chain for action=list/steer/stop; weakref so a finished parent
     # can be collected while a detached child record lingers in the registry.

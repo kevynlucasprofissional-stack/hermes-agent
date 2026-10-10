@@ -886,7 +886,11 @@ def workstation_routed_browser_handler(
     # Enforce human-in-the-loop control lease invariants
     if task_id:
         from workstation.browser_session import BrowserControlLeaseManager
-        BrowserControlLeaseManager.get_instance().assert_action_allowed(task_id, action,
+        mgr = BrowserControlLeaseManager.get_instance()
+        if "_sub_" in str(task_id) and not mgr.get_parent_task(str(task_id)):
+            parent_id = str(task_id).split("_sub_")[0]
+            mgr.register_child_task(str(task_id), parent_id)
+        mgr.assert_action_allowed(task_id, action,
             fence_token=args.get('fence_token'))
 
     # Once selected, the internal browser is authoritative for this call.

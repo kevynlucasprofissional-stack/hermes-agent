@@ -4,6 +4,25 @@
 ## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
 
 Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`. Integration and CI repairs precede target P0–P3. Desktop typecheck/build and focused contracts pass; exact-head CI, native qualification and audit-branch reconciliation remain pending. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 Dogfood-first independent audit — DOCUMENTED / NO NEW CODE
+
+**Observed GitHub main:** `f21e803b3525b70ee6be2305e579c1cc1f930e74`. The user reports HyperFrames already installed in a local Hermes Work; no auditable remote integration was found in that consulted main/Creative branch set, so **local status UNKNOWN to this audit; do not overwrite it or call it missing**. D-041 decision resides in draft PR #62; earlier Creative #57–#61 are draft unmerged. Existing local Code 01 startup incident and real-use H-080B audit require fresh Windows native reproduction before current-state claims.
+
+**Confirmed code-level gaps in `main` snapshot:** `OnlineCompilabilityMonitor.process_event` SHADOW skips mining; `schedule_event` sheds full-queue events; `_get_window` deletes 900s idle state; `stop` discards queued work; fixed retry budgets; `resolve_policy` selects DIRECT for nonempty `direct_qualification_ref` without validating attestation. These are not proof of unauthorized execution: separate D-038 verification and policy gates remain. D-039 specifies the corrected product direction, **not an implemented patch**.
+
+**Proof/qualification gaps:** native Browser + child subagent Browser Hub parity, normal-product verified ExperienceCorpus/producer→promotion→reuse path, nonredundant open-site verification, real product validator, labeled opportunity accounting, genuine animated HyperFrames export/edit/reopen and real Laya savings lack current independently run E2E evidence. Tests and previous developer statements are weaker than user experience. H-079/H-081/H-082 and exact-head Windows CI remain distinct.
+
+**Documents only this cycle:** [DF-001..026 product gate](DOGFOOD_PRODUCT_GATE_2026-10-09.md), [implementation handoff](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md), [engineering audit](engineering-journal/dogfood-gap-audit-2026-10-09.md), [HyperFrames native gate](../creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md). No actual fixes or production qualification are claimed.
+
+## 2026-10-09 — HyperFrames-first Creative decision / current state (D-041)
+
+**FACT (GitHub at review):** `main=f21e803b3525b70ee6be2305e579c1cc1f930e74`. Draft chain is **OPEN, UNMERGED**: #57 Stage A `3417d57` (base main) → #58 Creative Runtime `480d809` → #59 revisioned project/PNG `bd22814` → #60 FFmpeg still-to-MP4 `6f784ad` → #61 Remotion TSX sources `426f736`. HyperFrames Studio is **NOT integrated in main or proven operational in Hermes**. Native capture fix was reportedly uncommitted on the user's separate Windows worktree and cannot be verified from GitHub; preserve/recover locally before destructive actions. The historical 2026-10-08 `DOCS ONLY` heading **below** described the then-main intake, not these later draft implementations.
+
+**Decision:** HyperFrames Studio self-hosted inside existing Hermes Chromium with Studio source-native projects; OpenReel/Diffusion Studio reference-only; first milestones M1a real editor launch and M1b human↔agent editable roundtrip/export. [Authoritative spec](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md). Candidate HyperFrames upstream observed `6ae1af7470133db72de6d9bbceeaf80e85695c68` (Apache-2.0 repo), Studio package `0.8.143`; integration/license/provenance **NOT QUALIFIED**.
+
+**Observed #61 CI:** aggregate `desktop-typecheck` failed while its Desktop TS typecheck step succeeded; `workstation_smoke` timed out after 1800s with Laya missing-provenance test failures. This is **not a demonstrated Creative regression or fixed issue**. H-079, exact-head release gates, H-081/082, KI and other relevant holds remain OPEN until proven. No merges or installations performed by this documentation lane. [Implementer handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
 
 <!-- creative-workstation-intake:2026-10-08 -->
 ## 2026-10-08 Creative Workstation — documentation intake, no runtime change
