@@ -49,7 +49,7 @@ jobs:
           cache: npm
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Validate committed Workstation integration
         run: python workstation/scripts/apply_core_integration.py --root . --check
       - name: Allocate isolated Workstation home
@@ -99,12 +99,11 @@ jobs:
             throw "Desktop build changed the committed checkout."
           }
       - name: Prepare Workstation validation dependencies
-        shell: pwsh
-        run: |
-          & .venv\Scripts\python.exe -m pip install -e ".[dev,anthropic]"
-          if ($LASTEXITCODE -ne 0) {
-            throw "Could not install the Workstation validation dependencies."
-          }
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # 8.2.0
+        with:
+          version: "0.12.3"
+      - name: Sync locked validation environment
+        run: uv sync --locked --python 3.14 --group dev --extra anthropic --extra workstation-laya
       - name: Emit clean-machine install evidence
         id: clean_machine_evidence
         shell: pwsh
