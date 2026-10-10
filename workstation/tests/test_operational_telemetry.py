@@ -53,6 +53,16 @@ def test_repeated_delivery_never_double_charges_a_provider_call():
     assert ora.total_cost_usd == 0.002
 
 
+def test_missing_operation_identity_cannot_resolve_an_unlinked_effect():
+    from workstation.telemetry.projectors import project_operation_economics
+    first = _event(TelemetryEventType.VERIFICATION_COMPLETED, status="VERIFIED")
+    second = _event(TelemetryEventType.VERIFICATION_COMPLETED, status="VERIFIED")
+    mutation = _event(TelemetryEventType.MUTATION_DISPATCHED)
+    result = project_operation_economics([first, second, mutation, first])
+    assert result["verified_operations"] == 2
+    assert result["uncertain_effects"] == 1
+
+
 def test_economics_joins_actual_usage_and_preserves_unknowns_across_runs(tmp_path):
     from workstation.integrations.hermes.telemetry import _observe_runtime_event
     from workstation.telemetry.projectors import project_operation_economics

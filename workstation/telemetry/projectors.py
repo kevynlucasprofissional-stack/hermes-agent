@@ -103,7 +103,7 @@ def project_operation_economics(events: list[TelemetryEventV1]) -> dict:
              if e.event_type == TelemetryEventType.PROVIDER_USAGE_RECORDED and e.call_id}
     billed = [usage.get((e.session_id, e.call_id), e) for e in calls]
     tools = [e for e in unique if e.event_type == TelemetryEventType.TOOL_COMPLETED and e.tool_calls]
-    verified = {(e.task_id, e.run_id, e.operation_id): e for e in unique
+    verified = {(e.task_id, e.run_id, e.operation_id or e.event_id): e for e in unique
                 if e.event_type == TelemetryEventType.VERIFICATION_COMPLETED and e.status == "VERIFIED"}
     def total(items, field):
         values = [getattr(e, field) for e in items]
@@ -140,7 +140,8 @@ def project_operation_economics(events: list[TelemetryEventV1]) -> dict:
         "failed_verifications": sum(e.event_type == TelemetryEventType.VERIFICATION_COMPLETED
                                     and e.status in {"FAILED", "CONFLICT", "STALE"} for e in unique),
         "uncertain_effects": sum(e.event_type == TelemetryEventType.MUTATION_DISPATCHED
-                                 and (e.task_id, e.run_id, e.operation_id) not in verified for e in unique),
+                                 and (not e.operation_id or (e.task_id, e.run_id, e.operation_id) not in verified)
+                                 for e in unique),
         "input_tokens": total(billed, "input_tokens"), "output_tokens": total(billed, "output_tokens"),
         "cache_read_tokens": total(billed, "cache_read_tokens"), "cache_write_tokens": total(billed, "cache_write_tokens"),
         "provider_request_bytes": total(calls, "request_bytes"), "provider_result_bytes": total(calls, "result_bytes"),
