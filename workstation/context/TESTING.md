@@ -1,5 +1,15 @@
 # Workstation Testing
 
+<!-- operational-speed:2026-10-10 -->
+## 2026-10-10 — D-043 verified-outcome performance qualification
+
+**Status: TEST PLAN; NOT EXECUTED in D-043 docs change.** Performance is admissible only with **equal or stronger correctness, authorization, concurrency safety and verified terminal outcomes**. Run five paired repetitions per cold/warm condition where feasible and report median/p95 `user_to_verified_ms`, actual provider calls/tokens/cost (or UNKNOWN), unique tool call IDs, readiness probes, skill/terminal exploration, bytes through LLM, failed/uncertain effects, human handoffs, verified items, duplicate writes and cost per verified outcome. Deduplicate exported logs by `call_id`; do not infer physical browser operation count from raw transcript message count.
+
+Native product matrix: (1) `open Trello` short command with fresh user utterance, browser closed/open, authenticated/unauthenticated and proper goal-only readback; (2) `open HyperFrames` via owned StudioInstance and Electron, cold/warm start and foreign localhost denial; (3) Trello 12-card same-TaskRun learning and 33-description resume, exact readback, reserved #012 human edit, CAS/ETag absence, cancel, SUPERSEDED and crash; (4) BrowserTask child delegation and human takeover; (5) HyperFrames human→agent edit, 409 conflict, save/reopen, independently decoded multiple nonidentical frames of MP4. Include negative forged DIRECT attestation/revocation/wrong scope, unsafe historical success narratives and queue-full recovery. **Mocks prove unit wiring, not live native product.** All actual requests to third-party systems require permitted sandbox/account and effects limited to approved scope.
+
+Run targeted RED/GREEN, Workstation regression, Desktop typecheck, real Windows/Electron E2E, seam audit and exact-HEAD required CI under H-079, with receipts and TaskRun IDs. A `61/61` local test count or single-frame MP4 is not D-042 `VERIFIED_NATIVE`. Definitive step-by-step test sequence: [speed implementer handoff](OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+
 ## 2026-10-08 H-081 clean-profile and timeout qualification
 
 The H-081 complete suite includes real Anthropic SDK construction. Its clean CI install
