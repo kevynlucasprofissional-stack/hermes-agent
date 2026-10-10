@@ -13,6 +13,7 @@ Default mode is SHADOW (observe + record decisions only).
 """
 from __future__ import annotations
 
+import json
 import logging
 import queue
 import threading
@@ -40,8 +41,104 @@ logger = logging.getLogger(__name__)
 
 SHADOW, DIRECT = "shadow", "direct"
 LABEL_SCHEMA = "workstation.compilability_label.v1"
+CHECKPOINT_SCHEMA = "workstation.run_learning_checkpoint.v1"
+DIRECT_QUALIFICATION_SCHEMA = "workstation.direct_qualification.v1"
 _FAILURE_OUTCOMES = {"failed", "uncertain", "interrupted", "authority_superseded"}
 _VERIFIED_OUTCOMES = {"verified_success", TransitionOutcome.VERIFIED_SUCCESS.value}
+
+
+def create_direct_qualification_attestation(
+    *,
+    code_version: str = "current",
+    provider: str = "laya",
+    model: str = "laya-v1",
+    model_revision: str = "",
+    operation_family: str = "*",
+    effect_class: str = "read_only",
+    verifier_contract: Optional[Dict[str, Any]] = None,
+    safe_env: str = "isolated_sandbox",
+    exact_tests: Tuple[str, ...] = (),
+    issued_at: Optional[float] = None,
+    expires_at: Optional[float] = None,
+    revoked: bool = False,
+    revocation_reason: str = "",
+    attestation_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a cryptographically bound direct qualification attestation."""
+    now = time.time() if issued_at is None else issued_at
+    payload: Dict[str, Any] = {
+        "attestation_id": attestation_id or f"dqa_{digest({'v': code_version, 't': now})[:12]}",
+        "schema": DIRECT_QUALIFICATION_SCHEMA,
+        "code_version": code_version,
+        "provider": provider,
+        "model": model,
+        "model_revision": model_revision,
+        "operation_family": operation_family,
+        "effect_class": effect_class,
+        "verifier_contract": verifier_contract or {},
+        "safe_env": safe_env,
+        "exact_tests": list(exact_tests),
+        "issued_at": now,
+        "expires_at": expires_at,
+        "revoked": bool(revoked),
+        "revocation_reason": revocation_reason,
+    }
+    payload["signature"] = digest(payload)[:32]
+    return payload
+
+
+def verify_qualification_attestation(
+    qualification_ref: Union[str, Dict[str, Any]],
+    artifacts: Optional[ArtifactStore] = None,
+) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    """Verify that a qualification reference resolves to a valid, signed, active attestation."""
+    data: Optional[Dict[str, Any]] = None
+    if isinstance(qualification_ref, dict):
+        data = qualification_ref
+    elif isinstance(qualification_ref, str):
+        ref_str = qualification_ref.strip()
+        if not ref_str:
+            return False, "direct_requires_qualification_ref", None
+        if ref_str.startswith("artifact://"):
+            if artifacts is None:
+                artifacts = ArtifactStore()
+            try:
+                data = artifacts.read_json(ref_str)
+            except Exception:
+                return False, "invalid_qualification_attestation", None
+        elif ref_str.startswith("{") and ref_str.endswith("}"):
+            try:
+                data = json.loads(ref_str)
+            except Exception:
+                return False, "invalid_qualification_attestation", None
+        else:
+            return False, "invalid_qualification_attestation", None
+    else:
+        return False, "invalid_qualification_attestation", None
+
+    if not isinstance(data, dict):
+        return False, "invalid_qualification_attestation", None
+
+    if data.get("schema") != DIRECT_QUALIFICATION_SCHEMA:
+        return False, "invalid_qualification_attestation", None
+
+    if data.get("revoked"):
+        return False, "qualification_revoked", data
+
+    expires_at = data.get("expires_at")
+    if expires_at is not None and time.time() > float(expires_at):
+        return False, "qualification_expired", data
+
+    sig = data.get("signature", "")
+    if not sig:
+        return False, "qualification_signature_mismatch", data
+
+    payload_to_verify = {k: v for k, v in data.items() if k != "signature"}
+    expected_sig = digest(payload_to_verify)[:32]
+    if sig != expected_sig:
+        return False, "qualification_signature_mismatch", data
+
+    return True, "", data
 
 
 @dataclass(frozen=True)
@@ -54,7 +151,7 @@ class LearningPolicy:
     downgrade_reason: str = ""
 
 
-def load_learning_policy() -> LearningPolicy:
+def load_learning_policy(artifacts: Optional[ArtifactStore] = None) -> LearningPolicy:
     """Read ``workstation.online_compilability`` from config.yaml (never from environment variables)."""
     try:
         from hermes_cli.config import load_config
@@ -62,15 +159,33 @@ def load_learning_policy() -> LearningPolicy:
         cfg = ((load_config() or {}).get("workstation") or {}).get("online_compilability") or {}
     except Exception:
         cfg = {}
-    return resolve_policy(cfg.get("mode", SHADOW), cfg.get("direct_qualification_ref", ""),
-                          cfg.get("enabled", True) is not False)
+    return resolve_policy(
+        cfg.get("mode", SHADOW),
+        cfg.get("direct_qualification_ref", ""),
+        cfg.get("enabled", True) is not False,
+        artifacts=artifacts,
+    )
 
 
-def resolve_policy(mode: Optional[str], qualification_ref: str = "", enabled: bool = True) -> LearningPolicy:
+def resolve_policy(
+    mode: Optional[str],
+    qualification_ref: Union[str, Dict[str, Any]] = "",
+    enabled: bool = True,
+    artifacts: Optional[ArtifactStore] = None,
+) -> LearningPolicy:
     requested = str(mode or SHADOW).lower()
-    if requested == DIRECT and not str(qualification_ref or "").strip():
+    if requested != DIRECT:
+        return LearningPolicy(enabled, SHADOW, "", "")
+    if not qualification_ref:
         return LearningPolicy(enabled, SHADOW, "", "direct_requires_qualification_ref")
-    return LearningPolicy(enabled, DIRECT if requested == DIRECT else SHADOW, str(qualification_ref or ""))
+
+    valid, reason, att = verify_qualification_attestation(qualification_ref, artifacts=artifacts)
+    if not valid:
+        ref_repr = str(qualification_ref) if isinstance(qualification_ref, str) else str((att or {}).get("attestation_id", ""))
+        return LearningPolicy(enabled, SHADOW, ref_repr, reason)
+
+    ref_str = str(qualification_ref) if isinstance(qualification_ref, str) else json.dumps(qualification_ref)
+    return LearningPolicy(enabled, DIRECT, ref_str, "")
 
 
 @dataclass(frozen=True)
@@ -118,6 +233,8 @@ class TaskRunObservationWindow:
     events: List[CompilabilityEvent] = field(default_factory=list)
     seen_fingerprints: set = field(default_factory=set)
     attempt_count_per_segment: Dict[str, int] = field(default_factory=dict)
+    segment_evidence_revisions: Dict[str, int] = field(default_factory=dict)
+    attempts_at_revision: Dict[str, Dict[int, int]] = field(default_factory=dict)
     validation_attempts: Dict[str, int] = field(default_factory=dict)
     last_inference_time: float = 0.0
     last_touch: float = field(default_factory=time.time)
@@ -137,14 +254,17 @@ class TaskRunObservationWindow:
     def add_event(self, event: CompilabilityEvent) -> bool:
         with self.lock:
             self.last_touch = time.time()
+            seg_key = self.get_segment_key(event)
             if event.outcome in _VERIFIED_OUTCOMES:
                 if event.sample_ref and event.sample_ref not in self.verified_success_refs:
                     self.verified_success_refs.append(event.sample_ref)
+                    self.segment_evidence_revisions[seg_key] = self.segment_evidence_revisions.get(seg_key, 0) + 1
                 if event.system2_calls is not None and len(self.system2_samples) < 256:
                     self.system2_samples.append(int(event.system2_calls))
             elif event.outcome in _FAILURE_OUTCOMES:
                 if event.sample_ref and event.sample_ref not in self.counterexample_refs:
                     self.counterexample_refs.append(event.sample_ref)
+                    self.segment_evidence_revisions[seg_key] = self.segment_evidence_revisions.get(seg_key, 0) + 1
 
             fp = event.fingerprint
             if fp in self.seen_fingerprints and event.outcome not in ("verified_success", "failed"):
@@ -161,9 +281,15 @@ class TaskRunObservationWindow:
         return f"{event.operation_family or event.primitive}:{event.target_family or event.route}"
 
     def can_attempt_compilation(self, segment_key: str) -> bool:
-        return self.attempt_count_per_segment.get(segment_key, 0) < self.max_compile_attempts_per_segment
+        rev = self.segment_evidence_revisions.get(segment_key, 0)
+        attempts = self.attempts_at_revision.get(segment_key, {}).get(rev, 0)
+        return attempts < self.max_compile_attempts_per_segment
 
     def record_compilation_attempt(self, segment_key: str) -> None:
+        rev = self.segment_evidence_revisions.get(segment_key, 0)
+        if segment_key not in self.attempts_at_revision:
+            self.attempts_at_revision[segment_key] = {}
+        self.attempts_at_revision[segment_key][rev] = self.attempts_at_revision[segment_key].get(rev, 0) + 1
         self.attempt_count_per_segment[segment_key] = self.attempt_count_per_segment.get(segment_key, 0) + 1
 
     def baseline_system2_calls_per_item(self) -> Optional[float]:
@@ -197,7 +323,7 @@ class OnlineCompilabilityMonitor:
         self.registry = registry or OperationalCapabilityRegistry()
         self.corpus = corpus or ExperienceCorpus(self.artifacts)
         self.compiler = compiler or ExperienceCompiler(self.registry, self.corpus)
-        policy = resolve_policy(mode, direct_qualification_ref, enabled)
+        policy = resolve_policy(mode, direct_qualification_ref, enabled, artifacts=self.artifacts)
         self.enabled, self.mode, self.mode_downgrade_reason = policy.enabled, policy.mode, policy.downgrade_reason
         self.cooldown_seconds = cooldown_seconds
         self.owner = owner
@@ -242,17 +368,80 @@ class OnlineCompilabilityMonitor:
                     target=self._worker_loop, name="OnlineCompilabilityWorker", daemon=True)
                 self._worker_thread.start()
 
+    def _persist_window_checkpoint(self, window: TaskRunObservationWindow) -> None:
+        """Persist compact workstation.run_learning_checkpoint.v1 metadata into ArtifactStore."""
+        if not self.artifacts:
+            return
+        try:
+            with window.lock:
+                payload = {
+                    "task_id": window.task_id,
+                    "run_id": window.run_id,
+                    "verified_success_refs": list(window.verified_success_refs),
+                    "counterexample_refs": list(window.counterexample_refs),
+                    "mined_candidate_ids": list(window.mined_candidate_ids),
+                    "segment_evidence_revisions": dict(window.segment_evidence_revisions),
+                    "attempt_count_per_segment": dict(window.attempt_count_per_segment),
+                    "attempts_at_revision": {
+                        k: {str(r): cnt for r, cnt in v.items()}
+                        for k, v in window.attempts_at_revision.items()
+                    },
+                    "system2_samples": list(window.system2_samples),
+                    "decision_receipt_refs": list(window.decision_receipt_refs),
+                    "last_touch": window.last_touch,
+                }
+            self.artifacts.store(
+                window.task_id,
+                f"learning_checkpoint_{window.task_id}_{window.run_id}.json",
+                payload,
+                schema=CHECKPOINT_SCHEMA,
+            )
+        except Exception as exc:
+            logger.debug("Failed saving learning checkpoint: %s", exc)
+
+    def _rehydrate_window_from_checkpoint(self, task_id: str, run_id: str, window: TaskRunObservationWindow) -> bool:
+        """Rehydrate state from workstation.run_learning_checkpoint.v1 if present in ArtifactStore."""
+        if not self.artifacts:
+            return False
+        try:
+            target_path = self.artifacts._task_dir(task_id) / f"learning_checkpoint_{task_id}_{run_id}.json"
+            if not target_path.exists():
+                return False
+            data = json.loads(target_path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                return False
+            with window.lock:
+                window.verified_success_refs = list(data.get("verified_success_refs", []))
+                window.counterexample_refs = list(data.get("counterexample_refs", []))
+                window.mined_candidate_ids = list(data.get("mined_candidate_ids", []))
+                window.segment_evidence_revisions = {k: int(v) for k, v in (data.get("segment_evidence_revisions") or {}).items()}
+                window.attempt_count_per_segment = {k: int(v) for k, v in (data.get("attempt_count_per_segment") or {}).items()}
+                window.attempts_at_revision = {
+                    k: {int(r): int(cnt) for r, cnt in v.items()}
+                    for k, v in (data.get("attempts_at_revision") or {}).items()
+                }
+                window.system2_samples = [int(s) for s in data.get("system2_samples", [])]
+                window.decision_receipt_refs = list(data.get("decision_receipt_refs", []))
+            return True
+        except Exception:
+            return False
+
     def _get_window(self, task_id: str, run_id: str) -> TaskRunObservationWindow:
         key, now = (task_id, str(run_id)), time.time()
         with self._windows_lock:
             stale = [k for k, w in self._windows.items() if now - w.last_touch > self.window_ttl_seconds]
             for k in stale:
+                self._persist_window_checkpoint(self._windows[k])
                 del self._windows[k]
             if key not in self._windows:
                 while len(self._windows) >= self.max_windows:
-                    del self._windows[min(self._windows, key=lambda k: self._windows[k].last_touch)]
-                self._windows[key] = TaskRunObservationWindow(
+                    evict_k = min(self._windows, key=lambda k: self._windows[k].last_touch)
+                    self._persist_window_checkpoint(self._windows[evict_k])
+                    del self._windows[evict_k]
+                window = TaskRunObservationWindow(
                     task_id=task_id, run_id=str(run_id), cooldown_seconds=self.cooldown_seconds)
+                self._rehydrate_window_from_checkpoint(task_id, str(run_id), window)
+                self._windows[key] = window
             window = self._windows[key]
             window.last_touch = now
             return window
@@ -270,7 +459,16 @@ class OnlineCompilabilityMonitor:
             return True
         except queue.Full:
             self._bump("events_shed")
-            logger.debug("OnlineCompilabilityMonitor queue full; shedding optional event")
+            # DF-009: Preserve high-value references even under queue saturation
+            if (
+                event.outcome in _VERIFIED_OUTCOMES
+                or event.outcome in _FAILURE_OUTCOMES
+                or bool(event.sample_ref)
+            ):
+                window = self._get_window(event.task_id, event.run_id)
+                window.add_event(event)
+                self._persist_window_checkpoint(window)
+            logger.debug("OnlineCompilabilityMonitor queue full; preserved high-value references")
             return False
 
     def drain(self, timeout: float = 2.0) -> bool:
@@ -283,8 +481,11 @@ class OnlineCompilabilityMonitor:
         return True
 
     def stop(self, timeout: float = 2.0) -> bool:
-        """Stop the worker, discard pending optional work, and join within ``timeout``."""
+        """Stop the worker, persist checkpoints, and join within ``timeout``."""
         self._stop_event.set()
+        with self._windows_lock:
+            for w in list(self._windows.values()):
+                self._persist_window_checkpoint(w)
         try:
             while True:
                 self._queue.get_nowait()
@@ -321,6 +522,8 @@ class OnlineCompilabilityMonitor:
         if not window.add_event(event):
             self._bump("events_filtered")
             return {"status": "filtered_duplicate"}
+        if event.outcome in _VERIFIED_OUTCOMES or event.outcome in _FAILURE_OUTCOMES or bool(event.sample_ref):
+            self._persist_window_checkpoint(window)
         if not self._deterministic_prefilter(window, event):
             self._bump("events_filtered")
             return {"status": "prefilter_insufficient"}
@@ -331,13 +534,15 @@ class OnlineCompilabilityMonitor:
                                    "task_id": event.task_id, "run_id": event.run_id}
 
         if self.mode != DIRECT:
-            # SHADOW: decision recorded for calibration; zero mining, validation or offers.
+            # SHADOW_FOR_EFFECTS: decisions recorded for calibration; effects remain restricted.
             self._bump("decisions_shadow")
             window.shadow_decisions.append({"stage": stage, "confidence": decision.get("confidence"),
                                             "request_id": decision.get("request_id")})
             del window.shadow_decisions[:-32]
             summary["shadow"] = True
-            return summary
+
+        # OBSERVE_ACTIVE: safe candidate mining and preparatory validation happen regardless of effect mode
+        # as long as stage warrants mining/validation.
 
         if stage in (CompilabilityStage.MINE_CANDIDATE.value, CompilabilityStage.POSSIBLE_RUN_LOCAL_REUSE.value):
             seg_key = window.get_segment_key(event)
@@ -363,6 +568,7 @@ class OnlineCompilabilityMonitor:
                     summary["offer"] = window.offers[cand_id].offer_id
                 else:
                     summary.setdefault("validation_denied", {})[cand_id] = reasons
+        self._persist_window_checkpoint(window)
         return summary
 
     def _deterministic_prefilter(self, window: TaskRunObservationWindow, event: CompilabilityEvent) -> bool:

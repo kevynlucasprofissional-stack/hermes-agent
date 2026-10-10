@@ -176,6 +176,7 @@ class TransitionSample:
     provenance: Provenance = field(default_factory=Provenance)
     metrics: Metrics = field(default_factory=Metrics)
     raw_result_ref: str | None = None
+    causal_grade: int = CausalGrade.OBSERVED_ONCE
 
     def to_dict(self):
         body = normalized(asdict(self))
@@ -196,4 +197,5 @@ class TransitionSample:
                    Operation(**b.get('operation', {})), SemanticState(**b.get('state_after', {})),
                    StateDelta(**b.get('delta', {})), Verification(**verification),
                    TransitionOutcome(b.get('outcome', 'uncertain')), Provenance(**provenance),
-                   Metrics(**b.get('metrics', {})), raw_result_ref=b.get('raw_result_ref'))
+                   Metrics(**b.get('metrics', {})), raw_result_ref=b.get('raw_result_ref'),
+                   causal_grade=int(b.get('causal_grade', 0)))

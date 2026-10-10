@@ -79,6 +79,13 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> Optional[Du
         readback_fn=_readback_write_file(dispatch, artifacts, str(task_id)),
         readback_primitives=_READBACK, supported_primitives=_SUPPORTED, system2_counter=system2_counter,
     )
+    from workstation.experience_compiler.lifecycle import (
+        get_validation_environment_provider,
+        register_validation_environment_provider,
+        create_local_canary_validation_provider,
+    )
+    if get_validation_environment_provider() is None:
+        register_validation_environment_provider(create_local_canary_validation_provider(artifacts))
     try:
         agent._run_adoption_owner = owner
     except AttributeError:

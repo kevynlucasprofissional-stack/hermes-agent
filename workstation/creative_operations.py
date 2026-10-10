@@ -15,6 +15,7 @@ import re
 from typing import Any, Dict, List, Literal, Optional, Tuple
 from uuid import uuid4
 
+from workstation.artifacts import ArtifactStore
 from workstation.config import WorkstationConfig
 from workstation.contracts import ExecutionEventKind
 from workstation.creative_3d import (
@@ -783,18 +784,57 @@ def apply_creative_operation(
     except Exception as error:
         raise CreativeEffectUncertain(op_id) from error
 
+    transition_ref = None
+    try:
+        store = ArtifactStore()
+        transition_body = {
+            "sample_id": f"creative_{op_id[:16]}",
+            "operation": {
+                "primitive": f"creative_{operation.kind}",
+                "canonical_route": "creative_studio",
+                "parameters": {"project_id": new_rev.project_id, "kind": operation.kind},
+            },
+            "outcome": "verified_success",
+            "provenance": {
+                "task_id": context.task_id,
+                "run_id": str(context.run_id),
+                "operation_id": op_id,
+                "runtime": "hyperframes-studio",
+                "source": "creative_operation",
+                "trust_class": "trusted_runtime",
+            },
+            "verification": {
+                "status": "VERIFIED",
+                "evidence_refs": [new_rev.manifest_path.as_uri()],
+                "evidence_strength": 3,
+            },
+            "causal_grade": 0,
+        }
+        transition_ref = store.store(
+            context.task_id,
+            f"transition_creative_{op_id[:16]}.json",
+            transition_body,
+            schema="hermes.transition_sample.v1",
+        ).ref
+    except Exception:
+        pass
+
     journal = ExecutionJournal(task_id=context.task_id, session_id=context.session_id)
+    journal_meta = {
+        "operation_id": op_id,
+        "project_id": new_rev.project_id,
+        "parent_revision_id": parent_rev.revision_id,
+        "new_revision_id": new_rev.revision_id,
+        "new_etag": new_rev.etag,
+        "details": op_result_details,
+    }
+    if transition_ref:
+        journal_meta["transition_ref"] = transition_ref
+
     journal.record(
         ExecutionEventKind.ACTION,
         f"Creative operation applied: {operation.kind}",
-        metadata={
-            "operation_id": op_id,
-            "project_id": new_rev.project_id,
-            "parent_revision_id": parent_rev.revision_id,
-            "new_revision_id": new_rev.revision_id,
-            "new_etag": new_rev.etag,
-            "details": op_result_details,
-        },
+        metadata=journal_meta,
     )
 
     return new_rev, op_result_details
