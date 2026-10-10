@@ -1,5 +1,12 @@
 # Hermes Creative Workstation
 
+<!-- creative-D043-overlay -->
+## D-043 — decisão atual de produto (2026-10-10)
+**Status: arquitetura aceita, implementação não qualificada.** O Hermes CW deve oferecer um Creative Document e um Command Bus comuns à edição manual, IA e headless, com NLE, motion/freeform, exatidão temporal, revisões e render por adaptadores. HyperFrames foi primeira referência, **não** escolha obrigatória; EffectCraft/OpenReel são referências arquiteturais, não editores a copiar integralmente. O PR #62 D-041 HyperFrames-first permanece histórico draft supersedido para a escolha de motor; PR #63 D-042 e H-079/D-038/D-039 seguem obrigatórios. Sequência CW antiga abaixo é histórica. **Começar em:** [D-043 arquitetura](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) e [implementador CWN-00..09](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 > **Status (2026-10-08): PROPOSTA DOCUMENTADA / IMPLEMENTAÇÃO NÃO INICIADA.**
 > Esta pasta descreve uma iniciativa futura subordinada aos gates canônicos do Hermes Workstation. Sua existência não comprova a instalação, integração, disponibilidade, teste ou certificação de nenhuma engine criativa.
 

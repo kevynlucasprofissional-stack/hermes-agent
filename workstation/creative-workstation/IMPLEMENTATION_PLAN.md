@@ -1,5 +1,12 @@
 # Plano de implementação — Hermes Creative Workstation
 
+<!-- creative-D043-overlay -->
+## PRIORIDADE ATUAL — D-043 / CWN-00→CWN-09 (2026-10-10)
+**O plano antigo CW-01..CW-07 abaixo não deve governar implementações novas.** Nova ordem: (00) preflight e salvage #57–#63; (01) documento + timebase racional/source map; (02) Command Bus/atomicidade/histórico UI+IA; (03) NLE linked A/V; (04) Semantic Edit Plan/revisão preview; (05) SVG/Canvas/WebGL/Three.js livre e editável por parâmetros; (06) adapters de render/paridade export; (07) workspaces adaptativos/Graph Editor; (08) verified reuse do Experience Compiler; (09) efeitos/engines conforme benchmark. Princípios do H-079, D-038/D-039, dogfood D-042/PR #63, licença e exato HEAD CI continuam. Não fazer merge da decisão D-041/PR #62 sem conciliar engine-neutral. [Matriz e critérios detalhados](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) | [Handoff com arquivos e testes](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 **Estado:** BACKLOG PLANEJADO, documentação inicial. **Este arquivo não libera expansão runtime.**
 **Autoridade de prioridade:** [../ROADMAP.md](../ROADMAP.md).  
 **Pré-condições:** [H-079 upstream-first](../context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md), H-080A/H-080B e bloqueios de [CURRENT_STATE](../context/CURRENT_STATE.md).

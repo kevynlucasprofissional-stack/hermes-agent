@@ -1,5 +1,12 @@
 # Creative Runtime — arquitetura candidata
 
+<!-- creative-D043-overlay -->
+## Arquitetura corrente — D-043, 2026-10-10
+O projeto presente é **engine-neutral**: Creative Document versionado/IDs estáveis/rational time → mesmo registro de comandos UI/IA/headless com transações e Undo → Semantic Edit Plan sobre revisões → adaptadores independentes de produção/render → workspaces contextuais. Nenhum source schema, Studio ou motor é obrigatório; preservar HyperFrames existente como candidato e o código útil dos PRs #57–#61. As opções de Remotion/Penpot/Three.js e o manifest antigo abaixo são **históricos**, não prescrição arquitetural. Esta decisão **não é runtime implementado**. [Especificação completa](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) | [execução](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 **Status: DESIGN PROPOSTO.** Não é uma descrição do que está em produção. Contratos devem ser reconciliados com o código real antes de implementar.
 
 ## Escopo de implementação e evidência

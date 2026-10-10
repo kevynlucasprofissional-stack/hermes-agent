@@ -1,5 +1,12 @@
 # Matriz de verificação e segurança — Hermes Creative Workstation
 
+<!-- creative-D043-overlay -->
+## Gate atual adicional D-043 (2026-10-10)
+**CRITÉRIOS DE TESTE AINDA NÃO EXECUTADOS.** CWN-01: schema/reopen/source map, 30000/1001, 60fps, speed/reverse/ramp; CWN-02: GUI/agent/headless mesmo comando, revisão conflitante, batch abort/Undo/idempotência; CWN-03: split/trim/ripple/slip/slide/roll com A/V vinculado, bloqueios e multitrack; CWN-04: preview copy-on-write real, aceitação parcial/rebase e cancel sem mutação; CWN-05: SVG/Canvas/Three.js com arbitrary seek/ready, params editáveis e sandbox JS; CWN-06: export real com decodificação de frame/áudio/codec, close/cancel/kill-tree; CWN-07: pessoa e IA editam os mesmos IDs, Undo e reabertura na GUI; CWN-08: reuso compilado apenas após execução verificada; CWN-09: benchmark/licenças. Qualificação exige positivo+negativo+real E2E+CI exato, com receipts e status verdadeiro; documento ou mock não passam gates. [D-043](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md), [handoff](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
+
+<!-- /creative-D043-overlay -->
+
+
 **Status: CRITÉRIOS PROPOSTOS / NENHUM TESTE AQUI FOI EXECUTADO.** Os nomes/owners reais dos comandos de teste devem ser confirmados no HEAD antes de rodar. Esta matriz não substitui as suítes existentes, release gates ou os controles do Workstation.
 
 ## Escala de evidência e bloqueio
