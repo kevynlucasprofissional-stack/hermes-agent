@@ -1,5 +1,17 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- operational-speed:2026-10-10 -->
+## 2026-10-10 — D-043: economia cognitiva/operacional como prioridade do Hermes Work
+
+**Princípio diretor:** velocidade é **latência e custo até outcome verificado**, não rapidez do click isolado. O Hermes já contém resolver pré-LLM, TaskCompiler, OperationalKernel, BrowserReadiness, ArtifactStore `text_ref/artifact_ref`, serviço HyperFrames e plano Laya→ExperienceCompiler→RunLocalAdopter. O usuário sofre principalmente quando a System-2 redescobre owners, reconstrói sequências DOM, interrompe cada primitiva para decidir/verificar e inventa mecanismos auxiliares. Priorização: **P0** telemetria verdadeira + fechar atestado DIRECT sem emissor; **P1** intenção nova determinística antes da LLM, `creative.hyperframes.open`, `browser.open_site`, operação composta e readiness por condição, payload por referência e verificação proporcional; **P2** proteger edição humana no Trello, retomar lote sem efeitos duplicados, realmente compilar/reutilizar no próprio TaskRun; **P3** medir em Windows/Electron real com custos verificáveis e CI do mesmo SHA.
+
+**Fato vs hipótese:** logs 09/10 (Trello 837 mensagens/163 console registradas mas só 122 IDs console; HyperFrames 301 mensagens/53 terminal/~5m40s até primeira abertura) sustentam **investigação de overhead de coordenação**, mas não demonstram porcentagem nem economia monetária. Ferramentas browser tiveram duração pequena em chamadas correlacionadas; medir latência LLM/wait/Browser antes de atribuir causalidade. O Trello apagou edição humana no cartão #012, de 2480 para 2567 caracteres: sempre proteger a versão e fechar em CONFLICT/HANDOFF quando concorrente; não considerar `33/33` como editorialmente exato. `DF-BASELINE.md` relata testes que podem usar mocks; não confundir com real native E2E.
+
+**Segurança/custo estrutural:** `DIRECT` com `digest(payload)[:32]` é hash, não assinatura autenticada; não elevar efeitos. `schedule_event=False` com fila saturada significa oportunidade possivelmente não processada; manter pendência durável. Contador `system2_calls_avoided_estimated` não corresponde a LLM real poupada. Site conhecido precisa de readiness/URL/BrowserTask, não necessariamente login/vision. Studio aberto via localhost deve corresponder ao **ProcessRegistry/StudioInstance possuída**, não qualquer servidor local. Preservar prefix prompt caching, contratos de autorização e mínimo seam upstream.
+
+**Fonte operacional:** [plano consolidado](OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md) / [handoff executável](OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md) / [journal auditável](engineering-journal/operational-speed-audit-2026-10-10.md). D-041/D-042 continuam a reger produto/Creative e dogfood; esta decisão prioriza **a ordem de redução de overhead**, não substitui a arquitetura.
+
+
 <!-- dogfood-gate:2026-10-09 -->
 ## 2026-10-09 — D-042: Dogfood is the product's executable acceptance contract
 
