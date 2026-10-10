@@ -16,6 +16,12 @@ function fixture() {
   const payload = path.join(directory, 'resources', 'agent-payload')
   const binary = path.join(payload, 'tools', 'uv', 'uv.exe')
   fs.mkdirSync(path.dirname(binary), { recursive: true })
+  // The digest fixture also passes the downstream packaged-readiness guard.
+  // This is an unpacked fixture mirror, not packaged-product evidence.
+  const unpacked = path.join(directory, 'resources', 'app.asar.unpacked', 'dist')
+  fs.mkdirSync(unpacked, { recursive: true })
+  fs.writeFileSync(path.join(unpacked, 'electron-main.mjs'), 'const ready = /HERMES_(?:BACKEND|DASHBOARD)_READY/;\n')
+  fs.writeFileSync(path.join(directory, 'resources', 'app.asar'), 'fixture archive mirror')
   // A truncated PE certificate table is a sanitizer input, not an executable.
   const pe = Buffer.alloc(392)
   pe.write('MZ')

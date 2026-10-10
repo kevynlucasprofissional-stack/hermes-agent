@@ -306,7 +306,10 @@ sys.path.append(${JSON.stringify(repository)})
 assert not os.environ.get('HERMES_RUNTIME_DIR')
 import urllib.request
 from urllib.parse import urlsplit
-original_build = urllib.request.build_opener
+# source_check also imports under its package name; installing twice must not
+# wrap the local transport and reject its own loopback request.
+original_build = getattr(urllib.request, '_fixture_original_build_opener', urllib.request.build_opener)
+urllib.request._fixture_original_build_opener = original_build
 passthrough = original_build().open
 def local(request, *args, **kwargs):
     parsed = urlsplit(request.full_url if isinstance(request, urllib.request.Request) else request)

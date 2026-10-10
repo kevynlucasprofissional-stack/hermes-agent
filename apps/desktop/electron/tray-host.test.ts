@@ -1,15 +1,16 @@
 import { EventEmitter } from 'node:events'
 
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 const createClient = vi.hoisted(() => vi.fn())
 vi.mock('dbus-native', () => ({ createClient }))
 
 import { watchLinuxTrayHost } from './tray-host'
 
-const linuxTest = test.skipIf(process.platform !== 'linux')
+afterEach(() => vi.unstubAllEnvs())
 
 function bus(hostRegistered: boolean) {
+  vi.stubEnv('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/mock/session/bus')
   const connection = Object.assign(new EventEmitter(), { stream: { destroy: vi.fn() } })
   const invoke = vi.fn(async (): Promise<unknown> => ({ signature: 'b', value: hostRegistered }))
 
@@ -24,7 +25,7 @@ function bus(hostRegistered: boolean) {
   return instance
 }
 
-linuxTest('a registered host is required, and losing its owner reports loss exactly once', async () => {
+test('a registered host is required, and losing its owner reports loss exactly once', async () => {
   const instance = bus(true)
   const lost = vi.fn()
   const dispose = await watchLinuxTrayHost(lost)

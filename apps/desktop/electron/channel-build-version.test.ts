@@ -463,6 +463,9 @@ sys.path.insert(0, sys.argv[1])
 from scripts.bundles.release_artifacts import record, desktop_application
 root = pathlib.Path(sys.argv[2])
 request = json.loads(sys.argv[3])
+# This manifest contract has no executable payload; use the recorder's explicit
+# version sidecar rather than probing a nonexistent Windows executable.
+(root / 'version-info-x64.json').write_text(json.dumps({'productVersion': request['version']}))
 package = root / 'Recorder-win-x64.msix'
 with zipfile.ZipFile(package, 'w') as archive:
     archive.writestr('AppxManifest.xml', (root / 'manifest.xml').read_bytes())
