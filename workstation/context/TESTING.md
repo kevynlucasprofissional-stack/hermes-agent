@@ -1271,3 +1271,10 @@ Key suites:
 - `workstation/tests/test_canonical_work_loop.py`: 35 passed tests covering stale run late completion rejection, terminal parent reconciliation (Cases A & B), lineage persistence (`run_id`, `execution_key`, `operation_id`), 120-event streaming hash integrity benchmark, human takeover mutation revocation and fence invalidation, and end-to-end cockpit lineage projection.
 - `workstation/tests/test_canonical_continuity.py`: 14 passed tests covering `db_path` str/Path connectivity, browser readiness contracts, and execution loop continuity.
 - `python -m workstation.work100 --run`: 30 seed cases with 0 coverage gaps, executing 35 pytest tests and 36 Electron/desktop tests cleanly.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.

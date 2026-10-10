@@ -4355,3 +4355,10 @@ the read dispatcher. See [the caller protocol](READONLY_DURABLE_PREFLIGHT.md).
 Successful read capability does not establish write capability. Fan-out is
 authorized by verified persistence of a representative canary, not by successful
 execution of a preparation step. No configuration switch or threshold change.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.

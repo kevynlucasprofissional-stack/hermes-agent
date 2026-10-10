@@ -828,3 +828,10 @@ The canonical execution reliability gate resolved and verified the identified ca
 
 All 30 seed cases in `work100.py` pass with 0 coverage gaps, and all 452
 Workstation tests pass with 2 expected skips.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.

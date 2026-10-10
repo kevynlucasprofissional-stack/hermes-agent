@@ -1,5 +1,14 @@
 # Current State
 
+## 2026-10-10 — explicit development exception
+
+The maintainer instructed: “Pode pular os CI e continue o trabalho”. Runtime work
+continues off-main from Stage A `217742e7bfc66310f9352155e4a0b1a30bab2b98` on
+`codex/operational-speed-runtime-20261010`, with upstream pin `66605471e9f0b0832abbefaf625ce08e948ca540`.
+This waives CI as a development prerequisite only. Baseline/native failures remain
+open; no release qualification, external write, main merge or DIRECT expansion
+is implied. Local RED/GREEN and proportional regression remain required.
+
 
 ## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
 
@@ -1504,3 +1513,10 @@ The working tree extends canonical acceptance/intent/liveness/journal and durabl
 execution owners. The full product program is still IN PROGRESS. See
 [implementation evidence](CANONICAL_WORK_LOOP.md) for exact scope, additive
 migrations, compatibility boundaries and remaining integrations.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.

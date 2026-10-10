@@ -1,4 +1,4 @@
-"""Tests for DF-008 / DF3: Verifiable DIRECT Qualification Attestation.
+﻿"""Tests for DF-008 / DF3: Verifiable DIRECT Qualification Attestation.
 
 Validates that:
 1. Arbitrary non-empty strings (e.g. "receipt-1") no longer enable DIRECT mode.
@@ -9,9 +9,12 @@ Validates that:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 import pytest
+
+pytestmark = pytest.mark.usefixtures("direct_qualification_issuer")
 
 from workstation.artifacts import ArtifactStore
 from workstation.experience_compiler.compilability_monitor import (
@@ -94,6 +97,68 @@ def test_tampered_signature_fails_closed():
     policy = resolve_policy(DIRECT, qualification_ref=tampered)
     assert policy.mode == SHADOW
     assert policy.downgrade_reason == "qualification_signature_mismatch"
+
+
+def test_self_signed_attestation_cannot_enable_direct(tmp_path, monkeypatch):
+    """An attacker who controls a payload cannot issue their own DIRECT permission."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes-home"))
+    now = time.time()
+    forged = {
+        "attestation_id": "attacker-issued",
+        "schema": "workstation.direct_qualification.v1",
+        "code_version": "attacker-code",
+        "provider": "laya",
+        "model": "laya-v1",
+        "model_revision": "attacker-model-revision",
+        "operation_family": "file_edit",
+        "effect_class": "state_mutation",
+        "verifier_contract": {"name": "attacker-verifier"},
+        "safe_env": "production",
+        "exact_tests": ["attacker-claimed-test"],
+        "issued_at": now,
+        "expires_at": now + 3600,
+        "revoked": False,
+        "revocation_reason": "",
+    }
+    canonical = json.dumps(forged, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    forged["signature"] = hashlib.sha256(canonical.encode()).hexdigest()[:32]
+
+    policy = resolve_policy(DIRECT, qualification_ref=forged)
+
+    assert policy.mode == SHADOW
+
+
+def test_rehashed_attestation_cannot_expand_qualified_scope(tmp_path, monkeypatch):
+    """A holder cannot turn a revoked read-only qualification into mutating DIRECT."""
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes-home"))
+    attestation = create_direct_qualification_attestation(
+        code_version="reviewed-code",
+        model_revision="reviewed-model",
+        operation_family="read_status",
+        effect_class="read_only",
+        revoked=True,
+        revocation_reason="qualification_withdrawn",
+    )
+    forged = {
+        **attestation,
+        "code_version": "attacker-code",
+        "model_revision": "attacker-model",
+        "operation_family": "file_edit",
+        "effect_class": "state_mutation",
+        "revoked": False,
+        "revocation_reason": "",
+    }
+    canonical = json.dumps(
+        {key: value for key, value in forged.items() if key != "signature"},
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+    forged["signature"] = hashlib.sha256(canonical.encode()).hexdigest()[:32]
+
+    policy = resolve_policy(DIRECT, qualification_ref=forged)
+
+    assert policy.mode == SHADOW
 
 
 def test_resolvable_artifact_ref_attestation(tmp_path):

@@ -14,12 +14,15 @@ Default mode is SHADOW (observe + record decisions only).
 from __future__ import annotations
 
 import json
+import base64
+import hmac
 import logging
+import math
 import queue
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from agent.system1_decision import DecisionResult, decide_system1
 from workstation.artifacts import ArtifactStore
@@ -29,7 +32,7 @@ from workstation.experience_compiler.compiler import ExperienceCompiler
 from workstation.experience_compiler.corpus import ExperienceCorpus
 from workstation.experience_compiler.models import TransitionOutcome
 from workstation.operational_capabilities import OperationalCapability, OperationalCapabilityRegistry
-from workstation.recipes import digest
+from workstation.recipes import canonical_bytes, digest
 from workstation.run_adoption import AdoptionOffer, RunAdoptionOwner
 from workstation.run_closure import RunClosureProof, compute_expected_operational_utility
 from workstation.system1.contracts import CompilabilityStage
@@ -42,9 +45,43 @@ logger = logging.getLogger(__name__)
 SHADOW, DIRECT = "shadow", "direct"
 LABEL_SCHEMA = "workstation.compilability_label.v1"
 CHECKPOINT_SCHEMA = "workstation.run_learning_checkpoint.v1"
-DIRECT_QUALIFICATION_SCHEMA = "workstation.direct_qualification.v1"
+DIRECT_QUALIFICATION_SCHEMA = "workstation.direct_qualification.v2"
+QUALIFICATION_BINDINGS = (
+    "code_version", "provider", "model", "model_revision", "operation_family",
+    "effect_class", "verifier_contract", "safe_env",
+)
 _FAILURE_OUTCOMES = {"failed", "uncertain", "interrupted", "authority_superseded"}
 _VERIFIED_OUTCOMES = {"verified_success", TransitionOutcome.VERIFIED_SUCCESS.value}
+
+
+def _qualification_trust():
+    """Operator config selects trust; artifacts never select their own secret."""
+    from hermes_cli.config import load_config_readonly
+    from agent.secret_scope import get_secret
+
+    cfg = (((load_config_readonly() or {}).get("workstation") or {})
+           .get("online_compilability") or {}).get("qualification_trust") or {}
+    if not isinstance(cfg, dict) or not all(isinstance(cfg.get(k), str) and cfg[k]
+                                          for k in ("issuer", "key_id", "secret_ref")):
+        raise ValueError("qualification_trust_missing")
+    secret = get_secret(cfg["secret_ref"], "")
+    try:
+        key = base64.b64decode(secret or "", validate=True)
+    except (ValueError, TypeError):
+        raise ValueError("qualification_trust_missing") from None
+    if len(key) < 32:
+        raise ValueError("qualification_trust_missing")
+    if not isinstance(cfg.get("bindings"), list) or not isinstance(cfg.get("revoked_attestation_ids", []), list):
+        raise ValueError("qualification_trust_missing")
+    return cfg, key
+
+
+def _qualified_verifier(contract):
+    # Validation adds run-specific receipts and changes lifecycle/fingerprint.
+    # Their authenticity remains the runtime's responsibility; qualification
+    # binds every semantic verifier field before and after that validation.
+    return {k: v for k, v in contract.items() if k not in {
+        "fingerprint", "lifecycle", "validation_evidence_refs", "validation_receipts"}}
 
 
 def create_direct_qualification_attestation(
@@ -64,11 +101,19 @@ def create_direct_qualification_attestation(
     revocation_reason: str = "",
     attestation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Create a cryptographically bound direct qualification attestation."""
+    """Issuer-side helper; requires an operator-provisioned profile secret.
+
+    Possession of an artifact, a historical success or a model decision does not
+    provision this secret or add an allowed binding to trusted configuration.
+    """
+    trust, key = _qualification_trust()
     now = time.time() if issued_at is None else issued_at
     payload: Dict[str, Any] = {
         "attestation_id": attestation_id or f"dqa_{digest({'v': code_version, 't': now})[:12]}",
         "schema": DIRECT_QUALIFICATION_SCHEMA,
+        "algorithm": "HMAC-SHA256",
+        "issuer": trust["issuer"],
+        "key_id": trust["key_id"],
         "code_version": code_version,
         "provider": provider,
         "model": model,
@@ -79,11 +124,11 @@ def create_direct_qualification_attestation(
         "safe_env": safe_env,
         "exact_tests": list(exact_tests),
         "issued_at": now,
-        "expires_at": expires_at,
+        "expires_at": now + 3600 if expires_at is None else expires_at,
         "revoked": bool(revoked),
         "revocation_reason": revocation_reason,
     }
-    payload["signature"] = digest(payload)[:32]
+    payload["signature"] = hmac.new(key, canonical_bytes(payload), "sha256").hexdigest()
     return payload
 
 
@@ -122,21 +167,41 @@ def verify_qualification_attestation(
     if data.get("schema") != DIRECT_QUALIFICATION_SCHEMA:
         return False, "invalid_qualification_attestation", None
 
-    if data.get("revoked"):
+    try:
+        trust, key = _qualification_trust()
+    except (ValueError, RuntimeError, OSError):
+        return False, "qualification_trust_missing", data
+    if (data.get("algorithm"), data.get("issuer"), data.get("key_id")) != (
+            "HMAC-SHA256", trust["issuer"], trust["key_id"]):
+        return False, "qualification_issuer_mismatch", data
+    sig = data.get("signature")
+    try:
+        expected_sig = hmac.new(key, canonical_bytes({k: v for k, v in data.items() if k != "signature"}), "sha256").hexdigest()
+        if not isinstance(sig, str) or not hmac.compare_digest(sig, expected_sig):
+            return False, "qualification_signature_mismatch", data
+    except (ValueError, TypeError, UnicodeError):
+        return False, "invalid_qualification_attestation", data
+    if data.get("revoked") or data.get("attestation_id") in trust.get("revoked_attestation_ids", []):
         return False, "qualification_revoked", data
-
-    expires_at = data.get("expires_at")
-    if expires_at is not None and time.time() > float(expires_at):
+    issued, expires = data.get("issued_at"), data.get("expires_at")
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in (issued, expires)):
+        return False, "qualification_invalid_validity", data
+    now = time.time()
+    if expires <= now:
         return False, "qualification_expired", data
-
-    sig = data.get("signature", "")
-    if not sig:
-        return False, "qualification_signature_mismatch", data
-
-    payload_to_verify = {k: v for k, v in data.items() if k != "signature"}
-    expected_sig = digest(payload_to_verify)[:32]
-    if sig != expected_sig:
-        return False, "qualification_signature_mismatch", data
+    if issued > now or expires <= issued or expires - issued > 86400:
+        return False, "qualification_invalid_validity", data
+    binding = {k: data.get(k) for k in QUALIFICATION_BINDINGS}
+    try:
+        trusted_binding = any(canonical_bytes(binding) == canonical_bytes(allowed)
+                              for allowed in trust["bindings"])
+    except (ValueError, TypeError, UnicodeError):
+        trusted_binding = False
+    if (not all(binding.values()) or not isinstance(binding["verifier_contract"], dict)
+            or not isinstance(data.get("exact_tests"), list) or not data["exact_tests"]
+            or not all(isinstance(t, str) and t for t in data["exact_tests"])
+            or not trusted_binding):
+        return False, "qualification_binding_mismatch", data
 
     return True, "", data
 
@@ -324,6 +389,7 @@ class OnlineCompilabilityMonitor:
         self.corpus = corpus or ExperienceCorpus(self.artifacts)
         self.compiler = compiler or ExperienceCompiler(self.registry, self.corpus)
         policy = resolve_policy(mode, direct_qualification_ref, enabled, artifacts=self.artifacts)
+        self._qualification_ref = policy.direct_qualification_ref
         self.enabled, self.mode, self.mode_downgrade_reason = policy.enabled, policy.mode, policy.downgrade_reason
         self.cooldown_seconds = cooldown_seconds
         self.owner = owner
@@ -720,12 +786,20 @@ class OnlineCompilabilityMonitor:
         """Offers the runtime checkpoint may evaluate. SHADOW and disabled monitors expose none."""
         if not self.enabled or self.mode != DIRECT:
             return []
+        valid, reason, attestation = verify_qualification_attestation(self._qualification_ref, self.artifacts)
+        if not valid:
+            self.mode, self.mode_downgrade_reason = SHADOW, reason
+            return []
         with self._windows_lock:
             window = self._windows.get((task_id, str(run_id)))
         if window is None:
             return []
         with window.lock:
-            return [o for o in window.offers.values() if o.status == "ready"]
+            return [o for o in window.offers.values() if o.status == "ready"
+                    and o.operation_family == attestation["operation_family"]
+                    and ("state_mutation" if o.proof.effect_budget else "read_only") == attestation["effect_class"]
+                    and canonical_bytes(_qualified_verifier(o.proof.verifier_contract)) ==
+                        canonical_bytes(_qualified_verifier(attestation["verifier_contract"]))]
 
     def record_adoption(self, task_id: str, run_id: str, record: Dict[str, Any]) -> None:
         """Account a checkpoint outcome. Only terminal, read-back-verified items count as reuse."""

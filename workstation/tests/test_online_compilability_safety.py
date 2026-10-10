@@ -15,6 +15,8 @@ from types import SimpleNamespace
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures("direct_qualification_issuer")
+
 from agent.system1_decision import DecisionResult, register_system1_decision_provider, reset_system1_decision
 from workstation.artifacts import ArtifactStore
 from workstation.batch_runner import DurableBatchRunner
@@ -262,7 +264,10 @@ def laya(stage):
 
 def make_monitor(fx, *, mode=DIRECT, **kwargs):
     from workstation.experience_compiler.compilability_monitor import create_direct_qualification_attestation
-    direct_ref = create_direct_qualification_attestation(code_version="fixture", provider="laya") if mode == DIRECT else ""
+    direct_ref = create_direct_qualification_attestation(
+        code_version="fixture", provider="laya", operation_family=OP_FAMILY,
+        effect_class="state_mutation", verifier_contract=verification_contract(None).to_dict(),
+    ) if mode == DIRECT else ""
     monitor = OnlineCompilabilityMonitor(
         artifacts=fx.artifacts, registry=fx.registry, corpus=fx.corpus, compiler=fx.compiler, mode=mode,
         direct_qualification_ref=direct_ref,

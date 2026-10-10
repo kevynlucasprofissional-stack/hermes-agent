@@ -1,6 +1,15 @@
 # CURRENT — Workstation Engineering Journal
 
 
+## Operational speed development exception — 2026-10-10
+
+Maintainer explicitly authorized continuing while skipping CI. Separate runtime
+branch starts at Stage A `217742e`; upstream pin remains `66605471e9f0b0832abbefaf625ce08e948ca540`.
+No main merge or qualification waiver. P0 experiment: reproduce unkeyed-hash
+forgery, then authenticate qualifications against profile-scoped secure secrets,
+trusted issuer/bindings, finite validity and trusted revocation. Missing/invalid
+trust must retain SHADOW. Test real config/secret paths under two isolated homes.
+
 ## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
 
 Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
@@ -5609,3 +5618,10 @@ task, active tab and viewport host on one identity without foreground theft.
 
 Canonical target:
 `../BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.
