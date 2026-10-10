@@ -9,6 +9,7 @@ replay runner (owner seams) are test doubles. No test calls ``attempt_run_local_
 from __future__ import annotations
 
 import hashlib
+import json
 import threading
 import time
 from types import SimpleNamespace
@@ -571,6 +572,25 @@ def test_taskrun_learns_then_automatically_adopts_and_verifies_next_items(fx, tm
     before = len(fx.dispatch_log)
     assert fx.checkpoint(api_call_count=8) is None or not fx.checkpoint().items
     assert len(fx.dispatch_log) == before and monitor.metrics["items_verified"] == 4
+
+
+def test_operator_revocation_between_items_stops_the_current_checkpoint(fx, tmp_path, direct_qualification_issuer):
+    monitor = learn(fx, tmp_path, k=3)
+    original = fx.owner._readback
+    attestation_id = json.loads(monitor._qualification_ref)["attestation_id"]
+
+    def revoke_after_readback(*args):
+        result = original(*args)
+        direct_qualification_issuer["revoked_attestation_ids"].append(
+            attestation_id)
+        return result
+
+    fx.owner._readback = revoke_after_readback
+    report = fx.checkpoint()
+    assert len(report.items) == 1 and report.items[0]["verified"]
+    assert not report.all_items_completed
+    assert fx.statuses().count(WorkItemStatus.COMPLETED) == 4
+    assert monitor.mode == SHADOW
 
 
 def test_single_run_candidate_is_never_promoted_globally(fx, tmp_path):

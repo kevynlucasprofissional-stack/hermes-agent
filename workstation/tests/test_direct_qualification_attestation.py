@@ -2,7 +2,7 @@
 
 Validates that:
 1. Arbitrary non-empty strings (e.g. "receipt-1") no longer enable DIRECT mode.
-2. Only cryptographically/structurally bound attestations (workstation.direct_qualification.v1)
+2. Only operator-authenticated attestations (workstation.direct_qualification.v2)
    with intact signature, valid timestamps, and active status are accepted.
 3. Revoked or expired attestations fail closed to SHADOW mode with specific reasons.
 4. Tampered signatures fail closed with signature mismatch.
