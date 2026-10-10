@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import hashlib
 from typing import Any
 from workstation.batch_detection import prepare_mutation, record_mutation
 from workstation.task_compiler import capture_raw_result
@@ -92,3 +93,25 @@ def workstation_raw_post_tool_observer(
         capture_raw_result(call_id, raw_result)
     except Exception as exc:
         logger.warning("Workstation capture_raw_result observer failed: %s", exc)
+
+    try:
+        from workstation.telemetry import TelemetryEventType, emit_event
+        from workstation.recipes import sanitize, canonical_bytes
+        from workstation.routing import canonical_route_for_tool
+        from agent.runtime_events import serialized_size
+
+        dispatched = context.get("dispatched", True)
+        emit_event(TelemetryEventType.TOOL_COMPLETED, source_owner="workstation.tool_observer",
+            session_id=getattr(agent, "session_id", None),
+            task_id=getattr(agent, "_canonical_work_task_id", None),
+            run_id=getattr(agent, "_canonical_work_run_id", None), call_id=call_id,
+            operation_id=getattr(agent, "_current_operation_id", None) or call_id,
+            route=canonical_route_for_tool(tool_name), tool_calls=1 if dispatched else 0,
+            status="observed" if dispatched else "denied", duration_ms=duration * 1000 if duration is not None else None,
+            request_bytes=serialized_size(final_args), result_bytes=serialized_size(raw_result),
+            dedupe_key=f"tool:{getattr(agent, 'session_id', None)}:{call_id}" if call_id else None,
+            payload={"tool_name": tool_name,
+                     "read_fingerprint": hashlib.sha256(canonical_bytes(sanitize(final_args))).hexdigest()
+                     if tool_name in {"browser_snapshot", "browser_extract_items", "browser_console"} else None})
+    except Exception:
+        logger.debug("Tool telemetry unavailable", exc_info=True)

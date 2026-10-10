@@ -635,16 +635,16 @@
     },
     {
       "id": "FPS-RUNTIME-TELEMETRY-001",
-      "path": "agent/runtime_events.py; agent/turn_api_call.py; agent/auxiliary_client.py; hermes_cli/kanban_db.py; hermes_cli/kanban_db_runtime_events.py",
+      "path": "agent/runtime_events.py; agent/turn_api_call.py; agent/turn_usage.py; agent/turn_response_check.py; agent/turn_operational_resolution.py; agent/auxiliary_client.py; hermes_cli/kanban_db.py; hermes_cli/kanban_db_runtime_events.py",
       "disposition": "UPSTREAM_ABSTRACT",
       "target": "generic content-free runtime event observer boundary",
       "rationale": "Provider dispatch is owned by generic Hermes while Workstation locally projects structural telemetry; a generic observer preserves ownership and keeps Workstation imports out of core.",
       "concerns": [
         {
           "id": "SEAM-RUNTIME-TELEMETRY",
-          "symbol_or_concern": "provider_called structural observation",
+          "symbol_or_concern": "provider_called/provider_usage_recorded and operational_resolution_checked structural observation",
           "semantic_owner": "generic runtime observer registry -> workstation/integrations/hermes/telemetry",
-          "current_behavior": "Reports one content-free event per real main or auxiliary provider dispatch without requests, messages, prompts, or responses.",
+          "current_behavior": "Reports content-free dispatch and canonical usage/cost events linked by call ID, serialized byte counts and resolution duration; never retains requests, messages, prompts or responses.",
           "required_ordering": "At provider dispatch completion/error for main calls and at actual auxiliary dispatch.",
           "disposition": "UPSTREAM_ABSTRACT",
           "replacement": "generic runtime_events observer registry",

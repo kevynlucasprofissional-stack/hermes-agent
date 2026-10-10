@@ -10,6 +10,8 @@ class TelemetryEventType(str, Enum):
     TURN_STARTED = "TURN_STARTED"
     TURN_FINISHED = "TURN_FINISHED"
     PROVIDER_CALLED = "PROVIDER_CALLED"
+    PROVIDER_USAGE_RECORDED = "PROVIDER_USAGE_RECORDED"
+    TOOL_COMPLETED = "TOOL_COMPLETED"
     SYSTEM1_COMPLETED = "SYSTEM1_COMPLETED"
     AUTHORITY_SUPERSEDED = "AUTHORITY_SUPERSEDED"
     ROUTING_DECIDED = "ROUTING_DECIDED"
@@ -56,6 +58,12 @@ class TelemetryEventV1:
     output_tokens: int | None = None
     tool_calls: int | None = None
     cost_usd: float | None = None
+    cost_source: str | None = None
+    call_id: str | None = None
+    cache_read_tokens: int | None = None
+    cache_write_tokens: int | None = None
+    request_bytes: int | None = None
+    result_bytes: int | None = None
     evidence_refs: tuple[str, ...] = ()
     build_sha: str | None = None
     workstation_version: str | None = None

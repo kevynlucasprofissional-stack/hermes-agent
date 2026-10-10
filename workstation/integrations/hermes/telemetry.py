@@ -24,6 +24,14 @@ def install_workstation_telemetry():
 
 
 def _observe_runtime_event(event_name: str, metadata: dict) -> None:
+    if event_name == "operational_resolution_checked":
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(TelemetryEventType.ROUTING_DECIDED, source_owner="hermes.operational_resolution",
+            session_id=metadata.get("session_id"), task_id=metadata.get("task_id"),
+            turn_id=metadata.get("turn_id"), duration_ms=metadata.get("duration_ms"),
+            status=metadata.get("status"), payload={"provider": metadata.get("provider")},
+            dedupe_key=f"resolution:{metadata.get('session_id')}:{metadata.get('turn_id')}:{metadata.get('iteration')}")
+        return
     if event_name == "task_run_superseded":
         from workstation.telemetry import TelemetryEventType, emit_event
         emit_event(TelemetryEventType.AUTHORITY_SUPERSEDED, source_owner="hermes.kanban_taskrun",
@@ -39,17 +47,22 @@ def _observe_runtime_event(event_name: str, metadata: dict) -> None:
             dedupe_key="system1:" + metadata["request_id"],
             payload={key: metadata.get(key) for key in ("provider", "model", "abstained", "fallback", "error", "successful")})
         return
-    if event_name != "provider_called":
+    if event_name not in {"provider_called", "provider_usage_recorded"}:
         return
     from workstation.telemetry import TelemetryEventType, emit_event
     api_request_id = metadata.get("api_request_id")
-    emit_event(TelemetryEventType.PROVIDER_CALLED, source_owner="hermes.provider",
+    usage_event = event_name == "provider_usage_recorded"
+    emit_event(TelemetryEventType.PROVIDER_USAGE_RECORDED if usage_event else TelemetryEventType.PROVIDER_CALLED,
+               source_owner="hermes.provider",
                session_id=metadata.get("session_id"), task_id=metadata.get("task_id"),
                turn_id=metadata.get("turn_id"), duration_ms=metadata.get("duration_ms"),
-               provider_calls=1, input_tokens=metadata.get("input_tokens"),
+               provider_calls=0 if usage_event else 1, input_tokens=metadata.get("input_tokens"),
                output_tokens=metadata.get("output_tokens"), status=metadata.get("status"),
                cost_usd=metadata.get("cost_usd"),
-               dedupe_key=f"provider:{api_request_id}" if api_request_id else None,
+               cost_source=metadata.get("cost_source"), call_id=api_request_id,
+               cache_read_tokens=metadata.get("cache_read_tokens"), cache_write_tokens=metadata.get("cache_write_tokens"),
+               request_bytes=metadata.get("request_bytes"), result_bytes=metadata.get("result_bytes"),
+               dedupe_key=f"{event_name}:{metadata.get('session_id')}:{api_request_id}" if api_request_id else None,
                payload={"api_request_id": api_request_id, "provider": metadata.get("provider"),
                         "model": metadata.get("model"), "purpose": metadata.get("purpose"),
                         "auxiliary": metadata.get("auxiliary", False)})

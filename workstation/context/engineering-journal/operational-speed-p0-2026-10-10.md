@@ -25,3 +25,9 @@ The authenticated claim is qualification evidence, not an authorization grant. E
 
 P0.1 telemetry and real baseline completion; P1 new-intent routing/browser/artifact/HyperFrames operations; P2 concurrent human edit protection and durable learning queue closure; P3 native E1–E3 and controlled repeated benchmarks. No external Trello writes performed. Latency, real LLM avoidance, tokens saved and cost savings: UNKNOWN.
 
+
+## Operational speed P0.1 — instrumentation development (2026-10-10)
+
+Existing local telemetry now persists nullable canonical cost/source, actual cache tokens, call IDs and application UTF-8 byte counts; repeated event delivery is deduplicated. Provider usage comes from the existing pricing/accounting owner. Tool timing/fingerprints store no raw Browser content. Telemetry failure cannot prevent mutation bookkeeping. Session economics reports unknown values when usage/pricing is absent, and flags calls without run lineage; per-run attribution is not complete. Server admission latency excludes UI/transport and remains unknown for ambiguous turn lineage.
+RED: SQLite lost cost_usd and repeated delivery charged twice (2 failures). GREEN: 34 focused telemetry/core/System-1 contracts; final usage-owner and SQLite recheck 12 passed. Full Workstation regression running, not yet qualified. Strict seam classification: 14 classified, zero unclassified/growth. Exact historical seam manifest remains divergent on 14 unchanged tools-file line keys.
+Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller health returned false; no real end-user latency, token savings or monetary savings available. CI skipped by maintainer authorization, development only. Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md.

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import time
 from typing import Any, Dict, Optional
 
 from agent.message_metadata import append_message
@@ -63,6 +64,7 @@ def resolve_operational_step_phase(
         session_id = ""
     session_id = session_id or str(getattr(agent, "session_id", None) or "")
 
+    started = time.monotonic()
     resolution = resolve_operational_step(
         OperationalResolutionContext(
             agent=agent,
@@ -75,6 +77,13 @@ def resolve_operational_step_phase(
             iteration=int(api_call_count or 0),
         )
     )
+    from agent.runtime_events import notify_runtime_event
+    notify_runtime_event("operational_resolution_checked", {
+        "session_id": session_id, "task_id": str(effective_task_id or ""),
+        "turn_id": str(turn_id or ""), "iteration": int(api_call_count or 0),
+        "duration_ms": (time.monotonic() - started) * 1000,
+        "status": resolution.outcome.value, "provider": resolution.provider,
+    })
     if not resolution.is_terminal:
         return OperationalResolutionVerdict(
             "fallthrough", final_response, _turn_exit_reason, api_call_count

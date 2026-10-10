@@ -73,6 +73,7 @@ def _fold_moa_usage(agent, canonical_usage):
 def record_response_usage(
     agent: Any, response: Any, *, messages: list[dict[str, Any]], api_call_count: int,
     api_duration: float, compression_attempts: int, max_compression_attempts: int,
+    usage_context: dict[str, Any] | None = None,
 ) -> ResponseUsageOutcome:
     """Fold ``response.usage`` into compressor, anchors, session counters, state.db
     and the API-call log line (see module docstring). No-usage responses only
@@ -243,6 +244,19 @@ def record_response_usage(
             _cost_delta = (_cost_delta or 0.0) + _moa_cost
     agent.session_cost_status = cost_result.status
     agent.session_cost_source = cost_result.source
+
+    from agent.runtime_events import notify_runtime_event
+    notify_runtime_event("provider_usage_recorded", {
+        "api_request_id": getattr(agent, "_current_api_request_id", None),
+        **(usage_context or {}),
+        "session_id": agent.session_id, "provider": _agg_cost_provider, "model": _agg_cost_model,
+        "input_tokens": canonical_usage.input_tokens, "output_tokens": canonical_usage.output_tokens,
+        "cache_read_tokens": canonical_usage.cache_read_tokens,
+        "cache_write_tokens": canonical_usage.cache_write_tokens,
+        "cost_usd": _cost_delta if cost_result.amount_usd is not None else None,
+        "cost_source": cost_result.source,
+        "status": cost_result.status, "purpose": "main",
+    })
 
     # Persist per-call token deltas for any session_id so non-CLI runs can't lose
     # accounting; gateway/session-store writes use absolute totals and safely overwrite

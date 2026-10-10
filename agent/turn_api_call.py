@@ -148,7 +148,7 @@ def perform_api_call(
                 "turn_id": str(turn_id or ""),
             })
             raise
-        from agent.runtime_events import notify_runtime_event
+        from agent.runtime_events import notify_runtime_event, serialized_size
         usage = getattr(response, "usage", None)
         if usage is None and isinstance(response, dict):
             usage = response.get("usage")
@@ -165,6 +165,8 @@ def perform_api_call(
             "turn_id": str(turn_id or ""),
             "input_tokens": usage_value("input_tokens", "prompt_tokens"),
             "output_tokens": usage_value("output_tokens", "completion_tokens"),
+            "request_bytes": serialized_size(api_kwargs),
+            "result_bytes": serialized_size(response),
         })
     finally:
         with _bracket:

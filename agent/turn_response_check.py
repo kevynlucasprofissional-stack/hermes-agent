@@ -196,6 +196,8 @@ def check_api_response(
         agent, response, messages=messages, api_call_count=api_call_count,
         api_duration=api_duration, compression_attempts=compression_attempts,
         max_compression_attempts=max_compression_attempts,
+        usage_context={"api_request_id": str(api_request_id),
+                       "task_id": str(effective_task_id or ""), "turn_id": str(turn_id or "")},
     )
     compression_attempts = _usage_outcome.compression_attempts
     if _usage_outcome.rearmed:
