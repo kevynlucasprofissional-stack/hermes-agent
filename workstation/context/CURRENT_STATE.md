@@ -1,5 +1,15 @@
 # Current State
 
+<!-- operational-speed:2026-10-10 -->
+## 2026-10-10 — Operational speed/cost lane, audited dogfood branch (DOCS ONLY)
+
+**Code snapshot (not main):** `codex/dogfood-causal-closure-20261009@8e64b38a81adcf8a01dc2ed05aa3eb078adc9f9f`; observed `main@f21e803b3525b70ee6be2305e579c1cc1f930e74`. Some older 2026-10-09 dogfood paragraphs below correctly describe their **older main snapshot** but are superseded when making claims about this candidate: SHADOW now mines/prepares validation, durable refs/checkpoints and run-local offers are present; `text_ref/artifact_ref` and Studio lifecycle/Electron open are implemented individually. Existing resolver restores an intent from stored objective, but new concise user command pre-LLM is **not proven**. Studio launch is not yet exposed as one owned operation. Existing DIRECT attestation uses non-authenticating SHA256-derived `signature`; **hold on DIRECT until authenticated qualification**. Pressure shedding may preserve a pointer without actually processing the candidate; no measured System-2 economy.
+
+**Real-use findings:** Trello 09/10 took ~90 min, 163 console requests logged with 122 IDs (tool median ~0.06s), manual edit of card #012 was overwritten. HyperFrames required ~5m40s to confirmed Studio open and 53 terminal calls logged. These are diagnostics, not comparable benchmark runs. `DF-BASELINE.md` reported 61/61 local tests but **does not establish packaged Windows native behavior**; candidate CI status not independently qualified in this documentation cycle. No code changes/tests/merges were executed by this documentation update.
+
+**Priority:** P0 trustworthy telemetry/cost plus authenticated DIRECT; P1 current-utterance pre-LLM aliases, composed typed browser procedures, semantic wait, artifact payload references and `creative.hyperframes.open`; P2 concurrency-safe Trello/resume + genuine same-run ExperienceCompiler; P3 E1/E2/E3 native and exact-head CI. See [D-043 spec](OPERATIONAL_SPEED_COST_REDUCTION_2026-10-10.md) and [handoff](OPERATIONAL_SPEED_IMPLEMENTER_HANDOFF_2026-10-10.md). H-079 upstream-first remains mandatory before modifying runtime code.
+
+
 <!-- dogfood-gate:2026-10-09 -->
 ## 2026-10-09 Dogfood-first independent audit — DOCUMENTED / NO NEW CODE
 
