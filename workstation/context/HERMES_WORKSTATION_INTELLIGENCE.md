@@ -1,5 +1,19 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- OPC-001-intelligence:2026-10-10 -->
+## 2026-10-10 — Inteligência operacional pré-fabricada compartilhada Agent + Workstation
+
+**Decisão aceita / runtime não qualificado.** Reutilizar o pacote **Hermes-Work-Prefabs-Plug-and-Play-v0.1** como referência de engenharia (código, parser, navegador com snapshot, Trello REST, inventário de sessões/HTML e testes), não como segunda aplicação ou autorização de instalar/reescrever o Hermes. Complemento opcional v0.2 fornece descoberta `prefab_catalog` ao toolset `browser` do Hermes Agent, mantém `prefab_execute` no `desktop_ui` do Workstation e gera inventário observacional sanitizado. A existência das ferramentas não garante roteamento: provar `model_tools.get_tool_definitions`, presença em toolsets efetivos, matching exato antes de System-2, dispatch canônico, readback e event labels.
+
+**Princípio:** interpretação uma vez, execução determinística reutilizável quando pré-condições e identidade são comprovadas. Use heurística sem LLM para casos fechados; Laya faz classificação/event readiness de baixo custo quando necessário e nunca autoriza side effects; System-2 fica para ambiguidade, novos objetivos e recovery autorizado. `CapabilityResolver/OperationalKernel/TaskCompiler/Policy/Verifier/ArtifactStore/ExperienceCompiler` continuam owners únicos. Aprender de HTML/sessão é observar e gerar candidatos DISCOVERED, não promover. Run-local browser requer owner readback, scope, tab/revision, lease e budget; incerteza de mutação interrompe qualquer retry.
+
+**Evidência observacional:** 9 sessões únicas, 8 HTMLs únicos nos anexos; 1.109 browser tool calls, concentradas Instagram 543, Trello 387, WhatsApp 148. Não confundir tool calls com tokens de modelo. Primeiro vertical = abrir Trello/quadros ACIRV e consultar cards/readback sem LLM; segundo = mutação Trello via TaskRun; depois Instagram incremental, WhatsApp escopado sem envio automático, ChatGPT com editor semântico. Metadados de source e fixtures devem ser privados/sanitizados. Caminhos locais do usuário não estão confirmados no remoto do GitHub.
+
+**Estado e gates:** `main` inspecionada `f21e803` já contém merge Laya, mas H-079 upstream-first, H-081/082 e release safety são independentes. O monitor SHADOW hoje não minera; D-039 favorece OBSERVE_ACTIVE e oportunidades HELD, sem ampliar authority. Não elevar DIRECT até prova de verificador/replay real e atestação vinculada a família/revisão.
+
+**Canonical:** [OPC-001](PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md) · [implementation handoff](PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md) · [journal](engineering-journal/prefab-operational-capabilities-2026-10-10.md).
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
 
