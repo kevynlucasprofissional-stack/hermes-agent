@@ -15,7 +15,7 @@
 ## Local candidate/reference status
 
 - Existing user package `Hermes-Work-Prefabs-Plug-and-Play-v0.1.zip` includes 17 files, shell/bat installer, catalog, Trello official API adapter, scoped navigation, offline fingerprints, candidate `DISCOVERED` seed and unit tests; it is a reference, not qualified production code.
-- Complement `Hermes-Work-Prefabs-Integracao-v0.2.zip` adds generic Agent `browser` toolset `prefab_catalog`, offline multi-file `harvester.audit_corpus` and `audit-corpus` CLI, plus privacy tests. **32/32 local Python unittests passed** in isolated package. Not an Electron/live policy/CI qualification.
+- Complement `Hermes-Work-Prefabs-Integracao-v0.2.zip` adds generic Agent `browser` toolset `prefab_catalog`, offline multi-file `harvester.audit_corpus` and `audit-corpus` CLI, plus privacy tests. **33/33 local Python unittests passed** in isolated package. Not an Electron/live policy/CI qualification.
 - v0.2 audit of provided copies deduplicated 9 JSON and 8 HTML. File names and fingerprints support a site-family association only. Never represent the HTML as step-by-step independent runtime verification.
 - The local Windows paths from user are *not* on the examined GitHub main tree; implementer must verify Windows checkout contents. Remote Desktop Commander device was offline; no local checkout verification performed.
 
