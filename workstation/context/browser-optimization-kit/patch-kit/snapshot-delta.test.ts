@@ -26,3 +26,19 @@ test('rejects replay on wrong baseline and stale revisions', () => {
   assert.throws(() => applySnapshotDelta({ ...start, tabId: 'another' }, patch))
   assert.equal(diffSnapshot(start, { ...start, revision: 1 }).kind, 'full')
 })
+
+test.each([
+  ['long Unicode replacement', 'café 東京 '.repeat(180) + '\nold\n' + '尾部 '.repeat(180),
+    'café 大阪 '.repeat(180) + '\nnew\n' + '尾部 '.repeat(180), false],
+  ['insert and remove lines with terminal newline', 'head '.repeat(180) + '\nremove\nkeep\n' + 'tail '.repeat(180),
+    'head '.repeat(180) + '\ninsert-1\ninsert-2\nkeep\n' + 'tail '.repeat(180) + '\n', false],
+  ['truncated next frame forces a full update', 'before '.repeat(180),
+    'after '.repeat(180), true]
+])('reconstructs exact structure for %s', (_label, before, after, truncated) => {
+  const previous = { ...start, revision: 7, text: before as string }
+  const next = { ...start, revision: 8, text: after as string,
+    ...(truncated ? { truncated: true } : {}) }
+  const update = diffSnapshot(previous, next, 0)
+  if (truncated) assert.equal(update.kind, 'full')
+  assert.deepEqual(applySnapshotDelta(previous, update), next)
+})
