@@ -2117,6 +2117,12 @@ replacement access failure under a checkout-nested temporary directory. The
 canonical isolated runner repeats it using independent OS temporary roots.
 Desktop reruns exposed host saturation when multiple suites used default worker
 counts; qualification now limits Desktop workers without changing test timeouts.
+Native isolated Workstation result: 474 passed, two expected skips, zero failures
+and zero retries in 610.3s; canary/large-fanout file took 578.2s. This validates the
+canonical per-file path on Windows. Release qualification now reuses that path
+with four workers and explicitly zero retries, retaining its existing aggregate
+timeout and all stages. A real child-process regression checks exit propagation
+and bound forwarding. Actual release-smoke execution is the next validation.
 
 ## H-064 — Canonical Work Loop (2026-09-17)
 
