@@ -1,0 +1,18 @@
+{
+  "audit_date": "2026-10-10",
+  "hermes_commit": "56f5758d9b589f3bc04f5a4b4305d80d8fd459a7",
+  "evidence_files": [
+    "workstation/dogfood/dados/Sess\u00f5es Hermes/sincronizar-descri-es-lote-piloto-acirv-no-trell-20260919.json",
+    "workstation/dogfood/dados/Sess\u00f5es Hermes/continuar-coleta-instagram-acirv-setembro-2026-20261002.json",
+    "workstation/dogfood/dados/Sess\u00f5es Hermes/abrir-hyperframe-20261009.json",
+    "apps/desktop/electron/workstation-browser-runtime.ts",
+    "refer\u00eancias/02-Browser-Automacao-Web/browserclaw-main/src/actions/batch.ts",
+    "refer\u00eancias/02-Browser-Automacao-Web/browseros-ai--BrowserOS/packages/browseros-agent/packages/browser-core/src/core/snapshot/diff.ts",
+    "refer\u00eancias/02-Browser-Automacao-Web/browserbase--stagehand/packages/sdk-python/examples/caching.py",
+    "refer\u00eancias/02-Browser-Automacao-Web/vercel-labs--agent-browser/cli/src/native/snapshot.rs",
+    "refer\u00eancias/02-Browser-Automacao-Web/browser-use--desktop/app/src/main/chrome-import/index.ts",
+    "refer\u00eancias/02-Browser-Automacao-Web/EricFinland--witness/witness/pricing.py"
+  ],
+  "verified_findings_count": 12,
+  "total_repositories_inspected": 25
+}

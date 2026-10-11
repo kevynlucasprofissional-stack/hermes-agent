@@ -1,0 +1,12 @@
+mecanismo,categoria,hermes_status,melhor_referencia,decisao,impacto_latencia,impacto_tokens
+Execução em Lote,Automação,Ausente,BrowserClaw (batch.ts),COPY / ADAPT,-65%,-70%
+Snapshot Accessibility Tree,Percepção,Lento (DOM JS),Agent Browser & BrowserOS,REIMPLEMENT PATTERN,-70%,-20%
+Diffs de Snapshot Pós-Mutação,Eficiência,Ausente (página inteira),BrowserOS (diff.ts),REIMPLEMENT PATTERN,-30%,-80%
+Extração Estruturada com Cache,Extração,Ausente (console hack),Stagehand (caching.py),ADAPT,-90%,-90%
+Importação de Sessão do Chrome,Autenticação,Ausente (login manual),browser-use/desktop,COPY,Instantâneo,0
+Recuperação de Crash de Renderizador,Resiliência,Ad-hoc parcial,browser-use (crash_watchdog),COPY,Recupera em 500ms,0
+Diagnóstico de UI Drift,Resiliência,Genérico (quarentena direta),Driftlock (diagnose.mjs),ADAPT,Auto-reparo <100ms,-50%
+Guarda de Hidratação SPA,Percepção,Delay fixo 220ms,BrowserClaw (ai-snapshot.ts),COPY,-20%,0
+Contabilidade de Custo Financeiro,Telemetria,Apenas contagem de tokens,Witness (pricing.py),COPY,0,0
+Throttling 6fps em Background,Performance,Nativo 6fps,Hermes Work,KEEP HERMES,Baixo CPU/GPU,0
+Compilação de Procedimentos,Aprendizado,ExperienceCompiler,Hermes Work,KEEP HERMES,Zero LLM em reuso,-100%

@@ -1,25 +1,10 @@
 # Matriz de verificação e segurança — Hermes Creative Workstation
 
-<!-- dogfood-gate:2026-10-09 -->
-## 2026-10-09 Additional *product* verifier — DF-024 / HC-01..08
+<!-- creative-D043-overlay -->
+## Gate atual adicional D-043 (2026-10-10)
+**CRITÉRIOS DE TESTE AINDA NÃO EXECUTADOS.** CWN-01: schema/reopen/source map, 30000/1001, 60fps, speed/reverse/ramp; CWN-02: GUI/agent/headless mesmo comando, revisão conflitante, batch abort/Undo/idempotência; CWN-03: split/trim/ripple/slip/slide/roll com A/V vinculado, bloqueios e multitrack; CWN-04: preview copy-on-write real, aceitação parcial/rebase e cancel sem mutação; CWN-05: SVG/Canvas/Three.js com arbitrary seek/ready, params editáveis e sandbox JS; CWN-06: export real com decodificação de frame/áudio/codec, close/cancel/kill-tree; CWN-07: pessoa e IA editam os mesmos IDs, Undo e reabertura na GUI; CWN-08: reuso compilado apenas após execução verificada; CWN-09: benchmark/licenças. Qualificação exige positivo+negativo+real E2E+CI exato, com receipts e status verdadeiro; documento ou mock não passam gates. [D-043](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md), [handoff](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
 
-This older creative verification matrix is supplemented by [DOGFOOD_CREATIVE_GATE_2026-10-09.md](DOGFOOD_CREATIVE_GATE_2026-10-09.md) and [D-042 main dogfood product gate](../context/DOGFOOD_PRODUCT_GATE_2026-10-09.md). A fixture PNG, still-PNG-derived MP4, static source test or HyperFrames dev-server screenshot may support a stage but **cannot** stand in for native product qualification. Must prove shared human+agent editing, safe concurrent revision 409, exact editable-source reopen, physical Electron/WebContentsView owner, animated frame variation, verified artifact/TaskRun lineage and same ExperienceCompiler; include unauthorized session, crashed renderer, stale lease, canceled run and failed readback negatives. Until the user's actual installed HyperFrames checkout is inspected and native tests are run, mark implementation status UNKNOWN / NOT VERIFIED, not absent or done. Release still depends on upstream-first baseline and exact-head Windows CI.
-
-## D-041 — Nova matriz P0–P6 para HyperFrames-first (2026-10-09)
-
-**Esta matriz é plano de verificação, NÃO testes já executados no Hermes/HyperFrames.** As antigas linhas CW abaixo são registros de um projeto anterior e não substituem os testes atuais. Estado válido: NOT_RUN, UNIT_PASS, INTEGRATION_PASS, E2E_PASS, QUALIFIED ou BLOCKED; um mock não é native-E2E.
-
-| Fase / ID | Evidência positiva real | Testes negativos/falhas | Critério de saída |
-| --- | --- | --- | --- |
-| HF-P0 baseline | mapa de salvage SHA/PR/owners, licença SHA HyperFrames pinado, H-079/CI audit | local native fix ausente, upstream conflitado, Laya/provider faltante, license não auditada | inventário confiável e admission experimental explícita |
-| HF-P1 service | owned preview API/UI funcional, loopback, start/stop/restart, browser/view do Electron verdadeiro | porta ocupada, URI maliciosa, csrf/origin, token inválido, A→B profile, missing dependency, crash/orphan, human focus | **M1a**, vídeo/screenshot nativo + health/API readback + receipts |
-| HF-P2 project/export | native source edits, If-Match/ETag, restart/reopen, render PNG/MP4, hashes + ffprobe + frame decoded | stale etag/409, troca humana simultânea, traversal/symlink, external file change, partial save, render timeout/cancel, mismatched output | origem editável e outputs reais verificáveis |
-| HF-P3 agent bridge | task-scoped inspect/add/update/keyframes, agent↔human changes preserved after reopen | unauthorized task, cross-profile, stale revision, arbitrary JS, injection, credit/data exfiltration, uncertain response/duplicate retry | **M1b** human→agent→human, undo/conflict, no invented success |
-| HF-P4 video/design | trim/split/track/audio/text motion on one project, exact frame/export readback | missing media, temporal drift, audio sync errors, lost keyframes, backward compatibility | NLE/video incremental validated |
-| HF-P5 3D | Three.js scene/GLB/animation + revision/undo/export | corrupt model, endless render, unsafe asset URL/JS, wrong scene scope | optional E2E or explicit deferred |
-| HF-P6 qualification | all product gates, native Windows/Electron E2E, owner verifier/replay/EC measured, exact-head CI | denial, restart, timeouts, no promotion on unverifiable output, upstream drift not classified | QUALIFIED only on independently linked receipts and green required CI |
-
-**Required metadata per scenario:** code commit SHA, HyperFrames pinned SHA/package/lock hash, profile/task/run ID redacted, exact command, actual result, screenshot/project/output/checksum, independent readback, negative case, resource bounds, approval and rollback. Studio is a browser UI and does not confer effect authority. **Do not call #60 still-to-MP4 proof an animation engine.** License/auth/security controls cannot be bypassed in a sample. See [D-041](HYPERFRAMES_ADOPTION_2026-10-09.md).
+<!-- /creative-D043-overlay -->
 
 
 **Status: CRITÉRIOS PROPOSTOS / NENHUM TESTE AQUI FOI EXECUTADO.** Os nomes/owners reais dos comandos de teste devem ser confirmados no HEAD antes de rodar. Esta matriz não substitui as suítes existentes, release gates ou os controles do Workstation.

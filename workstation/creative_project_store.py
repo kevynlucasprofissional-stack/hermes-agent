@@ -63,7 +63,7 @@ def creative_source_bytes(source: dict) -> bytes:
     return data
 
 
-_SUPPORTED_ENGINES = {"electron-svg", "remotion", "hyperframes"}
+_SUPPORTED_ENGINES = {"electron-svg", "remotion", "hyperframes", "creative-document"}
 
 
 def load_creative_revision(project_id: str, revision_id: str) -> CreativeProjectRevision:
@@ -209,16 +209,21 @@ def save_creative_revision(
     data = creative_source_bytes(source)
     operation_id = _identifier(operation_id) if operation_id is not None else uuid.uuid4().hex
 
-    if (project_id is None) != (parent_revision is None):
-        raise ValueError("Existing projects require an explicit parent revision")
+    if parent_revision is not None and project_id is None:
+        raise ValueError("Existing projects require an explicit project identifier")
 
-    if project_id is not None:
+    if project_id is not None and parent_revision is None:
+        root = _root()
+        if (root / _identifier(project_id)).exists():
+            raise ValueError("Existing projects require an explicit parent revision")
+
+    if project_id is not None and parent_revision is not None:
         parent = load_creative_revision(project_id, parent_revision)
         if parent.engine != engine:
             raise ValueError("Creative project engine cannot change within a revision lineage")
         if if_match is not None and if_match.strip() != parent.etag:
             raise CreativeConflictError(f"409 Conflict: ETag mismatch. Expected {parent.etag}, got {if_match}")
-    else:
+    elif project_id is None:
         project_id = uuid.uuid4().hex
 
     revision_id = uuid.uuid4().hex
@@ -267,3 +272,32 @@ def save_creative_revision(
         os.fsync(stream.fileno())
 
     return load_creative_revision(project_id, revision_id)
+
+
+def save_creative_document(
+    doc: Any,
+    *,
+    parent_revision: str | None = None,
+    operation_id: str | None = None,
+    if_match: str | None = None,
+) -> CreativeProjectRevision:
+    """Save an engine-neutral CreativeDocument instance."""
+    from workstation.creative_document import document_to_dict
+    payload = document_to_dict(doc)
+    proj_id = doc.project_id
+    return save_creative_revision(
+        payload,
+        project_id=proj_id,
+        parent_revision=parent_revision,
+        operation_id=operation_id,
+        engine="creative-document",
+        if_match=if_match,
+    )
+
+
+def load_creative_document(project_id: str, revision_id: str) -> Any:
+    """Load and parse an engine-neutral CreativeDocument instance."""
+    from workstation.creative_document import load_document_from_dict
+    rev = load_creative_revision(project_id, revision_id)
+    payload = json.loads(rev.source_path.read_bytes())
+    return load_document_from_dict(payload)

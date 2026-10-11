@@ -1,20 +1,10 @@
 # Hermes Workstation — Coding-Agent Context
 
-<!-- dogfood-gate:2026-10-09 -->
-## Priority read — 2026-10-09 D-042 Dogfood-first implementation
+<!-- creative-D043-overlay -->
+### D-043 Creative Workstation — entrada atual (2026-10-10)
+Após as regras upstream/segurança obrigatórias desta página, qualquer agente CW deve seguir [arquitetura engine-neutral](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) e [implementer handoff CWN-00→09](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md). O draft D-041 HyperFrames-first (PR #62) está supersedido como regra de motor; D-042 dogfood/PR #63 e H-079/D-038/D-039 continuam. Ordem CW-01..CW-07 antiga é histórico para recuperação e não deve conduzir novas mudanças.
 
-The maintainer's timestamped Markdown entries under `../dogfood/` are **mandatory first-class product requirements**. For any Browser, System-1/Laya, Experience Compiler, subagent, web workflow or Creative/HyperFrames work, after the existing root `AGENTS.md` / Workstation upstream-first gate read:
-
-1. [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md) — complete human-note-to-owner/test ledger DF-001..026;
-2. [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md) — fast, ordered DF0..DF8 implementation handoff and exact touchpoints;
-3. [engineering-journal/dogfood-gap-audit-2026-10-09.md](engineering-journal/dogfood-gap-audit-2026-10-09.md) — dated findings and evidentiary limits;
-4. the **original seven** `../dogfood/*.md` notes themselves (not just summaries), then D-039, D-038 and affected runtime owner/tests; for HyperFrames also [../creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md](../creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md) and draft PR #62 D-041.
-
-Respect existing required context-reading order, H-079 upstream-first baseline and D-038 authority. The dated static audit does not certify newer local HyperFrames code; inventory user worktrees and preserve uncommitted changes before coding. **This note is a documentation handoff, not a completed runtime fix.**
-
-## 2026-10-09 — D-041: Creative Workstation reading route (current)
-
-**Para qualquer nova tarefa de Creative**, depois de cumprir **a ordem obrigatória de leitura abaixo e o gate H-079** (não anulados), use primeiro [o handoff HyperFrames-first](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md), depois [a especificação D-041](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md), [matriz de verificação](../creative-workstation/VERIFICATION_MATRIX.md) e os arquivos de código específicos. O bloco 2026-10-08 `Planned Creative` abaixo é histórico. Nova prioridade: **HyperFrames Studio self-hosted dentro do Chromium/Electron existente**, OpenReel e Diffusion apenas referências; preservar #57–61 como drafts e não importar a cadeia sem revisão. Status: decisão documentada, integração não qualificada.
+<!-- /creative-D043-overlay -->
 
 
 <!-- creative-workstation-intake:2026-10-08 -->

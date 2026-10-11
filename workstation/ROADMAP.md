@@ -1,32 +1,17 @@
 # Workstation roadmap
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — NOVA PRIORIDADE CW: D-043, engine-neutral
+**STATUS: DECISÃO DE ARQUITETURA / IMPLEMENTAÇÃO.** O usuário retirou a preferência arquitetural por HyperFrames. A decisão HyperFrames-first no [PR #62](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/62) D-041 é substituída para seleção de motor, projeto e UX; preservar código/ativos úteis, mas não tomar HyperFrames como núcleo obrigatório. D-042/PR #63 dogfood e gates D-038/D-039, H-079/H-081/H-082 continuam. PRs #57–#61 são drafts, não código de `main` (snapshot main `f21e803b`).
+**Ordem executiva (CWN-00→CWN-09):** CWN-00 inventário/PRs/baseline e licença → CWN-01 Creative Document com IDs estáveis, racional timecode/source map → CWN-02 Command Bus, transações e Undo comuns à UI/IA/headless → CWN-03 NLE split/trim/ripple/slip/slide/roll com linked A/V → CWN-04 Semantic Edit Plan e preview de revisão/rebase/aceitação parcial → CWN-05 autoria freeform SVG/Canvas/WebGL/Three.js com seek determinístico → CWN-06 renderizadores intercambiáveis, paridade preview/export e áudio → CWN-07 Graph Editor e workspaces adaptativos → CWN-08 Experience Compiler com reuso verificado → CWN-09 efeitos/engines especializados conforme benchmark.
+**Autoridade do trabalho criativo:** [Arquitetura D-043](creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md), [prompt integral de implementação](creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md), [journal](context/engineering-journal/creative-engine-neutral-2026-10-10.md). Sequências antigas CW-01..07 abaixo são contexto histórico/salvage, não a ordem atual.
 
-## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
-
+## Operational speed Stage A — 2026-10-10
 Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
 <!-- dogfood-gate:2026-10-09 -->
 ## 2026-10-09 — D-042 Dogfood-first product acceptance, native learning and HyperFrames qualification
 
-**Status: PRODUCT DIRECTION ACCEPTED / IMPLEMENTATION OPEN / NOT RELEASE-QUALIFIED.** The maintainer's **all seven** Markdown entries in `workstation/dogfood/` are mandatory product outcome requirements, not a suggestions appendix. Exact observed main `f21e803b` is behind the reported local HyperFrames installation; audit local WIP before any reset/replacement. D-041 HyperFrames-first is documented in **unmerged draft PR #62**, not confirmed on main. This documentation gate does not install a studio or change runtime.
-
-**Critical path (upstream-first remains first):** DF0 preserve local checkout + H-079 fixed pin and baseline qualification -> DF1 semantic verified capture and **OBSERVE_ACTIVE mining even when external effects are SHADOW** -> DF2 durable fair adaptive candidate/queue/checkpoint survival -> DF3 verifiable scoped DIRECT attestation + actual isolated validation owner + automatically derived owner-scoped same-run handoff -> DF4 native browser route and subagent Browser-Hub E2E -> DF5 retroactive missed-opportunity evaluation, opt-in recorder, site prebake and typed adapters -> DF6 repair/qualify actual local HyperFrames human+agent studio -> DF7 causal E1 Browser, E2 12 Trello cards, E3 animated HyperFrames native-product tests + exact-head Windows/Workstation CI -> DF8 optional integrations as **separate backlog**. DF4 and DF6 may proceed in parallel after shared ownership/proof is stable.
-
-**Top blockers from dated static audit:** `compilability_monitor.py` SHADOW return before mining, loss of queued events on saturation/shutdown/900s eviction, permanent 3-attempt budgets and nonempty-string DIRECT mode selection. Preserve D-038 proof/authority and D-039 desired active learning; no replay/receipt synthesis. H-080B real-use verification/readback and BrowserTask delegation need **native E2E**. Do not promote mock-only tests, static architecture, still-PNG MP4 or documentation to production DONE.
-
-**Acceptance source and implementer order:** [Dogfood requirement ledger DF-001..026](context/DOGFOOD_PRODUCT_GATE_2026-10-09.md) · [exact implementation handoff DF0–DF8](context/DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md) · [independent audit journal](context/engineering-journal/dogfood-gap-audit-2026-10-09.md) · [creative native qualification](creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md). Preserve existing roadmap sections as historical snapshots. `main` release claim remains **OPEN**.
-
-
-## 2026-10-09 — D-041 HYPERFRAMES-FIRST / Hermes Workstation priority (accepted product direction, NOT qualified)
-
-**Current Creative priority is a working Hermes Workstation Creative Studio**: self-hosted **HyperFrames Studio** running within the existing Electron/Chromium BrowserTask/WebContentsView, with persistent source projects and eventual typed Hermes agent edits. **OpenReel** (NLE operations) and **Diffusion Studio** (code↔UI/agent edits) are architectural references only. Penpot/Remotion/Three.js are **no longer competing P0 editors**; Remotion source PR #61 is preserved but paused, Three.js and specialized design engines remain optional later stages.
-
-**Status now:** D-041 **DOCUMENTED / APPROVED DESIGN**; HyperFrames–Hermes runtime **NOT IMPLEMENTED, NOT E2E, NOT QUALIFIED**. Historical Creative work exists on unmerged draft PRs #57 Stage A, #58 Creative Runtime, #59 revisioned source/PNG, #60 still-image MP4, #61 editable Remotion TSX; do not mistake old `DOCS ONLY` paragraphs below for current *whole initiative* status or assume these drafts are in main. Native capture repair was reported local/uncommitted and must be recovered on that machine, not inferred from GitHub.
-
-**Sequence (one independently reviewable unit per stage):** **P0** recover draft work, preserve local uncommitted changes, H-079/CI baseline triage and pinned HyperFrames proof → **P1** local owned HyperFrames service in the **existing** Hermes Chromium (M1a) → **P2** editable HTML/CSS/JS/media project, ETag/revision persistence, independently checked PNG+MP4 → **P3** human+Hermes agent typed edits with conflict/readback (M1b) → **P4** targeted NLE/design gaps → **P5** optional Three.js and specialist engines → **P6** complete native qualification, owner-verified Experience Compiler capture/reuse. P1 isolated experiment may run under recorded 2026-10-08 *development exception* while Stage A remediation proceeds separately, without waiving H-079 preflight or unsafe-code/release holds.
-
-**NO MAIN MERGE / NO PROMOTION while H-079 upstream-aligned baseline, required H-080/H-081/H-082/KI checks or exact-head CI remain red.** Preserve canonical Session/TaskRun, Control Plane, Browser, ProcessRegistry, ArtifactStore, Journal and Experience Compiler; Studio is UI, not effect authority. Source security/ports/license must be checked per pinned revision.
-
-**Authoritative spec:** [D-041 HyperFrames adoption](creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md) · [step-by-step implementer handoff](creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) · [phase verification](creative-workstation/VERIFICATION_MATRIX.md). Older CW-00–CW-07 sequencing below is **historical/superseded only for Creative tool selection and ordering**, not a cancellation of baseline security rules.
+<!-- /creative-D043-overlay -->
 
 
 <!-- creative-workstation-intake:2026-10-08 -->

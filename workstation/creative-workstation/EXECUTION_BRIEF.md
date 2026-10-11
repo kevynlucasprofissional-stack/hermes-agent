@@ -1,10 +1,10 @@
 # CW — Execution Brief (entrada compacta para coding agents)
 
-## 2026-10-09 — ENTRADA ATUAL: D-041 HyperFrames-first
+<!-- creative-D043-overlay -->
+## Entrada atual (2026-10-10) — D-043 CWN-00→CWN-09
+**A ordem CW-01..CW-07/R1..R5 neste briefing antigo está SUPERSEDIDA apenas quanto à estratégia do produto.** Execução atual: [ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md), com documento+tempo → Command Bus → NLE/linked sync → Semantic Edit Plan → freeform → render adaptável → UX/Graph Editor → reuso verificado. H-079, política D-038/D-039, dogfood D-042 e gates exato HEAD preservados. HyperFrames não é escolha obrigatória.
 
-**The CW-01-only/Remotion-Penpot-Three instructions below are historical. Do not execute that order as new project strategy.** Implement **HyperFrames Studio self-hosted within existing Hermes Chromium/Electron** first, using draft CW-02 runtime (#58), revision/image contracts (#59) and FFmpeg (#60), without blindly merging. OpenReel NLE + Diffusion agent/code patterns are **references only**. Do not fork three competing editors or invent a universal project DB. Project native HTML/CSS/JS/media + thin Hermes provenance.
-
-**Start here:** [full implementer handoff](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) → [D-041 spec](HYPERFRAMES_ADOPTION_2026-10-09.md) → [verification matrix](VERIFICATION_MATRIX.md). Stage order P0 salvage/gates → P1 Studio owned/embedded (M1a) → P2 edit/save/reopen/PNG+MP4 → P3 agent typed edit (M1b) → P4 selective NLE → P5 optional 3D → P6 qualification/reuse. Each phase draft PR, no main merge or dependency install without authority. Mandatory root/workstation/context AGENTS and H-079 precedence remains unchanged.
+<!-- /creative-D043-overlay -->
 
 
 **Estado em 2026-10-08:** documentos, não runtime. **Prioridade efetiva:** `workstation/ROADMAP.md` e gates atuais; CW-P0 não substitui H-079/H-080/KI-024. **Referência desta iniciativa:** [README](README.md) → [plano](IMPLEMENTATION_PLAN.md) → [matriz de aprovação](VERIFICATION_MATRIX.md).

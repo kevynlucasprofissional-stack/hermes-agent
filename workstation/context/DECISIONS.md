@@ -1,37 +1,22 @@
 # Architectural Decisions
 
+<!-- creative-D043-overlay -->
+## D-043 — Creative Workstation independente de motor, documento e edição compartilhada humano/IA (2026-10-10)
+**Status: ARQUITETURA E IMPLEMENTAÇÃO ENGINE-NEUTRAL.** Substitui a seleção HyperFrames-first de D-041 no PR #62 como regra de motor/editor, **sem** invalidar D-042 dogfood (PR #63), D-038 segurança, D-039 aprendizagem, H-079 upstream-first, H-080, H-081/082, segurança/consentimento e CI exato.
+1. Creative Document versionado com IDs estáveis, referências à mídia e mapa de tempo racional é a autoridade de *edição*. Engines externas continuam atrás de adaptadores.
+2. Ações manuais, de IA, API, MCP e headless utilizam o mesmo Command Registry tipado, owner fence, expected revision, idempotência, transação, readback e Undo/Redo; falha parcial nunca declara DONE.
+3. Cortes NLE devem preservar tempos de mídia, velocidade reversa/variável, linked audio, bloqueios de faixa e sincronização; propostas de IA usam revisões de preview reais, diff semântico, escolha parcial e rollback.
+4. SVG/Canvas/Three/WebGL livres exigem seek determinístico e parâmetros expostos; conteúdos opacos são identificados como tais.
+5. UI contextual/adaptativa: workspaces e timeline são projeções do mesmo documento.
+6. Experience Compiler existente só reutiliza transformações verificadas; segurança e admissões já estabelecidas são preservadas.
+**Execução:** [D-043 arquitetura](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) e [handoff CWN-00..09](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
 
-## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
-
-Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+## Operational speed Stage A — 2026-10-10
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
 <!-- dogfood-gate:2026-10-09 -->
 ## D-042 — Dogfood is a first-class, empirical product gate (2026-10-09)
 
-**Status: ACCEPTED AS PRODUCT DIRECTION AND DOCUMENTATION CONTRACT / IMPLEMENTATION UNVERIFIED.** Relates to D-037 (event-driven learning), D-038 (fail-closed authority), D-039 (active non-effectful mining, durable opportunities) and D-041 (HyperFrames-first design in unmerged PR #62). This is not a claim D-041 or any new code reached `main`.
-
-1. **Human dogfood intent has maximal product priority:** all timestamped notes in `workstation/dogfood/` map to stable DF-001..DF-026 IDs, owners, RED/GREEN tests, normal-product evidence and truthfully classified completion status. Do not edit original notes to fit implementation.
-2. **Causal learning before feature breadth:** a useful system learns from verified real Browser/Tool/Creative action, recognizes a subsequent compatible request, executes a safe deterministic capability with existing owners and proves the result. Mere capture, classes, Laya typed response or mock-only unit tests are insufficient.
-3. **Effect shadow != learning paralysis:** observe and mine safe candidates continuously via meaningful semantic events while unqualified side effects remain shadow/held; never issue permission from model confidence. Durable provenance survives hot-cache eviction/backpressure/shutdown, with prioritized work and adaptive retry only when evidence changes.
-4. **DIRECT qualification must be real:** mode permission is bound to verifiable, revocable scoped attestations and live owner-verified sandbox/replay/readback; a string is not a certificate. Same-run reuse may be admitted by existing user authority only for next equivalent pending work, rechecking effect budget/lease; global promotion remains stricter.
-5. **Shared native BrowserTask:** principal and subagents must use the same Electron/Chromium platform and broker with child identity/explicit delegated scope and visible Browser Hub runs. Recorder/site prep/Chrome extension/typed browser services are gated separately and may not leak account sessions or bypass third-party access restrictions.
-6. **Real Creative product gate:** audit installed local HyperFrames Work before coding; user+agent editing same source, ETag conflicts, save/reopen and independently verified animated video with existing Session/TaskRun/ProcessRegistry/ArtifactStore/ExperienceCompiler owners. D-041's prior still-video is not an animated-render proof.
-7. **Truthful economics/completeness:** report opportunity eligible/detected/held/missed/unknown/true-negative against a bounded labeled benchmark; never assert exhaustive compilation of every conceivable procedure. System-2 savings measured against instrumented baseline, unknown otherwise.
-8. **Release control:** upstream-first H-079 + H-081/H-082 + separate security/CI gates remain. Native packaged Electron evidence and three real dogfood scenarios required. Never force main merge; optional K-Tools/ECO/ATOM/Agora etc stay researched/triaged until core gates close.
-
-Canonical scope/owners [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md), phased implementation [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md). D-042 adds product acceptance, not a new runtime authority subsystem.
-
-## D-041 — HyperFrames Studio as the single default Creative UI (2026-10-09)
-
-**Status: PRODUCT ARCHITECTURE APPROVED; IMPLEMENTATION NOT YET QUALIFIED.** Applies to Hermes Creative Workstation, not to general autonomous runtime permissions. Supersedes D-040's *candidate tooling order* but retains D-040 non-duplication and all H-079/H-080/H-081/H-082/KI safety gates.
-
-1. **Self-hosted HyperFrames Studio** is the default integrated creative editor inside Hermes Workstation's **existing** Electron/Chromium BrowserTask/WebContentsView. Use OpenReel only as an NLE code/UX reference and Diffusion Studio as an agent↔code↔UI pattern reference; no assumption of drop-in compatibility or license clearance.
-2. Use HyperFrames source HTML/CSS/JS/media as the **editable project** and add a **thin Hermes provenance/revision manifest**. Do not create a competing universal scene schema, TaskRun owner or project-state authority. Preserve Studio ETag/409 semantics, human edits and immutable output receipts.
-3. **Sidecar-first**: run an audited pinned HyperFrames Studio service on restricted loopback, owned by the existing Creative Runtime/ProcessRegistry with consent, session auth, origin/CSRF fence, scoped workspaces and strict file/code isolation. Preview in existing Electron view; an owned headless render worker is distinct from a parallel interactive browser.
-4. Keep Remotion #61 source work **preserved/paused**; selectively salvage existing #58 runtime, #59 project/PNG, #60 FFmpeg/ffprobe. Do not merge dependent draft PRs wholesale. Three.js and additional designer/NLE engines follow only after the first usable Studio+agent vertical.
-5. Deliver **P0 salvage/preflight → P1 Studio-in-Hermes (M1a) → P2 persistent editable project/export → P3 typed Hermes agent roundtrip (M1b) → P4 selective NLE/design → P5 optional 3D → P6 verification and Experience Compiler**. Each stage evidence-gated and separate from Stage A baseline remediation.
-6. No permission to install any external executable, bypass upstream-first H-079, disable security tests, expand effect authority, promote a compiler candidate, or merge/qualify on red exact-head CI is granted by this design decision. The 2026-10-08 development exception allows only bounded separate experiments.
-
-**Implementation source:** [D-041 technical specification](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md) and [operational handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md). Historical D-040 below remains traceable for rationale and safeguards.
+<!-- /creative-D043-overlay -->
 
 
 <!-- creative-workstation-intake:2026-10-08 -->

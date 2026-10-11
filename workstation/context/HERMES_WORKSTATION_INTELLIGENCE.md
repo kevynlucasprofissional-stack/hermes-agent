@@ -1,33 +1,16 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- creative-D043-overlay -->
+## 2026-10-10 — Creative Workstation D-043: inteligência arquitetura + evidências
+**Síntese:** Creative Document com IDs e rational media map; Command Bus + transações, histórico/Undo; split/trim/ripple/slip/slide/roll verificáveis; Semantic Edit Plan com diff/revisões, real preview e aprovação parcial; camada freeform com parâmetros ou opacidade explícita; adaptadores de renderização qualificados por métricas; UX contextual que permite cortar, animar e fazer design/3D sobre o mesmo projeto; Experience Compiler existente pode compilar procedimentos criativos com prova real. Não criar outro BrowserTask, TaskRun, ArtifactStore, Control Plane ou registry de aprendizagem.
+**Gates:** D-038/D-039, H-079, D-042/PR #63, licenças, opt-in, sandbox e exact-HEAD CI. Ordem CWN-00..09 em [arquitetura](../creative-workstation/ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md); [prompt executável](../creative-workstation/ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
 
-## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
-
-Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+## Operational speed Stage A — 2026-10-10
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
 <!-- dogfood-gate:2026-10-09 -->
 ## 2026-10-09 — D-042: Dogfood is the product's executable acceptance contract
 
-**Canonical synthesis:** The maintainer's handwritten `workstation/dogfood/` files are the highest-priority source for what Hermes Work *should demonstrably do*. The architecture already has ExperienceCorpus/Compiler, hierarchical OperationalCapabilities, BrowserTask/BrowserControlBroker, System-1/Laya and RunLocalAdopter; the remaining strategic gap is **causal closure across a real product run**.
-
-The required trajectory is **novel user intent -> LLM resolves via native Browser/Tool/Creative -> independently verified post-effect result -> accepted, provenance-bound TransitionSample -> early safe mining while effects remain SHADOW -> independently validated candidate/replay -> existing authority admits next run-local equivalent item or promotion policy accepts cross-run proof -> deterministic verified re-execution, with measured System-2 reduction**. A recorded trace alone, source code generation by the LLM, or a Laya suggestion is not reuse.
-
-**User-critical corrections:** separate observe/mine from effect authorization; preserve high-value learning through queue saturation, idle TTL and shutdown in canonical stores; retry when evidence materially changes; replace "DIRECT has some nonempty string" with genuine scoped attestation; bootstrap narrow real verifier owner; verify at goal-appropriate strength (opening ChatGPT need not verify login); allow scoped native BrowserTask to subagents and make them visible in Browser Hub; offer safe opt-in human browser recorder, versioned preprocessed site operations, UI-to-typed-service adapters, historical conversation/trace backfill, and evidence-based missed-opportunity accounting. Never falsely claim exhaustive learning; measured denominators and true-negative ground truth are essential.
-
-**HyperFrames is an especially useful learning vertical, not a separate compiler:** user reports Studio functional locally; remote audited main/PRs do not establish its exact implementation. Preserve local work, assess shared edit/ETag, editable source, genuine motion export and same Experience Compiler observations using existing Hermes TaskRun and process/artifact owners. Actual native Windows Electron test is mandatory. D-041 HyperFrames-first design remains in draft PR #62 as of this dated audit.
-
-**Scope discipline:** D-038 fail-closed authority is immutable; D-039 active learning drives this lane; D-042 adds a real-use release gate, not permission to bypass H-079/H-081/H-082. The lower priority K-Tools, X-cursos runner, ECO, ATOM, Agora/Mirofish/random forest and Google AI Studio-as-adapter ideas require distinct feasibility/legal/security evaluations after core causal proof.
-
-**Execution source of truth:** [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md) and [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md); status/evidence in [engineering-journal/dogfood-gap-audit-2026-10-09.md](engineering-journal/dogfood-gap-audit-2026-10-09.md).
-
-## 2026-10-09 — D-041: HyperFrames-first Hermes Creative Studio (APPROVED DESIGN / NOT IMPLEMENTED IN PRODUCT)
-
-**Vision:** Hermes Workstation is the product; Creative Studio is an integrated operating surface, **not** a separate competing application. The user and agent operate **the same editable HyperFrames composition** (HTML/CSS/JS, assets, seekable animations, timeline), moving seamlessly from 2D design to animation/video without flattening source projects. Self-host `heygen-com/hyperframes` Studio in the existing Electron/Chromium BrowserTask/WebContentsView. OpenReel informs NLE UX (trim/split/audio); Diffusion Studio informs bidirectional agent/code/visual editing. Penpot/Remotion/Three.js remain secondary/specialist or optional, not M1 prerequisites.
-
-**Architecture:** Session/TaskRun + Control Plane/TaskCompiler admission → owned loopback HyperFrames Studio service via existing Creative ProcessRegistry → existing WebContentsView UI → ETag-scoped Creative Bridge and native HyperFrames project → render worker/FFmpeg → ArtifactStore/ExecutionJournal/independent readback → Experience Compiler only after verified replay. Renderer/Studio can't mint authority; human edits must survive concurrent agent requests. Source files remain native and a *thin* Hermes manifest holds provenance; do not duplicate project DB, Browser owner or arbitrary-JS privileged execution.
-
-**Value sequence:** P0 recovery/precise upstream&CI gap map; P1 embedded Studio (M1a); P2 persistence and PNG/MP4; P3 Hermes agent controls same editable project (M1b); P4 targeted editor gaps; P5 optional 3D; P6 full verification/operational reuse. P1 experiments separated from Stage A under the already recorded development exception; no merge/promotion while H-079, H-080/H-081/H-082 and related hold gates fail.
-
-**Evidence boundaries:** five Creative draft PRs #57–61 are unmerged; #58/#59/#60 contain reusable contracts, #61 Remotion source is preserved/paused; reported local native-capture improvements are not recoverable from GitHub alone. The new HyperFrames integration is a **target**, not accomplished fact. See [D-041 spec](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md), [handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) and [current state](CURRENT_STATE.md). Prior 2026-10-08 Creative block below is **historical** for tool order, not the current plan.
+<!-- /creative-D043-overlay -->
 
 
 <!-- creative-workstation-intake:2026-10-08 -->

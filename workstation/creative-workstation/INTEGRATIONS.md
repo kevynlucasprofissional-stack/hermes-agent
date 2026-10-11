@@ -1,10 +1,10 @@
 # Integrações e skills — catálogo de descoberta
 
-## D-041 — Matriz vigente de integração Creative (2026-10-09)
+<!-- creative-D043-overlay -->
+## Nova política de seleção D-043 (2026-10-10)
+As prioridades por engine da matriz antiga abaixo não são mandatos de instalação ou formato. **HyperFrames, OpenReel, EffectCraft, Penpot, Remotion e Three.js competem como candidatos/implementações específicas**, nunca como soberanos do documento. Primeiro validar Creative Document+Command Bus+tempo e cortes; engines são selecionadas via capacidade, medição de paridade, custo, licenças e sandbox, com referências editáveis preservadas. [Autoridade](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md).
 
-**As prioridades P0 para Penpot/Remotion/Three.js na tabela antiga abaixo estão SUPERADAS como plano de implementação.** Novo núcleo: [HyperFrames Studio](https://github.com/heygen-com/hyperframes) (**candidato de adoção**, Apache-2.0 na raiz, ref observada `6ae1af7470133db72de6d9bbceeaf80e85695c68` a auditar/pinar). Studio `packages/studio`, editor API `packages/studio-server`, CLI `packages/cli`, ETag writer `useProjectFileWriter.ts`. Embutir como serviço **self-hosted** via Creative ProcessRegistry + BrowserTask existente, sem nova janela Electron nem cloud obrigatória.
-
-**OpenReel** `Augani/openreel-video` (MIT repo) é referência NLE; **Diffusion Studio** `diffusionstudio/editor` (MPL-2.0 repo) é referência de colaboração agente/code/UI; nenhum é instalação P0. Remotion draft #61 preservado/pausado, Penpot/Three.js especialistas opcionais. Escopo de licença específico, origem e dependências exigem nova auditoria antes de importar código. O documento governante é [D-041](HYPERFRAMES_ADOPTION_2026-10-09.md); ordem P0–P6 no [handoff](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md). Entradas antigas permanecem como pesquisa histórica.
+<!-- /creative-D043-overlay -->
 
 
 **Data-base da pesquisa:** 2026-10-08. **Importante:** nomes e links são candidatos; existência de integração pública não prova funcionamento no Hermes fork. Fixar commits e auditar código/licença antes de instalação. O registro oficial de referências e decisão de adoção é [SOURCE_MATRIX.md](../SOURCE_MATRIX.md).
