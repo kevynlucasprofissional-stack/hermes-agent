@@ -9,6 +9,8 @@ Audit executive summary received (Antigravity: 25 references / 49 dogfood sessio
 
 Each mutation step requires same owner authorization/lease, actual BrowserOwnerReceipt, readback and uncertain-effect stop. No speculative score is a release criterion. Detailed decisions: [BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md](context/BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md); [Implementation plan](context/browser-optimization-kit/IMPLEMENTATION_PLAN.md). This note does not supersede H-079/H-080 or qualify runtime.
 
+**Gate refresh (2026-10-10, local Sao Paulo):** BROW-00 remains **HOLD / NOT QUALIFIED**. Continue from PR #66's Stage A candidate and fixed upstream pin; the repository currently rejects Actions dispatch with HTTP 422, so no exact-head CI evidence can be produced. BROW-01 is **PREPARED / NOT MEASURED**; benchmark scaffolding and isolated patch-kit checks do not establish browser performance. OPT-01 through OPT-04 and other runtime items remain **BLOCKED** pending BROW-00. OPT-05 remains a separate **privacy/consent HOLD**. See [baseline evidence](context/browser-optimization-kit/BASELINE_EVIDENCE_2026-10-10.md).
+
 ---
 
 

@@ -11,6 +11,8 @@ A pesquisa declara 25 repositórios/49 sessões, mas os relatórios integrais n�
 
 H-079/H-080/H-081 e qualificação Windows continuam soberanos. [Decisões](BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md) · [Plano e patch-kit](browser-optimization-kit/IMPLEMENTATION_PLAN.md). Nenhuma mudança runtime está homologada por esta documentação.
 
+**Gate refresh (2026-10-10):** BROW-00 is **HOLD / NOT QUALIFIED** because required GitHub Actions dispatches return HTTP 422 even though the permissions endpoint says enabled; PR #66 has no check-runs and a pending status with no statuses. Its upstream pin remains fixed through this cycle; the observed 78-commit upstream movement has no diff in the inspected Browser owner paths and is recorded for a later cycle. BROW-01 is **PREPARED / NOT MEASURED**. OPT runtime changes are blocked; OPT-05 stays separately held for privacy/consent. Malformed and sparse batch inputs exposed defects in the standalone reference helper; its complete prevalidation now passes **24 isolated Vitest tests**, and benchmark parsing/path/fixture contracts pass **12 Node tests**. These test only reference preparation; no runtime owner, receipt, or native Browser performance is qualified. Exact evidence, files and rollback: [Browser baseline evidence](browser-optimization-kit/BASELINE_EVIDENCE_2026-10-10.md).
+
 ---
 
 

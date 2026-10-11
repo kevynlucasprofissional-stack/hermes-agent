@@ -2,6 +2,8 @@
 
 **Escopo:** melhorias do Browser derivadas da auditoria externa. **Estado:** documentação e patch-kit apenas; não há runtime habilitado nesta branch. Ler [decisões canônicas](../BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md) antes de qualquer mudança. Um implementador deve considerar o SHA real do checkout como fonte de verdade; a main inspecionada em 10/10 foi `f21e803b3525b70ee6be2305e579c1cc1f930e74`.
 
+**Live gate status (2026-10-10):** BROW-00 = **HOLD / NOT QUALIFIED** on PR #66's Stage A candidate and fixed pin; Actions dispatch is blocked by HTTP 422, and no exact-head check result exists. BROW-01 = **PREPARED / NOT MEASURED**. OPT-01/02/03/04 and other runtime units = **BLOCKED** until BROW-00 closes. OPT-05 = separate **privacy/consent HOLD**. Isolated patch-kit tests are reference-only; malformed batch payload contracts pass against a corrected helper in the kit and do not qualify product runtime. Current commands and evidence are in [BASELINE_EVIDENCE_2026-10-10.md](BASELINE_EVIDENCE_2026-10-10.md).
+
 | Ordem | ID | Dono/arquivos-alvo | Código de referência | Aceitação mínima |
 |---|---|---|---|---|
 | 0 | BROW-00 | `workstation/context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md`, CI e core seam | nenhum | baseline upstream-qualified e exact-head audit, ou HOLD formal |
@@ -13,7 +15,7 @@
 | 6 | OPT-06/09/12 | `wc.on('render-process-gone')`, `did-stop-loading`, retries, controller | testes já existentes | recovery e SPA sem repetição, sem troca indevida de task/tab |
 | 7 | UX-01 | `apps/desktop/src/app/browser/` e chat right rail | padrão BrowserOS (sem copiar fonte) | UX derivada de owners existentes; takeover/occlusion E2E |
 | 8 | OPT-07/11 | `workstation/operational_kernel.py`, rota Browser Python, registry | Driftlock e mapa atual | diagnósticos sem autopromoção; sem remoção de backends sem prova |
-| 9 | OPT-05 | fora do caminho crítico | browser-use/desktop como referência | **HOLD** até threat model, consentimento explícito e isolamento perfil/origem; nunca importação automática |
+| 9 | OPT-05 | fora do caminho crítico | browser-use/desktop como referência | **HOLD** até threat model e consentimento explícito por perfil/origem; exigir isolamento temporário, minimização de dados, retenção/deleção e rollback definidos, logs sem segredos; nunca importação automática |
 | 10 | BROW-QUAL | suíte Desktop/Windows/pytest/CI, benchmark de resultados verificados | testes de regressão | exato HEAD qualificado + métrica comparativa + rollback flags |
 
 ## Fase de implementação — especificação plug-and-play
