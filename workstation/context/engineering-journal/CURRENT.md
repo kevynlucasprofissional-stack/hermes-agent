@@ -1,5 +1,19 @@
 # CURRENT — Workstation Engineering Journal
 
+<!-- browser-code-to-code:2026-10-10 -->
+## 2026-10-10 — Browser comparative research intake; implementation HOLD
+
+**Baseline inspected:** remote `main@f21e803b3525b70ee6be2305e579c1cc1f930e74`. Antigravity report was produced against local `codex/creative-d043-engine-neutral@56f5758d9b` and reports 25 repositories/49 sessions; local deep reports are not committed to remote main. These are **different evidence surfaces**.
+
+**FACT verified on main:** `inventoryScript()` walks DOM/reads computed styles in Electron; `executeControlRequest()` applies per-action delays and auto-snapshots; `browser_extract_items` exists in native runtime and Python schema; `snapshotForEntry()` already includes SPA hydration checks; `render-process-gone` already marks crashed/recovery. Therefore reject proposals to create redundant extract/watchdog owners, while retaining batch, AX and delta as candidates.
+
+**HYPOTHESES (not measured on target HEAD):** 300–1200ms reflow snapshots, <50ms AX, 70% faster batches, 85% token delta, 481 console calls, 49 complete analyzed sessions. Independent test receipts and user-local source import required.
+
+**Decision:** approve staged *research-to-implementation plan* and standalone original patch-kit but do not connect code into runtime until H-079 upstream-first baseline and release gates. Prioritize P0 batch/AX/extraction/delta with explicit owners, per-step lease/receipt/verification, no stale cache, full snapshot fallback, and stop on uncertain effects. Defer DPAPI credentials import; BrowserOS is reference for behavior/UX only pending legal review. Track via [decision record](../BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md), [plan](../browser-optimization-kit/IMPLEMENTATION_PLAN.md). **No runtime modification, no CI result claimed by this entry.**
+
+---
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.

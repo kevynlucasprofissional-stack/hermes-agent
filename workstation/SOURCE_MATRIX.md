@@ -1,5 +1,27 @@
 # Source reuse matrix
 
+<!-- browser-code-to-code:2026-10-10 -->
+## Browser comparative audit intake — 2026-10-10
+
+Received Antigravity executive report scoped to 25 references/49 local sessions; full audit artifacts live at the user's local `workstation/research/browser-code-to-code-2026-10-10/` but were **not present in the inspected remote main**. Additional local targets: Camofox, `openbrowserclaw-master`, `browserclaw-main`, `BrowserOS-main`. Their exact local source pins, per-file licenses, tests and claims must be revalidated before reuse. Reported speedups and comparative “state-of-the-art” claims remain unverified by this repository intake.
+
+| Reference | Triage | Hermes mechanism / note |
+|---|---|---|
+| BrowserClaw `src/actions/batch.ts` | **ADAPT/VERIFY LICENSE** | Typed serial browser batch; existing owners and per-step receipts/lease remain authoritative |
+| Agent Browser / BrowserOS Accessibility snapshots | **REIMPLEMENT PATTERN / EVAL** | Experimental AXTree projection; must retain actionable refs and fall back safely |
+| BrowserOS `diff.ts` / UX | **REIMPLEMENT PATTERN / UX REFERENCE** | Delta framing and agent/human UI patterns, **no source-copy approved** (license audit required) |
+| Stagehand caching/extraction | **ADAPT IDEA/CONTRACT** | Extend existing `browser_extract_items`, never create duplicate extract tools by default |
+| browser-use desktop Chrome import | **DEFER/SECURITY** | Cookies/profile migration carries sensitive credentials, opt-in/security review required |
+| browser-use watchdogs | **REFERENCE/EVAL** | Existing Electron `render-process-gone` handling should be tested/hardened first |
+| Driftlock | **REFERENCE/EVAL** | Diagnose cosmetic/structural drift; no automatic mutation bypass |
+| Witness pricing | **REFERENCE** | Versioned price telemetry only with observed usage/cost denominators |
+| Camofox / openbrowserclaw / browserclaw | **AUDIT REFERENCES** | Compare with native Browser; do not replace owners or anti-drift safety by assumption |
+
+Canonical triage/implementation decision: [BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md](context/BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md). Audit protocol still applies; `NV` is not `ABSENT`.
+
+---
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation external-reference intake — 2026-10-08
 

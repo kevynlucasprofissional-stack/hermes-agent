@@ -1,5 +1,19 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+<!-- browser-code-to-code:2026-10-10 -->
+## 2026-10-10 — Browser: menos ciclos de percepção, maior reuso verificável (DOCUMENTADO / NÃO IMPLEMENTADO)
+
+Visão incorporada da auditoria comparativa Browser: ação em lote segura e serial, observação por AXTree com fallback de refs, extração estruturada aproveitando `browser_extract_items`, deltas versionados pós-efeito e UX humano-agente inspirada no BrowserOS. Ganho buscado: menor latência p50/p95 e custo **por resultado verificado**, não número de ferramentas adicionadas.
+
+Correção factual importante: o Hermes **já possui** extração estruturada nativa, detecção de crash e tentativas SPA; é obrigatório melhorar owners existentes antes de criar novos. Diffs e cache são projeções de contexto, não verificador nem direito de mutação. O batch não substitui `TaskCompiler`/`DurableBatchRunner`: seu papel é reduzir overhead de chamadas Browser preservando TaskRun, authority lease, BrowserOwnerReceipt para cada efeito, checkpoints e interrupção conservadora.
+
+A pesquisa declara 25 repositórios/49 sessões, mas os relatórios integrais não estão na main remota; métricas 70–85% e claims de superioridade permanecem não verificadas. Source code BrowserOS não deve ser copiado nesta fase; revisar licenças. Importação silenciosa de cookies/DPAPI está fora do escopo P0 e exige opt-in e avaliação de segurança/privacidade.
+
+H-079/H-080/H-081 e qualificação Windows continuam soberanos. [Decisões](BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md) · [Plano e patch-kit](browser-optimization-kit/IMPLEMENTATION_PLAN.md). Nenhuma mudança runtime está homologada por esta documentação.
+
+---
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
 
@@ -2224,7 +2238,7 @@ O Hermes Workstation respeita rigorosamente o **Footprint Ladder** (`AGENTS.md`)
 
 Ao atuar em camadas de testes ou SO hospedeiro, considere armadilhas inerentes à ponte POSIX para Windows:
 - **File Modes e Ownership (`438 !== 384/493`):** Testes de `hardening` baseados em File Modes estritos (`0o700`) tendem a gerar divergências lógicas no Windows devido ao NTFS não suportar nativamente permissões octais do Unix da mesma forma, exigindo abstrações corretas ao invés de expectações hardcoded. O mesmo vale para formatações nativas de `Intl` que trocam o ponto flutuante, podendo falhar testes de formatação gráfica estrita de UI.
-- **Symlinks e EPERM em Worktrees:** Construções de socket (`ssh-connection`) e diretórios de cache ou paths temporários na LocalAppData geram falhas de `EPERM` se manipulados indevidamente no Windows (ex: bloqueios ao rodar git-worktrees simultâneos em caminhos de rede/UNC ou namespaces de WSL `\\?\`).
+- **Symlinks e EPERM em Worktrees:** Construções de socket (`ssh-connection`) e diretórios de cache ou paths temporários na LocalAppData geram falhas de `EPERM` se manipulados indevidamente no Windows (ex: bloqueios ao rodar git-worktrees simultâneos em caminhos de rede/UNC ou namespaces de WSL `\\?`).
 - **PowerShell Hand-off e Timings:** O ciclo de atualizações da workstation e transferências de arquivos com PowerShell retém os metadados corretos de `acquisition time`, porém é propenso a timeouts lentos nos runners CI de integração (gerando Timeouts fixos de 5000ms e 15000ms no Electron), que não devem ser tratados trivialmente com `continue-on-error`.
 
 ### 10.1. Matriz de escopo de estado
@@ -2481,7 +2495,7 @@ prefixos de segredo antes de construir a busca.
 O runtime mantém dois valores de URL: a URL viva de `WebContents` para a
 interface e `safeUrl` para restart. O segundo é reavaliado em cada
 `did-navigate`, `did-navigate-in-page`, `page-title-updated` e crash. Query e
-fragmento nunca sobrevivem; userinfo, `\\`, controles, encoding ambíguo,
+fragmento nunca sobrevivem; userinfo, `\`, controles, encoding ambíguo,
 atribuições `token/password`, JWTs, tokens opacos e rotas de login/OTP com
 credenciais falham fechados. Mesmo uma URL assinada só pode deixar sobreviver a
 parte estrutural sem o material secreto.

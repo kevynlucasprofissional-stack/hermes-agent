@@ -1,5 +1,17 @@
 # Workstation roadmap
 
+<!-- browser-code-to-code:2026-10-10 -->
+## Browser code-to-code optimization — 2026-10-10 (RESEARCH ACCEPTED / IMPLEMENTATION GATED)
+
+Audit executive summary received (Antigravity: 25 references / 49 dogfood sessions claimed locally); detailed audit artifacts are **not yet in remote main**. Branch evidence is separate from current main and performance claims (70–85%, <50ms, 16x, 481 console calls) are hypotheses until reproducible receipts. Current main already implements `browser_extract_items`, crash event handling and SPA readiness retries, so work is **extend/harden**, not recreate.
+
+**Priority:** BROW-00 H-079 upstream-first/exact-head release gates → BROW-01 benchmarks → OPT-01 typed Browser batch (not a second planner) → OPT-02 CDP AXTree experiment with actionable refs/fallback → OPT-03 extend existing structured extraction with safe freshness/cache → OPT-04 snapshot delta with full fallback → OPT-06/09/12 recovery/races → BrowserOS-inspired UX projection → drift/cost/backend rationalization. DPAPI cookie import **DEFER pending explicit user consent/security review**.
+
+Each mutation step requires same owner authorization/lease, actual BrowserOwnerReceipt, readback and uncertain-effect stop. No speculative score is a release criterion. Detailed decisions: [BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md](context/BROWSER_CODE_TO_CODE_DECISIONS_2026-10-10.md); [Implementation plan](context/browser-optimization-kit/IMPLEMENTATION_PLAN.md). This note does not supersede H-079/H-080 or qualify runtime.
+
+---
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 
