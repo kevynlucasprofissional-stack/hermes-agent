@@ -1,5 +1,10 @@
 # Hermes Workstation — Agent Instructions
 
+## OPC-001 — Prefabricated operational capabilities
+
+For recurring browser/site procedures or Agent/Workstation capability discoverability, use `context/PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md` and `context/PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md` *after* the mandatory upstream-first and canonical context reading. Reuse existing `referências/Hermes-Work-Prefabs-Plug-and-Play-v0.1` code when available; never copy private dogfood JSON/HTML into commits. Runtime changes require exact-HEAD gates. Agent toolset discovery and pre-System-2 Workstation resolution need separate evidence; neither Laya nor saved HTML can grant permissions.
+
+
 This directory is the downstream Hermes Workstation product layer. Repository-wide rules in the root `AGENTS.md` remain authoritative.
 
 ## Primary operating gate: synchronize before downstream implementation
