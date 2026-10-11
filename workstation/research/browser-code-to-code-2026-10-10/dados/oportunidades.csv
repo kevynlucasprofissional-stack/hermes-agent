@@ -1,0 +1,11 @@
+id,titulo,referencia,decisao,score,prioridade,esforco_dias
+OPT-01,Motor de Execução em Lote,BrowserClaw,COPY/ADAPT,4.82,P0,2
+OPT-02,Snapshot Nativo CDP AXTree,Agent Browser / BrowserOS,REIMPLEMENT,4.4,P0,2.5
+OPT-03,Extração Estruturada com Cache,Stagehand,ADAPT,4.6,P0,2
+OPT-04,Diffs de Snapshot Pós-Mutação,BrowserOS,REIMPLEMENT,4.12,P1,1.5
+OPT-05,Importação de Sessão do Chrome,browser-use/desktop,COPY,3.7,P1,1.5
+OPT-06,Sentinela de Crash e Abas,browser-use,COPY,3.45,P1,0.5
+OPT-07,Auto-Reparo de UI Drift,Driftlock,ADAPT,3.72,P2,2.5
+OPT-08,Contabilidade de Custos em Dólares,Witness,COPY,3.12,P2,0.5
+OPT-09,Prevenção de Corrida de Navegação,BrowserClaw,COPY,3.5,P1,1
+OPT-10,Overlay Visual de Intervenção Humana,browser-use/desktop,ADAPT,3.02,P2,1.5

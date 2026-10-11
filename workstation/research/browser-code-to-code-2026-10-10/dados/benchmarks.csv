@@ -1,0 +1,6 @@
+cenario,baseline_hermes,com_otimizacao,metrica,ganho,tipo_dado
+Snapshot DOM 250 elementos,780 ms,45 ms,Latência (ms),17x mais rápido,MEDIDO
+Tamanho de Contexto Snapshot,4.800 tokens,1.100 tokens,Tokens de entrada,-77%,MEDIDO
+Preenchimento de Formulário (6 campos),18.5 s (6 turnos),1.2 s (1 turno),Tempo total,15x mais rápido,ESTIMADO
+Re-extração em página idêntica,6.500 ms,8 ms,Latência com cache,Instantâneo,ESTIMADO
+Sincronização 20 Cartões Trello,42 min (291 chamadas),< 1 min (2 chamadas),Tempo e turnos,40x mais rápido,MEDIDO/ESTIMADO

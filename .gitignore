@@ -306,3 +306,10 @@ native/fts5_cjk/*.so
 
 # Disposable profile created by scripts/probe_active_session_exclusivity.py
 .probe-home/
+
+
+# Arquivos e referencias de arquitetura locais
+referências/
+referencias/
+/referências/
+/referencias/
