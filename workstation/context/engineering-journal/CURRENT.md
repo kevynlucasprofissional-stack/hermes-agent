@@ -1,5 +1,15 @@
 # CURRENT — Workstation Engineering Journal
 
+<!-- OPC-001-current:2026-10-10 -->
+## 2026-10-10 — OPC-001 Prefabricated Capabilities (evidence and implementation handoff)
+
+**Classification:** architectural design and static repository audit VERIFIED; source corpus analysis PARTIAL (user attachments); reference package tests PASSED LOCALLY (32/32 in v0.2); Workstation Agent/Browser production integration NOT EXECUTED/NOT QUALIFIED. Main observed: f21e803 (already merged Laya Direct despite older docs saying no main merge). Windows source folders are not present in current GitHub main; do not claim inspected the user's live folders. Remote Desktop Commander machine is offline. Existing pre-LLM and tool registry surfaces support the target without a new compiler/executor.
+
+**Hypothesis:** one shared verified prefab capability catalog + two discovery surfaces + canonical scoped executor reduces repeat System-2 calls on exact recurring tasks without sacrificing authority. **Falsifiers:** model called before deterministic known intent, capability absent in Agent toolset, missing/forged browser readback, uncertain write retried, cross-profile escape, privacy leak, red exact-head CI, or savings unmeasured. **Minimum next experiment:** run corpus SHA inventory on Windows checkout, then Agent schema discovery and native Workstation navigation (0 System-2 on exact command) with receipt.
+
+**Next order:** H-079 one-pin baseline → redact/dedup source corpus → integrate reused v0.1 (plus v0.2 discovery/harvester) → Trello read-only E2E → certified Trello mutation/readback → browser run-local/D-039 qualification → expand sites. Do not flip Laya DIRECT via mere string ref. Work tracked in [OPC-001 journal](prefab-operational-capabilities-2026-10-10.md), [spec](../PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md), [executor](../PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md).
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
