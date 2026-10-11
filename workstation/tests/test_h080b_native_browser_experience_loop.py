@@ -44,8 +44,9 @@ def _task():
     return bridge, envelope, task_id, run_id
 
 
-def _persist_browser(browser_home, task_id, run_id, *, url=URL, session=SESSION, recovery="live",
+def _persist_browser(browser_home, task_id, run_id, *, url=None, session=SESSION, recovery="live",
                      operation_id="op-test-canonical", revision=1, include_receipt=True):
+    url = URL if url is None else url
     directory = browser_home / "Runtime"
     directory.mkdir(exist_ok=True)
     saved_at = datetime.now(timezone.utc).isoformat()
@@ -297,7 +298,8 @@ def _compiled_two_run_capability(browser_home):
     return compiler, registry, candidates[0], run_ids
 
 
-def test_real_browser_readback_validates_and_promotes_compiled_capability(local_state, monkeypatch):
+@pytest.mark.parametrize("fresh_command", [False, True])
+def test_real_browser_readback_validates_and_promotes_compiled_capability(local_state, monkeypatch, fresh_command):
     from copy import deepcopy
     from dataclasses import replace
 
@@ -311,6 +313,8 @@ def test_real_browser_readback_validates_and_promotes_compiled_capability(local_
     from workstation.experience_compiler.state_abstraction import abstract_state
     from workstation.operational_kernel import OperationalKernel
 
+    if fresh_command:
+        monkeypatch.setitem(globals(), "URL", "https://trello.com/")
     compiler, registry, cap, run_ids = _compiled_two_run_capability(local_state)
     assert len(set(run_ids)) == 2
     assert cap.formal_contract is not None
@@ -425,26 +429,36 @@ def test_real_browser_readback_validates_and_promotes_compiled_capability(local_
     import workstation
 
     workstation.bootstrap_workstation_adapter("required")
-    bridge, envelope, future_task, future_run = _task()
+    if fresh_command:
+        from hermes_cli import kanban_db
+        bridge = WorkstationKanbanBridge()
+        envelope = MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION, "Abre o Trello.")
+        future_task = bridge.promote_request_if_multistep(envelope.content, session_id=SESSION,
+            envelope=envelope, force=True)
+        with bridge.get_connection() as conn:
+            future_run = str(kanban_db.get_task(conn, future_task).current_run_id)
+    else:
+        bridge, envelope, future_task, future_run = _task()
     formal = cap.formal_contract
     intent = OperationIntent(id="h080b-native-intent", target=formal.target_family,
         goal=EQ("host", "example.test"),
         effect_budget=list(formal.effect_footprint),
         metadata={"operation_family": formal.operation_family,
                   "target_family": formal.target_family}).to_dict()
-    objective_ref = ArtifactStore().store(future_task, "h080b-established-intent.json", {
-        "operation_intent": intent, "semantic_state": {"host": ""},
-        "capability_inputs": {}, "operation_id": "h080b-reuse",
-        "expected_task_id": future_task, "expected_run_id": future_run,
-        "expected_operation_id": "h080b-reuse",
-    }).ref
-    durable = DurableTaskStore()
-    try:
-        durable.create_plan(future_task, "established native navigation intent", [{"id": 1}],
-            session_id=SESSION, metadata={"objective_ref": objective_ref,
-                "canonical_task_id": future_task})
-    finally:
-        durable.close()
+    if not fresh_command:
+        objective_ref = ArtifactStore().store(future_task, "h080b-established-intent.json", {
+            "operation_intent": intent, "semantic_state": {"host": ""},
+            "capability_inputs": {}, "operation_id": "h080b-reuse",
+            "expected_task_id": future_task, "expected_run_id": future_run,
+            "expected_operation_id": "h080b-reuse",
+        }).ref
+        durable = DurableTaskStore()
+        try:
+            durable.create_plan(future_task, "established native navigation intent", [{"id": 1}],
+                session_id=SESSION, metadata={"objective_ref": objective_ref,
+                    "canonical_task_id": future_task})
+        finally:
+            durable.close()
 
     resolutions = []
     kernel_results = []
@@ -495,7 +509,7 @@ def test_real_browser_readback_validates_and_promotes_compiled_capability(local_
         browser_control_principal="workstation",
         browser_control_transport_family="workstation_native")
     try:
-        future_result = agent.run_conversation(user_message=PROMPT, task_id=future_task)
+        future_result = agent.run_conversation(user_message=envelope.content, task_id=future_task)
     finally:
         clear_session_vars(tokens)
     assert not provider_calls, resolutions
