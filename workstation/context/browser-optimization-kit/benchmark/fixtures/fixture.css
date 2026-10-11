@@ -1,0 +1,68 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  background: #f4f6f8;
+  color: #18202a;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 72rem;
+  padding: 2rem;
+}
+
+header,
+main,
+output {
+  display: block;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #c8d0da;
+  border-radius: 0.75rem;
+  background: white;
+}
+
+.eyebrow {
+  color: #526274;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+label {
+  display: block;
+  margin: 0.75rem 0;
+}
+
+input,
+select,
+button,
+[contenteditable='true'] {
+  box-sizing: border-box;
+  min-width: 12rem;
+  margin-top: 0.25rem;
+  padding: 0.65rem;
+}
+
+[contenteditable='true'] {
+  min-height: 8rem;
+  border: 1px solid #7c8998;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.4rem;
+  border: 1px solid #d6dce3;
+  text-align: left;
+}
+
+.takeover-active {
+  border-color: #b42318;
+  background: #fff1f0;
+}
