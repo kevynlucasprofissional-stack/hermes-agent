@@ -6,6 +6,11 @@ Após as regras upstream/segurança obrigatórias desta página, qualquer agente
 
 <!-- /creative-D043-overlay -->
 
+<!-- OPC-001-context-entry:2026-10-10 -->
+## New 2026-10-10: Prefabricated Operational Capabilities (OPC-001)
+
+When the task concerns repeated browser/site workflows, Agent tool discovery, pre-LLM deterministic routing, Laya/Experience Compiler reuse, Trello/Instagram/WhatsApp/ChatGPT: after the repository-wide H-079 upstream-first gate, use [OPC-001 architecture](PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md) and the [implementation handoff](PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md). Existing code reference under `referências/Hermes-Work-Prefabs-Plug-and-Play-v0.1` and user session/HTML folders are local-only until verified. Do not replace canonical task/authority owners or conflate document status with production qualification.
+
 
 <!-- creative-workstation-intake:2026-10-08 -->
 ### Planned Creative Workstation context — read on demand

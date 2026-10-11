@@ -13,6 +13,15 @@ Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconci
 
 <!-- /creative-D043-overlay -->
 
+<!-- OPC-001-prefabricated-capabilities:2026-10-10 -->
+## OPC-001 — Prefabricated Operational Capabilities (2026-10-10)
+
+**Status: DESIGN / LOCAL REFERENCE PACKAGE; NOT INTEGRATED OR PRODUCTION-QUALIFIED.** User-provided source roots: `referências/Hermes-Work-Prefabs-Plug-and-Play-v0.1`, `workstation/dogfood/dados/Sessões Hermes`, `workstation/dogfood/dados/Páginas de sites` (paths reported in Windows checkout, not observed in GitHub main). Deliver deterministic, discoverable, verified operations to **both** Hermes Agent (`browser` toolset) and Workstation (`desktop_ui` + pre-System-2 resolver), reusing the v0.1 package and v0.2 overlay; no duplicate agent/Browser/TaskCompiler/registry. The corpus/HTML are **untrusted candidate evidence**, not effect authority.
+
+**Order:** OPC-00 H-079 upstream-first baseline, H-081/H-082/effect gates → OPC-01 dedup/redacted evidence inventory → OPC-02 reuse/refactor Prefabs + tool discovery/Agent+Workstation visibility → OPC-03 Trello READ + native navigation proven without System-2 → OPC-04 Trello mutations with TaskRun Policy/GET readback/uncertain-no-retry → OPC-05 browser scoped adoption + real receipts → OPC-06 D-039 active mining/HELD + Laya classification (not authority) → OPC-07 Instagram/WhatsApp/ChatGPT individually → OPC-08 exact-head Windows/Electron/CI benchmarks. No production-mode DIRECT, autowrite, PR merge or upstream bypass from this document.
+
+**Execution contract:** [OPC-001 spec](context/PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md) · [fully ordered implementer prompt](context/PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md) · [engineering journal](context/engineering-journal/prefab-operational-capabilities-2026-10-10.md). Priorities subordinate to H-079 and current critical safety/release gates.
+
 
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)

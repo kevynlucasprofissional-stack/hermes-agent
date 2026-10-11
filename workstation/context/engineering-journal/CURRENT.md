@@ -17,6 +17,12 @@ Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconci
 
 <!-- /creative-D043-overlay -->
 
+<!-- OPC-001-current:2026-10-10 -->
+## 2026-10-10 — OPC-001 Prefabricated Capabilities (evidence and implementation handoff)
+
+**Classification:** architectural design and static repository audit VERIFIED; reference package tests PASSED LOCALLY (33/33 in v0.2). Existing pre-LLM and tool registry surfaces support the target without a new compiler/executor.
+**Execution contract:** [OPC-001 journal](prefab-operational-capabilities-2026-10-10.md), [spec](../PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md), [executor](../PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md).
+
 
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
