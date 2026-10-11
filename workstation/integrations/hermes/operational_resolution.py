@@ -274,7 +274,7 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
     from workstation.durable_tasks import DurableTaskStore
 
     agent = getattr(context, "agent", None)
-    if agent is None:
+    if agent is None or getattr(agent, "_interrupt_requested", False):
         return None
 
     # Run-local reuse of a just-learned, independently validated procedure. It acts only
@@ -293,10 +293,23 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
         try:
             plan_row, objective = _established_intent(store, ArtifactStore(), task)
             outstanding = store.outstanding_uncertain_mutations(plan_row["id"]) if plan_row else []
+            if plan_row is None:
+                # Fresh intent must not become a retry lane over an existing plan
+                # whose objective is unreadable or cannot be proven.
+                existing = store.get_connection().execute(
+                    "SELECT 1 FROM work_plans WHERE task_id=? OR "
+                    "json_extract(metadata, '$.canonical_task_id')=? LIMIT 1", (task.id, task.id)
+                ).fetchone()
+                from workstation.work_intent import current_command_objective
+                current_message = getattr(context, "user_message", "")
+                if existing or (current_message and current_message != task.body):
+                    return None
+                objective = current_command_objective(agent._message_envelope, task.id, str(task.current_run_id))
+                if objective is None:
+                    return None
+                plan_row = {}
         finally:
             store.close()
-        if plan_row is None:
-            return None
     except Exception:
         logger.debug("operational resolution: no trustworthy intent to read", exc_info=True)
         return None

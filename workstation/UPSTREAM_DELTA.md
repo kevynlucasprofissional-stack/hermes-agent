@@ -1,5 +1,20 @@
 # Hermes Workstation upstream delta
 
+## Operational speed Stage A — upstream reconciliation (2026-10-10)
+
+Candidate only, **NOT QUALIFIED**. True merge of upstream pin
+`66605471e9f0b0832abbefaf625ce08e948ca540` into downstream base
+`f21e803b3525b70ee6be2305e579c1cc1f930e74`; target P0–P3 implementation has not begun.
+SEMANTIC_PORT preserves batch admission, scoped execution, mutation checkpoints,
+BrowserTask/native IPC and preview ownership using upstream structural owners.
+ADOPT_UPSTREAM retires the unused lazy Laya installer table, with approved local
+Laya dependency/provenance preserved. Desktop product/configuration moves to
+upstream CJS owners while retaining Hermes Work display and stable installation
+identity. NSIS/MSI suppliers use the existing prepared-input owner and fail closed
+on missing or modified input; the build child cannot acquire a replacement.
+See [Stage A evidence](context/engineering-journal/operational-speed-stage-a-2026-10-10.md).
+
+
 ## HW-033 — Laya direct System-1 integration and dual upstream governance (2026-10-02)
 
 **Status:** **IMPLEMENTATION PARTIAL / POST-IMPLEMENTATION AUDIT OPEN / NOT QUALIFIED** on branch `workstation/laya-direct-system1`.
@@ -552,3 +567,8 @@ actual owner events. The audit above is preserved as the record of the original 
 H-079 was refreshed/classified against `46904a3b467f62616f5b3ee247adce30b1b277a0`
 (7,336 upstream-only commits; material file overlap); the original adopted pin remains
 immutable. This evidence does not claim latest-upstream alignment or authorize a main merge.
+
+## Operational speed P0.1 generic observation extension (2026-10-10)
+
+UPSTREAM_ABSTRACT: existing runtime_events registry now reports canonical response usage/cost after upstream pricing, linked by api_request_id, and operational resolution duration. turn_api_call adds UTF-8 application byte counts only; no request/response content crosses the seam. turn_response_check supplies generic call/task/turn identity to turn_usage. Existing scoped execution, provider dispatch, authorization and prompt caching remain unchanged. Registered in FPS-RUNTIME-TELEMETRY-001; no new direct core→Workstation import.
+Local telemetry extends its existing SQLite schema in place with nullable cost/source/cache/call/byte fields. Unknown prices remain unknown. Query exposes session economics; provider events lacking canonical run lineage must not be treated as complete per-run attribution. Classification strict check: 14 classified, zero unclassified, zero budget growth. Exact historical seam-baseline.json check still fails on 14 pre-existing tools-file line keys; those files are unchanged by P0 and the baseline is not rewritten to conceal drift.

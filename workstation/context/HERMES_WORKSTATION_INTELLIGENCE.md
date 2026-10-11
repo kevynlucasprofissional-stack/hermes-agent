@@ -1,5 +1,35 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+
+## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
+
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 — D-042: Dogfood is the product's executable acceptance contract
+
+**Canonical synthesis:** The maintainer's handwritten `workstation/dogfood/` files are the highest-priority source for what Hermes Work *should demonstrably do*. The architecture already has ExperienceCorpus/Compiler, hierarchical OperationalCapabilities, BrowserTask/BrowserControlBroker, System-1/Laya and RunLocalAdopter; the remaining strategic gap is **causal closure across a real product run**.
+
+The required trajectory is **novel user intent -> LLM resolves via native Browser/Tool/Creative -> independently verified post-effect result -> accepted, provenance-bound TransitionSample -> early safe mining while effects remain SHADOW -> independently validated candidate/replay -> existing authority admits next run-local equivalent item or promotion policy accepts cross-run proof -> deterministic verified re-execution, with measured System-2 reduction**. A recorded trace alone, source code generation by the LLM, or a Laya suggestion is not reuse.
+
+**User-critical corrections:** separate observe/mine from effect authorization; preserve high-value learning through queue saturation, idle TTL and shutdown in canonical stores; retry when evidence materially changes; replace "DIRECT has some nonempty string" with genuine scoped attestation; bootstrap narrow real verifier owner; verify at goal-appropriate strength (opening ChatGPT need not verify login); allow scoped native BrowserTask to subagents and make them visible in Browser Hub; offer safe opt-in human browser recorder, versioned preprocessed site operations, UI-to-typed-service adapters, historical conversation/trace backfill, and evidence-based missed-opportunity accounting. Never falsely claim exhaustive learning; measured denominators and true-negative ground truth are essential.
+
+**HyperFrames is an especially useful learning vertical, not a separate compiler:** user reports Studio functional locally; remote audited main/PRs do not establish its exact implementation. Preserve local work, assess shared edit/ETag, editable source, genuine motion export and same Experience Compiler observations using existing Hermes TaskRun and process/artifact owners. Actual native Windows Electron test is mandatory. D-041 HyperFrames-first design remains in draft PR #62 as of this dated audit.
+
+**Scope discipline:** D-038 fail-closed authority is immutable; D-039 active learning drives this lane; D-042 adds a real-use release gate, not permission to bypass H-079/H-081/H-082. The lower priority K-Tools, X-cursos runner, ECO, ATOM, Agora/Mirofish/random forest and Google AI Studio-as-adapter ideas require distinct feasibility/legal/security evaluations after core causal proof.
+
+**Execution source of truth:** [DOGFOOD_PRODUCT_GATE_2026-10-09.md](DOGFOOD_PRODUCT_GATE_2026-10-09.md) and [DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md); status/evidence in [engineering-journal/dogfood-gap-audit-2026-10-09.md](engineering-journal/dogfood-gap-audit-2026-10-09.md).
+
+## 2026-10-09 — D-041: HyperFrames-first Hermes Creative Studio (APPROVED DESIGN / NOT IMPLEMENTED IN PRODUCT)
+
+**Vision:** Hermes Workstation is the product; Creative Studio is an integrated operating surface, **not** a separate competing application. The user and agent operate **the same editable HyperFrames composition** (HTML/CSS/JS, assets, seekable animations, timeline), moving seamlessly from 2D design to animation/video without flattening source projects. Self-host `heygen-com/hyperframes` Studio in the existing Electron/Chromium BrowserTask/WebContentsView. OpenReel informs NLE UX (trim/split/audio); Diffusion Studio informs bidirectional agent/code/visual editing. Penpot/Remotion/Three.js remain secondary/specialist or optional, not M1 prerequisites.
+
+**Architecture:** Session/TaskRun + Control Plane/TaskCompiler admission → owned loopback HyperFrames Studio service via existing Creative ProcessRegistry → existing WebContentsView UI → ETag-scoped Creative Bridge and native HyperFrames project → render worker/FFmpeg → ArtifactStore/ExecutionJournal/independent readback → Experience Compiler only after verified replay. Renderer/Studio can't mint authority; human edits must survive concurrent agent requests. Source files remain native and a *thin* Hermes manifest holds provenance; do not duplicate project DB, Browser owner or arbitrary-JS privileged execution.
+
+**Value sequence:** P0 recovery/precise upstream&CI gap map; P1 embedded Studio (M1a); P2 persistence and PNG/MP4; P3 Hermes agent controls same editable project (M1b); P4 targeted editor gaps; P5 optional 3D; P6 full verification/operational reuse. P1 experiments separated from Stage A under the already recorded development exception; no merge/promotion while H-079, H-080/H-081/H-082 and related hold gates fail.
+
+**Evidence boundaries:** five Creative draft PRs #57–61 are unmerged; #58/#59/#60 contain reusable contracts, #61 Remotion source is preserved/paused; reported local native-capture improvements are not recoverable from GitHub alone. The new HyperFrames integration is a **target**, not accomplished fact. See [D-041 spec](../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md), [handoff](../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) and [current state](CURRENT_STATE.md). Prior 2026-10-08 Creative block below is **historical** for tool order, not the current plan.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation — visão 2026-10-08 (DOCUMENTADA / NÃO IMPLEMENTADA)
 
@@ -4325,3 +4355,20 @@ the read dispatcher. See [the caller protocol](READONLY_DURABLE_PREFLIGHT.md).
 Successful read capability does not establish write capability. Fan-out is
 authorized by verified persistence of a representative canary, not by successful
 execution of a preparation step. No configuration switch or threshold change.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.
+## Operational speed P0.1 — instrumentation development (2026-10-10)
+
+Existing local telemetry now persists nullable canonical cost/source, actual cache tokens, call IDs and application UTF-8 byte counts; repeated event delivery is deduplicated. Provider usage comes from the existing pricing/accounting owner. Tool timing/fingerprints store no raw Browser content. Telemetry failure cannot prevent mutation bookkeeping. Session economics reports unknown values when usage/pricing is absent, and flags calls without run lineage; per-run attribution is not complete. Server admission latency excludes UI/transport and remains unknown for ambiguous turn lineage.
+RED: SQLite lost cost_usd and repeated delivery charged twice (2 failures). GREEN: 34 focused telemetry/core/System-1 contracts; final usage-owner and SQLite recheck 12 passed. Full Workstation regression running, not yet qualified. Strict seam classification: 14 classified, zero unclassified/growth. Exact historical seam manifest remains divergent on 14 unchanged tools-file line keys.
+Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller health returned false; no real end-user latency, token savings or monetary savings available. CI skipped by maintainer authorization, development only. Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md.
+## P0.2 item-boundary revocation follow-up (2026-10-10)
+
+A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
+GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
+Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.

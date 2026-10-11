@@ -1,5 +1,18 @@
 # Source reuse matrix
 
+## 2026-10-09 — D-041 Creative reference matrix (HyperFrames-first)
+
+| Source (observed repository) | Role / disposition | License observation | Qualification |
+| --- | --- | --- | --- |
+| [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | **ADOPT AS CANDIDATE PRIMARY STUDIO/RENDER ENGINE**, audit and pin exact SHA `6ae1af7470133db72de6d9bbceeaf80e85695c68` before code. `packages/studio` React 19 editor, `studio-server` Hono routes, `cli` preview/render; source ETags and history hooks | Apache-2.0 repository root; transitive deps, media, fonts, FFmpeg separate | **FACT at source / Hermes integration NV** |
+| [Augani/openreel-video](https://github.com/Augani/openreel-video) | **REFERENCE ONLY** for NLE trim/split/reorder, multi-track/audio, UX; gap-driven code review after P3 | MIT repository metadata observed; per-file verification before import | **REFERENCE / not integrated** |
+| [diffusionstudio/editor](https://github.com/diffusionstudio/editor) | **REFERENCE ONLY** for bidirectional code↔UI and agent edit interfaces; no wholesale import | MPL-2.0 repository metadata observed; per-file obligations before copying | **REFERENCE / not integrated** |
+| [remotion-dev/remotion](https://github.com/remotion-dev/remotion) | **PAUSED OPTIONAL ADAPTER**; preserve #61 TSX, no runtime/rendering claim | Source-available; license/use case review independently | **Source-only draft, not executed** |
+| [penpot/penpot](https://github.com/penpot/penpot), [mrdoob/three.js](https://github.com/mrdoob/three.js), [GraphiteEditor/Graphite](https://github.com/GraphiteEditor/Graphite) | **OPTIONAL SPECIALIST BACKLOG**, no competing default editor | Audit specific scope/package at adoption | **NOT P1 dependencies** |
+
+Selection is a **product architecture decision**, not an upstream code transplant, a sanctioned auto-install or a claim of interoperability. Prefer HyperFrames native files and thin Hermes project provenance, use existing BrowserTask/ProcessRegistry/TaskRun/ArtifactStore/Journal. Full contract, risks and checkpoints: [D-041](creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md). Earlier Creative reference section below is historical to the 2026-10-08 multi-editor exploration.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Creative Workstation external-reference intake — 2026-10-08
 

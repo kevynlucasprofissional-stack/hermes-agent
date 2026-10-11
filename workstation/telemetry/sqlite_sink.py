@@ -10,6 +10,9 @@ from .models import TelemetryEventV1
 from .privacy import MAX_EVIDENCE_REFS, MAX_PAYLOAD_BYTES, sanitize_payload
 
 DEFAULT_MAX_EVENTS = 250_000
+_ADDITIONAL_COLUMNS = {"cost_usd": "REAL", "cost_source": "TEXT", "call_id": "TEXT",
+                       "cache_read_tokens": "INTEGER", "cache_write_tokens": "INTEGER",
+                       "request_bytes": "INTEGER", "result_bytes": "INTEGER"}
 
 
 class SQLiteTelemetrySink:
@@ -41,6 +44,10 @@ class SQLiteTelemetrySink:
         """
         with self._connect() as conn:
             conn.execute(f"CREATE TABLE IF NOT EXISTS events ({columns})")
+            existing = {row[1] for row in conn.execute("PRAGMA table_info(events)")}
+            for name, kind in _ADDITIONAL_COLUMNS.items():
+                if name not in existing:
+                    conn.execute(f"ALTER TABLE events ADD COLUMN {name} {kind}")
             for column in ("occurred_at", "event_type", "task_id", "run_id", "operation_id", "capability_id"):
                 conn.execute(f"CREATE INDEX IF NOT EXISTS idx_events_{column} ON events({column})")
             conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_events_dedupe_key ON events(dedupe_key) WHERE dedupe_key IS NOT NULL")
@@ -64,6 +71,7 @@ class SQLiteTelemetrySink:
             "build_sha", "workstation_version", "environment", "dedupe_key",
             "evidence_refs_json", "payload_json",
         )
+        names = (*names, *_ADDITIONAL_COLUMNS)
         values = tuple(data.get(name) for name in names)
         with self._connect() as conn:
             conn.execute(
@@ -84,12 +92,13 @@ class TelemetryQuery:
         self.path = Path(path)
 
     def events(self, *, start: str | None = None, end: str | None = None,
+               session_id: str | None = None,
                event_type: str | None = None, task_id: str | None = None,
                run_id: str | None = None, operation_id: str | None = None,
                capability_id: str | None = None) -> list[TelemetryEventV1]:
         clauses: list[str] = []
         values: list[str] = []
-        dimensions = {"event_type": event_type, "task_id": task_id, "run_id": run_id,
+        dimensions = {"session_id": session_id, "event_type": event_type, "task_id": task_id, "run_id": run_id,
                       "operation_id": operation_id, "capability_id": capability_id}
         for name, value in dimensions.items():
             if value is not None:
@@ -115,3 +124,8 @@ class TelemetryQuery:
 
     def reconstruct_run(self, task_id: str, run_id: str) -> list[TelemetryEventV1]:
         return self.events(task_id=task_id, run_id=run_id)
+
+    def operation_economics(self, *, session_id: str | None = None) -> dict:
+        """Session projection preserves provider usage absent canonical TaskRun lineage."""
+        from .projectors import project_operation_economics
+        return project_operation_economics(self.events(session_id=session_id))

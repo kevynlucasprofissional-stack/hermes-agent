@@ -1,17 +1,18 @@
 import { EventEmitter } from 'node:events'
 
-import { expect, test, vi } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 const createClient = vi.hoisted(() => vi.fn())
 vi.mock('dbus-native', () => ({ createClient }))
 
 import { watchLinuxTrayHost } from './tray-host'
 
-const linuxTest = test.skipIf(process.platform !== 'linux')
+afterEach(() => vi.unstubAllEnvs())
 
 function bus(hostRegistered: boolean) {
+  vi.stubEnv('DBUS_SESSION_BUS_ADDRESS', 'unix:path=/mock/session/bus')
   const connection = Object.assign(new EventEmitter(), { stream: { destroy: vi.fn() } })
-  const invoke = vi.fn(async () => ({ signature: 'b', value: hostRegistered }))
+  const invoke = vi.fn(async (): Promise<unknown> => ({ signature: 'b', value: hostRegistered }))
 
   const instance = {
     connection,
@@ -24,7 +25,7 @@ function bus(hostRegistered: boolean) {
   return instance
 }
 
-linuxTest('a registered host is required, and losing its owner reports loss exactly once', async () => {
+test('a registered host is required, and losing its owner reports loss exactly once', async () => {
   const instance = bus(true)
   const lost = vi.fn()
   const dispose = await watchLinuxTrayHost(lost)
@@ -42,7 +43,16 @@ linuxTest('a registered host is required, and losing its owner reports loss exac
   dispose()
 })
 
-linuxTest('a missing host and a failed query reject without leaving an open bus connection', async () => {
+test('dbus-native 0.15 returns the registered flag as a bare boolean', async () => {
+  const instance = bus(true)
+  instance.invoke.mockResolvedValue(true)
+  const lost = vi.fn()
+  const dispose = await watchLinuxTrayHost(lost)
+  expect(lost).not.toHaveBeenCalled()
+  dispose()
+})
+
+test('a missing host and a failed query reject without leaving an open bus connection', async () => {
   const lost = vi.fn()
   const absent = bus(false)
   await expect(watchLinuxTrayHost(lost)).rejects.toThrow('No system tray host')

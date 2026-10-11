@@ -1,5 +1,34 @@
 # Workstation roadmap
 
+
+## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
+
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 — D-042 Dogfood-first product acceptance, native learning and HyperFrames qualification
+
+**Status: PRODUCT DIRECTION ACCEPTED / IMPLEMENTATION OPEN / NOT RELEASE-QUALIFIED.** The maintainer's **all seven** Markdown entries in `workstation/dogfood/` are mandatory product outcome requirements, not a suggestions appendix. Exact observed main `f21e803b` is behind the reported local HyperFrames installation; audit local WIP before any reset/replacement. D-041 HyperFrames-first is documented in **unmerged draft PR #62**, not confirmed on main. This documentation gate does not install a studio or change runtime.
+
+**Critical path (upstream-first remains first):** DF0 preserve local checkout + H-079 fixed pin and baseline qualification -> DF1 semantic verified capture and **OBSERVE_ACTIVE mining even when external effects are SHADOW** -> DF2 durable fair adaptive candidate/queue/checkpoint survival -> DF3 verifiable scoped DIRECT attestation + actual isolated validation owner + automatically derived owner-scoped same-run handoff -> DF4 native browser route and subagent Browser-Hub E2E -> DF5 retroactive missed-opportunity evaluation, opt-in recorder, site prebake and typed adapters -> DF6 repair/qualify actual local HyperFrames human+agent studio -> DF7 causal E1 Browser, E2 12 Trello cards, E3 animated HyperFrames native-product tests + exact-head Windows/Workstation CI -> DF8 optional integrations as **separate backlog**. DF4 and DF6 may proceed in parallel after shared ownership/proof is stable.
+
+**Top blockers from dated static audit:** `compilability_monitor.py` SHADOW return before mining, loss of queued events on saturation/shutdown/900s eviction, permanent 3-attempt budgets and nonempty-string DIRECT mode selection. Preserve D-038 proof/authority and D-039 desired active learning; no replay/receipt synthesis. H-080B real-use verification/readback and BrowserTask delegation need **native E2E**. Do not promote mock-only tests, static architecture, still-PNG MP4 or documentation to production DONE.
+
+**Acceptance source and implementer order:** [Dogfood requirement ledger DF-001..026](context/DOGFOOD_PRODUCT_GATE_2026-10-09.md) · [exact implementation handoff DF0–DF8](context/DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md) · [independent audit journal](context/engineering-journal/dogfood-gap-audit-2026-10-09.md) · [creative native qualification](creative-workstation/DOGFOOD_CREATIVE_GATE_2026-10-09.md). Preserve existing roadmap sections as historical snapshots. `main` release claim remains **OPEN**.
+
+
+## 2026-10-09 — D-041 HYPERFRAMES-FIRST / Hermes Workstation priority (accepted product direction, NOT qualified)
+
+**Current Creative priority is a working Hermes Workstation Creative Studio**: self-hosted **HyperFrames Studio** running within the existing Electron/Chromium BrowserTask/WebContentsView, with persistent source projects and eventual typed Hermes agent edits. **OpenReel** (NLE operations) and **Diffusion Studio** (code↔UI/agent edits) are architectural references only. Penpot/Remotion/Three.js are **no longer competing P0 editors**; Remotion source PR #61 is preserved but paused, Three.js and specialized design engines remain optional later stages.
+
+**Status now:** D-041 **DOCUMENTED / APPROVED DESIGN**; HyperFrames–Hermes runtime **NOT IMPLEMENTED, NOT E2E, NOT QUALIFIED**. Historical Creative work exists on unmerged draft PRs #57 Stage A, #58 Creative Runtime, #59 revisioned source/PNG, #60 still-image MP4, #61 editable Remotion TSX; do not mistake old `DOCS ONLY` paragraphs below for current *whole initiative* status or assume these drafts are in main. Native capture repair was reported local/uncommitted and must be recovered on that machine, not inferred from GitHub.
+
+**Sequence (one independently reviewable unit per stage):** **P0** recover draft work, preserve local uncommitted changes, H-079/CI baseline triage and pinned HyperFrames proof → **P1** local owned HyperFrames service in the **existing** Hermes Chromium (M1a) → **P2** editable HTML/CSS/JS/media project, ETag/revision persistence, independently checked PNG+MP4 → **P3** human+Hermes agent typed edits with conflict/readback (M1b) → **P4** targeted NLE/design gaps → **P5** optional Three.js and specialist engines → **P6** complete native qualification, owner-verified Experience Compiler capture/reuse. P1 isolated experiment may run under recorded 2026-10-08 *development exception* while Stage A remediation proceeds separately, without waiving H-079 preflight or unsafe-code/release holds.
+
+**NO MAIN MERGE / NO PROMOTION while H-079 upstream-aligned baseline, required H-080/H-081/H-082/KI checks or exact-head CI remain red.** Preserve canonical Session/TaskRun, Control Plane, Browser, ProcessRegistry, ArtifactStore, Journal and Experience Compiler; Studio is UI, not effect authority. Source security/ports/license must be checked per pinned revision.
+
+**Authoritative spec:** [D-041 HyperFrames adoption](creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md) · [step-by-step implementer handoff](creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md) · [phase verification](creative-workstation/VERIFICATION_MATRIX.md). Older CW-00–CW-07 sequencing below is **historical/superseded only for Creative tool selection and ordering**, not a cancellation of baseline security rules.
+
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Planned initiative — Hermes Creative Workstation (2026-10-08)
 
@@ -2854,3 +2883,20 @@ Safety and canonical owner extensions are implemented in the working tree;
 complete integration parity, five Work100 gaps and native product validation
 before declaring this program delivered. Scope and remaining work:
 [Canonical Work Loop](context/CANONICAL_WORK_LOOP.md).
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.
+## Operational speed P0.1 — instrumentation development (2026-10-10)
+
+Existing local telemetry now persists nullable canonical cost/source, actual cache tokens, call IDs and application UTF-8 byte counts; repeated event delivery is deduplicated. Provider usage comes from the existing pricing/accounting owner. Tool timing/fingerprints store no raw Browser content. Telemetry failure cannot prevent mutation bookkeeping. Session economics reports unknown values when usage/pricing is absent, and flags calls without run lineage; per-run attribution is not complete. Server admission latency excludes UI/transport and remains unknown for ambiguous turn lineage.
+RED: SQLite lost cost_usd and repeated delivery charged twice (2 failures). GREEN: 34 focused telemetry/core/System-1 contracts; final usage-owner and SQLite recheck 12 passed. Full Workstation regression running, not yet qualified. Strict seam classification: 14 classified, zero unclassified/growth. Exact historical seam manifest remains divergent on 14 unchanged tools-file line keys.
+Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller health returned false; no real end-user latency, token savings or monetary savings available. CI skipped by maintainer authorization, development only. Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md.
+## P0.2 item-boundary revocation follow-up (2026-10-10)
+
+A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
+GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
+Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.

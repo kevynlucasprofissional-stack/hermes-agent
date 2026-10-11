@@ -28,6 +28,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { app, BrowserWindow, ipcMain, session, type Session, type WebContents, WebContentsView } from 'electron'
+import { renderCreativeFrame, withCreativeCaptureLayout } from './workstation-creative-frame'
 
 import {
   buildWorkstationResourceSnapshot,
@@ -2158,6 +2159,15 @@ export class WorkstationBrowserRuntime {
       return this.removeExtensionForController(String(args.extension_id ?? ''))
     }
 
+    if (action === 'browser_creative_render' || action === 'browser_creative_studio_open') {
+      const task = this.taskLifecycle().task(taskId)
+      if (!sessionHost || !runId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      if (action === 'browser_creative_render' && !operationId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      if (!task || task.sessionHost !== sessionHost || task.runId !== runId) {
+        throw workstationControllerFault('NO_BOUND_TAB', 'creative_owner_mismatch')
+      }
+    }
+
     const mutating = new Set([
       'browser_navigate',
       'browser_click',
@@ -2165,7 +2175,9 @@ export class WorkstationBrowserRuntime {
       'browser_scroll',
       'browser_back',
       'browser_press',
-      'browser_extension_open_options'
+      'browser_extension_open_options',
+      'browser_creative_render',
+      'browser_creative_studio_open'
     ])
 
     if (mutating.has(action)) {
@@ -2174,6 +2186,86 @@ export class WorkstationBrowserRuntime {
 
     if (sessionHost || kanbanCardId || runId) {
       this.bindControllerSessionIdentity(taskId, sessionHost, kanbanCardId, runId)
+    }
+
+    if (action === 'browser_creative_studio_open') {
+      if (!sessionHost || !runId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      const targetUrl = String(args.url ?? '')
+      let parsedUrl: URL
+      try {
+        parsedUrl = new URL(targetUrl)
+      } catch {
+        throw workstationControllerFault('INVALID_ARGUMENT', 'invalid_creative_studio_url')
+      }
+      if (parsedUrl.hostname !== '127.0.0.1' && parsedUrl.hostname !== 'localhost') {
+        throw workstationControllerFault('INVALID_ARGUMENT', 'creative_studio_loopback_required')
+      }
+      const entry = this.entryForTask(taskId, true, sessionHost, kanbanCardId, runId)!
+      await entry.view.webContents.loadURL(targetUrl)
+      if (!this.activeTabId || this.activeTabId === entry.id || (this.preferredTaskId && this.preferredTaskId === taskId)) {
+        this.activateTab(entry.id)
+      }
+      const opId = operationId ?? `op_${action}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+      const rawReceipt: BrowserOwnerReceipt = {
+        operationId: opId,
+        taskId,
+        runId: runId ?? '',
+        browserTaskId: taskId,
+        tabId: entry.id,
+        revision: 0,
+        action,
+        safeUrl: `http://127.0.0.1:${parsedUrl.port}/#project`,
+        executedAt: new Date().toISOString()
+      }
+      const updatedTask = this.taskLifecycle().recordReceipt(taskId, rawReceipt)
+      this.persistBrowserSessionState()
+      return {
+        success: true,
+        runtime: 'electron-chromium',
+        task_id: taskId,
+        tab_id: entry.id,
+        url: targetUrl,
+        port: Number(parsedUrl.port),
+        operation_id: opId,
+        receipt: updatedTask.lastReceipt
+      }
+    }
+
+    if (action === 'browser_creative_render') {
+      if (!sessionHost || !runId || !operationId) throw workstationControllerFault('INVALID_ARGUMENT', 'creative_lineage_required')
+      const entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
+      if (!entry) throw workstationControllerFault('NO_BOUND_TAB', 'creative_bound_tab_required')
+      const assertOwner = () => {
+        this.assertAgentControl(taskId)
+        const task = this.taskLifecycle().task(taskId)
+        if (task?.runId !== runId || task.sessionHost !== sessionHost || this.entries.get(entry.id) !== entry || entry.ownerTaskId !== taskId) {
+          throw workstationControllerFault('NO_BOUND_TAB', 'creative_owner_changed')
+        }
+      }
+      const capture = async (width: number, height: number): Promise<Buffer> => {
+        assertOwner()
+        const response = await this.cdp(entry.view.webContents, 'Page.captureScreenshot', {
+          format: 'png', fromSurface: true, captureBeyondViewport: false,
+          clip: { x: 0, y: 0, width, height, scale: 1 }
+        }) as { data?: unknown }
+        assertOwner()
+        if (!response || typeof response.data !== 'string' || response.data.length > 44_739_244 ||
+            !/^[A-Za-z0-9+/]*={0,2}$/.test(response.data)) {
+          throw new Error('creative_capture_readback_invalid')
+        }
+        return Buffer.from(response.data, 'base64')
+      }
+      const result = await withCreativeCaptureLayout(entry.view, this.ownerWindow, assertOwner,
+        () => renderCreativeFrame(entry.view, args, screenshotDirectory(), assertOwner, capture))
+      assertOwner()
+      if (entry.id !== this.activeTabId || !this.attached) this.parkEntry(entry)
+      const receipt: BrowserOwnerReceipt = {
+        operationId, taskId, runId, browserTaskId: taskId, tabId: entry.id, revision: 0,
+        action, safeUrl: null, executedAt: new Date().toISOString()
+      }
+      const updated = this.taskLifecycle().recordReceipt(taskId, receipt)
+      this.persistBrowserSessionState()
+      return { ...result, task_id: taskId, tab_id: entry.id, operation_id: operationId, receipt: updated.lastReceipt }
     }
 
     if (action === 'browser_navigate') {

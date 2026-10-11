@@ -301,6 +301,15 @@ class RunLocalAdopter:
                 break
             report.status = "evaluated"
             while len(report.items) < self.item_limit:
+                # A checkpoint may span many items; an earlier qualified offer
+                # does not survive operator revocation/expiry during that work.
+                if not any(current.offer_id == offer.offer_id
+                           for current in self.sink.ready_offers(task_id, run_id)):
+                    report.denied = ["offer_no_longer_qualified"]
+                    self.sink.record_adoption(task_id, run_id, {
+                        "kind": "denied", "offer_id": offer.offer_id, "reasons": report.denied})
+                    halted = True
+                    break
                 snapshot = self.owner.snapshot(task_id, run_id)
                 plan, reasons = plan_item_adoption(snapshot, offer, self.owner)
                 if plan is None:

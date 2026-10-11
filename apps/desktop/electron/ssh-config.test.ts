@@ -75,7 +75,9 @@ test('collectSshConfigHosts expands globbed includes via injected globSync', () 
     path: path.posix,
     readFile: p => files[p] ?? null,
     globSync: pattern =>
-      pattern.endsWith('config.d/*') ? ['/home/u/.ssh/config.d/10-work', '/home/u/.ssh/config.d/20-home'] : [pattern]
+      pattern.replaceAll(path.sep, '/').endsWith('config.d/*')
+        ? ['/home/u/.ssh/config.d/10-work', '/home/u/.ssh/config.d/20-home']
+        : [pattern]
   })
 
   assert.deepEqual(hosts.sort(), ['home', 'root', 'work'].sort())

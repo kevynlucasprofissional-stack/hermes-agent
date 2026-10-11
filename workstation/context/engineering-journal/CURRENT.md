@@ -1,5 +1,121 @@
 # CURRENT — Workstation Engineering Journal
 
+
+## Operational speed development exception — 2026-10-10
+
+Maintainer explicitly authorized continuing while skipping CI. Separate runtime
+branch starts at Stage A `217742e`; upstream pin remains `66605471e9f0b0832abbefaf625ce08e948ca540`.
+No main merge or qualification waiver. P0 experiment: reproduce unkeyed-hash
+forgery, then authenticate qualifications against profile-scoped secure secrets,
+trusted issuer/bindings, finite validity and trusted revocation. Missing/invalid
+trust must retain SHADOW. Test real config/secret paths under two isolated homes.
+
+## Operational speed Stage A — 2026-10-10 (NOT QUALIFIED)
+
+Upstream pin: `66605471e9f0b0832abbefaf625ce08e948ca540`; audited branch reconciled in merge `88a6166`. Candidate `749e2f92785fbc9bb84c0737d6cd730f55aa9aa6`: Workstation 970 passed / 4 skipped; Desktop typecheck/build pass. Full UI run had 3 failures (10,753 passed); all 3 repaired with 87 focused tests passing. Desktop native regression still has open failures. GitHub rejected both workflow dispatches with HTTP 422, “Actions has been disabled for this repository.” H-079 remains red; P0–P3 runtime stays blocked. No measured product savings. Evidence: `workstation/context/engineering-journal/operational-speed-stage-a-2026-10-10.md`.
+<!-- dogfood-gate:2026-10-09 -->
+## 2026-10-09 — D-042 Dogfood-first audit and handoff (DOCS ONLY)
+
+**Observation:** independent source+code review of all seven `workstation/dogfood/*.md` notes + supplied 2026-10-09 audit, on remote `main@f21e803b`; no runtime implementation, CI rerun or local-installed HyperFrames inspection. The user reports functioning HyperFrames in their local Hermes Work; exact code/branch remains unverified remotely. Original dogfood notes remain unchanged.
+
+**Hypothesis:** Workstation's primary quality bottleneck is failure to prove real causal learning/reuse rather than missing more infrastructure. **Falsifiers:** a native E2E showing verified post-effect sample -> compiler candidate -> production verifier/replay -> automatic run-local next item or cross-run promotion -> safe deterministic route with observed savings; the opposite failures are no accepted sample, permanent SHADOW no mining, queue opportunity loss, weak DIRECT qualification and hidden Browser Hub child runs.
+
+**Code observations:** `compilability_monitor.py` SHADOW returns without mining, queue full/stop drops events, hot windows expire 900s and fixed 3-attempt budgets exhaust; `resolve_policy` trusts nonempty qualification string. Existing D-038 owner/readback checks mitigate unauthorized effect risk; **do not** weaken them. Native subagent BrowserTask and HyperFrames packaged work remain **not independently qualified**, not classified absent.
+
+**Decision:** adopt D-042 empirical dogfood release gate, IDs DF-001..026; D-039 implementation DF1–DF3 first, native browser child E2E and retro missed-opportunity evidence, audit installed HyperFrames and prove actual animated shared-edit exports, qualify all three real scenarios. Preserve mandatory H-079 baseline and H-081/H-082. **Outcome of this entry: documentation only.**
+
+**Full journal:** [dogfood-gap-audit-2026-10-09.md](dogfood-gap-audit-2026-10-09.md). **Owners:** [../DOGFOOD_PRODUCT_GATE_2026-10-09.md](../DOGFOOD_PRODUCT_GATE_2026-10-09.md) / [../DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md](../DOGFOOD_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
+## 2026-10-09 — HyperFrames Creative Workstation execution: P0 Recovery, P1 Studio, P2 Native Persistence, P3 Agent Edits, P4 NLE, P5 3D
+
+**Status: EXPERIMENTAL RUNTIME IMPLEMENTED ON BRANCH `codex/creative-hyperframes-20261009` / NOT MERGED TO MAIN.**
+Development authorized under maintainer Development Exception of 2026-10-08 ("Está autorizado"). Baseline debts (H-079 pin advancement, aggregate CI release qualification timeouts, missing laya) remain open and merge to `main` is strictly held.
+
+**P0 Recovery & Stabilize:**
+- Audited downstream `main f21e803b3525...`, upstream pin `71a2fe399bbd...`, upstream `NousResearch:main b624a38f...`. Seams audited: 14 core seams (0 unclassified).
+- Diagnosed PR #61 red CI: `workstation_smoke` timeout at 1800s and missing `laya` package in provenance tests. Desktop TypeScript typecheck had passed independently.
+- Preserved uncommitted native compositor capture repair from local worktree `codex/creative-native-capture-20261008` and backed up to `workstation/creative-workstation/evidence/hyperframes-20261009-p0/native-capture-backup/`.
+- Audited HyperFrames: `hyperframes@0.8.143`, `@hyperframes/studio@0.8.143`, Apache-2.0. Proved standalone execution in isolated scratch environment: scaffolding blank project, boot loopback server on port 3032 (HTTP 200 on `/__hyperframes_config` and `/api/environment/ffmpeg`), rendered verified 60-frame 1920x1080 30fps H.264 MP4 in 9.4s, and verified clean child exit. Recovery matrix written.
+
+**P1 Studio Service & Desktop WebContentsView Integration:**
+- Implemented `workstation/creative_studio_service.py`: typed `hyperframes.studio` service.
+  - Port negotiation on `127.0.0.1` (`allocate_studio_port`, testing loopback bind with collision avoidance).
+  - Session token generation (`secrets.token_hex(24)`) and origin/CSRF validation (`validate_studio_origin`).
+  - Sanitized child environment (`_child_env` + `HYPERFRAMES_SKIP_SKILLS=1`, `HYPERFRAMES_TELEMETRY=0`, isolated `.tmp`, zero credential leakage).
+  - Adoption by canonical `ProcessRegistry` (`adopt_local`).
+  - Health and readiness readback polling `/__hyperframes_config` and `/api/environment/ffmpeg`.
+  - Supervised termination (`stop_studio_service`) killing process tree without orphans; crash detection and restart.
+- Updated `apps/desktop/electron/workstation-browser-runtime.ts`:
+  - Added `browser_creative_studio_open` action strictly enforcing loopback `127.0.0.1`, activating task-bound `WebContentsView`, redacting session tokens from safeUrl receipts.
+  - Added `renderCreativeFrame` capture fix using `withCreativeCaptureLayout` and CDP `Page.captureScreenshot`.
+- Desktop tests: `workstation-creative-studio.test.ts`, `workstation-creative-capture.test.ts`, `workstation-creative-layout.test.ts` (6 passed in 439ms); `tsc -p tsconfig.electron.json` passed with 0 errors.
+
+**P2 Single Project Persistence & Export:**
+- Enhanced `workstation/creative_project_store.py`:
+  - Added `engine="hyperframes"` native project storage preserving raw `index.html`, `hyperframes.json`, and assets.
+  - Implemented HTTP-compatible `etag` property (`f'"{revision_id[:16]}-{source_sha256[:16]}"'`).
+  - Implemented `CreativeConflictError` raising 409 Conflict when conditional write `if_match` does not match parent revision's ETag.
+- Implemented `workstation/creative_hyperframes_render.py`:
+  - Supervised motion render via `ProcessRegistry` executing `hyperframes render -o motion.mp4`.
+  - Independent ffprobe verification via `inspect_video_probe` (dimensions, fps, decoded frame count, H.264 codec).
+  - Extracted decoded preview snapshot frame via ffmpeg.
+  - Persisted video and preview deliverables to `ArtifactStore` and recorded in `ExecutionJournal`.
+
+**P3 Agent Edits via Typed CreativeOperation:**
+- Implemented `workstation/creative_operations.py`:
+  - Typed operations: `inspect_project`, `add_element`, `update_element`, `set_style`.
+  - Safe DOM tree parser and serializer (`parse_html_tree`, `render_html_tree`).
+  - Input sanitization strictly rejecting `<script>`, `<iframe>`, `javascript:` URIs, and executable event attributes (`onclick`, `onerror`).
+  - Sequential human/agent co-editing roundtrip tested and verified.
+
+**P4 NLE, Multi-track Video Timeline, Audio, Transitions & Design Depth:**
+- Implemented `workstation/creative_nle.py`:
+  - Multi-track timeline model (`Timeline`, `Track`, `Clip`) supporting video, audio, text, and vector tracks embedded in HyperFrames compositions.
+  - Trim with optional ripple (`trim_nle_clip`): accurately recalculates clip in/out boundaries and shifts all subsequent clips on track.
+  - Clip split (`split_nle_clip`): divides an existing clip into two sequential sub-clips, recomputing source in/out offsets.
+  - Clip deletion with ripple (`delete_nle_clip`): removes clips and closes gaps by pulling downstream clips earlier.
+  - Sequential clip packing and reordering (`reorder_nle_clips`).
+  - Transition support (`add_nle_transition`): crossfade, fade, wipe, and slide configurations between adjacent clips.
+  - Mixed audio volume control and mute (`set_clip_audio`), plus normalized waveform peak sampling (`generate_waveform_peaks`).
+  - Strict SVG and typography sanitization (`sanitize_svg_markup`, `sanitize_typography`), strictly rejecting `<script>`, `<iframe>`, `<foreignObject>`, `on*` event attributes, and remote URL schemes.
+- Integrated into `workstation/creative_operations.py`:
+  - Typed operations: `add_nle_track`, `add_nle_clip`, `trim_nle_clip`, `split_nle_clip`, `delete_nle_clip`, `reorder_nle_clips`, `add_nle_transition`, `set_nle_audio`, `add_svg_element`.
+  - Atomically syncs `hyperframes.json["timeline"]` and HTML DOM tree (`index.html`) under ETag optimistic concurrency control.
+- Test suite in `workstation/tests/test_creative_nle.py` (10 tests):
+  - Serialization, trimming, ripple trimming, splitting, deleting, reordering, transitions, waveforms, typography, SVG sanitization, and end-to-end multi-track workflow with 409 conflict detection.
+
+**P5 3D / Three.js and GLB Asset Support (HyperFrames Composition Embedded):**
+- Implemented `workstation/creative_3d.py`:
+  - Bounded Three.js 3D viewport configuration (`ThreeJsSceneConfig`) embedded directly within HyperFrames compositions (`<canvas data-hf-3d="true" ...>`), avoiding competing standalone 3D editor applications.
+  - Standard-compliant glTF 2.0 Binary (GLB) generation (`create_minimal_valid_glb`) and strict security parser (`inspect_glb_bytes`).
+  - Strict resource budgets enforced: 16MB file limit (`MAX_GLB_BYTE_SIZE`), max 1,000 nodes, 500 meshes, 500 materials, 50 animations.
+  - Path traversal and network exfiltration defenses: all buffer and image URIs inside the GLB JSON chunk inspected and rejected on remote schemes (`http://`, `https://`, `data:text/html`), absolute paths (`/`, `C:\`), and traversal sequences (`..`).
+  - Extracted immutable metadata receipt (`GLBAssetMetadata`) with SHA-256 fingerprint, animation clip names, and buffer lengths.
+  - Non-blocking Blender specialist discovery probe (`inspect_blender_specialist`), confirming role as optional conversion/rendering assistant without blocking Three.js runtime.
+- Integrated 3D operations into `workstation/creative_operations.py`:
+  - `add_3d_canvas`: inserts configured Three.js canvas DOM element into HTML and serializes scene metadata into `hyperframes.json["scenes_3d"]`.
+  - `import_3d_asset`: validates raw or base64 GLB payload, places asset into `assets/<name>.glb`, registers metadata in `hyperframes.json["assets_3d"]`, and optionally binds to a 3D canvas.
+  - `update_3d_transform`: updates position, rotation, scale, and active animation clips for 3D models with ETag concurrency control.
+  - Enhanced native project files preservation to recursively capture subdirectories (`assets/`) across all revision saves.
+- Comprehensive test suite in `workstation/tests/test_creative_3d.py` (10 tests):
+  - Valid binary generation & inspection, 16MB budget enforcement, header validation, URI traversal/exfiltration rejection, geometry budgets, Three.js DOM generation, Blender inspection, and end-to-end add/import/transform/ETag operations with roundtrip disk persistence.
+
+**Test Receipts:**
+- Python test suite: **51 passed in 41.95s across 13 test files** (`workstation/tests/test_creative*.py`).
+- Desktop Vitest: **6 passed in 985ms across 3 test files** (`workstation-creative-studio.test.ts`, `workstation-creative-capture.test.ts`, `workstation-creative-layout.test.ts`).
+- Desktop Typecheck: `tsc -p tsconfig.electron.json --noEmit` clean (**0 errors**).
+
+## 2026-10-09 — D-041 Creative Workstation change of strategy (documentation / inspection only)
+
+**Question:** can a single self-hosted HyperFrames Studio surface satisfy user+agent editing inside Hermes without creating a second execution authority? **Decision:** yes as prioritized *candidate architecture*, **NOT** as proven integration. Previous multi-editor-first order is superseded; choose Studio-first, OpenReel NLE and Diffusion Studio code/agent/UI as **references**. P0–P6 and exact candidate seams in [D-041 adoption specification](../../creative-workstation/HYPERFRAMES_ADOPTION_2026-10-09.md); concrete implementation task in [handoff](../../creative-workstation/HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
+**Source observations / exact identifiers:** downstream `main f21e803b3525b70ee6be2305e579c1cc1f930e74`; draft #57`3417d57` -> #58`480d809` -> #59`bd22814` -> #60`6f784ad` -> #61`426f736`, unmerged. HyperFrames GitHub `heygen-com/hyperframes`, observed candidate `6ae1af7470133db72de6d9bbceeaf80e85695c68`, Apache-2.0 root; observed Studio v`0.8.143`, React 19/Vite 6, `packages/studio/src/index.ts`, `packages/studio-server/src/createStudioApi.ts`, `packages/studio/src/hooks/useProjectFileWriter.ts` ETag/409. Hermes Desktop React 19/Electron 40/Vite 8. OpenReel MIT listing, Diffusion Studio MPL-2.0 listing. No integration/build/proof on this new plan.
+
+**Evidence of old work:** #58 owned CLI process/health; #59 persisted a restricted project model and PNG; #60 independently verified 8s static MP4; #61 persisted TSX without running Remotion. The native capture compositor fix (47 tests reportedly passed) was *local/uncommitted* in `C:\Users\Kevyn Lucas\.codex\worktrees\creative-stage-a\hermes-agent`, **not inspected now**. Actual #61 CI release-gate `workstation_smoke` timeout (1800s) and `laya` absence observed; aggregate job fails despite TS typecheck pass. Current gate = NOT QUALIFIED; no false extrapolation across SHA.
+
+**Actions in this documentation PR:** introduce D-041, pin-source-intake and P0–P6 plan, supersession notices and handoff; **NO runtime or installation changes, NO test execution, NO merge**. Next: preserve local worktree, H-079/upstream/baseline triage, isolated HyperFrames Windows proof, then BrowserTask/ProcessRegistry adapter in controlled stage PRs. Keep one-pin, agent authority, journal and rollback. Report pending blockers instead of silent code skipping.
+
+
 ## 2026-10-08 — CW-01 Creative Workstation baseline audit (in progress)
 
 Scope: documentation and static/read-only qualification only; no runtime, installation, merge or editor launch.
@@ -5502,3 +5618,20 @@ task, active tab and viewport host on one identity without foreground theft.
 
 Canonical target:
 `../BROWSER_OWNERSHIP_RECOVERY_RECONCILIATION_2026-09-18.md`.
+
+## Operational speed P0.2 — local development evidence (2026-10-10)
+
+Maintainer authorized CI omission for continued development; H-079/release qualification remains pending. This supersedes the earlier Stage A statement that runtime implementation had not begun, without changing historical evidence.
+Authenticated DIRECT v2 replaces forgeable unkeyed hashes using existing profile-scoped secrets and exact operator trust bindings. Missing, invalid, expired or revoked qualifications retain SHADOW. No production key or mutable qualification installed.
+RED: two forged qualifications accepted by old code. GREEN: 48 security/learning tests, including real A→B→A config/secret isolation and local verified run adoption. Native E1–E3, human-edit concurrency closure and product cost/latency benchmarks remain pending; no savings claimed.
+Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md. Development branch starts at 217742e; immutable upstream pin remains 66605471e9f0b0832abbefaf625ce08e948ca540. No main merge.
+## Operational speed P0.1 — instrumentation development (2026-10-10)
+
+Existing local telemetry now persists nullable canonical cost/source, actual cache tokens, call IDs and application UTF-8 byte counts; repeated event delivery is deduplicated. Provider usage comes from the existing pricing/accounting owner. Tool timing/fingerprints store no raw Browser content. Telemetry failure cannot prevent mutation bookkeeping. Session economics reports unknown values when usage/pricing is absent, and flags calls without run lineage; per-run attribution is not complete. Server admission latency excludes UI/transport and remains unknown for ambiguous turn lineage.
+RED: SQLite lost cost_usd and repeated delivery charged twice (2 failures). GREEN: 34 focused telemetry/core/System-1 contracts; final usage-owner and SQLite recheck 12 passed. Full Workstation regression running, not yet qualified. Strict seam classification: 14 classified, zero unclassified/growth. Exact historical seam manifest remains divergent on 14 unchanged tools-file line keys.
+Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller health returned false; no real end-user latency, token savings or monetary savings available. CI skipped by maintainer authorization, development only. Evidence: workstation/context/engineering-journal/operational-speed-p0-2026-10-10.md.
+## P0.2 item-boundary revocation follow-up (2026-10-10)
+
+A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
+GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
+Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.

@@ -1,5 +1,22 @@
 # Plano de implementação — Hermes Creative Workstation
 
+## Plano executivo vigente D-041 — priorizar Hermes Workstation (2026-10-09)
+
+**Este bloco substitui a sequência histórica CW-00–CW-07 abaixo para tool selection/priority.** Aquele histórico preserva evidências e requisitos de segurança; não deve ser seguido como ordem de novos editores. Fonte integral: [HYPERFRAMES_ADOPTION_2026-10-09.md](HYPERFRAMES_ADOPTION_2026-10-09.md); execução diretamente delegável: [HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md](HYPERFRAMES_IMPLEMENTER_HANDOFF_2026-10-09.md).
+
+| Prioridade | Entrega | Owners / fontes | Aceite indispensável |
+| --- | --- | --- | --- |
+| P0 | Resgatar draft #57–61, preservar correção nativa local, auditar H-079/CI/seams, pin externo | PR #57–61, contexto canônico, HyperFrames repos | inventário de código/SHAs/locks, não perder trabalho; blocked vs experimental explicitados |
+| P1 | HyperFrames Studio servido localmente e embutido no **Chromium atual** | `creative_apps.py`, `creative_process.py`, `creative_runtime.py` (PR #58); `apps/desktop/electron/workstation-browser-runtime.ts`; `packages/studio`, `studio-server` | **M1a**: interação GUI Windows/Electron, health real, token/origin/port/profile/stop/restart |
+| P2 | Fonte nativa HTML/CSS/JS/assets + ETag, revisions e PNG/MP4 | `creative_project_store.py`/#59, `creative_video*.py`/#60; HyperFrames file writer/CLI | editar/salvar/reabrir/exportar e decodificar, sem flatten, fonte humana preservada |
+| P3 | Bridge de operações criativas do Hermes Agent | Control Plane, TaskCompiler, Browser/Project Store | **M1b**: edit humano → agent → humano e reabertura, conflitos/denials/replay |
+| P4 | NLE/design gaps por uso real | HyperFrames primeiro; OpenReel/Diffusion referências | composição com vídeo/áudio/texto editável, testes reais |
+| P5 | 3D opcional por demanda | Three.js in HyperFrames; outros adapters separados | GLB/scene/undo/revision real ou bloqueio justificado |
+| P6 | Qualificação e Experience Compiler | H-079/H-080/H-081/H-082, owner receipts/verifier | E2E Electron exato, CI/rollback e reuso verificado sem auto-certificação |
+
+**Procedimento:** PR por etapa, RED/green, status e receipts reais. A exceção de desenvolvimento 2026-10-08 permite experimentos P1 isolados mesmo com baseline pendente, **não** libera merge, runtime inseguro, install automático ou bypass do H-079 preflight. Se bloqueado, documentar e continuar apenas tarefas independentes seguras; não encerrar a missão após P0 se P1 experimental for admissível.
+
+
 **Estado:** BACKLOG PLANEJADO, documentação inicial. **Este arquivo não libera expansão runtime.**
 **Autoridade de prioridade:** [../ROADMAP.md](../ROADMAP.md).  
 **Pré-condições:** [H-079 upstream-first](../context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md), H-080A/H-080B e bloqueios de [CURRENT_STATE](../context/CURRENT_STATE.md).

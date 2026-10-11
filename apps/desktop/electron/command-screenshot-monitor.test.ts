@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawn as nodeSpawn, type SpawnOptions, spawnSync } from 'node:child_process'
+import { execFileSync, spawn as nodeSpawn, spawnSync, type SpawnOptions } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

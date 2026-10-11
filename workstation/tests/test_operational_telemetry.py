@@ -33,6 +33,94 @@ def test_event_roundtrip_unique_ids_and_unknowns_remain_none():
     assert restored.provider_calls is None
 
 
+def test_actual_cost_survives_sqlite_reopen(tmp_path):
+    path = tmp_path / "cost.sqlite"
+    SQLiteTelemetrySink(path).emit(_event(
+        TelemetryEventType.PROVIDER_CALLED, cost_usd=0.002,
+        payload={"cost_source": "test-explicit-tariff"}))
+    restored = TelemetryQuery(path).events()[0]
+    assert restored.cost_usd == 0.002
+    assert restored.payload["cost_source"] == "test-explicit-tariff"
+
+
+def test_repeated_delivery_never_double_charges_a_provider_call():
+    call = _event(TelemetryEventType.PROVIDER_CALLED, provider_calls=1,
+                  input_tokens=10, output_tokens=2, cost_usd=0.002)
+    verified = _event(TelemetryEventType.VERIFICATION_COMPLETED,
+                      operation_id="operation", status="VERIFIED")
+    ora, volc = project_ora_volc([call, call, verified])
+    assert volc.llm_calls == 1
+    assert ora.total_cost_usd == 0.002
+
+
+def test_missing_operation_identity_cannot_resolve_an_unlinked_effect():
+    from workstation.telemetry.projectors import project_operation_economics
+    first = _event(TelemetryEventType.VERIFICATION_COMPLETED, status="VERIFIED")
+    second = _event(TelemetryEventType.VERIFICATION_COMPLETED, status="VERIFIED")
+    mutation = _event(TelemetryEventType.MUTATION_DISPATCHED)
+    result = project_operation_economics([first, second, mutation, first])
+    assert result["verified_operations"] == 2
+    assert result["uncertain_effects"] == 1
+
+
+def test_economics_joins_actual_usage_and_preserves_unknowns_across_runs(tmp_path):
+    from workstation.integrations.hermes.telemetry import _observe_runtime_event
+    from workstation.telemetry.projectors import project_operation_economics
+
+    sink = SQLiteTelemetrySink(tmp_path / "economics.sqlite")
+    set_telemetry_sink(sink)
+    try:
+        metadata = {"session_id": "s", "api_request_id": "call", "input_tokens": 10,
+                    "output_tokens": 2, "cache_read_tokens": 8, "cache_write_tokens": 0,
+                    "cost_usd": .002, "cost_source": "controlled-test-tariff"}
+        _observe_runtime_event("provider_called", metadata)
+        _observe_runtime_event("provider_called", metadata)
+        _observe_runtime_event("provider_usage_recorded", metadata)
+    finally:
+        set_telemetry_sink(None)
+    events = TelemetryQuery(sink.path).events()
+    events += [_event(TelemetryEventType.VERIFICATION_COMPLETED, operation_id="op", status="VERIFIED"),
+               _event(TelemetryEventType.MUTATION_DISPATCHED, operation_id="op", run_id="other")]
+    result = project_operation_economics(events)
+    assert result["provider_calls"] == 1
+    assert result["input_tokens"] == 10 and result["cache_read_tokens"] == 8
+    assert result["cost_per_verified_outcome_usd"] == .002
+    assert result["cost_sources"] == ["controlled-test-tariff"]
+    assert result["uncertain_effects"] == 1
+    events.append(_event(TelemetryEventType.PROVIDER_CALLED, call_id="unknown"))
+    unknown = project_operation_economics(events)
+    assert unknown["cost_usd"] is None and unknown["input_tokens"] is None
+
+
+def test_tool_telemetry_cannot_prevent_bookkeeping_or_retain_browser_text(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from workstation.integrations.hermes import tool_observer
+    from workstation.telemetry.projectors import project_operation_economics
+    import workstation.task_compiler
+
+    monkeypatch.setattr(workstation.task_compiler, "durable_execution_active", lambda: False)
+    captured = []
+    monkeypatch.setattr(tool_observer, "record_mutation", lambda *a, **kw: captured.append("mutation"))
+    monkeypatch.setattr(tool_observer, "capture_raw_result", lambda *a: captured.append("raw"))
+    path = tmp_path / "tools.sqlite"
+    set_telemetry_sink(SQLiteTelemetrySink(path))
+    agent = SimpleNamespace(session_id="s", _canonical_work_task_id="t", _canonical_work_run_id="r")
+    try:
+        for call_id in ("a", "a", "b"):
+            tool_observer.workstation_raw_post_tool_observer("browser_console",
+                {"code": "PRIVATE_BROWSER_TEXT"}, call_id, "PRIVATE_DOM_TEXT", .01, {"agent": agent})
+        # Malformed telemetry inputs must still reach both canonical bookkeeping owners.
+        tool_observer.workstation_raw_post_tool_observer("browser_console",
+            {"number": float("nan")}, "bad", "result", .01, {"agent": agent})
+    finally:
+        set_telemetry_sink(None)
+    assert captured == ["mutation", "raw"] * 4
+    result = project_operation_economics(TelemetryQuery(path).events())
+    assert result["console_calls"] == 2 and result["repeated_browser_queries"] == 1
+    raw = b"".join(p.read_bytes() for p in path.parent.glob("tools.sqlite*"))
+    assert b"PRIVATE_BROWSER_TEXT" not in raw and b"PRIVATE_DOM_TEXT" not in raw
+
+
 def test_sqlite_durability_dedupe_queries_order_and_retention(tmp_path):
     path = tmp_path / "telemetry.sqlite"
     sink = SQLiteTelemetrySink(path, max_events=3, prune_batch=1)

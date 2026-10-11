@@ -43,8 +43,12 @@ def sanitize(value):
     return value
 
 
+def canonical_bytes(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+
+
 def digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+    return hashlib.sha256(canonical_bytes(value)).hexdigest()
 
 
 def recipe_fingerprint(graph, scope, preflight=(), mutation_target=None):

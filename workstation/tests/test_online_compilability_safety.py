@@ -9,11 +9,14 @@ replay runner (owner seams) are test doubles. No test calls ``attempt_run_local_
 from __future__ import annotations
 
 import hashlib
+import json
 import threading
 import time
 from types import SimpleNamespace
 
 import pytest
+
+pytestmark = pytest.mark.usefixtures("direct_qualification_issuer")
 
 from agent.system1_decision import DecisionResult, register_system1_decision_provider, reset_system1_decision
 from workstation.artifacts import ArtifactStore
@@ -261,9 +264,14 @@ def laya(stage):
 
 
 def make_monitor(fx, *, mode=DIRECT, **kwargs):
+    from workstation.experience_compiler.compilability_monitor import create_direct_qualification_attestation
+    direct_ref = create_direct_qualification_attestation(
+        code_version="fixture", provider="laya", operation_family=OP_FAMILY,
+        effect_class="state_mutation", verifier_contract=verification_contract(None).to_dict(),
+    ) if mode == DIRECT else ""
     monitor = OnlineCompilabilityMonitor(
         artifacts=fx.artifacts, registry=fx.registry, corpus=fx.corpus, compiler=fx.compiler, mode=mode,
-        direct_qualification_ref="test-fixture-qualification" if mode == DIRECT else "",
+        direct_qualification_ref=direct_ref,
         cooldown_seconds=0.0, contract_factory=verification_contract, **kwargs)
     install_compilability_monitor(monitor)
     return monitor
@@ -305,7 +313,11 @@ def test_shadow_is_default_and_direct_requires_explicit_qualification():
     assert load_learning_policy().mode == SHADOW
     downgraded = OnlineCompilabilityMonitor(mode="direct")
     assert downgraded.mode == SHADOW and downgraded.mode_downgrade_reason == "direct_requires_qualification_ref"
-    assert OnlineCompilabilityMonitor(mode="direct", direct_qualification_ref="receipt-1").mode == DIRECT
+    arbitrary = OnlineCompilabilityMonitor(mode="direct", direct_qualification_ref="receipt-1")
+    assert arbitrary.mode == SHADOW and arbitrary.mode_downgrade_reason == "invalid_qualification_attestation"
+    from workstation.experience_compiler.compilability_monitor import create_direct_qualification_attestation
+    valid_att = create_direct_qualification_attestation(code_version="v1", provider="laya")
+    assert OnlineCompilabilityMonitor(mode="direct", direct_qualification_ref=valid_att).mode == DIRECT
 
 
 def test_kill_switch_stops_the_learning_plane_without_threads():
@@ -315,7 +327,8 @@ def test_kill_switch_stops_the_learning_plane_without_threads():
     assert monitor._worker_thread is None and monitor.ready_offers("t", "1") == []
 
 
-def test_shadow_records_decisions_but_never_mines_validates_or_offers(fx, tmp_path):
+def test_shadow_for_effects_actively_mines_while_restricting_offers(fx, tmp_path):
+    """DF-007 / DF1: In SHADOW_FOR_EFFECTS, OBSERVE_ACTIVE still performs candidate mining, but ready_offers remains empty."""
     install_validation_env(fx, tmp_path)
     register_system1_decision_provider(laya(CompilabilityStage.POSSIBLE_RUN_LOCAL_REUSE.value))
     monitor = make_monitor(fx, mode=SHADOW)
@@ -323,9 +336,12 @@ def test_shadow_records_decisions_but_never_mines_validates_or_offers(fx, tmp_pa
     assert monitor.drain(10.0)
     window = monitor._windows[(fx.task_id, fx.run_id)]
     assert monitor.metrics["decisions_shadow"] >= 1 and window.shadow_decisions
-    assert monitor.metrics["mining_attempts"] == 0 and monitor.metrics["validations_attempted"] == 0
+    # Active observation: mining occurred because canonical verified evidence existed
+    assert monitor.metrics["mining_attempts"] > 0
+    # Effect restriction: unpromoted/unqualified mutation offers are NOT available for autonomous execution
     assert monitor.ready_offers(fx.task_id, fx.run_id) == []
     assert fx.checkpoint() is None and fx.statuses().count(WorkItemStatus.COMPLETED) == 3
+
 
 
 @pytest.mark.parametrize("behavior", ["raise", "abstain"])
@@ -556,6 +572,25 @@ def test_taskrun_learns_then_automatically_adopts_and_verifies_next_items(fx, tm
     before = len(fx.dispatch_log)
     assert fx.checkpoint(api_call_count=8) is None or not fx.checkpoint().items
     assert len(fx.dispatch_log) == before and monitor.metrics["items_verified"] == 4
+
+
+def test_operator_revocation_between_items_stops_the_current_checkpoint(fx, tmp_path, direct_qualification_issuer):
+    monitor = learn(fx, tmp_path, k=3)
+    original = fx.owner._readback
+    attestation_id = json.loads(monitor._qualification_ref)["attestation_id"]
+
+    def revoke_after_readback(*args):
+        result = original(*args)
+        direct_qualification_issuer["revoked_attestation_ids"].append(
+            attestation_id)
+        return result
+
+    fx.owner._readback = revoke_after_readback
+    report = fx.checkpoint()
+    assert len(report.items) == 1 and report.items[0]["verified"]
+    assert not report.all_items_completed
+    assert fx.statuses().count(WorkItemStatus.COMPLETED) == 4
+    assert monitor.mode == SHADOW
 
 
 def test_single_run_candidate_is_never_promoted_globally(fx, tmp_path):

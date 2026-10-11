@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Optional
+from datetime import datetime, timezone
 from agent.turn_ingress import TurnIngress, TurnOrigin, TurnTrustClass
 from agent.turn_route_policy import TurnRoutePolicy, set_current_turn_route_policy
 from workstation.contracts import IntentAuthority, MessageEnvelope, MessageOrigin
@@ -13,6 +14,7 @@ def workstation_turn_admission(
     ingress: Optional[Any] = None,
 ) -> None:
     """Translate generic turn ingress into canonical Workstation WorkIntent & task binding."""
+    admitted_at = datetime.now(timezone.utc).isoformat()
     root = getattr(agent, "_conversation_root_id", lambda: None)()
     session_id = str(root or getattr(agent, "session_id", None) or "")
 
@@ -97,6 +99,12 @@ def workstation_turn_admission(
     agent._work_procedure_trace_truncated = False
 
     intent = prepare_turn_work(agent, envelope.content, envelope=envelope)
+    from workstation.telemetry import TelemetryEventType, emit_event
+    emit_event(TelemetryEventType.TURN_STARTED, source_owner="workstation.turn_admission",
+        occurred_at=admitted_at, session_id=session_id,
+        task_id=getattr(agent, "_canonical_work_task_id", None),
+        run_id=getattr(agent, "_canonical_work_run_id", None),
+        turn_id=envelope.correlation_id, payload={"latency_origin": "server_turn_admission"})
 
     if intent and intent.constraints:
         policy = TurnRoutePolicy(

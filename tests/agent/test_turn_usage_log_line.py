@@ -29,7 +29,11 @@ def _line(agent, caplog, resp):
 
 
 def test_write_id_and_upstream_are_on_the_line(tmp_path, monkeypatch, caplog):
+    from agent import runtime_events
+    events = []
+    monkeypatch.setattr(runtime_events, "notify_runtime_event", lambda name, data: events.append((name, data)))
     a = _agent(tmp_path, monkeypatch)
+    a._current_api_request_id = "measured-call"
     try:
         line = _line(a, caplog, SimpleNamespace(usage=_usage(34_283, 28_604, 62_889), id="gen-1788636728-qMa1SbYZcwjrvUzJuF1g",
                                                 provider="Anthropic", model="anthropic/claude-fable-5.1"))
@@ -41,6 +45,13 @@ def test_write_id_and_upstream_are_on_the_line(tmp_path, monkeypatch, caplog):
     assert " upstream=Anthropic" in line
     # the pre-existing prefix is unchanged, so older parsers keep matching
     assert line.startswith("API call #1: model=anthropic/claude-fable-5.1 provider=nous in=62889 out=7 total=62896 latency=0.2s")
+    event = next(data for name, data in events if name == "provider_usage_recorded")
+    assert event["api_request_id"] == "measured-call"
+    assert event["cache_read_tokens"] == 34_283 and event["cache_write_tokens"] == 28_604
+    assert event["output_tokens"] == 7
+    assert event["cost_usd"] == (a.session_estimated_cost_usd if event["cost_usd"] is not None else None)
+    assert event["cost_source"] == a.session_cost_source
+    assert "messages" not in event and "response" not in event
 
 
 def test_fields_are_omitted_when_absent(tmp_path, monkeypatch, caplog):

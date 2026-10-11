@@ -1,0 +1,30 @@
+﻿[
+    {
+        "path":  "apps/desktop/electron/workstation-browser-runtime.ts",
+        "sha256":  "6C598E6170594C3C45FB22268CA34232155782C38354ABDC45682E03A17F81B3"
+    },
+    {
+        "path":  "apps/desktop/electron/workstation-creative-frame.ts",
+        "sha256":  "AE2FD792B6C2EB322FBA191C0DA66725220829875D4967C991DF8949BDF0407A"
+    },
+    {
+        "path":  "apps/desktop/electron/workstation-creative-project-native.e2e.mts",
+        "sha256":  "02947819F953903E6AE956436686C0FEA3C811815F67C52366D362D46DB748E6"
+    },
+    {
+        "path":  "workstation/context/engineering-journal/CURRENT.md",
+        "sha256":  "9E12D412F9FB74DC99B9E7E09245277B525313AB9787CD78DD03148EB2A00C23"
+    },
+    {
+        "path":  "workstation/creative.py",
+        "sha256":  "8B729AD0E9DF371C06B43973577D79BA2837EE930B836C0845E530702E608C20"
+    },
+    {
+        "path":  "apps/desktop/electron/workstation-creative-capture.test.ts",
+        "sha256":  "ED6B288126DF36866581E5C27D57007DFEB6D3E9CE707F3FC37113EAA2028118"
+    },
+    {
+        "path":  "apps/desktop/electron/workstation-creative-layout.test.ts",
+        "sha256":  "BAD60B1C349FB71FFC45F56766A28E204F482D11B1CD7A81F472DC1E59C13EC6"
+    }
+]

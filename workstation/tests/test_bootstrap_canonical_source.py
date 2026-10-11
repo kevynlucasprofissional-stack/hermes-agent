@@ -67,7 +67,8 @@ def test_windows_workflow_tests_committed_tree_without_repairing_it() -> None:
     assert "Desktop production build" in workflow
     assert "Assert build kept checkout clean" in workflow
     assert "Prepare Workstation validation dependencies" in workflow
-    assert 'pip install -e ".[dev,anthropic]"' in workflow
+    assert 'uv sync --locked --python 3.14 --group dev --extra anthropic --extra workstation-laya' in workflow
+    assert 'pip install -e ".[dev,anthropic]"' not in workflow
     assert "Emit clean-machine install evidence" in workflow
     assert "Allocate isolated Workstation home" in workflow
     assert "HERMES_WORKSTATION_HOME=$cleanHome" in workflow
