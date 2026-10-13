@@ -12,18 +12,19 @@ export function CreativeWorkspaceSwitcher() {
   ]
 
   return (
-    <div className="creative-workspace-switcher" role="tablist" aria-label="Workspace modes">
+    <div aria-label="Workspace modes" className="creative-workspace-switcher" role="tablist">
       {modes.map(mode => {
         const isActive = workspaceMode === mode.id
         const isPinned = mode.panels.some(p => pinnedPanels.has(p))
+
         return (
           <button
-            key={mode.id}
-            className={`creative-workspace-mode-btn ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
-            role="tab"
+            aria-label={`${mode.label} workspace`}
             aria-selected={isActive}
+            className={`creative-workspace-mode-btn ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}`}
+            key={mode.id}
             onClick={() => setWorkspaceMode(mode.id)}
-            title={`${mode.label} workspace`}
+            role="tab"
           >
             <span className="creative-workspace-mode-icon">{mode.icon}</span>
             <span className="creative-workspace-mode-label">{mode.label}</span>

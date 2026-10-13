@@ -38,6 +38,11 @@
   - Inclui teste end-to-end `HWH-MVP: Creative Workstation internal tab, web tab switching, and manual tab adoption into session`: abertura do Creative via botão, criação de aba web e alternância sem recargas, clique e execução de adoção para sessão Gateway, bloqueio de ações do agente sob lease humano (409 `USER_CONTROL_ACTIVE`) e retomada após liberação explícita.
 - **Qualidade, Tipagem e Code Health:**
   - `npm run typecheck` (4 tsconfigs: app, electron, e2e, electron-builder) → 0 erros.
-  - `npx eslint` → 0 erros, 0 avisos.
-  - `python scripts/check --only health` → 0 blocking, 0 advisory findings.
+  - `npx eslint` → 0 erros, 0 avisos nos componentes editados.
+  - `python scripts/check --only health` → 0 blocking, 0 advisory findings across 24 files.
   - `git diff --check` → limpo, sem warnings de whitespace.
+- **Correções Adicionais de Testes e Isolamento no Windows:**
+  - `no-native-title.test.ts`: Substituição de atributos nativos `title=` por `aria-label=` em botões de `CreativeToolbar`, `CreativeWorkspaceSwitcher` e `workstation-browser-pane` para aderência à regra estática de design.
+  - `CreativeWorkspacePage.mvp.test.tsx`: Atualização de seletores obsoletos `getByTitle` para `getByRole('button', { name: ... })` → 3 passed.
+  - `workstation-browser-runtime-batch.test.ts` & `admission.test.ts`: Isolamento do ambiente Windows definindo `HERMES_WORKSTATION_HOME = dir` em `runtimeHome()`, evitando interferência de arquivos pré-existentes em `%LOCALAPPDATA%\HermesWorkstation` → 11 passed (batch), 4 passed (admission), 63/63 em toda a suíte de runtime.
+  - `e2e/workstation-headless-load.spec.ts`: Re-verificação completa no Playwright após compilação limpa → 9 passed (2.8m, exit code 0).

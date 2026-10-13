@@ -453,7 +453,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               className="text-sky-400 hover:text-sky-300"
               onClick={() => void run(() => bridge.releaseControl(preferredTaskId ?? undefined))}
               size="icon-xs"
-              title="Hand control back to agent"
               variant="ghost"
             >
               <Codicon name="robot" size="0.75rem" />
@@ -464,7 +463,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               className="text-(--ui-text-tertiary) hover:text-(--ui-text-primary)"
               onClick={() => void run(() => bridge.takeControl(preferredTaskId ?? undefined, activeSessionKey ?? undefined))}
               size="icon-xs"
-              title="Take human control"
               variant="ghost"
             >
               <Codicon name="person" size="0.75rem" />
@@ -476,7 +474,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               aria-label="Toggle Execution History"
               onClick={() => setShowJournal(prev => !prev)}
               size="icon-xs"
-              title="Execution history & journal"
               variant={showJournal ? 'secondary' : 'ghost'}
             >
               <Codicon name="history" size="0.75rem" />

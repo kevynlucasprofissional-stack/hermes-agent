@@ -236,12 +236,14 @@ const tempHomes: string[] = []
 function runtimeHome(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-batch-test-'))
   tempHomes.push(dir)
+  process.env.HERMES_WORKSTATION_HOME = dir
   process.env.HERMES_HOME = dir
 
   return dir
 }
 
 afterEach(() => {
+  delete process.env.HERMES_WORKSTATION_HOME
   delete process.env.HERMES_HOME
 
   for (const dir of tempHomes.splice(0)) {
