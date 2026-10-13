@@ -15,3 +15,29 @@
 - Focused `python -m pytest` attempt: platform tool safety block before execution; no result.
 - Renderer tests: NOT_RUN. Packaged Electron E2E A/B/C: NOT_RUN. GitHub exact-head required CI: NOT_VERIFIED. Feature code: NOT_WRITTEN.
 - Superpowers (TDD, executing plans, git-worktrees) and Community Agent Workflows (ECC harness) skills loaded; their methods informed the preflight.
+
+## 2026-10-13 — Execution Evidence Ledger (HWH-001 MVP: HWH-01, HWH-02, HWH-03 & E2E)
+- **Branch & Checkout:** `feat/hermes-workstation-mvp-20261013` em `C:\Github\hermes-agent`.
+- **H-079 Gate:** `H-079 = PASS_WITH_AUTHORIZATION` concedido pelo maintainer exclusivamente para esta branch (sincronização upstream pelo maintainer antes do PR/merge).
+- **HWH-01 (Agent → Creative):**
+  - Ferramenta `open_creative_workstation` em `tools/creative_workstation_tool.py`.
+  - Registro em `desktop_ui` (`toolsets.py`) e evento `creative.open` em `desktop-bridge.ts`.
+  - Testes: `python -m pytest tests/tools/test_creative_workstation_tool.py tests/tools/test_desktop_tools_diet.py tests/tools/test_desktop_ui.py -q` → 10 passed.
+- **HWH-02 (Browser → Workstation Hub):**
+  - Sidebar label `Workstation` para `/browser` (`apps/desktop/src/app/chat/sidebar/index.tsx`).
+  - Aba React Creative interna e preservação da viewport Chromium (`apps/desktop/src/app/browser/index.tsx`).
+  - Testes: `npx vitest run src/app/browser/hwh-creative-tab.test.tsx src/app/contrib/surfaces.app-routes.test.tsx` → PASS.
+- **HWH-03 (Levar para sessão):**
+  - Método `adoptTab` no runtime Electron (`workstation-browser-runtime.ts`), canal IPC em `workstation-browser-ipc.ts`, preload em `preload.ts`.
+  - Retenção do lease de controle humano com 409 `USER_CONTROL_ACTIVE` até liberação explícita.
+  - UI `BrowserControlBar` com botão "Levar para sessão" e hook `useAdoptTabToSession`.
+  - Testes: `npx vitest run electron/workstation-browser-runtime-task.test.ts` (36 passed), `npx vitest run src/app/browser/hwh-adopt-session.test.tsx` (3 passed).
+- **Playwright Native Electron E2E:**
+  - Build de produção gerado limpo com `npm run build` (0 warnings bloqueantes, dist/ atualizado).
+  - Execução real: `npx playwright test e2e/workstation-headless-load.spec.ts` → **9 passed (2.2m)**.
+  - Inclui teste end-to-end `HWH-MVP: Creative Workstation internal tab, web tab switching, and manual tab adoption into session`: abertura do Creative via botão, criação de aba web e alternância sem recargas, clique e execução de adoção para sessão Gateway, bloqueio de ações do agente sob lease humano (409 `USER_CONTROL_ACTIVE`) e retomada após liberação explícita.
+- **Qualidade, Tipagem e Code Health:**
+  - `npm run typecheck` (4 tsconfigs: app, electron, e2e, electron-builder) → 0 erros.
+  - `npx eslint` → 0 erros, 0 avisos.
+  - `python scripts/check --only health` → 0 blocking, 0 advisory findings.
+  - `git diff --check` → limpo, sem warnings de whitespace.

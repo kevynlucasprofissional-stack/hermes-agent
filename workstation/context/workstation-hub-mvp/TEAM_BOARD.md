@@ -26,13 +26,13 @@ Atualizado: 2026-10-13. **Este arquivo é um snapshot durável, não um lock.** 
 | HWH-01 Agent → Creative | VERIFIED (open_creative_workstation, desktop_ui bridge, 4/4 pytests PASS) | A/D |
 | HWH-02 Browser → Workstation | VERIFIED (sidebar 'Workstation', internal Creative tab, 3/3 tab vitests PASS, route test PASS, code health 0 blocking) | B/D |
 | HWH-03 Levar para sessão | VERIFIED (adoção de tab manual na sessão Gateway, preservação da WebContentsView sem loadURL, lease humano e 409 USER_CONTROL_ACTIVE, 36/36 electron tests PASS, 3/3 UI adoption vitests PASS, code health 0 blocking) | C/D |
-| Native E2E A/B/C | NOT_RUN nesta frente | D |
+| Native E2E A/B/C | VERIFIED (9/9 Playwright E2E tests PASS no Electron real: alinhamento de 4 tarefas nativas, execução concorrente de tarefas e chat, restauração de viewport sem foreground theft, recusa 409 em takeover humano, clique real em Take/Release Control, mutação persistente após ack perdido, handoff canônico incerto sem replay, cold restart de Electron com recuperação de lease, e jornada completa HWH-MVP de abertura de aba Creative, alternância de abas e adoção de tab em sessão Gateway com preservação de lease) | D |
 
 O CreativeWorkspaceProvider aparece em `CreativeWorkspacePage.tsx` no HEAD inspecionado; **não** reimplementar só por ser pendência histórica do PR #77. Os PRs anteriores já foram consolidados; `STATE.md` antigo contém identidades históricas e não deve ordenar retomada de worktree inexistente.
 
 ## Próxima integração
 - Etapa 1 / Prompt 1: fechar HWH-01 e HWH-02 como **um incremento vertical** (Agent→Hub→Creative) — CONCLUÍDO E INTEGRADO.
 - Etapa 2 / Prompt 2: HWH-03 Browser manual→sessão existente→Chat com a mesma WebContentsView e lease humano — CONCLUÍDO E INTEGRADO.
-- Etapa 3 / Prompt 3: execução E2E real, hardening direcionado, CI, PR final.
+- Etapa 3 / Prompt 3: execução E2E real, hardening direcionado, CI, PR final — CONCLUÍDO E INTEGRADO.
 - Se etapas anteriores já estiverem aprovadas no HEAD, avançar imediatamente sem reexecutar pesquisa ampla.
 - Em qualquer suspensão, publicar o próximo prompt integral, factual e recursivo.

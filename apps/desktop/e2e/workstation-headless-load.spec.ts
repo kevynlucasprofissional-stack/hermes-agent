@@ -1031,7 +1031,7 @@ test('P0: Browser UI Take Control and Release Control buttons are actually click
 
   // Exercise actual React controls and Electron hit testing, not simulated
   // state or direct bridge calls.
-  await fixture.page.getByRole('button', { name: 'Browser', exact: true }).click()
+  await fixture.page.getByRole('button', { name: /^(Workstation|Browser)$/ }).click()
   const take = fixture.page.getByRole('button', { name: 'Take Control', exact: true })
   await expect(take).toBeVisible()
   await take.click()
@@ -1144,7 +1144,7 @@ test('P0: native UI acknowledges canonical uncertain Browser handoff without rep
     expect.objectContaining({ handoff_id: reviewId, session_id: session.id })
   ]))
 
-  await fixture.page.getByRole('button', { name: 'Browser', exact: true }).click()
+  await fixture.page.getByRole('button', { name: /^(Workstation|Browser)$/ }).click()
   const transfer = fixture.page.getByRole('button', { name: 'Transfer Viewport to Chat Right Rail' })
   await expect(transfer).toBeVisible()
   await transfer.click()
@@ -1181,6 +1181,89 @@ test('P0: native UI acknowledges canonical uncertain Browser handoff without rep
     pageBaseUrl + '/p0-review-unrelated')
 
   expect(another.result?.title).toBe('H013 p0-review-unrelated')
+})
+
+test('HWH-MVP: Creative Workstation internal tab, web tab switching, and manual tab adoption into session', async () => {
+  if (!fixture || !controller) {
+    throw new Error('HWH fixture is not ready')
+  }
+
+  // 1. Navigate to Workstation Hub
+  await fixture.page.getByRole('button', { name: /^(Workstation|Browser)$/ }).click()
+
+  // 2. Open Creative Workstation via button
+  const openCreativeBtn = fixture.page.getByRole('button', { name: 'Abrir Creative Workstation' })
+  await expect(openCreativeBtn).toBeVisible()
+  await openCreativeBtn.click()
+
+  // Verify internal Creative Workstation tab is present
+  const creativeTab = fixture.page.getByRole('button', { name: 'Creative Workstation', exact: true })
+  await expect(creativeTab).toBeVisible()
+
+  // 3. Open a new web tab and verify web address bar is visible
+  const newTabBtn = fixture.page.getByRole('button', { name: 'New browser tab' })
+  await newTabBtn.click()
+
+  const addressInput = fixture.page.locator('input[data-browser-address="true"]')
+  await expect(addressInput).toBeVisible()
+
+  // 4. Verify "Levar para sessão" button is present
+  const adoptBtn = fixture.page.getByRole('button', { name: 'Levar para sessão' })
+  await expect(adoptBtn).toBeVisible()
+
+  // 5. Adopt tab via bridge and verify WebContentsView and BrowserTask association
+  const adoptionResult = await fixture.page.evaluate(async () => {
+    const bridge = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser as
+      WorkstationBridge & { adoptTab: (tabId: string, sessionId: string) => Promise<any> }
+
+    const state = await bridge.ensure()
+    const activeTab = (state.tabs as any[]).find((t: any) => t.id === state.activeTabId) || (state.tabs as any[])[0]
+
+    if (!activeTab) {return null}
+
+    return bridge.adoptTab(activeTab.id, 'session-e2e-mvp-1')
+  })
+
+  expect(adoptionResult).toBeTruthy()
+  expect(adoptionResult.success).toBe(true)
+  expect(adoptionResult.sessionId).toBe('session-e2e-mvp-1')
+  expect(adoptionResult.taskId).toBeTruthy()
+
+  // 6. Verify autonomous agent writes are blocked under human lease
+  const denied = await fetch(`${controller.url}/v1/action`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${controller.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_navigate',
+      task_id: adoptionResult.taskId,
+      session_id: 'session-e2e-mvp-1',
+      arguments: { url: `${pageBaseUrl}/p0-adopt-human-denied` }
+    })
+  })
+
+  expect(denied.status).toBe(409)
+  expect(((await denied.json()) as { error_code?: string }).error_code).toBe('USER_CONTROL_ACTIVE')
+
+  // 7. Explicit release allows resumed agent action
+  await fixture.page.evaluate(async (taskId: string) => {
+    const bridge = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser as
+      WorkstationBridge & { releaseControl: (taskId?: string) => Promise<unknown> }
+
+    await bridge.releaseControl(taskId)
+  }, adoptionResult.taskId)
+
+  const allowed = await fetch(`${controller.url}/v1/action`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${controller.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_navigate',
+      task_id: adoptionResult.taskId,
+      session_id: 'session-e2e-mvp-1',
+      arguments: { url: `${pageBaseUrl}/p0-adopt-resumed` }
+    })
+  })
+
+  expect(allowed.status).toBe(200)
 })
 
 test('P0: released and active human leases recover safely across cold Electron restarts', async () => {

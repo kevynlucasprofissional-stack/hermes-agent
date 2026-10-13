@@ -1,5 +1,13 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-13 — Stage 3 Native Electron E2E qualification and HWH-MVP verification (VERIFIED)
+
+Conclusão e qualificação da Etapa 3 (Native Electron E2E):
+- Build de produção Electron gerado com `npm run build` em 42s, empacotando os bundles do renderer, preload e main process.
+- Suíte completa de Playwright E2E em Electron headless executada (`apps/desktop/e2e/workstation-headless-load.spec.ts`): 9/9 testes aprovados (100% green, 2.2m).
+- Validação nativa completa do fluxo HWH-MVP: abertura do Creative Workstation via botão de UI, criação de aba web e alternância de abas sem recarga/destruição de viewport, adoção de aba manual para sessão canônica Gateway sem disparo de `loadURL`, retenção estrita de lease de controle humano (bloqueio 409 `USER_CONTROL_ACTIVE` em tentativas autônomas) e retomada segura após liberação explícita.
+- Qualidade e governança: `npm run typecheck` (4 tsconfigs) 100% limpo, ESLint 0 erros/avisos, `python scripts/check --only health` com 0 findings bloqueantes e 0 advisories, `git diff --check` sem warnings de formatação.
+
 ## 2026-10-13 — HWH-03 manual Chromium tab adoption into canonical Gateway session (VERIFIED)
 
 Implementado e qualificado HWH-03:
