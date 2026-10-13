@@ -1,39 +1,36 @@
-# HWH-001 — checkpoint, 2026-10-12
+# HWH-001 — Estado operacional vigente em 2026-10-13
 
-**Release status: BLOCKED / NOT_VERIFIED_NATIVE.** This branch currently contains documentation only; HWH-01/02/03 product code has NOT been implemented or tested.
+> Este documento substitui o checkpoint histórico de 2026-10-12, que descrevia PRs e worktrees já consolidados na main. Não usar identidades antigas para orientar novas alterações.
 
-## Git / worktrees
-Repository `kevynlucasprofissional-stack/hermes-agent`
-Original `origin/main`: `a2b56db1bc9e0b5acf48d94fa86a9844a1005842`
-Original downstream-to-upstream frozen common pin: `66605471e9f0b0832abbefaf625ce08e948ca540`
-Observed upstream main after actual fetch: `53df274b08f2bbbe82bb67bb50c7571952e95809`
-Divergence from origin/main at check: `963 478` (left/right).
-Feature branch: `feat/workstation-hub-creative-session-handoff-20261012`
-Feature worktree: `C:\Github\hermes-agent\.worktrees\workstation-hub-creative-session-20261012`; created clean at original origin/main. Remote branch created through GitHub; **fetch it before local commits**.
-Stage A branch: `integration/hwh-upstream-20261012-53df274`
-Stage A worktree: `C:\Github\hermes-agent\.worktrees\hwh-upstream-baseline-20261012`. It has a **live in-progress, UNCOMMITTED upstream/main merge**, not a clean/qualified integration.
-Primary checkout: `C:\Github\hermes-agent`, branch `fix/hermes-oneclick-lock-startup-20261011`, HEAD `9fffa7f3ffcc2c50774654c271fe25e92ce459e8` at inspection, with ~20+ dirty changes of other agents. DO NOT CHANGE.
+## Identidade
+- Repositório: `kevynlucasprofissional-stack/hermes-agent`.
+- Base verificada em `main`/`origin/main` ao abrir o ciclo: `b80d10a4d6d4536b65df52eb4e011ad8d5eef672`.
+- Branch compartilhada: `feat/hermes-workstation-mvp-20261013`.
+- Único checkout de desenvolvimento: `C:\Github\hermes-agent`.
+- Projeto e documentação: `workstation/context/workstation-hub-mvp/`.
+- SHA atual, status de sincronização e claims: executar `git rev-parse HEAD`, `git status -sb`, `python workstation/scripts/multi_agent_coordination.py status`. Não confundir este baseline inicial com HEAD futuro.
+- Antigo PR #87: merged em `main`, **documentação apenas**; o antigo `NEXT_PROMPT.md` e bloqueios específicos daquela sessão foram superados como identidades de trabalho, NÃO como provas funcionais.
 
-## Stage A candidate merge
-`git merge --no-commit --no-ff upstream/main` produced 5 conflicts:
-- `agent/chat_completion_helpers.py`
-- `apps/desktop/electron/updater/checkout-source.test.ts`
-- `pyproject.toml`
-- `tools/tool_search.py`
-- `uv.lock`
+## Prova de observação 2026-10-13
+- `apps/desktop/src/app/creative-workspace/CreativeWorkspacePage.tsx` inclui `CreativeWorkspaceProvider`; evitar recodificação redundante.
+- `apps/desktop/src/app/chat/sidebar/index.tsx` ainda mostra `label: 'Browser'`.
+- Não foi demonstrada no produto a capability de abrir o Creative interno pelo comando do agente, a aba Creative dentro do Hub, nem o botão seguro `Levar para sessão`. Os três fluxos permanecem como entrega a fazer.
+- Original `main` estava limpa e sincronizada no instante do checkout; ferramentas de coordenação foram adicionadas na nova branch.
+- O gate H-079 upstream-first e CI exata continuam válidos; estado H-079 atual não foi requalificado nesta fase documental. Não assumir PASS automaticamente.
+- Há worktrees externos antigos do Codex registrados por Git; não apagá-los sem confirmar owner. Nenhum worktree adicional foi criado neste ciclo.
 
-The conflict hunks were resolved **in local working files only** by `C:\Temp\hwh_stagea_resolve.py`: combined downstream provider usage with upstream reasoning carriers; combined downstream tool projection registry with upstream search metrics; kept downstream idempotent loopback URL interception in updater fixture; kept downstream 14-day exclude-newer policy and package exceptions vs upstream 3-day; kept downstream lock options and extras. **Not staged** at checkpoint: index still showed five U conflicts. These resolutions are candidate decisions, **NOT qualified**. Reinspect behavior and regenerate/check lock; do not blindly finalize.
-Offline `uv lock --check --offline` failed because git dependency `NousResearch/misaki@f03fd2be` was not cached. Focused Python pytest tool call was blocked before execution by platform security settings. No PASS claim.
-
-## HWH ledger
-| Phase | Status | Next |
+## Fases — orçamento de prompts
+| Fase | Produto | Estado neste checkpoint |
 |---|---|---|
-| HWH-00 | IN_PROGRESS / H-079_BLOCKED | Finish qualified upstream integration and exact-head baseline |
-| HWH-01 | NOT_STARTED | RED test of agent internal Creative app dispatch → Desktop |
-| HWH-02 | NOT_STARTED | RED test of Hub Creative tab/provider/occlusion |
-| HWH-03 | NOT_STARTED | RED test of authenticated adoption of existing tab |
-| HWH-04 | NOT_STARTED | Three native Electron E2Es |
-| HWH-05 | NOT_STARTED | Feature implementation, commits, PR review; no main merge |
+| 0 | Branch única, protocolo compartilhado, ferramenta de claims, testes e handoff | Em execução; passa a DONE após verificação, commit e push |
+| 1 | Agent abre Creative + sidebar Workstation + aba Creative | NOT_STARTED |
+| 2 | Levar tab manual para sessão real, sem recriar Chromium, com lease humano | NOT_STARTED |
+| 3 | Três E2E nativos, segurança, CI, PR final | NOT_STARTED |
 
-## Related PRs
-#77 Creative renderer-local editor/provider; #81 hybrid Creative TaskRun, pending trusted owner; #83 Browser session authority and human leases; #85 Browser automation test-only. All observed OPEN/DRAFT/UNMERGED.
+**Meta: 3 próximos prompts** depois da fase 0; pode haver mais apenas diante de bloqueio material comprovado. Se um prompt terminar com uma fase completa e houver capacidade, continuar na próxima.
+
+## Critérios
+Sem E2E Electron real = `NOT_VERIFIED_NATIVE`. Sem autoridade autenticada/lease de usuário = `RELEASE_BLOCKED`. Agentes não alteram `main` e não abrem branches/worktrees extras. O integrador é o único escritor Git, e conflitos de arquivo têm owner definido no protocolo.
+
+## Continuidade
+Ler `TEAM_BOARD.md`, `IMPLEMENTATION_STAGES.md`, `NEXT_PROMPT.md` e `../AGENT_COLLABORATION_PROTOCOL.md`; confirmar HEAD/claims reais. Ao final de qualquer sessão incompleta, publicar próximo prompt autossuficiente, com estado factual e obrigação recursiva.

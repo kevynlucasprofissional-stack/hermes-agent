@@ -1,5 +1,10 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-13 — HWH-001 coordinated single-branch workflow (DOCUMENTED, NOT PRODUCT QUALIFIED)
+
+Consolidação verificada: `main`/`origin/main` limpos em `b80d10a4d6d4536b65df52eb4e011ad8d5eef672`. A antiga PR #87 foi merged mas documentava pendências e não qualificou os 3 fluxos. Iniciado ciclo único `feat/hermes-workstation-mvp-20261013` sobre `C:\Github\hermes-agent`, sem worktree extra; quatro lanes (`creative-agent`, `hub-ui`, `session-handoff`, `integration-qa`), claims locais atômicos e integrador exclusivo de operações Git. Contratos: [protocolo](../AGENT_COLLABORATION_PROTOCOL.md), [board](../workstation-hub-mvp/TEAM_BOARD.md), [etapas](../workstation-hub-mvp/IMPLEMENTATION_STAGES.md). A ferramenta `workstation/scripts/multi_agent_coordination.py` tem 8 testes de isolamento/ownership/heartbeat/release inicialmente PASS; não representa prova de segurança runtime. Status dos fluxos HWH01, HWH02, HWH03: NOT_VERIFIED; HWH04: NOT_RUN; H-079 e CI continuam gates de promoção. Não reexecutar uma auditoria global nem converter ausência de E2E em PASS.
+
+
 ## 2026-10-11 — Hermes Work: Aceleração Operacional, Redução de Redundâncias e Custo (D-043 / P0–P2)
 
 **Classificação: IMPLEMENTAÇÃO COMPLETA, TESTES E QUALIFICAÇÃO INTEGRADOS.**

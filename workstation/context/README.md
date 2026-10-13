@@ -44,6 +44,10 @@ For the **new, not-yet-implemented** event-driven Laya/Experience Compiler featu
 
 This directory is the operational entry point for coding agents working on the downstream Hermes Workstation surface. It does **not** replace the repository-wide rules in [`../../AGENTS.md`](../../AGENTS.md) or duplicate the architecture documents in `workstation/`.
 
+## Shared-branch multi-agent entry point (2026-10-13)
+
+Active coordination: [protocol](AGENT_COLLABORATION_PROTOCOL.md), [live/durable status](workstation-hub-mvp/TEAM_BOARD.md), [MVP stage budget](workstation-hub-mvp/IMPLEMENTATION_STAGES.md), [fresh continuation](workstation-hub-mvp/NEXT_PROMPT.md). For four agents sharing the same Windows checkout, local claims in `/.hermes-collab/` identify actual ongoing work, while the integrator owns Git changes and updates the board. Old HWH-001 states and PRs are historical, not current source authority. Upstream and security gates below remain authoritative.
+
 ## Required reading order
 
 Before changing Workstation code, read these documents in order:
