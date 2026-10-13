@@ -2,11 +2,14 @@
 
 ## 2026-10-13 — Stage 3 Native Electron E2E qualification and HWH-MVP verification (VERIFIED)
 
-Conclusão e qualificação da Etapa 3 (Native Electron E2E):
-- Build de produção Electron gerado com `npm run build` em 42s, empacotando os bundles do renderer, preload e main process.
-- Suíte completa de Playwright E2E em Electron headless executada (`apps/desktop/e2e/workstation-headless-load.spec.ts`): 9/9 testes aprovados (100% green, 2.2m).
+Conclusão e qualificação da Etapa 3 (Native Electron E2E e Hardening):
+- Build de produção Electron gerado com `npm run build` limpo, empacotando os bundles do renderer, preload e main process.
+- Suíte completa de Playwright E2E em Electron headless executada (`apps/desktop/e2e/workstation-headless-load.spec.ts`): 9/9 testes aprovados (100% green, 2.8m, Exit Code 0).
 - Validação nativa completa do fluxo HWH-MVP: abertura do Creative Workstation via botão de UI, criação de aba web e alternância de abas sem recarga/destruição de viewport, adoção de aba manual para sessão canônica Gateway sem disparo de `loadURL`, retenção estrita de lease de controle humano (bloqueio 409 `USER_CONTROL_ACTIVE` em tentativas autônomas) e retomada segura após liberação explícita.
-- Qualidade e governança: `npm run typecheck` (4 tsconfigs) 100% limpo, ESLint 0 erros/avisos, `python scripts/check --only health` com 0 findings bloqueantes e 0 advisories, `git diff --check` sem warnings de formatação.
+- Resolução da regra de UI e acessibilidade (`no-native-title.test.ts`): substituição de `title=` por `aria-label=` nos botões de `CreativeToolbar`, `CreativeWorkspaceSwitcher` e `workstation-browser-pane`, com ordenação de props JSX via ESLint (`perfectionist/sort-jsx-props`).
+- Atualização semântica dos testes de UI (`CreativeWorkspacePage.mvp.test.tsx`): migração de `getByTitle` para `getByRole('button', { name: ... })` (3/3 PASS).
+- Isolamento hermético de testes no Windows (`workstation-browser-runtime-batch.test.ts` e `admission.test.ts`): definição explícita de `HERMES_WORKSTATION_HOME = dir` em `runtimeHome()`, prevenindo poluição de `%LOCALAPPDATA%\HermesWorkstation` e eliminando colisões de estado de sessão preexistente (63/63 testes de runtime Electron PASS).
+- Qualidade e governança: `npm run typecheck` (4 tsconfigs) 100% limpo, ESLint 0 erros/avisos, `python scripts/check --only health` com 0 findings bloqueantes e 0 advisories em 24 arquivos, `git diff --check` sem warnings de formatação. Commit consolidado `15e0f0e49d` publicado na branch remota `feat/hermes-workstation-mvp-20261013`.
 
 ## 2026-10-13 — HWH-03 manual Chromium tab adoption into canonical Gateway session (VERIFIED)
 
