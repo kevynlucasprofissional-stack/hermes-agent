@@ -1,5 +1,10 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-13 — HWH-001 user dogfood corrective round
+
+Reference: `workstation/context/workstation-hub-mvp/DOGFOOD_REPAIR_20261013.md`. CSS do Creative estava desconectado e primeiro uso exigia projeto JSON. A aba agora abre projeto vazio, oferece preview temporário de assets e fecha sem destruir o componente. `Levar para sessão` não fabrica IDs quando Gateway falha e separa `runtime session_id` (BrowserTask/agent tools) do `stored_session_id` (chat/preview). Vitest 84/84 PASS, E2E Electron 1/1 PASS, ESLint 0 issues, build PASS; os testes não demonstram a jornada real de criação Gateway pelo botão seguida de ação do modelo sobre a mesma DOM, nem persistência de media; manter evidência parcial. Alterações de usuário em `workstation/dogfood/` preservadas. H-079 permanece PASS_WITH_AUTHORIZATION exclusivamente nesta branch.
+
+
 ## 2026-10-13 — Stage 3 Native Electron E2E qualification and HWH-MVP verification (VERIFIED)
 
 Conclusão e qualificação da Etapa 3 (Native Electron E2E e Hardening):

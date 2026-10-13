@@ -1,5 +1,10 @@
 # HWH-001 — Estado operacional vigente em 2026-10-13
 
+## Dogfood do usuário (13/10) — correções adicionais; qualificação de ponta a ponta parcial
+
+Os estados DONE abaixo representam a rodada anterior de testes, **não aprovação de usabilidade no produto real**. Feedback identificou primeiro uso Creative dependente de JSON, viewport preta, aba não fechável e handoff insuficiente. Foi produzido um patch em `DOGFOOD_REPAIR_20261013.md` com testes de CSS/startup, fechar aba e integração runtime-vs-stored session, além de pendências: assets canônicos, chat Creative e E2E real via botão do Gateway. Não encerrar HWH como qualificado nessas áreas sem novas provas.
+
+
 ## 2026-10-13 — H-079 PASS_WITH_AUTHORIZATION (somente esta branch)
 
 O maintainer autorizou expressamente: **"Para essa branch marca H-079 com 'Pulado com autorização' e pode continuar o trabalho, eu faço a sincronização upstream quando eu for fazer pull request e merge no main"**. Decisão: H-079 = `PASS_WITH_AUTHORIZATION` exclusivamente em `feat/hermes-workstation-mvp-20261013` para **desenvolvimento HWH-01/HWH-02/HWH-03**. A sincronização upstream foi atribuída ao maintainer no momento da preparação de PR/merge. Isso **NÃO equivale** a CI qualificada nem autoriza merge automático, release, bypass de lease/auth/session, nem declarar E2E sem prova. No último preflight, o workflow Workstation CI falhou tanto no baseline main `b80d10a` (run `38395540990`) quanto no HEAD `d280bcd` (run `38395647904`), ambos sem jobs retornados na consulta; causa não atribuída. Tratar como `RELEASE_HOLD`, não bloqueio para a implementação explicitamente autorizada.

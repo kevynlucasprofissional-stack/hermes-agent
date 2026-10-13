@@ -2,6 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { requestGatewayForProfile } from '@/store/gateway'
+import { openWorkstationBrowserPreview } from '@/store/preview'
+
 import type { WorkstationBrowserState } from './types'
 
 import { BrowserView } from './index'
@@ -55,6 +58,7 @@ describe('HWH-03: Levar para sessão (adopt tab into session)', () => {
   let bridge: Record<string, ReturnType<typeof vi.fn>>
 
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} })
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       callback(0)
@@ -74,9 +78,9 @@ describe('HWH-03: Levar para sessão (adopt tab into session)', () => {
       adoptTab: vi.fn().mockResolvedValue({
         success: true,
         tabId: 'web-1',
-        taskId: 'browser-task-1',
-        sessionId: 'stored-session-adopted-1',
-        state: { ...browserState, tasks: [{ taskId: 'browser-task-1', sessionHost: 'stored-session-adopted-1' }] }
+        taskId: 'rt-session-adopted-1',
+        sessionId: 'rt-session-adopted-1',
+        state: { ...browserState, tasks: [{ taskId: 'rt-session-adopted-1', sessionHost: 'rt-session-adopted-1' }] }
       })
     }
     vi.stubGlobal('hermesDesktop', { workstationBrowser: bridge })
@@ -97,9 +101,28 @@ describe('HWH-03: Levar para sessão (adopt tab into session)', () => {
     fireEvent.click(adoptBtn)
 
     await waitFor(() => {
-      expect(bridge.adoptTab).toHaveBeenCalledWith('web-1', 'stored-session-adopted-1')
+      expect(bridge.adoptTab).toHaveBeenCalledWith('web-1', 'rt-session-adopted-1', 'rt-session-adopted-1')
     })
     expect(bridge.newTab).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when Gateway session.create fails (never invents a local session)', async () => {
+    vi.mocked(requestGatewayForProfile).mockRejectedValueOnce(new Error('Gateway offline'))
+    render(<MemoryRouter><BrowserView /></MemoryRouter>)
+    await screen.findByText('Web Page')
+    fireEvent.click(screen.getByRole('button', { name: 'Levar para sessão' }))
+    expect(await screen.findByText(/Gateway offline/)).toBeTruthy()
+    expect(bridge.adoptTab).not.toHaveBeenCalled()
+    expect(openWorkstationBrowserPreview).not.toHaveBeenCalled()
+  })
+
+  it('binds the preview to the newly created session instead of the previous chat', async () => {
+    render(<MemoryRouter><BrowserView /></MemoryRouter>)
+    await screen.findByText('Web Page')
+    fireEvent.click(screen.getByRole('button', { name: 'Levar para sessão' }))
+    await waitFor(() => expect(openWorkstationBrowserPreview).toHaveBeenCalledWith({
+      fromHub: true, sessionId: 'stored-session-adopted-1'
+    }))
   })
 
   it('prevents double-clicks / concurrent adoption attempts', async () => {

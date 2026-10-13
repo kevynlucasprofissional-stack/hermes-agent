@@ -1199,6 +1199,12 @@ test('HWH-MVP: Creative Workstation internal tab, web tab switching, and manual 
   // Verify internal Creative Workstation tab is present
   const creativeTab = fixture.page.getByRole('button', { name: 'Creative Workstation', exact: true })
   await expect(creativeTab).toBeVisible()
+  // A new user can work immediately without a pre-existing JSON project.
+  await expect(fixture.page.getByRole('button', { name: 'Add rectangle' })).toBeVisible()
+  await expect(fixture.page.getByRole('button', { name: 'Importar assets' })).toBeVisible()
+  // Closing Creative must reveal the original native Chromium viewport.
+  await fixture.page.getByRole('button', { name: 'Fechar Creative Workstation' }).click()
+  await expect(creativeTab).toHaveCount(0)
 
   // 3. Open a new web tab and verify web address bar is visible
   const newTabBtn = fixture.page.getByRole('button', { name: 'New browser tab' })
@@ -1214,20 +1220,20 @@ test('HWH-MVP: Creative Workstation internal tab, web tab switching, and manual 
   // 5. Adopt tab via bridge and verify WebContentsView and BrowserTask association
   const adoptionResult = await fixture.page.evaluate(async () => {
     const bridge = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser as
-      WorkstationBridge & { adoptTab: (tabId: string, sessionId: string) => Promise<any> }
+      WorkstationBridge & { adoptTab: (tabId: string, sessionId: string, taskId?: string) => Promise<any> }
 
     const state = await bridge.ensure()
     const activeTab = (state.tabs as any[]).find((t: any) => t.id === state.activeTabId) || (state.tabs as any[])[0]
 
     if (!activeTab) {return null}
 
-    return bridge.adoptTab(activeTab.id, 'session-e2e-mvp-1')
+    return bridge.adoptTab(activeTab.id, 'session-e2e-mvp-1', 'session-e2e-mvp-1')
   })
 
   expect(adoptionResult).toBeTruthy()
   expect(adoptionResult.success).toBe(true)
   expect(adoptionResult.sessionId).toBe('session-e2e-mvp-1')
-  expect(adoptionResult.taskId).toBeTruthy()
+  expect(adoptionResult.taskId).toBe('session-e2e-mvp-1')
 
   // 6. Verify autonomous agent writes are blocked under human lease
   const denied = await fetch(`${controller.url}/v1/action`, {

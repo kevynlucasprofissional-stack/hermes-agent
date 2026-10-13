@@ -763,3 +763,16 @@
 .creative-graph-editor-properties::-webkit-scrollbar-thumb:hover {
   background: var(--fg-muted, #666);
 }
+/* First-run controls and local asset shelf. Never paint an opaque native viewport over the editor. */
+.creative-workspace-project-bar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: #23242b; border-bottom: 1px solid #3c3e4a; color: #f0f1f5; }
+.creative-workspace-project-bar strong { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.creative-workspace-project-bar button { padding: 7px 12px; border: 1px solid #52566a; background: #31364b; border-radius: 6px; cursor: pointer; color: #fff; }
+.creative-workspace-project-bar button:focus-visible { outline: 2px solid #8bacff; }
+.creative-asset-shelf { padding: 10px 12px; border-bottom: 1px solid #454755; background: #191b24; color: #eee; flex-shrink: 0; max-height: 185px; overflow: auto; }
+.creative-asset-note { font-size: 11px; color: #c8c5a7; display: block; margin-bottom: 7px; }
+.creative-asset-list { display: flex; gap: 8px; overflow-x: auto; }
+.creative-asset { min-width: 100px; max-width: 150px; display: flex; flex-direction: column; gap: 4px; font-size: 11px; overflow: hidden; }
+.creative-asset img, .creative-asset video { width: 115px; height: 75px; object-fit: contain; background: #070910; }
+.creative-asset audio { width: 150px; height: 54px; }
+.creative-asset span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.creative-workspace-empty { color: #fff; }

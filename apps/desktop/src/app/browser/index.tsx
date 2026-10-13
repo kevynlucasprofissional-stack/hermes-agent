@@ -361,40 +361,43 @@ function useAdoptTabToSession({
 
     try {
       const profile = normalizeProfileKey($activeGatewayProfile.get())
-      let sessionId = ''
 
-      try {
-        const createRes = await requestGatewayForProfile<{
-          session_id: string
-          stored_session_id?: string
-        }>(
-          profile,
-          'session.create',
-          { profile, title: shortTitle(tab) },
-          undefined,
-          undefined,
-          { spawnPriority: 'foreground' }
-        )
+      // A session is an authenticated Gateway resource, never a renderer UUID.
+      // Fail closed: the manual tab remains untouched if session.create fails.
+      const createRes = await requestGatewayForProfile<{
+        session_id: string
+        stored_session_id?: string
+      }>(
+        profile,
+        'session.create',
+        { profile, title: shortTitle(tab) },
+        undefined,
+        undefined,
+        { spawnPriority: 'foreground' }
+      )
 
-        sessionId = createRes?.stored_session_id || createRes?.session_id || ''
-      } catch {
-        sessionId = `session-workstation-${crypto.randomUUID()}`
+      // The agent's native browser dispatcher keys BrowserTask by the runtime
+      // session ID. Using the stored chat ID (or a random BrowserTask ID) here
+      // would open a DIFFERENT page when the agent next calls browser_*.
+      const runtimeSessionId = createRes?.session_id || ''
+      const storedSessionId = createRes?.stored_session_id || runtimeSessionId
+
+      if (!runtimeSessionId || !storedSessionId) {
+        throw new Error('Gateway did not return a valid session identity for adoption')
       }
 
-      if (!sessionId) {
-        throw new Error('Failed to resolve Gateway session for tab adoption')
-      }
-
-      const adoption = await bridge.adoptTab(tab.id, sessionId)
+      const adoption = await bridge.adoptTab(tab.id, runtimeSessionId, runtimeSessionId)
 
       if (!adoption || !adoption.success) {
         throw new Error('Runtime tab adoption failed')
       }
 
-      openWorkstationBrowserPreview({ fromHub: true })
+      // Bind the preview to the CREATED chat, not the previously focused one.
+      // The tab's Electron WebContentsView and BrowserTask remain the same.
+      openWorkstationBrowserPreview({ fromHub: true, sessionId: storedSessionId })
 
       if (navigate) {
-        openSession(sessionId, navigate)
+        openSession(storedSessionId, navigate, 'main')
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -416,6 +419,7 @@ export function BrowserView() {
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(false)
   const [creativeOpened, setCreativeOpened] = useState(false)
+  const [creativeTabOpen, setCreativeTabOpen] = useState(false)
   const [creativeActive, setCreativeActive] = useState(false)
   // Kept independent of publishBounds identity to avoid detach/re-attach on tab switches.
   const creativeActiveRef = useRef(false)
@@ -423,7 +427,11 @@ export function BrowserView() {
   const selectCreative = useCallback((active: boolean) => {
     creativeActiveRef.current = active
 
-    if (active) {setCreativeOpened(true)}
+    if (active) {
+      setCreativeOpened(true)
+      setCreativeTabOpen(true)
+    }
+
     setCreativeActive(active)
   }, [])
 
@@ -511,6 +519,16 @@ export function BrowserView() {
     },
     [bridge]
   )
+
+  // Restoring the native viewport is a layout operation, not a navigation:
+  // reattach the exact WebContentsView after the editor relinquishes the host.
+  useLayoutEffect(() => {
+    if (!creativeActive && creativeOpened && bridge && state.ready) {
+      const frame = requestAnimationFrame(() => void publishBounds(true))
+
+      return () => cancelAnimationFrame(frame)
+    }
+  }, [bridge, creativeActive, creativeOpened, publishBounds, state.ready])
 
   const transferToHub = useCallback(async () => {
     if (!bridge || !hostRef.current) {
@@ -764,7 +782,8 @@ export function BrowserView() {
                 </span>
               </button>
             ))}
-            {creativeOpened && (
+            {creativeTabOpen && (
+              <div className="flex h-8 shrink-0 items-center rounded-t-md border border-(--ui-stroke-secondary)">
               <button
                 aria-label="Creative Workstation"
                 aria-selected={creativeActive}
@@ -778,6 +797,17 @@ export function BrowserView() {
                 <Codicon name="symbol-color" size="0.8rem" />
                 Creative Workstation
               </button>
+              <button
+                aria-label="Fechar Creative Workstation"
+                className="rounded px-1.5 text-(--ui-text-secondary) hover:bg-(--ui-control-hover-background)"
+                onClick={() => {
+                  setCreativeTabOpen(false)
+                  selectCreative(false)
+                }}
+                title="Fechar Creative Workstation"
+                type="button"
+              ><Codicon name="close" size="0.75rem" /></button>
+              </div>
             )}
           </div>
           <Button

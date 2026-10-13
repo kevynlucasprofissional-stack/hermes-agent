@@ -1,4 +1,6 @@
-import { useRef, useState } from 'react'
+import './creative-workspace.css'
+
+import { useEffect, useRef, useState } from 'react'
 
 import { assertCreativeProject, newCreativeProject } from './creative-mvp-model'
 import { CreativeGraphEditor } from './CreativeGraphEditor'
@@ -13,10 +15,49 @@ export function CreativeWorkspacePage() {
   return <CreativeWorkspaceProvider><CreativeWorkspaceContent /></CreativeWorkspaceProvider>
 }
 
+interface ImportedAsset {
+  id: string
+  name: string
+  type: string
+  url: string
+}
+
 function CreativeWorkspaceContent() {
   const { project, workspaceMode, pinnedPanels, setProject } = useCreativeWorkspace()
   const fileRef = useRef<HTMLInputElement>(null)
   const [openError, setOpenError] = useState('')
+  const assetInputRef = useRef<HTMLInputElement>(null)
+  const [assets, setAssets] = useState<ImportedAsset[]>([])
+  const assetUrls = useRef<string[]>([])
+
+  // First launch must be a usable editor, not a demand for a nonexistent JSON file.
+  useEffect(() => {
+    if (!project) {setProject(newCreativeProject(crypto.randomUUID()))}
+  }, [project, setProject])
+
+  useEffect(() => () => {
+    for (const url of assetUrls.current) {URL.revokeObjectURL(url)}
+    assetUrls.current = []
+  }, [])
+
+  const importAssets = (files: FileList | null) => {
+    if (!files?.length) {return}
+    const accepted: ImportedAsset[] = []
+
+    for (const file of Array.from(files).slice(0, 30)) {
+      if (!/^(image|video|audio)\//.test(file.type) || file.size > 250_000_000) {
+        setOpenError('Escolha imagens, vídeos ou áudios de até 250 MB por arquivo.')
+
+        continue
+      }
+
+      const url = URL.createObjectURL(file)
+      assetUrls.current.push(url)
+      accepted.push({ id: crypto.randomUUID(), name: file.name, type: file.type, url })
+    }
+
+    if (accepted.length) {setAssets(current => [...current, ...accepted].slice(-60))}
+  }
 
   const openFile = async (file: File | undefined) => {
     if (!file) {return}
@@ -56,7 +97,35 @@ function CreativeWorkspaceContent() {
   return (
     <div className="creative-workspace-page">
       <CreativeToolbar />
-      <button onClick={() => fileRef.current?.click()} type="button">Open project</button>
+      <div className="creative-workspace-project-bar">
+        <strong>{project.name}</strong>
+        <button onClick={() => assetInputRef.current?.click()} type="button">Importar assets</button>
+        <button onClick={() => fileRef.current?.click()} type="button">Abrir projeto JSON</button>
+        <input
+          accept="image/*,video/*,audio/*"
+          aria-label="Selecionar assets"
+          multiple
+          onChange={event => {importAssets(event.target.files); event.target.value = ''}}
+          ref={assetInputRef}
+          style={{ display: 'none' }}
+          type="file"
+        />
+      </div>
+      {assets.length > 0 && (
+        <section aria-label="Assets importados" className="creative-asset-shelf">
+          <span className="creative-asset-note">Pré-visualização somente nesta sessão; estes assets ainda não são salvos no projeto JSON.</span>
+          <div className="creative-asset-list">
+            {assets.map(asset => (
+              <div className="creative-asset" key={asset.id}>
+                {asset.type.startsWith('image/') ? <img alt={asset.name} src={asset.url} /> :
+                  asset.type.startsWith('video/') ? <video aria-label={asset.name} controls src={asset.url} /> :
+                    <audio aria-label={asset.name} controls src={asset.url} />}
+                <span title={asset.name}>{asset.name}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <input accept=".json,application/json" aria-label="Project JSON file" onChange={event => void openFile(event.target.files?.[0])} ref={fileRef}
         style={{ display: 'none' }} type="file" />
       {openError && <p role="alert">{openError}</p>}

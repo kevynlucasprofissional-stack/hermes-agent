@@ -72,6 +72,18 @@ describe('Workstation Hub internal Creative tab', () => {
     await waitFor(() => expect(bridge.setVisible).toHaveBeenCalledWith(false, 'hub'))
   })
 
+  it('closes Creative using an explicit close button and restores the native tab without reloading it', async () => {
+    render(<MemoryRouter><BrowserView /></MemoryRouter>)
+    await screen.findByText('Web Page')
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir Creative Workstation' }))
+    expect(await screen.findByTestId('creative-editor')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar Creative Workstation' }))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Creative Workstation' })).toBeNull())
+    expect(screen.getByTestId('creative-workstation-tab').className).toContain('hidden')
+    expect(bridge.newTab).not.toHaveBeenCalled()
+    await waitFor(() => expect(bridge.setVisible).toHaveBeenCalledWith(true, 'hub'))
+  })
+
   it('Creative tab is focusable repeatedly without duplicate tab creation', async () => {
     render(<MemoryRouter><BrowserView /></MemoryRouter>)
     await screen.findByText('Web Page')
