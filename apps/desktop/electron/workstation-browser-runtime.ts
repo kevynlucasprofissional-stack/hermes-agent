@@ -27,7 +27,7 @@ import http, { type IncomingMessage, type Server, type ServerResponse } from 'no
 import os from 'node:os'
 import path from 'node:path'
 
-import { app, BrowserWindow, ipcMain, session, type Session, type WebContents, WebContentsView } from 'electron'
+import { app, BrowserWindow, session, type Session, type WebContents, WebContentsView } from 'electron'
 
 import {
   type BrowserBatchAdapter,
@@ -46,6 +46,7 @@ import {
   type ExtractScope,
   normalizeExtractedItem
 } from './workstation-browser-extract-cache'
+import { registerWorkstationBrowserIpc } from './workstation-browser-ipc'
 import {
   buildWorkstationResourceSnapshot,
   WORKSTATION_EVENT_SCHEMA_VERSION,
@@ -2015,6 +2016,103 @@ export class WorkstationBrowserRuntime {
     this.emitState()
 
     return this.state()
+  }
+
+  adoptTab(
+    tabId: string,
+    sessionId: string,
+    preferredTaskId?: string
+  ): {
+    sessionId: string
+    state: WorkstationBrowserState
+    success: boolean
+    tabId: string
+    taskId: string
+  } {
+    this.ensureBrowserSessionStateRestored()
+
+    if (!tabId || typeof tabId !== 'string') {
+      throw new Error('adoptTab requires a valid tabId')
+    }
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new Error('adoptTab requires a valid sessionId')
+    }
+
+    const entry = this.entries.get(tabId)
+
+    if (!entry || entry.view.webContents.isDestroyed() || entry.crashed) {
+      throw new Error(`Cannot adopt tab ${tabId}: tab is unavailable, destroyed or crashed`)
+    }
+
+    // Idempotent adoption or conflict check:
+    if (entry.ownerTaskId) {
+      const existingTask = this.taskLifecycle().task(entry.ownerTaskId)
+
+      if (existingTask) {
+        if (existingTask.sessionHost === sessionId) {
+          // Idempotent: already adopted by this exact session. Refresh human control lease.
+          this.taskLifecycle().acquireHumanControl(
+            entry.ownerTaskId,
+            {
+              sessionId,
+              tabId: entry.id,
+              pageId: typeof entry.view.webContents.id === 'number' ? entry.view.webContents.id : null,
+              profileScope: workstationBrowserProfilePath()
+            },
+            HUMAN_CONTROL_LEASE_TTL_MS
+          )
+          this.persistBrowserSessionState()
+          this.emitState()
+
+          return {
+            sessionId,
+            state: this.state(),
+            success: true,
+            tabId: entry.id,
+            taskId: entry.ownerTaskId
+          }
+        }
+
+        throw new Error(
+          `Tab ${tabId} is already bound to a different session (${existingTask.sessionHost})`
+        )
+      }
+    }
+
+    const taskId = preferredTaskId?.trim() || `browser-task-${crypto.randomUUID()}`
+
+    this.taskTabs.set(taskId, entry.id)
+    entry.ownerTaskId = taskId
+
+    this.withBrowserSessionProjectionSuppressed(() => {
+      this.taskLifecycle().createTask({
+        taskId,
+        sessionHost: sessionId
+      })
+    })
+
+    this.taskLifecycle().acquireHumanControl(
+      taskId,
+      {
+        sessionId,
+        tabId: entry.id,
+        pageId: typeof entry.view.webContents.id === 'number' ? entry.view.webContents.id : null,
+        profileScope: workstationBrowserProfilePath()
+      },
+      HUMAN_CONTROL_LEASE_TTL_MS
+    )
+
+    this.persistBrowserSessionState()
+    this.emitState()
+
+    return {
+      sessionId,
+      state: this.state(),
+      success: true,
+      tabId: entry.id,
+      taskId
+    }
   }
 
   async cleanupCache(force = false): Promise<WorkstationBrowserState> {
@@ -5084,129 +5182,7 @@ export function getWorkstationBrowserRuntime(): WorkstationBrowserRuntime {
   return runtime
 }
 
-function senderWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
-  const window = BrowserWindow.fromWebContents(event.sender)
-
-  if (!window) {
-    throw new Error('Hermes Browser IPC sender is not a BrowserWindow.')
-  }
-
-  return window
-}
-
-function registerIpc(): void {
-  ipcMain.handle('hermes:workstation-browser:status', () => getWorkstationBrowserRuntime().ensure())
-  ipcMain.handle('hermes:workstation-browser:ensure', () => getWorkstationBrowserRuntime().ensure())
-  ipcMain.handle('hermes:workstation-browser:resources', () => getWorkstationBrowserRuntime().resources())
-  ipcMain.handle('hermes:workstation-browser:events', (_event, taskId, limit) =>
-    getWorkstationBrowserRuntime().events(
-      typeof taskId === 'string' ? taskId : null,
-      typeof limit === 'number' ? limit : MAX_EVENTS_ENDPOINT
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:new-tab', (_event, target) =>
-    getWorkstationBrowserRuntime().createTab(String(target ?? 'about:blank'), true)
-  )
-  ipcMain.handle('hermes:workstation-browser:activate-tab', (_event, tabId) =>
-    getWorkstationBrowserRuntime().activateTab(String(tabId ?? ''))
-  )
-  ipcMain.handle('hermes:workstation-browser:close-tab', (_event, tabId) =>
-    getWorkstationBrowserRuntime().closeTab(String(tabId ?? ''))
-  )
-  ipcMain.handle('hermes:workstation-browser:navigate', async (_event, target) =>
-    getWorkstationBrowserRuntime().navigate(String(target ?? ''))
-  )
-  ipcMain.handle('hermes:workstation-browser:back', () => getWorkstationBrowserRuntime().back())
-  ipcMain.handle('hermes:workstation-browser:forward', () => getWorkstationBrowserRuntime().forward())
-  ipcMain.handle('hermes:workstation-browser:reload', () => getWorkstationBrowserRuntime().reload())
-  ipcMain.handle('hermes:workstation-browser:stop', () => getWorkstationBrowserRuntime().stop())
-  ipcMain.handle('hermes:workstation-browser:focus', () => getWorkstationBrowserRuntime().focus())
-  ipcMain.handle('hermes:workstation-browser:attach', (event, bounds, host, preferredTaskId) =>
-    getWorkstationBrowserRuntime().attach(
-      senderWindow(event),
-      bounds as WorkstationBrowserBounds,
-      typeof host === 'string' ? host : 'hub',
-      typeof preferredTaskId === 'string' ? preferredTaskId : null
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:set-bounds', (event, bounds, expectedHost) =>
-    getWorkstationBrowserRuntime().setBounds(
-      senderWindow(event),
-      bounds as WorkstationBrowserBounds,
-      typeof expectedHost === 'string' ? expectedHost : undefined
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:detach', (event, expectedHost) =>
-    getWorkstationBrowserRuntime().detach(
-      senderWindow(event),
-      typeof expectedHost === 'string' ? expectedHost : undefined
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:set-visible', (_event, visible, expectedHost) =>
-    getWorkstationBrowserRuntime().setVisible(
-      Boolean(visible),
-      typeof expectedHost === 'string' ? expectedHost : undefined
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:clear-error', () => getWorkstationBrowserRuntime().clearError())
-  ipcMain.handle('hermes:workstation-browser:transfer-viewport', (event, targetHost, bounds) =>
-    getWorkstationBrowserRuntime().transferViewport(
-      senderWindow(event),
-      typeof targetHost === 'string' ? targetHost : 'hub',
-      bounds as WorkstationBrowserBounds
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:list-tasks', () => getWorkstationBrowserRuntime().listTasks())
-  ipcMain.handle('hermes:workstation-browser:show-task', (event, taskId, bounds, host) =>
-    getWorkstationBrowserRuntime().showTask(
-      String(taskId ?? ''),
-      senderWindow(event),
-      bounds as WorkstationBrowserBounds,
-      typeof host === 'string' ? host : 'hub'
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:hide-task', (_event, taskId) =>
-    getWorkstationBrowserRuntime().hideTask(String(taskId ?? ''))
-  )
-  ipcMain.handle('hermes:workstation-browser:park-task', (_event, taskId) =>
-    getWorkstationBrowserRuntime().parkTask(String(taskId ?? ''))
-  )
-  ipcMain.handle('hermes:workstation-browser:destroy-task', (_event, taskId) =>
-    getWorkstationBrowserRuntime().destroyTask(String(taskId ?? ''))
-  )
-  ipcMain.handle('hermes:workstation-browser:clear-parked-tasks', (_event, eligibleTaskIds) =>
-    getWorkstationBrowserRuntime().clearParkedTasks(
-      Array.isArray(eligibleTaskIds)
-        ? eligibleTaskIds.filter((taskId): taskId is string => typeof taskId === 'string')
-        : []
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:pause', () => getWorkstationBrowserRuntime().pause())
-  ipcMain.handle('hermes:workstation-browser:resume', () => getWorkstationBrowserRuntime().resume())
-  ipcMain.handle('hermes:workstation-browser:take-control', (_event, taskId, sessionId) =>
-    getWorkstationBrowserRuntime().takeControl(
-      typeof taskId === 'string' ? taskId : undefined,
-      typeof sessionId === 'string' ? sessionId : undefined
-    )
-  )
-  ipcMain.handle('hermes:workstation-browser:release-control', (_event, taskId) =>
-    getWorkstationBrowserRuntime().releaseControl(typeof taskId === 'string' ? taskId : undefined)
-  )
-  ipcMain.handle('hermes:workstation-browser:renew-control', (_event, taskId) =>
-    getWorkstationBrowserRuntime().renewControl(typeof taskId === 'string' ? taskId : undefined)
-  )
-  ipcMain.handle('hermes:workstation-browser:expire-control', (_event, taskId) =>
-    getWorkstationBrowserRuntime().expireControl(typeof taskId === 'string' ? taskId : undefined)
-  )
-  ipcMain.handle('hermes:workstation-browser:cleanup-cache', (_event, force) =>
-    getWorkstationBrowserRuntime().cleanupCache(Boolean(force))
-  )
-  ipcMain.handle('hermes:workstation-browser:task-journal', (_event, taskId) =>
-    getWorkstationBrowserRuntime().getTaskJournal(String(taskId ?? ''))
-  )
-}
-
-registerIpc()
+registerWorkstationBrowserIpc()
 void app
   .whenReady()
   .then(() => getWorkstationBrowserRuntime().startControlServer())

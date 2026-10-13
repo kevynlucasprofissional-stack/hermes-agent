@@ -1,5 +1,14 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-13 — HWH-03 manual Chromium tab adoption into canonical Gateway session (VERIFIED)
+
+Implementado e qualificado HWH-03:
+- Runtime Electron (`workstation-browser-runtime.ts` e `workstation-browser-ipc.ts`): método `adoptTab(tabId, sessionId, preferredTaskId?)` adotando aba manual existente sem disparo de `loadURL` ou recarga de WebContentsView, vinculando `BrowserTask` à sessão Gateway e adquirindo lease humano de controle (`humanControlLease`).
+- Autoridade de lease humano: chamadas de ação autônoma do agente bloqueadas com erro `409 USER_CONTROL_ACTIVE` enquanto o humano mantiver controle; liberação atômica sob comando explícito "Release to Agent".
+- UI Desktop (`BrowserControlBar`, `useAdoptTabToSession` em `apps/desktop/src/app/browser`): botão "Levar para sessão" integrado na barra de controle do Browser Hub, criação resiliente de sessão Gateway, prevenção contra double-clicks e navegação com transferência da viewport sem destruição do estado do Chromium.
+- Ratchet & Code Health: extração de IPC handlers para tópico irmão `workstation-browser-ipc.ts`, satisfazendo limites de linhas e complexidade ciclomática (0 blocking, 0 advisory em `python scripts/check --only health`).
+- Suíte de Testes: 36/36 testes de runtime Electron (`workstation-browser-runtime-task.test.ts`), 25/25 testes de UI vitest (`hwh-adopt-session.test.tsx`, `hwh-creative-tab.test.tsx`, etc.), typecheck e ESLint 100% green.
+
 ## 2026-10-13 — HWH-001 maintainer H-079 PASS_WITH_AUTHORIZATION (SCOPED)
 
 Maintainer text: "Para essa branch marca H-079 com 'Pulado com autorização' e pode continuar o trabalho, eu faço a sincronização upstream quando eu for fazer pull request e merge no main". Applies ONLY to `feat/hermes-workstation-mvp-20261013` and HWH-01/02/03 development. Upstream sync obligation transferred to maintainer before PR/main merge. Does not waive functional/security TDD, authorized session/lease boundaries, exact-head CI, Electron proof, or grant permission to merge main. Runs `38395540990` (main base) and `38395647904` (feature docs HEAD) reported failure, jobs unavailable from CLI inspection; not green, release HOLD. This is an explicit one-branch exception to the default upstream-first ordering, not precedent for other branches.

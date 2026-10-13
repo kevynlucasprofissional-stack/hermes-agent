@@ -158,8 +158,17 @@ export interface WorkstationBrowserBridge {
   expireHumanControl: (taskId?: string) => Promise<WorkstationBrowserState>
   cleanupCache: (force?: boolean) => Promise<WorkstationBrowserState>
   getTaskJournal: (taskId: string) => Promise<TaskTimelineEvent[]>
+  adoptTab: (tabId: string, sessionId: string, taskId?: string) => Promise<TabAdoptionResult>
   onState: (callback: (state: WorkstationBrowserState) => void) => () => void
   onOpenChatPreview?: (callback: (data: { url: string; taskId?: string }) => void) => () => void
+}
+
+export interface TabAdoptionResult {
+  sessionId: string
+  state: WorkstationBrowserState
+  success: boolean
+  tabId: string
+  taskId: string
 }
 
 export interface TaskTimelineEvent {

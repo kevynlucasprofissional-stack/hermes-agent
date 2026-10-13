@@ -29,8 +29,8 @@ O maintainer autorizou expressamente: **"Para essa branch marca H-079 com 'Pulad
 |---|---|---|
 | 0 | Branch única, protocolo compartilhado, ferramenta de claims, testes e handoff | DONE |
 | 1 | Agent abre Creative + sidebar Workstation + aba Creative (HWH-01, HWH-02) | DONE (verificado com vitest, pytest e code health) |
-| 2 | Levar tab manual para sessão real, sem recriar Chromium, com lease humano (HWH-03) | IN_PROGRESS |
-| 3 | Três E2E nativos, segurança, CI, PR final | NOT_STARTED |
+| 2 | Levar tab manual para sessão real, sem recriar Chromium, com lease humano (HWH-03) | DONE (verificado com electron integration tests, vitest UI e code health) |
+| 3 | Três E2E nativos, segurança, CI, PR final | IN_PROGRESS |
 
 ## Critérios
 Sem E2E Electron real = `NOT_VERIFIED_NATIVE`. Sem autoridade autenticada/lease de usuário = `RELEASE_BLOCKED`. Agentes não alteram `main` e não abrem branches/worktrees extras. O integrador é o único escritor Git, e conflitos de arquivo têm owner definido no protocolo.

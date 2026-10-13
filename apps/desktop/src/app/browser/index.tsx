@@ -15,11 +15,14 @@ import {
 } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
+import { openSession } from '@/app/open-session'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { requestGatewayForProfile } from '@/store/gateway'
 import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
 import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
+import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 
 import { useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
@@ -160,7 +163,7 @@ interface BrowserAddressBarProps {
   activeTab: null | WorkstationBrowserTabState
   address: string
   bridge: WorkstationBridge
-  run: (op: () => Promise<unknown>) => Promise<void>
+  run: (op: () => Promise<WorkstationBrowserState>) => Promise<void>
   setAddress: (val: string) => void
   state: WorkstationBrowserState
   submitAddress: (event: FormEvent) => void
@@ -239,9 +242,11 @@ function BrowserAddressBar({
 }
 
 interface BrowserControlBarProps {
+  adoptBusy: boolean
   bridge: WorkstationBridge
+  onAdoptTab: () => void
   resourceSnapshot: null | WorkstationResourceSnapshot
-  run: (op: () => Promise<unknown>) => Promise<void>
+  run: (op: () => Promise<WorkstationBrowserState>) => Promise<void>
   setShowDownloads: Dispatch<SetStateAction<boolean>>
   showDownloads: boolean
   state: WorkstationBrowserState
@@ -249,7 +254,9 @@ interface BrowserControlBarProps {
 }
 
 function BrowserControlBar({
+  adoptBusy,
   bridge,
+  onAdoptTab,
   resourceSnapshot,
   run,
   setShowDownloads,
@@ -289,6 +296,16 @@ function BrowserControlBar({
           Take Control
         </Button>
       )}
+      <Button
+        aria-label="Levar para sessão"
+        disabled={adoptBusy || !state.ready || !state.activeTabId}
+        onClick={onAdoptTab}
+        size="sm"
+        variant="secondary"
+      >
+        <Codicon name="link-external" />
+        Levar para sessão
+      </Button>
       <Button aria-label="Transfer Viewport to Chat Right Rail" onClick={transferToChat} size="sm" variant="ghost">
         <Codicon name="comment-discussion" />
         Move to Chat
@@ -310,6 +327,85 @@ function BrowserControlBar({
       </span>
     </div>
   )
+}
+
+interface UseAdoptTabOptions {
+  activeTab: null | WorkstationBrowserTabState
+  bridge: undefined | WorkstationBridge
+  navigate: null | ReturnType<typeof useNavigate>
+  setState: Dispatch<SetStateAction<WorkstationBrowserState>>
+}
+
+function useAdoptTabToSession({
+  activeTab,
+  bridge,
+  navigate,
+  setState
+}: UseAdoptTabOptions) {
+  const [adoptBusy, setAdoptBusy] = useState(false)
+  const adoptBusyRef = useRef(false)
+
+  const handleAdoptTab = useCallback(async () => {
+    if (!bridge || adoptBusyRef.current) {
+      return
+    }
+
+    const tab = activeTab
+
+    if (!tab || tab.loading || tab.crashed) {
+      return
+    }
+
+    adoptBusyRef.current = true
+    setAdoptBusy(true)
+
+    try {
+      const profile = normalizeProfileKey($activeGatewayProfile.get())
+      let sessionId = ''
+
+      try {
+        const createRes = await requestGatewayForProfile<{
+          session_id: string
+          stored_session_id?: string
+        }>(
+          profile,
+          'session.create',
+          { profile, title: shortTitle(tab) },
+          undefined,
+          undefined,
+          { spawnPriority: 'foreground' }
+        )
+
+        sessionId = createRes?.stored_session_id || createRes?.session_id || ''
+      } catch {
+        sessionId = `session-workstation-${crypto.randomUUID()}`
+      }
+
+      if (!sessionId) {
+        throw new Error('Failed to resolve Gateway session for tab adoption')
+      }
+
+      const adoption = await bridge.adoptTab(tab.id, sessionId)
+
+      if (!adoption || !adoption.success) {
+        throw new Error('Runtime tab adoption failed')
+      }
+
+      openWorkstationBrowserPreview({ fromHub: true })
+
+      if (navigate) {
+        openSession(sessionId, navigate)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setState(prev => ({ ...prev, lastError: message }))
+    } finally {
+      adoptBusyRef.current = false
+      setAdoptBusy(false)
+    }
+  }, [activeTab, bridge, navigate, setState])
+
+  return { adoptBusy, handleAdoptTab }
 }
 
 export function BrowserView() {
@@ -390,6 +486,13 @@ export function BrowserView() {
   )
 
   const navigate = useOptionalNavigate()
+
+  const { adoptBusy, handleAdoptTab } = useAdoptTabToSession({
+    activeTab,
+    bridge,
+    navigate,
+    setState
+  })
 
   const publishBounds = useCallback(
     async (attach = false) => {
@@ -710,7 +813,9 @@ export function BrowserView() {
               submitAddress={submitAddress}
             />
             <BrowserControlBar
+              adoptBusy={adoptBusy}
               bridge={bridge}
+              onAdoptTab={handleAdoptTab}
               resourceSnapshot={resourceSnapshot}
               run={run}
               setShowDownloads={setShowDownloads}

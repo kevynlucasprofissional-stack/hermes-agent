@@ -71,6 +71,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     expireHumanControl: (taskId?: string) => ipcRenderer.invoke('hermes:workstation-browser:expire-control', taskId),
     cleanupCache: force => ipcRenderer.invoke('hermes:workstation-browser:cleanup-cache', force),
     getTaskJournal: taskId => ipcRenderer.invoke('hermes:workstation-browser:task-journal', taskId),
+    adoptTab: (tabId: string, sessionId: string, taskId?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:adopt-tab', tabId, sessionId, taskId),
     onState: callback => {
       const listener = (_event, state) => callback(state)
       ipcRenderer.on('hermes:workstation-browser:state', listener)
