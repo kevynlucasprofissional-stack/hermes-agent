@@ -73,7 +73,7 @@ interface WorkstationBridge {
 
 interface DesktopBridgeWindow {
   hermesDesktop: {
-    api: <T>(request: { path: string; timeoutMs?: number }) => Promise<T>
+    api: <T>(request: { path: string; timeoutMs?: number; connectionId?: string }) => Promise<T>
     workstationBrowser: WorkstationBridge
   }
 }

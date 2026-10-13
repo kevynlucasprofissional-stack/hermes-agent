@@ -217,7 +217,7 @@ const SIDEBAR_NAV: SidebarNavItem[] = [
   },
   {
     id: 'browser',
-    label: 'Browser',
+    label: 'Workstation',
     icon: props => <Codicon name="globe" {...props} />,
     route: BROWSER_ROUTE
   },

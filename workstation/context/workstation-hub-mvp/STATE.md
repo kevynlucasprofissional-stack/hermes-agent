@@ -1,5 +1,10 @@
 # HWH-001 — Estado operacional vigente em 2026-10-13
 
+## 2026-10-13 — H-079 PASS_WITH_AUTHORIZATION (somente esta branch)
+
+O maintainer autorizou expressamente: **"Para essa branch marca H-079 com 'Pulado com autorização' e pode continuar o trabalho, eu faço a sincronização upstream quando eu for fazer pull request e merge no main"**. Decisão: H-079 = `PASS_WITH_AUTHORIZATION` exclusivamente em `feat/hermes-workstation-mvp-20261013` para **desenvolvimento HWH-01/HWH-02/HWH-03**. A sincronização upstream foi atribuída ao maintainer no momento da preparação de PR/merge. Isso **NÃO equivale** a CI qualificada nem autoriza merge automático, release, bypass de lease/auth/session, nem declarar E2E sem prova. No último preflight, o workflow Workstation CI falhou tanto no baseline main `b80d10a` (run `38395540990`) quanto no HEAD `d280bcd` (run `38395647904`), ambos sem jobs retornados na consulta; causa não atribuída. Tratar como `RELEASE_HOLD`, não bloqueio para a implementação explicitamente autorizada.
+
+
 > Este documento substitui o checkpoint histórico de 2026-10-12, que descrevia PRs e worktrees já consolidados na main. Não usar identidades antigas para orientar novas alterações.
 
 ## Identidade
@@ -22,12 +27,10 @@
 ## Fases — orçamento de prompts
 | Fase | Produto | Estado neste checkpoint |
 |---|---|---|
-| 0 | Branch única, protocolo compartilhado, ferramenta de claims, testes e handoff | Em execução; passa a DONE após verificação, commit e push |
-| 1 | Agent abre Creative + sidebar Workstation + aba Creative | NOT_STARTED |
-| 2 | Levar tab manual para sessão real, sem recriar Chromium, com lease humano | NOT_STARTED |
+| 0 | Branch única, protocolo compartilhado, ferramenta de claims, testes e handoff | DONE |
+| 1 | Agent abre Creative + sidebar Workstation + aba Creative (HWH-01, HWH-02) | DONE (verificado com vitest, pytest e code health) |
+| 2 | Levar tab manual para sessão real, sem recriar Chromium, com lease humano (HWH-03) | IN_PROGRESS |
 | 3 | Três E2E nativos, segurança, CI, PR final | NOT_STARTED |
-
-**Meta: 3 próximos prompts** depois da fase 0; pode haver mais apenas diante de bloqueio material comprovado. Se um prompt terminar com uma fase completa e houver capacidade, continuar na próxima.
 
 ## Critérios
 Sem E2E Electron real = `NOT_VERIFIED_NATIVE`. Sem autoridade autenticada/lease de usuário = `RELEASE_BLOCKED`. Agentes não alteram `main` e não abrem branches/worktrees extras. O integrador é o único escritor Git, e conflitos de arquivo têm owner definido no protocolo.

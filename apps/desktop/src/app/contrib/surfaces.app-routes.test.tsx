@@ -62,5 +62,5 @@ it('mounts /creative with the required CreativeWorkspaceProvider instead of cras
       <ChatRoutesSurface actions={actions} />
     </MemoryRouter>
   )
-  expect(await screen.findByText('Open or create a project to start editing')).toBeTruthy()
+  expect(await screen.findByRole('heading', { name: 'Creative Workspace' })).toBeTruthy()
 })

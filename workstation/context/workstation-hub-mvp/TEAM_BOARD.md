@@ -23,15 +23,15 @@ Atualizado: 2026-10-13. **Este arquivo é um snapshot durável, não um lock.** 
 ## Estado funcional da missão
 | Critério | Verificação em 2026-10-13 | Próximo dono |
 |---|---|---|
-| HWH-01 Agent → Creative | NOT_VERIFIED / implementação não demonstrada | A |
-| HWH-02 Browser → Workstation | Rótulo ainda Browser; NOT_IMPLEMENTED | B |
-| HWH-03 Levar para sessão | Não demonstrado; NOT_IMPLEMENTED | C |
+| HWH-01 Agent → Creative | VERIFIED (open_creative_workstation, desktop_ui bridge, 4/4 pytests PASS) | A/D |
+| HWH-02 Browser → Workstation | VERIFIED (sidebar 'Workstation', internal Creative tab, 3/3 tab vitests PASS, route test PASS, code health 0 blocking) | B/D |
+| HWH-03 Levar para sessão | IN_PROGRESS (Transferência da aba para sessão com WebContentsView e autoridade humano/agente) | C |
 | Native E2E A/B/C | NOT_RUN nesta frente | D |
 
 O CreativeWorkspaceProvider aparece em `CreativeWorkspacePage.tsx` no HEAD inspecionado; **não** reimplementar só por ser pendência histórica do PR #77. Os PRs anteriores já foram consolidados; `STATE.md` antigo contém identidades históricas e não deve ordenar retomada de worktree inexistente.
 
 ## Próxima integração
-- Etapa 1 / Prompt 1: fechar HWH-01 e HWH-02 como **um incremento vertical** (Agent→Hub→Creative), integrando contratos mínimos e testes.
+- Etapa 1 / Prompt 1: fechar HWH-01 e HWH-02 como **um incremento vertical** (Agent→Hub→Creative) — CONCLUÍDO E INTEGRADO.
 - Etapa 2 / Prompt 2: HWH-03 Browser manual→sessão existente→Chat com a mesma WebContentsView e lease humano.
 - Etapa 3 / Prompt 3: execução E2E real, hardening direcionado, CI, PR final.
 - Se etapas anteriores já estiverem aprovadas no HEAD, avançar imediatamente sem reexecutar pesquisa ampla.

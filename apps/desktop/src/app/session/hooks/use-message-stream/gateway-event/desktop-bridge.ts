@@ -1,7 +1,9 @@
 import { writeAgentTerminalChunk } from '@/app/right-sidebar/terminal/agent-terminal-stream'
 import { closeAgentTerminalByProc } from '@/app/right-sidebar/terminal/terminals'
+import { BROWSER_ROUTE } from '@/app/routes'
 import { applyDesktopLayoutPreset, revealDesktopPane } from '@/store/pane-focus'
 import { reactionOverlayScope, recordAgentReaction } from '@/store/reactions-local'
+import { requestRoute } from '@/store/recovery-requests'
 import { setMessages } from '@/store/session'
 import { $tipsEnabled, type ActiveTip, agentTipId, showTip } from '@/store/tips'
 
@@ -41,6 +43,15 @@ const DESKTOP_BRIDGE_HANDLERS: Record<string, (ctx: GatewayEventContext) => void
         tipId: agentTipId(selector, text),
         title: typeof payload?.title === 'string' ? payload.title : undefined
       })
+    }
+  },
+
+  'creative.open': ({ isActiveEvent, fromActiveSource }) => {
+    // The desktop_ui emitter routes this to the owning window; only the
+    // foreground chat from the same connection/profile may move user focus.
+    // A navigation request is not an edit/TaskRun permission grant.
+    if (isActiveEvent && fromActiveSource()) {
+      requestRoute(`${BROWSER_ROUTE}?creative=1`)
     }
   },
 
