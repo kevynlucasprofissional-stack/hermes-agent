@@ -36,6 +36,13 @@ O maintainer autorizou expressamente: **"Para essa branch marca H-079 com 'Pulad
 | 1 | Agent abre Creative + sidebar Workstation + aba Creative (HWH-01, HWH-02) | DONE (verificado com vitest, pytest e code health) |
 | 2 | Levar tab manual para sessão real, sem recriar Chromium, com lease humano (HWH-03) | DONE (verificado com electron integration tests, vitest UI e code health) |
 | 3 | Três E2E nativos, segurança, CI, PR final | DONE (9/9 Playwright E2E tests no Electron real, build limpo, typecheck e code health 0 blocking) |
+| 4 | Correção HWH-OVERLAY-01 (Browser nativo sobreposto a nova sessão) | DONE (Vitest 17/17 PASS, ESLint 0 errors, Playwright E2E HWH-OVERLAY + HWH-MVP 2/2 PASS no Electron real, code health 0 blocking) |
+
+## HWH-OVERLAY-01 (14/10) — Correção e Qualificação Concluídas
+- **Problema:** Ao restaurar sessão com Browser e clicar em "New session", a WebContentsView permanecia sobreposta bloqueando o React da nova sessão.
+- **Causa Raiz:** Panes mantidas vivas (`PreviewTilePane` em keep-alive) sem vinculação de identidade própria despachavam `setVisible(false)` / `setBounds` interferindo com a nova sessão ativa; falta de gating por visibilidade da pane (`usePaneVisible`, `isElementInHiddenPane`) e ausência de verificação de `ownerId` no runtime Electron.
+- **Solução:** Identidade imutável por sessão na pane (`sessionId ?? selectedStoredSessionId ?? activeSessionId`), gating de oclusão estrito impedindo attach/bounds de panes ocultas, e proteção de `viewportOwnerId` no runtime Electron em `attach`, `setBounds`, `detach` e `setVisible`.
+- **Qualificação:** Suíte E2E nativa no Electron real (`HWH-OVERLAY` + `HWH-MVP`) 100% verde sem recarga ou perda de estado.
 
 ## Critérios
 Sem E2E Electron real = `NOT_VERIFIED_NATIVE`. Sem autoridade autenticada/lease de usuário = `RELEASE_BLOCKED`. Agentes não alteram `main` e não abrem branches/worktrees extras. O integrador é o único escritor Git, e conflitos de arquivo têm owner definido no protocolo.

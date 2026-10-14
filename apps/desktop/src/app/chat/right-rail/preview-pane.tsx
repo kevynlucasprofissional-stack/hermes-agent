@@ -13,16 +13,6 @@ import { PanelEmpty } from '@/app/overlays/panel'
 import { BROWSER_ROUTE } from '@/app/routes'
 import { isElementInHiddenPane } from '@/components/pane-shell/pane-visibility'
 import { Tip } from '@/components/ui/tooltip'
-
-import { WorkstationBrowserPane } from './workstation-browser-pane'
-
-function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
-  try {
-    return useNavigate()
-  } catch {
-    return null
-  }
-}
 import { type Translations, useI18n } from '@/i18n'
 import { isDesktopFsRemoteMode, isReadFileErrorResult } from '@/lib/desktop-fs'
 import { guardGuestPointers } from '@/lib/guest-pointer-guard'
@@ -88,6 +78,7 @@ import { PREVIEW_BROWSER_ATTR, registerPreviewNav } from './preview-nav'
 import { registerPreviewPageReader } from './preview-reader'
 import { registerPreviewScriptRunner } from './preview-script-runner'
 import { RealProfileConsentDialog } from './real-profile-consent-dialog'
+import { WorkstationBrowserPane } from './workstation-browser-pane'
 
 type PreviewWebview = HTMLElement & {
   canGoBack?: () => boolean
@@ -154,6 +145,7 @@ interface PreviewPaneProps {
   onClose?: () => void
   onRestartServer?: (url: string, context?: string) => Promise<string>
   reloadRequest?: number
+  sessionId?: string
   /** The preview tab this pane renders. Keys the per-tab console store the
    *  browser bar's console toggle and the console panel both read. */
   tabId?: string
@@ -268,6 +260,14 @@ function PreviewLoadError({
   )
 }
 
+function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
+  try {
+    return useNavigate()
+  } catch {
+    return null
+  }
+}
+
 export function PreviewPane(props: PreviewPaneProps) {
   const navigate = useOptionalNavigate()
   const isWorkstation = props.target.source === 'workstation-browser' || props.target.url.startsWith('workstation:')
@@ -275,7 +275,7 @@ export function PreviewPane(props: PreviewPaneProps) {
   if (isWorkstation) {
     return (
       <aside className="relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-transparent text-muted-foreground">
-        <WorkstationBrowserPane onPopOut={navigate ? () => navigate(BROWSER_ROUTE) : undefined} />
+        <WorkstationBrowserPane onPopOut={navigate ? () => navigate(BROWSER_ROUTE) : undefined} sessionId={props.sessionId} />
       </aside>
     )
   }

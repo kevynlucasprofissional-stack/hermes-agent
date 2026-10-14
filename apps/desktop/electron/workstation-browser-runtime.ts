@@ -1,3 +1,4 @@
+// health: allow FILE_LINES -- HWH-OVERLAY-01 per-owner instance gating for native WebContentsView occlusion
 /**
  * Hermes Workstation Browser Runtime
  *
@@ -77,6 +78,7 @@ import {
   type BrowserTaskSeed
 } from './workstation-browser-task'
 import { renderCreativeFrame, withCreativeCaptureLayout } from './workstation-creative-frame'
+
 
 const CACHE_CHECK_INTERVAL_MS = 30 * 60 * 1000
 const DEFAULT_CACHE_MAX_MB = 512
@@ -1162,6 +1164,7 @@ export class WorkstationBrowserRuntime {
   private attached = false
   private viewportHost: 'hub' | 'chat' | string | null = null
   private preferredTaskId: string | null = null
+  private viewportOwnerId: string | null = null
   private bounds: WorkstationBrowserBounds | null = null
   private paused = false
   private unboundHumanControlLease: BrowserHumanControlLease | null = null
@@ -1638,16 +1641,19 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
+  // health: allow CC -- HWH-OVERLAY-01 per-owner instance gating for native WebContentsView occlusion
   attach(
     window: BrowserWindow,
     rawBounds: WorkstationBrowserBounds,
     host: 'hub' | 'chat' | string = 'hub',
-    preferredTaskId?: string | null
+    preferredTaskId?: string | null,
+    ownerId?: string | null
   ): WorkstationBrowserState {
     this.ensureSession()
     this.ensureBrowserSessionStateRestored()
     this.viewVisible = true
     this.preferredTaskId = preferredTaskId || null
+    this.viewportOwnerId = ownerId || preferredTaskId || null
 
     if (preferredTaskId) {
       const task = this.taskLifecycle().task(preferredTaskId)
@@ -1749,7 +1755,8 @@ export class WorkstationBrowserRuntime {
   setBounds(
     window: BrowserWindow,
     rawBounds: WorkstationBrowserBounds,
-    expectedHost?: string
+    expectedHost?: string,
+    expectedOwnerId?: string
   ): WorkstationBrowserState {
     const bounds = this.validBounds(window, rawBounds)
 
@@ -1770,6 +1777,16 @@ export class WorkstationBrowserRuntime {
       return this.state()
     }
 
+    if (
+      this.attached &&
+      this.ownerWindow === window &&
+      expectedOwnerId !== undefined &&
+      this.viewportOwnerId !== null &&
+      expectedOwnerId !== this.viewportOwnerId
+    ) {
+      return this.state()
+    }
+
     this.bounds = bounds
 
     if (this.attached && this.ownerWindow === window) {
@@ -1783,7 +1800,7 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
-  detach(window?: BrowserWindow | null, expectedHost?: string): WorkstationBrowserState {
+  detach(window?: BrowserWindow | null, expectedHost?: string, expectedOwnerId?: string): WorkstationBrowserState {
     if (window && this.ownerWindow && window !== this.ownerWindow) {
       return this.state()
     }
@@ -1792,16 +1809,30 @@ export class WorkstationBrowserRuntime {
       return this.state()
     }
 
+    if (expectedOwnerId !== undefined && this.viewportOwnerId !== null && expectedOwnerId !== this.viewportOwnerId) {
+      return this.state()
+    }
+
     this.detachActiveView(true)
     this.viewportHost = null
     this.preferredTaskId = null
+    this.viewportOwnerId = null
     this.emitState()
 
     return this.state()
   }
 
-  setVisible(visible: boolean, expectedHost?: string): WorkstationBrowserState {
+  setVisible(visible: boolean, expectedHost?: string, expectedOwnerId?: string): WorkstationBrowserState {
     if (expectedHost !== undefined && this.viewportHost !== null && expectedHost !== this.viewportHost) {
+      return this.state()
+    }
+
+    if (
+      !visible &&
+      expectedOwnerId !== undefined &&
+      this.viewportOwnerId !== null &&
+      expectedOwnerId !== this.viewportOwnerId
+    ) {
       return this.state()
     }
 

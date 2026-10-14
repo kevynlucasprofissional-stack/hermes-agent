@@ -2,6 +2,7 @@ import { act, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { WorkstationBrowserBridge, WorkstationBrowserState } from '@/app/browser/types'
+import { PaneVisibleContext } from '@/components/pane-shell/pane-visibility'
 import { $activeSessionId, $selectedStoredSessionId, $sessions } from '@/store/session'
 import { makeSessionInfo } from '@/test/session-info'
 
@@ -97,6 +98,53 @@ describe('WorkstationBrowserPane cold attach', () => {
     expect(attach).toHaveBeenCalledTimes(1)
 
     await act(async () => undefined)
+  })
+
+  it('keeps a hidden Browser pane from stealing the foreground native viewport', async () => {
+    const attach = vi.fn(async () =>
+      ({ ...restoredState, attached: true, viewportHost: 'chat' }) as WorkstationBrowserState
+    )
+
+    const setVisible = vi.fn(async () => restoredState)
+
+    const bridge = {
+      ensure: vi.fn(async () => restoredState),
+      attach,
+      setBounds: vi.fn(async () => restoredState),
+      detach: vi.fn(async () => restoredState),
+      setVisible,
+      onState: vi.fn(() => () => undefined)
+    } as unknown as WorkstationBrowserBridge
+
+    Object.defineProperty(window, 'hermesDesktop', {
+      configurable: true,
+      value: { workstationBrowser: bridge }
+    })
+
+    const surface = (visible: boolean) => (
+      <PaneVisibleContext.Provider value={visible}>
+        <WorkstationBrowserPane />
+      </PaneVisibleContext.Provider>
+    )
+
+    const { rerender } = render(surface(false))
+
+    await waitFor(() => expect(bridge.ensure).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'chat', 'session-b'))
+    expect(attach).not.toHaveBeenCalled()
+
+    rerender(surface(true))
+    await waitFor(() => expect(attach).toHaveBeenCalledTimes(1))
+
+    setVisible.mockClear()
+    rerender(surface(false))
+    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'chat', 'session-b'))
+
+    await act(async () => { $activeSessionId.set('session-new') })
+    expect(attach).toHaveBeenCalledTimes(1)
+
+    rerender(surface(true))
+    await waitFor(() => expect(attach).toHaveBeenCalledTimes(2))
   })
 
   it('shows session-scoped native human review and acknowledges it only once', async () => {

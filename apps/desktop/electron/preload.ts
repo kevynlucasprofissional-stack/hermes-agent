@@ -44,13 +44,14 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     reload: () => ipcRenderer.invoke('hermes:workstation-browser:reload'),
     stop: () => ipcRenderer.invoke('hermes:workstation-browser:stop'),
     focus: () => ipcRenderer.invoke('hermes:workstation-browser:focus'),
-    attach: (bounds, host, preferredTaskId) =>
-      ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host, preferredTaskId),
-    setBounds: (bounds, expectedHost) =>
-      ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds, expectedHost),
-    detach: (expectedHost?: string) => ipcRenderer.invoke('hermes:workstation-browser:detach', expectedHost),
-    setVisible: (visible, expectedHost?: string) =>
-      ipcRenderer.invoke('hermes:workstation-browser:set-visible', visible, expectedHost),
+    attach: (bounds, host, preferredTaskId, ownerId) =>
+      ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host, preferredTaskId, ownerId),
+    setBounds: (bounds, expectedHost, expectedOwnerId) =>
+      ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds, expectedHost, expectedOwnerId),
+    detach: (expectedHost?: string, expectedOwnerId?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:detach', expectedHost, expectedOwnerId),
+    setVisible: (visible, expectedHost?: string, expectedOwnerId?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:set-visible', visible, expectedHost, expectedOwnerId),
     clearError: () => ipcRenderer.invoke('hermes:workstation-browser:clear-error'),
     transferViewport: (targetHost, bounds) =>
       ipcRenderer.invoke('hermes:workstation-browser:transfer-viewport', targetHost, bounds),
