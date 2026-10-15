@@ -7,6 +7,11 @@ For recurring browser/site procedures or Agent/Workstation capability discoverab
 
 This directory is the downstream Hermes Workstation product layer. Repository-wide rules in the root `AGENTS.md` remain authoritative.
 
+## Multi-agent shared-branch rule — ACTIVE 2026-10-13
+
+For simultaneous agents on the current Hermes Workstation MVP, FIRST read `context/AGENT_COLLABORATION_PROTOCOL.md` and `context/workstation-hub-mvp/TEAM_BOARD.md`. All agents work in the same `C:\Github\hermes-agent` checkout on `feat/hermes-workstation-mvp-20261013`, claim disjoint files with `python workstation/scripts/multi_agent_coordination.py claim`, heartbeat progress, and release after integration. The designated integrator alone performs Git staging/commits/push and edits canonical board/policies. Never create another branch/worktree merely to fix an MVP sub-task. This changes coordination only: upstream-first Stage A, human leases, TaskRun/session authority, TDD and exact-head CI are still mandatory.
+
+
 ## Primary operating gate: synchronize before downstream implementation
 
 Before editing Workstation runtime code or any upstream-owned integration point, execute

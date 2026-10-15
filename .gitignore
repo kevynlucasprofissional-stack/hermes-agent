@@ -328,6 +328,9 @@ native/fts5_cjk/*.so
 
 apps/desktop/.dist-build*
 
+# Local ephemeral multi-agent ownership/heartbeat/locks (not tracked; no large worktrees)
+/.hermes-collab/
+
 # Arquivos e referencias de arquitetura locais
 referências/
 referencias/

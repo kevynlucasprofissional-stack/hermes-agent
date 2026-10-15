@@ -1024,7 +1024,7 @@ export function isBrowserHubRoute(): boolean {
 }
 
 /** Re-front the task-owned native Workstation Browser without creating a guest webview. */
-export function openWorkstationBrowserPreview({ fromHub = false }: { fromHub?: boolean } = {}) {
+export function openWorkstationBrowserPreview({ fromHub = false, sessionId }: { fromHub?: boolean; sessionId?: string } = {}) {
   // An explicit Hub-to-Chat transfer is allowed to create the preview BEFORE
   // the router finishes leaving /browser; background opens remain guarded.
   if (isBrowserHubRoute() && !fromHub) {return}
@@ -1034,7 +1034,7 @@ export function openWorkstationBrowserPreview({ fromHub = false }: { fromHub?: b
     label: 'Workstation Browser',
     source: 'workstation-browser',
     url: 'workstation:browser'
-  })
+  }, sessionId ?? $focusedStoredSessionId.get())
 }
 
 /** ⌘⇧L is a TOGGLE: show the Browser when it's away, fold it away when it's

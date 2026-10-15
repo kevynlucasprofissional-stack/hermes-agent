@@ -44,13 +44,14 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     reload: () => ipcRenderer.invoke('hermes:workstation-browser:reload'),
     stop: () => ipcRenderer.invoke('hermes:workstation-browser:stop'),
     focus: () => ipcRenderer.invoke('hermes:workstation-browser:focus'),
-    attach: (bounds, host, preferredTaskId) =>
-      ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host, preferredTaskId),
-    setBounds: (bounds, expectedHost) =>
-      ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds, expectedHost),
-    detach: (expectedHost?: string) => ipcRenderer.invoke('hermes:workstation-browser:detach', expectedHost),
-    setVisible: (visible, expectedHost?: string) =>
-      ipcRenderer.invoke('hermes:workstation-browser:set-visible', visible, expectedHost),
+    attach: (bounds, host, preferredTaskId, ownerId) =>
+      ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host, preferredTaskId, ownerId),
+    setBounds: (bounds, expectedHost, expectedOwnerId) =>
+      ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds, expectedHost, expectedOwnerId),
+    detach: (expectedHost?: string, expectedOwnerId?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:detach', expectedHost, expectedOwnerId),
+    setVisible: (visible, expectedHost?: string, expectedOwnerId?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:set-visible', visible, expectedHost, expectedOwnerId),
     clearError: () => ipcRenderer.invoke('hermes:workstation-browser:clear-error'),
     transferViewport: (targetHost, bounds) =>
       ipcRenderer.invoke('hermes:workstation-browser:transfer-viewport', targetHost, bounds),
@@ -71,6 +72,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     expireHumanControl: (taskId?: string) => ipcRenderer.invoke('hermes:workstation-browser:expire-control', taskId),
     cleanupCache: force => ipcRenderer.invoke('hermes:workstation-browser:cleanup-cache', force),
     getTaskJournal: taskId => ipcRenderer.invoke('hermes:workstation-browser:task-journal', taskId),
+    adoptTab: (tabId: string, sessionId: string, taskId?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:adopt-tab', tabId, sessionId, taskId),
     onState: callback => {
       const listener = (_event, state) => callback(state)
       ipcRenderer.on('hermes:workstation-browser:state', listener)

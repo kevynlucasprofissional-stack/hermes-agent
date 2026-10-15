@@ -1,0 +1,84 @@
+diff --git a/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx b/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx
+--- a/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx
++++ b/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx
+@@ -2,6 +2,7 @@
+ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+ 
+ import type { WorkstationBrowserBridge, WorkstationBrowserState } from '@/app/browser/types'
++import { PaneVisibleContext } from '@/components/pane-shell/pane-visibility'
+ import { $activeSessionId, $selectedStoredSessionId, $sessions } from '@/store/session'
+ import { makeSessionInfo } from '@/test/session-info'
+ 
+@@ -99,6 +100,50 @@
+     await act(async () => undefined)
+   })
+ 
++  it('keeps a hidden Browser pane from stealing the foreground native viewport', async () => {
++    const attach = vi.fn(async () =>
++      ({ ...restoredState, attached: true, viewportHost: 'chat' }) as WorkstationBrowserState
++    )
++    const setVisible = vi.fn(async () => restoredState)
++    const bridge = {
++      ensure: vi.fn(async () => restoredState),
++      attach,
++      setBounds: vi.fn(async () => restoredState),
++      detach: vi.fn(async () => restoredState),
++      setVisible,
++      onState: vi.fn(() => () => undefined)
++    } as unknown as WorkstationBrowserBridge
++
++    Object.defineProperty(window, 'hermesDesktop', {
++      configurable: true,
++      value: { workstationBrowser: bridge }
++    })
++
++    const surface = (visible: boolean) => (
++      <PaneVisibleContext.Provider value={visible}>
++        <WorkstationBrowserPane />
++      </PaneVisibleContext.Provider>
++    )
++    const { rerender } = render(surface(false))
++
++    await waitFor(() => expect(bridge.ensure).toHaveBeenCalledTimes(1))
++    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'chat'))
++    expect(attach).not.toHaveBeenCalled()
++
++    rerender(surface(true))
++    await waitFor(() => expect(attach).toHaveBeenCalledTimes(1))
++
++    setVisible.mockClear()
++    rerender(surface(false))
++    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'chat'))
++
++    await act(async () => { $activeSessionId.set('session-new') })
++    expect(attach).toHaveBeenCalledTimes(1)
++
++    rerender(surface(true))
++    await waitFor(() => expect(attach).toHaveBeenCalledTimes(2))
++  })
++
+   it('shows session-scoped native human review and acknowledges it only once', async () => {
+     const { fireEvent, screen } = await import('@testing-library/react')
+ 
+diff --git a/apps/desktop/src/app/browser/native-view-occlusion.test.ts b/apps/desktop/src/app/browser/native-view-occlusion.test.ts
+--- a/apps/desktop/src/app/browser/native-view-occlusion.test.ts
++++ b/apps/desktop/src/app/browser/native-view-occlusion.test.ts
+@@ -140,6 +140,18 @@
+     expect(setVisible).not.toHaveBeenCalledWith(true, 'chat')
+   })
+ 
++  it('does not resurrect a native view when an owner unmounts without an overlay', async () => {
++    const setVisible = vi.fn().mockResolvedValue({})
++    const bridge = { setVisible } as unknown as WorkstationBrowserBridge
++    const { renderHook, waitFor } = await import('@testing-library/react')
++    const { unmount } = renderHook(() => useNativeViewOcclusion(bridge, 'chat'))
++
++    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(true, 'chat'))
++    setVisible.mockClear()
++    unmount()
++    expect(setVisible).not.toHaveBeenCalledWith(true, 'chat')
++  })
++
+   it('parks the view for an overlay that is already open when the pane mounts', async () => {
+     const setVisible = vi.fn().mockResolvedValue({})
+     const bridge = { setVisible } as unknown as WorkstationBrowserBridge

@@ -1,5 +1,10 @@
 # Workstation roadmap
 
+## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)
+
+A fase 0 estabelece UMA branch (`feat/hermes-workstation-mvp-20261013`), um checkout (`C:\Github\hermes-agent`), leases cooperativos de arquivos, um integrador Git e checkpoint recursivo, evitando quatro agentes abrirem worktrees/branches por ajuste. Ver [protocolo](context/AGENT_COLLABORATION_PROTOCOL.md), [board](context/workstation-hub-mvp/TEAM_BOARD.md) e [3 etapas de implementação](context/workstation-hub-mvp/IMPLEMENTATION_STAGES.md). Produto ainda NÃO qualificado: (1) Agent abre Creative interno sem search; (2) Browser→Workstation + aba Creative React; (3) aba web manual→nova sessão real via mesma WebContentsView e lease humano. Plano 20/80: Fase 1 HWH01+02, Fase 2 HWH03, Fase 3 native E2E/CI/PR; sem merge automático ou bypass H-079.
+
+
 ## 2026-10-12 — Strategic freeze: Kanban/Browser Authority P0 (PAUSED_BY_STRATEGY)
 
 **Não é fechamento técnico, nem nova prioridade de implementação.** O trabalho testado em PRs draft #70–#83 não foi promovido a `main`. Estado verificado no [handoff](context/HERMES_WORK_STRATEGIC_HANDOFF_2026-10-12.md), [PR snapshot](context/HERMES_WORK_PR_RECONCILIATION_2026-10-12.md), [issues KI-028–KI-043](context/KNOWN_ISSUES.md) e [evidence manifest](context/HERMES_WORK_SOURCE_EVIDENCE_MANIFEST_2026-10-12.md).

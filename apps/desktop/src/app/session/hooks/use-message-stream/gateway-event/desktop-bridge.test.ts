@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { $routeRequest } from '@/store/recovery-requests'
 import { $activeTip, $retiredTips, $tipsEnabled, dismissTip, resetTips, retireActiveTip } from '@/store/tips'
 
 import { handleDesktopBridgeEvent } from './desktop-bridge'
@@ -22,6 +23,25 @@ beforeEach(() => {
   dismissTip()
   resetTips()
   $tipsEnabled.set(true)
+})
+
+describe('creative.open bridge (HWH-01)', () => {
+  it('navigates the active source directly to the internal Workstation Creative tab', () => {
+    handleDesktopBridgeEvent({
+      event: { type: 'creative.open' }, payload: {}, isActiveEvent: true,
+      fromActiveSource: () => true
+    } as unknown as GatewayEventContext)
+    expect($routeRequest.get()?.path).toBe('/browser?creative=1')
+  })
+
+  it('does not steal focus from background/foreign-source sessions', () => {
+    const previous = $routeRequest.get()
+    handleDesktopBridgeEvent({
+      event: { type: 'creative.open' }, payload: {}, isActiveEvent: true,
+      fromActiveSource: () => false
+    } as unknown as GatewayEventContext)
+    expect($routeRequest.get()).toBe(previous)
+  })
 })
 
 describe('tip.show bridge (#117216)', () => {

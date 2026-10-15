@@ -15,3 +15,54 @@
 - Focused `python -m pytest` attempt: platform tool safety block before execution; no result.
 - Renderer tests: NOT_RUN. Packaged Electron E2E A/B/C: NOT_RUN. GitHub exact-head required CI: NOT_VERIFIED. Feature code: NOT_WRITTEN.
 - Superpowers (TDD, executing plans, git-worktrees) and Community Agent Workflows (ECC harness) skills loaded; their methods informed the preflight.
+
+## 2026-10-13 — Execution Evidence Ledger (HWH-001 MVP: HWH-01, HWH-02, HWH-03 & E2E)
+- **Branch & Checkout:** `feat/hermes-workstation-mvp-20261013` em `C:\Github\hermes-agent`.
+- **H-079 Gate:** `H-079 = PASS_WITH_AUTHORIZATION` concedido pelo maintainer exclusivamente para esta branch (sincronização upstream pelo maintainer antes do PR/merge).
+- **HWH-01 (Agent → Creative):**
+  - Ferramenta `open_creative_workstation` em `tools/creative_workstation_tool.py`.
+  - Registro em `desktop_ui` (`toolsets.py`) e evento `creative.open` em `desktop-bridge.ts`.
+  - Testes: `python -m pytest tests/tools/test_creative_workstation_tool.py tests/tools/test_desktop_tools_diet.py tests/tools/test_desktop_ui.py -q` → 10 passed.
+- **HWH-02 (Browser → Workstation Hub):**
+  - Sidebar label `Workstation` para `/browser` (`apps/desktop/src/app/chat/sidebar/index.tsx`).
+  - Aba React Creative interna e preservação da viewport Chromium (`apps/desktop/src/app/browser/index.tsx`).
+  - Testes: `npx vitest run src/app/browser/hwh-creative-tab.test.tsx src/app/contrib/surfaces.app-routes.test.tsx` → PASS.
+- **HWH-03 (Levar para sessão):**
+  - Método `adoptTab` no runtime Electron (`workstation-browser-runtime.ts`), canal IPC em `workstation-browser-ipc.ts`, preload em `preload.ts`.
+  - Retenção do lease de controle humano com 409 `USER_CONTROL_ACTIVE` até liberação explícita.
+  - UI `BrowserControlBar` com botão "Levar para sessão" e hook `useAdoptTabToSession`.
+  - Testes: `npx vitest run electron/workstation-browser-runtime-task.test.ts` (36 passed), `npx vitest run src/app/browser/hwh-adopt-session.test.tsx` (3 passed).
+- **Playwright Native Electron E2E:**
+  - Build de produção gerado limpo com `npm run build` (0 warnings bloqueantes, dist/ atualizado).
+  - Execução real: `npx playwright test e2e/workstation-headless-load.spec.ts` → **9 passed (2.2m)**.
+  - Inclui teste end-to-end `HWH-MVP: Creative Workstation internal tab, web tab switching, and manual tab adoption into session`: abertura do Creative via botão, criação de aba web e alternância sem recargas, clique e execução de adoção para sessão Gateway, bloqueio de ações do agente sob lease humano (409 `USER_CONTROL_ACTIVE`) e retomada após liberação explícita.
+- **Qualidade, Tipagem e Code Health:**
+  - `npm run typecheck` (4 tsconfigs: app, electron, e2e, electron-builder) → 0 erros.
+  - `npx eslint` → 0 erros, 0 avisos nos componentes editados.
+  - `python scripts/check --only health` → 0 blocking, 0 advisory findings across 24 files.
+  - `git diff --check` → limpo, sem warnings de whitespace.
+- **Correções Adicionais de Testes e Isolamento no Windows:**
+  - `no-native-title.test.ts`: Substituição de atributos nativos `title=` por `aria-label=` em botões de `CreativeToolbar`, `CreativeWorkspaceSwitcher` e `workstation-browser-pane` para aderência à regra estática de design.
+  - `CreativeWorkspacePage.mvp.test.tsx`: Atualização de seletores obsoletos `getByTitle` para `getByRole('button', { name: ... })` → 3 passed.
+  - `workstation-browser-runtime-batch.test.ts` & `admission.test.ts`: Isolamento do ambiente Windows definindo `HERMES_WORKSTATION_HOME = dir` em `runtimeHome()`, evitando interferência de arquivos pré-existentes em `%LOCALAPPDATA%\HermesWorkstation` → 11 passed (batch), 4 passed (admission), 63/63 em toda a suíte de runtime.
+  - `e2e/workstation-headless-load.spec.ts`: Re-verificação completa no Playwright após compilação limpa → 9 passed (2.8m, exit code 0).
+
+## 2026-10-14 — HWH-OVERLAY-01: Native Browser View Occlusion & Session Fence
+- **Defeito:** Ao restaurar uma sessão que utilizava o Browser nativo e clicar em "New session", a WebContentsView Chromium anterior permanecia sobreposta à interface React da nova sessão, bloqueando interações.
+- **Diagnóstico e Causa Raiz:**
+  - Panes mantidas vivas em segundo plano (`PreviewTilePane` com `data-pane-hidden=""`) herdavam `$activeSessionId` global em re-renderizações e não vinculavam sua identidade à sessão da aba proprietária. Ao alternar de sessão, comandos como `setVisible(false)`, `attach` ou `setBounds` eram despachados com a identidade da nova sessão ativa, interferindo com o ciclo de vida da viewport.
+  - `WorkstationBrowserPane` e `useNativeViewOcclusion` não consultavam `usePaneVisible()` ou `isElementInHiddenPane()`, permitindo que panes ocultas publicassem bounds ou anexassem a WebContentsView.
+  - O runtime Electron não validava a identidade do chamador (`ownerId`) contra `viewportOwnerId`, permitindo desanexação ou captura indevida de viewport entre sessões concorrentes no mesmo host `'chat'`.
+- **Correção Implementada:**
+  - Vinculação de identidade imutável da pane via `sessionId ?? selectedStoredSessionId ?? activeSessionId`, propagada desde `PreviewTab` até `WorkstationBrowserPane`.
+  - Gating estrito de oclusão com `usePaneVisible()` e `isElementInHiddenPane()` impedindo que panes ocultas publiquem bounds ou anexem a view.
+  - Validação de propriedade por instância no runtime Electron (`workstation-browser-runtime.ts` e `workstation-browser-ipc.ts`) em `attach()`, `setBounds()`, `detach()` e `setVisible()`, blindando desanexações espúrias de sessões em background.
+  - Limpeza de logging transiente de debug.
+- **Evidências de Verificação:**
+  - `npx vitest run --project ui src/app/browser/native-view-occlusion.test.ts src/app/chat/right-rail/workstation-browser-pane.test.tsx --reporter=dot` → 17 passed.
+  - `npx eslint src/app/browser/native-view-occlusion.ts src/app/browser/native-view-occlusion.test.ts src/app/chat/right-rail/workstation-browser-pane.tsx src/app/chat/right-rail/workstation-browser-pane.test.tsx src/app/chat/right-rail/preview-pane.tsx src/app/chat/right-rail/preview.tsx --max-warnings=0` → 0 erros, 0 avisos.
+  - `npx tsc -p . --noEmit --pretty false` → 0 erros.
+  - `npm run build` → build limpo (assets e bundles gerados com sucesso).
+  - `npx playwright test e2e/workstation-headless-load.spec.ts -g 'HWH-OVERLAY|HWH-MVP' --reporter=line` → 2 passed (32.8s no Electron real).
+  - `$env:PYTHONUTF8 = "1"; python scripts/check --only health` → 0 blocking, 0 advisory (ok).
+

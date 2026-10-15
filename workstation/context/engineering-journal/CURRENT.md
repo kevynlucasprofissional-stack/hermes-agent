@@ -1,5 +1,40 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-13 — HWH-001 user dogfood corrective round
+
+Reference: `workstation/context/workstation-hub-mvp/DOGFOOD_REPAIR_20261013.md`. CSS do Creative estava desconectado e primeiro uso exigia projeto JSON. A aba agora abre projeto vazio, oferece preview temporário de assets e fecha sem destruir o componente. `Levar para sessão` não fabrica IDs quando Gateway falha e separa `runtime session_id` (BrowserTask/agent tools) do `stored_session_id` (chat/preview). Vitest 84/84 PASS, E2E Electron 1/1 PASS, ESLint 0 issues, build PASS; os testes não demonstram a jornada real de criação Gateway pelo botão seguida de ação do modelo sobre a mesma DOM, nem persistência de media; manter evidência parcial. Alterações de usuário em `workstation/dogfood/` preservadas. H-079 permanece PASS_WITH_AUTHORIZATION exclusivamente nesta branch.
+
+
+## 2026-10-13 — Stage 3 Native Electron E2E qualification and HWH-MVP verification (VERIFIED)
+
+Conclusão e qualificação da Etapa 3 (Native Electron E2E e Hardening):
+- Build de produção Electron gerado com `npm run build` limpo, empacotando os bundles do renderer, preload e main process.
+- Suíte completa de Playwright E2E em Electron headless executada (`apps/desktop/e2e/workstation-headless-load.spec.ts`): 9/9 testes aprovados (100% green, 2.8m, Exit Code 0).
+- Validação nativa completa do fluxo HWH-MVP: abertura do Creative Workstation via botão de UI, criação de aba web e alternância de abas sem recarga/destruição de viewport, adoção de aba manual para sessão canônica Gateway sem disparo de `loadURL`, retenção estrita de lease de controle humano (bloqueio 409 `USER_CONTROL_ACTIVE` em tentativas autônomas) e retomada segura após liberação explícita.
+- Resolução da regra de UI e acessibilidade (`no-native-title.test.ts`): substituição de `title=` por `aria-label=` nos botões de `CreativeToolbar`, `CreativeWorkspaceSwitcher` e `workstation-browser-pane`, com ordenação de props JSX via ESLint (`perfectionist/sort-jsx-props`).
+- Atualização semântica dos testes de UI (`CreativeWorkspacePage.mvp.test.tsx`): migração de `getByTitle` para `getByRole('button', { name: ... })` (3/3 PASS).
+- Isolamento hermético de testes no Windows (`workstation-browser-runtime-batch.test.ts` e `admission.test.ts`): definição explícita de `HERMES_WORKSTATION_HOME = dir` em `runtimeHome()`, prevenindo poluição de `%LOCALAPPDATA%\HermesWorkstation` e eliminando colisões de estado de sessão preexistente (63/63 testes de runtime Electron PASS).
+- Qualidade e governança: `npm run typecheck` (4 tsconfigs) 100% limpo, ESLint 0 erros/avisos, `python scripts/check --only health` com 0 findings bloqueantes e 0 advisories em 24 arquivos, `git diff --check` sem warnings de formatação. Commit consolidado `15e0f0e49d` publicado na branch remota `feat/hermes-workstation-mvp-20261013`.
+
+## 2026-10-13 — HWH-03 manual Chromium tab adoption into canonical Gateway session (VERIFIED)
+
+Implementado e qualificado HWH-03:
+- Runtime Electron (`workstation-browser-runtime.ts` e `workstation-browser-ipc.ts`): método `adoptTab(tabId, sessionId, preferredTaskId?)` adotando aba manual existente sem disparo de `loadURL` ou recarga de WebContentsView, vinculando `BrowserTask` à sessão Gateway e adquirindo lease humano de controle (`humanControlLease`).
+- Autoridade de lease humano: chamadas de ação autônoma do agente bloqueadas com erro `409 USER_CONTROL_ACTIVE` enquanto o humano mantiver controle; liberação atômica sob comando explícito "Release to Agent".
+- UI Desktop (`BrowserControlBar`, `useAdoptTabToSession` em `apps/desktop/src/app/browser`): botão "Levar para sessão" integrado na barra de controle do Browser Hub, criação resiliente de sessão Gateway, prevenção contra double-clicks e navegação com transferência da viewport sem destruição do estado do Chromium.
+- Ratchet & Code Health: extração de IPC handlers para tópico irmão `workstation-browser-ipc.ts`, satisfazendo limites de linhas e complexidade ciclomática (0 blocking, 0 advisory em `python scripts/check --only health`).
+- Suíte de Testes: 36/36 testes de runtime Electron (`workstation-browser-runtime-task.test.ts`), 25/25 testes de UI vitest (`hwh-adopt-session.test.tsx`, `hwh-creative-tab.test.tsx`, etc.), typecheck e ESLint 100% green.
+
+## 2026-10-13 — HWH-001 maintainer H-079 PASS_WITH_AUTHORIZATION (SCOPED)
+
+Maintainer text: "Para essa branch marca H-079 com 'Pulado com autorização' e pode continuar o trabalho, eu faço a sincronização upstream quando eu for fazer pull request e merge no main". Applies ONLY to `feat/hermes-workstation-mvp-20261013` and HWH-01/02/03 development. Upstream sync obligation transferred to maintainer before PR/main merge. Does not waive functional/security TDD, authorized session/lease boundaries, exact-head CI, Electron proof, or grant permission to merge main. Runs `38395540990` (main base) and `38395647904` (feature docs HEAD) reported failure, jobs unavailable from CLI inspection; not green, release HOLD. This is an explicit one-branch exception to the default upstream-first ordering, not precedent for other branches.
+
+
+## 2026-10-13 — HWH-001 coordinated single-branch workflow (DOCUMENTED, NOT PRODUCT QUALIFIED)
+
+Consolidação verificada: `main`/`origin/main` limpos em `b80d10a4d6d4536b65df52eb4e011ad8d5eef672`. A antiga PR #87 foi merged mas documentava pendências e não qualificou os 3 fluxos. Iniciado ciclo único `feat/hermes-workstation-mvp-20261013` sobre `C:\Github\hermes-agent`, sem worktree extra; quatro lanes (`creative-agent`, `hub-ui`, `session-handoff`, `integration-qa`), claims locais atômicos e integrador exclusivo de operações Git. Contratos: [protocolo](../AGENT_COLLABORATION_PROTOCOL.md), [board](../workstation-hub-mvp/TEAM_BOARD.md), [etapas](../workstation-hub-mvp/IMPLEMENTATION_STAGES.md). A ferramenta `workstation/scripts/multi_agent_coordination.py` tem 8 testes de isolamento/ownership/heartbeat/release inicialmente PASS; não representa prova de segurança runtime. Status dos fluxos HWH01, HWH02, HWH03: NOT_VERIFIED; HWH04: NOT_RUN; H-079 e CI continuam gates de promoção. Não reexecutar uma auditoria global nem converter ausência de E2E em PASS.
+
+
 ## 2026-10-11 — Hermes Work: Aceleração Operacional, Redução de Redundâncias e Custo (D-043 / P0–P2)
 
 **Classificação: IMPLEMENTAÇÃO COMPLETA, TESTES E QUALIFICAÇÃO INTEGRADOS.**

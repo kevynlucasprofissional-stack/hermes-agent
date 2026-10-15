@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
 import { TaskJournalDrawer } from '@/app/browser/task-journal-drawer'
 import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from '@/app/browser/types'
+import { isElementInHiddenPane, usePaneVisible } from '@/components/pane-shell/pane-visibility'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,7 @@ interface NativeHumanReview {
 }
 
 export interface WorkstationBrowserPaneProps {
+  sessionId?: string
   onPopOut?: () => void
   className?: string
 }
@@ -87,7 +89,8 @@ function formatBrowserError(error: string): string {
   return error
 }
 
-export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrowserPaneProps) {
+// health: allow CC -- HWH-OVERLAY-01 session-bound occlusion coordination and native human review handling
+export function WorkstationBrowserPane({ sessionId, onPopOut, className }: WorkstationBrowserPaneProps) {
   const bridge = window.hermesDesktop?.workstationBrowser
   const [state, setState] = useState<WorkstationBrowserState>(EMPTY_STATE)
   const [runtimeDiscovered, setRuntimeDiscovered] = useState(false)
@@ -98,12 +101,13 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
   const [reviewNotice, setReviewNotice] = useState('')
 
   const hostRef = useRef<HTMLDivElement | null>(null)
+  const paneVisible = usePaneVisible()
 
   const selectedStoredSessionId = useStore($selectedStoredSessionId)
   const activeSessionId = useStore($activeSessionId)
   const sessions = useStore($sessions)
 
-  const activeSessionKey = selectedStoredSessionId ?? activeSessionId ?? null
+  const activeSessionKey = sessionId ?? selectedStoredSessionId ?? activeSessionId ?? null
 
   const activeSessionAliases = useMemo(() => {
     if (!activeSessionKey) {
@@ -234,9 +238,19 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     [bridge]
   )
 
+  const boundOwnerIdRef = useRef<string | null>(activeSessionKey ?? preferredTaskId ?? null)
+
+  const lastAttachedRef = useRef<{
+    host: 'chat'
+    sessionKey: string | null
+    preferredTaskId: string | null
+  } | null>(null)
+
+  const wasPaneVisibleRef = useRef(false)
+
   const publishBounds = useCallback(
     async (attach = false) => {
-      if (!bridge || !hostRef.current) {
+      if (!bridge || !hostRef.current || !paneVisible || isElementInHiddenPane(hostRef.current)) {
         return
       }
 
@@ -247,21 +261,35 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       }
 
       const bounds = rectToBounds(rect)
+      const ownerId = activeSessionKey ?? preferredTaskId ?? undefined
 
-      if (attach) {
-        setState(await bridge.attach(bounds, 'chat', preferredTaskId ?? undefined))
+      if (ownerId) {
+        boundOwnerIdRef.current = ownerId
+      }
+
+      const currentKey = {
+        host: 'chat' as const,
+        sessionKey: activeSessionKey,
+        preferredTaskId: preferredTaskId ?? null
+      }
+
+      const last = lastAttachedRef.current
+
+      const keyMismatch =
+        !last ||
+        last.host !== currentKey.host ||
+        last.sessionKey !== currentKey.sessionKey ||
+        last.preferredTaskId !== currentKey.preferredTaskId
+
+      if (attach || keyMismatch) {
+        lastAttachedRef.current = currentKey
+        setState(await bridge.attach(bounds, 'chat', preferredTaskId ?? undefined, ownerId))
       } else {
-        setState(await bridge.setBounds(bounds, 'chat'))
+        setState(await bridge.setBounds(bounds, 'chat', ownerId))
       }
     },
-    [bridge, preferredTaskId]
+    [activeSessionKey, bridge, paneVisible, preferredTaskId]
   )
-
-  const lastAttachedRef = useRef<{
-    host: 'chat'
-    sessionKey: string | null
-    preferredTaskId: string | null
-  } | null>(null)
 
   // eslint-disable-next-line no-restricted-syntax -- cleanup last attached key on unmount
   useEffect(() => {
@@ -296,7 +324,7 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
       disposed = true
       off()
       lastAttachedRef.current = null
-      void bridge.detach('chat')
+      void bridge.detach('chat', boundOwnerIdRef.current ?? undefined)
     }
   }, [bridge])
 
@@ -305,6 +333,17 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     if (!bridge || !hostRef.current || !runtimeDiscovered) {
       return
     }
+
+    // Keep-alive panes retain layout bounds while hidden. Never let an
+    // inactive session annex the OS-level Chromium child view.
+    if (!paneVisible || isElementInHiddenPane(hostRef.current)) {
+      wasPaneVisibleRef.current = false
+
+      return
+    }
+
+    const becameVisible = !wasPaneVisibleRef.current
+    wasPaneVisibleRef.current = true
 
     const currentKey = {
       host: 'chat' as const,
@@ -325,11 +364,11 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     // new conversation ownership, or when Chat itself lost its attachment.
     const chatNeedsReattach = !state.attached && (state.viewportHost === null || state.viewportHost === 'chat')
 
-    if (keyChanged || chatNeedsReattach) {
+    if (becameVisible || keyChanged || chatNeedsReattach) {
       lastAttachedRef.current = currentKey
       void publishBounds(true)
     }
-  }, [activeSessionKey, preferredTaskId, bridge, publishBounds, runtimeDiscovered, state.attached, state.viewportHost])
+  }, [activeSessionKey, preferredTaskId, bridge, paneVisible, publishBounds, runtimeDiscovered, state.attached, state.viewportHost])
 
   useEffect(() => {
     if (!bridge || !hostRef.current) {
@@ -356,7 +395,20 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
     }
   }, [bridge, publishBounds])
 
-  useNativeViewOcclusion(bridge, 'chat')
+  if (paneVisible) {
+    const currentOwner = activeSessionKey ?? preferredTaskId ?? null
+
+    if (currentOwner) {
+      boundOwnerIdRef.current = currentOwner
+    }
+  }
+
+  const effectiveOwnerId =
+    (paneVisible
+      ? activeSessionKey || preferredTaskId
+      : boundOwnerIdRef.current || activeSessionKey || preferredTaskId) || undefined
+
+  useNativeViewOcclusion(bridge, 'chat', { enabled: paneVisible, ownerId: effectiveOwnerId })
 
   const transferToChat = useCallback(async () => {
     if (!bridge || !hostRef.current) {
@@ -453,7 +505,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               className="text-sky-400 hover:text-sky-300"
               onClick={() => void run(() => bridge.releaseControl(preferredTaskId ?? undefined))}
               size="icon-xs"
-              title="Hand control back to agent"
               variant="ghost"
             >
               <Codicon name="robot" size="0.75rem" />
@@ -464,7 +515,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               className="text-(--ui-text-tertiary) hover:text-(--ui-text-primary)"
               onClick={() => void run(() => bridge.takeControl(preferredTaskId ?? undefined, activeSessionKey ?? undefined))}
               size="icon-xs"
-              title="Take human control"
               variant="ghost"
             >
               <Codicon name="person" size="0.75rem" />
@@ -476,7 +526,6 @@ export function WorkstationBrowserPane({ onPopOut, className }: WorkstationBrows
               aria-label="Toggle Execution History"
               onClick={() => setShowJournal(prev => !prev)}
               size="icon-xs"
-              title="Execution history & journal"
               variant={showJournal ? 'secondary' : 'ghost'}
             >
               <Codicon name="history" size="0.75rem" />

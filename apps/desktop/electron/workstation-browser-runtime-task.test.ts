@@ -1453,3 +1453,58 @@ test('P0-03: takeover between mousePressed and mouseReleased fails closed and re
   assert.deepEqual(events, ['mouseMoved', 'mousePressed', 'mouseReleased'])
   await runtime.destroy()
 })
+
+test('HWH-03: adoptTab binds existing manual tab to session, acquires human control lease without calling loadURL', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+
+  // Create a manual tab
+  const tabState = runtime.createTab('https://example.com/login', true)
+  const tabId = tabState.activeTabId!
+  const entry = (runtime as any).entries.get(tabId)
+  assert.ok(entry, 'entry exists')
+  assert.equal(entry.ownerTaskId, null, 'initially unbound')
+
+  // Spy on loadURL
+  const loadUrlSpy = vi.spyOn(entry.view.webContents, 'loadURL')
+
+  // Adopt tab to session
+  const sessionId = 'session-test-123'
+  const result = runtime.adoptTab(tabId, sessionId)
+  assert.equal(result.success, true)
+  assert.equal(result.tabId, tabId)
+  assert.equal(result.sessionId, sessionId)
+  assert.ok(result.taskId, 'minted taskId')
+  assert.equal(entry.ownerTaskId, result.taskId, 'entry is bound to taskId')
+  assert.equal(loadUrlSpy.mock.calls.length, 0, 'loadURL must NOT be called on adoption')
+
+  // Verify BrowserTask association
+  const task = (runtime as any).taskLifecycle().task(result.taskId)
+  assert.ok(task, 'task created in lifecycle')
+  assert.equal(task.sessionHost, sessionId, 'task bound to sessionId')
+
+  // Verify human control lease is active and enforces 409 USER_CONTROL_ACTIVE
+  assert.ok(task.humanControlLease, 'human control lease acquired')
+  assert.equal(task.humanControlLease.owner, 'human')
+  assert.equal(task.humanControlLease.sessionId, sessionId)
+  assert.throws(
+    () => (runtime as any).assertAgentControl(result.taskId),
+    (err: any) => err.error_code === 'USER_CONTROL_ACTIVE' || /under human control/i.test(err.message)
+  )
+
+  // Explicit release allows agent control
+  runtime.releaseControl(result.taskId)
+  assert.doesNotThrow(() => (runtime as any).assertAgentControl(result.taskId))
+
+  // Idempotent double adoption returns same task
+  const secondResult = runtime.adoptTab(tabId, sessionId)
+  assert.equal(secondResult.taskId, result.taskId)
+
+  // Foreign session adoption fails closed
+  assert.throws(
+    () => runtime.adoptTab(tabId, 'foreign-session-456'),
+    /already bound to a different session/i
+  )
+
+  await runtime.destroy()
+})

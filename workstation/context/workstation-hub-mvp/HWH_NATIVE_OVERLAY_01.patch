@@ -1,0 +1,192 @@
+diff --git a/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx b/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx
+--- a/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx
++++ b/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx
+@@ -3,6 +3,7 @@
+ 
+ import { useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
+ import { TaskJournalDrawer } from '@/app/browser/task-journal-drawer'
++import { isElementInHiddenPane, usePaneVisible } from '@/components/pane-shell/pane-visibility'
+ import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from '@/app/browser/types'
+ import { Button } from '@/components/ui/button'
+ import { Codicon } from '@/components/ui/codicon'
+@@ -98,6 +99,7 @@
+   const [reviewNotice, setReviewNotice] = useState('')
+ 
+   const hostRef = useRef<HTMLDivElement | null>(null)
++  const paneVisible = usePaneVisible()
+ 
+   const selectedStoredSessionId = useStore($selectedStoredSessionId)
+   const activeSessionId = useStore($activeSessionId)
+@@ -236,7 +238,7 @@
+ 
+   const publishBounds = useCallback(
+     async (attach = false) => {
+-      if (!bridge || !hostRef.current) {
++      if (!bridge || !hostRef.current || !paneVisible || isElementInHiddenPane(hostRef.current)) {
+         return
+       }
+ 
+@@ -254,7 +256,7 @@
+         setState(await bridge.setBounds(bounds, 'chat'))
+       }
+     },
+-    [bridge, preferredTaskId]
++    [bridge, paneVisible, preferredTaskId]
+   )
+ 
+   const lastAttachedRef = useRef<{
+@@ -262,6 +264,7 @@
+     sessionKey: string | null
+     preferredTaskId: string | null
+   } | null>(null)
++  const wasPaneVisibleRef = useRef(false)
+ 
+   // eslint-disable-next-line no-restricted-syntax -- cleanup last attached key on unmount
+   useEffect(() => {
+@@ -306,6 +309,17 @@
+       return
+     }
+ 
++    // Keep-alive panes retain layout bounds while hidden. Never let an
++    // inactive session annex the OS-level Chromium child view.
++    if (!paneVisible || isElementInHiddenPane(hostRef.current)) {
++      wasPaneVisibleRef.current = false
++
++      return
++    }
++
++    const becameVisible = !wasPaneVisibleRef.current
++    wasPaneVisibleRef.current = true
++
+     const currentKey = {
+       host: 'chat' as const,
+       sessionKey: activeSessionKey,
+@@ -325,11 +339,11 @@
+     // new conversation ownership, or when Chat itself lost its attachment.
+     const chatNeedsReattach = !state.attached && (state.viewportHost === null || state.viewportHost === 'chat')
+ 
+-    if (keyChanged || chatNeedsReattach) {
++    if (becameVisible || keyChanged || chatNeedsReattach) {
+       lastAttachedRef.current = currentKey
+       void publishBounds(true)
+     }
+-  }, [activeSessionKey, preferredTaskId, bridge, publishBounds, runtimeDiscovered, state.attached, state.viewportHost])
++  }, [activeSessionKey, preferredTaskId, bridge, paneVisible, publishBounds, runtimeDiscovered, state.attached, state.viewportHost])
+ 
+   useEffect(() => {
+     if (!bridge || !hostRef.current) {
+@@ -356,7 +370,7 @@
+     }
+   }, [bridge, publishBounds])
+ 
+-  useNativeViewOcclusion(bridge, 'chat')
++  useNativeViewOcclusion(bridge, 'chat', { enabled: paneVisible })
+ 
+   const transferToChat = useCallback(async () => {
+     if (!bridge || !hostRef.current) {
+diff --git a/apps/desktop/src/app/browser/native-view-occlusion.ts b/apps/desktop/src/app/browser/native-view-occlusion.ts
+--- a/apps/desktop/src/app/browser/native-view-occlusion.ts
++++ b/apps/desktop/src/app/browser/native-view-occlusion.ts
+@@ -90,16 +90,8 @@
+     assertVisible()
+   }, [assertVisible, occluded, revision])
+ 
+-  // Hand the viewport back on the way out, unless something is still covering
+-  // it — the surface that replaces this pane owns visibility from then on.
+-  useEffect(
+-    () => () => {
+-      if (bridge?.setVisible && !isNativeViewOccluded(document)) {
+-        void bridge.setVisible(true, host)
+-      }
+-    },
+-    [bridge, host]
+-  )
++  // The owning surface detaches or parks the native child on transition.
++  // Unmount MUST NOT reveal it: that would resurrect Chromium above a new chat.
+ 
+   return { assertVisible, occluded }
+ }
+diff --git a/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx b/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx
+--- a/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx
++++ b/apps/desktop/src/app/chat/right-rail/workstation-browser-pane.test.tsx
+@@ -2,6 +2,7 @@
+ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+ 
+ import type { WorkstationBrowserBridge, WorkstationBrowserState } from '@/app/browser/types'
++import { PaneVisibleContext } from '@/components/pane-shell/pane-visibility'
+ import { $activeSessionId, $selectedStoredSessionId, $sessions } from '@/store/session'
+ import { makeSessionInfo } from '@/test/session-info'
+ 
+@@ -99,6 +100,50 @@
+     await act(async () => undefined)
+   })
+ 
++  it('keeps a hidden Browser pane from stealing the foreground native viewport', async () => {
++    const attach = vi.fn(async () =>
++      ({ ...restoredState, attached: true, viewportHost: 'chat' }) as WorkstationBrowserState
++    )
++    const setVisible = vi.fn(async () => restoredState)
++    const bridge = {
++      ensure: vi.fn(async () => restoredState),
++      attach,
++      setBounds: vi.fn(async () => restoredState),
++      detach: vi.fn(async () => restoredState),
++      setVisible,
++      onState: vi.fn(() => () => undefined)
++    } as unknown as WorkstationBrowserBridge
++
++    Object.defineProperty(window, 'hermesDesktop', {
++      configurable: true,
++      value: { workstationBrowser: bridge }
++    })
++
++    const surface = (visible: boolean) => (
++      <PaneVisibleContext.Provider value={visible}>
++        <WorkstationBrowserPane />
++      </PaneVisibleContext.Provider>
++    )
++    const { rerender } = render(surface(false))
++
++    await waitFor(() => expect(bridge.ensure).toHaveBeenCalledTimes(1))
++    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'chat'))
++    expect(attach).not.toHaveBeenCalled()
++
++    rerender(surface(true))
++    await waitFor(() => expect(attach).toHaveBeenCalledTimes(1))
++
++    setVisible.mockClear()
++    rerender(surface(false))
++    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'chat'))
++
++    await act(async () => { $activeSessionId.set('session-new') })
++    expect(attach).toHaveBeenCalledTimes(1)
++
++    rerender(surface(true))
++    await waitFor(() => expect(attach).toHaveBeenCalledTimes(2))
++  })
++
+   it('shows session-scoped native human review and acknowledges it only once', async () => {
+     const { fireEvent, screen } = await import('@testing-library/react')
+ 
+diff --git a/apps/desktop/src/app/browser/native-view-occlusion.test.ts b/apps/desktop/src/app/browser/native-view-occlusion.test.ts
+--- a/apps/desktop/src/app/browser/native-view-occlusion.test.ts
++++ b/apps/desktop/src/app/browser/native-view-occlusion.test.ts
+@@ -140,6 +140,18 @@
+     expect(setVisible).not.toHaveBeenCalledWith(true, 'chat')
+   })
+ 
++  it('does not resurrect a native view when an owner unmounts without an overlay', async () => {
++    const setVisible = vi.fn().mockResolvedValue({})
++    const bridge = { setVisible } as unknown as WorkstationBrowserBridge
++    const { renderHook, waitFor } = await import('@testing-library/react')
++    const { unmount } = renderHook(() => useNativeViewOcclusion(bridge, 'chat'))
++
++    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(true, 'chat'))
++    setVisible.mockClear()
++    unmount()
++    expect(setVisible).not.toHaveBeenCalledWith(true, 'chat')
++  })
++
+   it('parks the view for an overlay that is already open when the pane mounts', async () => {
+     const setVisible = vi.fn().mockResolvedValue({})
+     const bridge = { setVisible } as unknown as WorkstationBrowserBridge

@@ -1,7 +1,11 @@
 import {
   type ChangeEvent,
+  type Dispatch,
   type FormEvent,
+  lazy,
   type MouseEvent,
+  type SetStateAction,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -9,13 +13,16 @@ import {
   useRef,
   useState
 } from 'react'
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 
+import { openSession } from '@/app/open-session'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
 import { cn } from '@/lib/utils'
+import { requestGatewayForProfile } from '@/store/gateway'
 import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
 import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
+import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 
 import { useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
@@ -27,6 +34,8 @@ import type {
   WorkstationBrowserTabState,
   WorkstationResourceSnapshot
 } from './types'
+
+const LazyCreativeWorkspace = lazy(async () => ({ default: (await import('@/app/creative-workspace')).CreativeWorkspacePage }))
 
 function useOptionalNavigate(): null | ReturnType<typeof useNavigate> {
   try {
@@ -105,12 +114,335 @@ function formatBrowserError(error: string): string {
   return error
 }
 
+type WorkstationBridge = NonNullable<typeof window.hermesDesktop>['workstationBrowser']
+
+interface CreativeTabPanelProps {
+  active: boolean
+  opened: boolean
+}
+
+function CreativeTabPanel({ active, opened }: CreativeTabPanelProps) {
+  if (!opened) {
+    return null
+  }
+
+  return (
+    <div
+      className={cn('absolute inset-0 overflow-auto bg-(--ui-main-surface-background)', active ? 'block' : 'hidden')}
+      data-testid="creative-workstation-tab"
+    >
+      <Suspense fallback={<div className="p-4 text-sm">Opening Creative Workstation…</div>}>
+        <LazyCreativeWorkspace />
+      </Suspense>
+    </div>
+  )
+}
+
+interface ViewportNoticeProps {
+  attached: boolean
+  onTransfer: () => void
+  viewportHost: null | string
+}
+
+function ViewportNotice({ attached, onTransfer, viewportHost }: ViewportNoticeProps) {
+  if (!attached || !viewportHost || viewportHost === 'hub') {
+    return null
+  }
+
+  return (
+    <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/90 px-3 py-1.5 text-xs font-medium text-black">
+      <span>Live viewport is currently active in Chat ({viewportHost})</span>
+      <Button onClick={onTransfer} size="xs" variant="secondary">
+        Bring Viewport to Hub
+      </Button>
+    </div>
+  )
+}
+
+interface BrowserAddressBarProps {
+  activeTab: null | WorkstationBrowserTabState
+  address: string
+  bridge: WorkstationBridge
+  run: (op: () => Promise<WorkstationBrowserState>) => Promise<void>
+  setAddress: (val: string) => void
+  state: WorkstationBrowserState
+  submitAddress: (event: FormEvent) => void
+}
+
+function BrowserAddressBar({
+  activeTab,
+  address,
+  bridge,
+  run,
+  setAddress,
+  state,
+  submitAddress
+}: BrowserAddressBarProps) {
+  return (
+    <div className="flex h-10 items-center gap-1.5 px-2">
+      <Button
+        aria-label="Back"
+        disabled={!activeTab?.canGoBack}
+        onClick={() => void run(() => bridge.back())}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <Codicon name="arrow-left" />
+      </Button>
+      <Button
+        aria-label="Forward"
+        disabled={!activeTab?.canGoForward}
+        onClick={() => void run(() => bridge.forward())}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <Codicon name="arrow-right" />
+      </Button>
+      <Button
+        aria-label={activeTab?.loading ? 'Stop loading' : 'Reload'}
+        onClick={() => void run(() => (activeTab?.loading ? bridge.stop() : bridge.reload()))}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <Codicon name={activeTab?.loading ? 'debug-stop' : 'refresh'} />
+      </Button>
+
+      <form className="min-w-0 flex-1" onSubmit={submitAddress}>
+        <input
+          className="h-7 w-full rounded-md border border-(--ui-stroke-secondary) bg-(--ui-input-background) px-2.5 font-mono text-[12px] outline-none focus:border-(--ui-stroke-primary)"
+          data-browser-address="true"
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setAddress(event.target.value)}
+          placeholder="Search or enter address"
+          value={address}
+        />
+      </form>
+
+      <div
+        className={cn(
+          'hidden items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium md:flex',
+          state.paused
+            ? 'border-amber-500/40 text-amber-400'
+            : state.controlOwner === 'human'
+              ? 'border-sky-500/40 text-sky-400'
+              : 'border-emerald-500/30 text-emerald-400'
+        )}
+        title={`Controller: ${state.controlReady ? 'ready' : 'offline'} · Profile: ${state.profilePath || 'initializing'}`}
+      >
+        <span className="size-1.5 rounded-full bg-current" />
+        {state.paused
+          ? 'Paused'
+          : state.controlOwner === 'human'
+            ? 'Human control'
+            : state.controlReady
+              ? 'Agent ready'
+              : 'Controller offline'}
+      </div>
+    </div>
+  )
+}
+
+interface BrowserControlBarProps {
+  adoptBusy: boolean
+  bridge: WorkstationBridge
+  onAdoptTab: () => void
+  resourceSnapshot: null | WorkstationResourceSnapshot
+  run: (op: () => Promise<WorkstationBrowserState>) => Promise<void>
+  setShowDownloads: Dispatch<SetStateAction<boolean>>
+  showDownloads: boolean
+  state: WorkstationBrowserState
+  transferToChat: () => void
+}
+
+function BrowserControlBar({
+  adoptBusy,
+  bridge,
+  onAdoptTab,
+  resourceSnapshot,
+  run,
+  setShowDownloads,
+  showDownloads,
+  state,
+  transferToChat
+}: BrowserControlBarProps) {
+  return (
+    <div className="flex min-h-8 flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) px-2 py-1">
+      {state.paused ? (
+        <Button onClick={() => void run(() => bridge.resume())} size="sm" variant="ghost">
+          <Codicon name="debug-continue" />
+          Resume
+        </Button>
+      ) : (
+        <Button onClick={() => void run(() => bridge.pause())} size="sm" variant="ghost">
+          <Codicon name="debug-pause" />
+          Pause
+        </Button>
+      )}
+      <Button onClick={() => void run(() => bridge.stop())} size="sm" variant="ghost">
+        <Codicon name="debug-stop" />
+        Stop
+      </Button>
+      <Button onClick={() => void run(() => bridge.focus())} size="sm" variant="ghost">
+        <Codicon name="target" />
+        Focus Browser
+      </Button>
+      {state.controlOwner === 'human' ? (
+        <Button onClick={() => void run(() => bridge.releaseControl())} size="sm" variant="ghost">
+          <Codicon name="robot" />
+          Release Control
+        </Button>
+      ) : (
+        <Button onClick={() => void run(() => bridge.takeControl())} size="sm" variant="ghost">
+          <Codicon name="person" />
+          Take Control
+        </Button>
+      )}
+      <Button
+        aria-label="Levar para sessão"
+        disabled={adoptBusy || !state.ready || !state.activeTabId}
+        onClick={onAdoptTab}
+        size="sm"
+        variant="secondary"
+      >
+        <Codicon name="link-external" />
+        Levar para sessão
+      </Button>
+      <Button aria-label="Transfer Viewport to Chat Right Rail" onClick={transferToChat} size="sm" variant="ghost">
+        <Codicon name="comment-discussion" />
+        Move to Chat
+      </Button>
+      {state.downloads && state.downloads.length > 0 && (
+        <Button
+          aria-label="Toggle Downloads Panel"
+          onClick={() => setShowDownloads(prev => !prev)}
+          size="sm"
+          variant={showDownloads ? 'secondary' : 'ghost'}
+        >
+          <Codicon name="cloud-download" />
+          Downloads ({state.downloads.length})
+        </Button>
+      )}
+      <span className="ml-auto hidden font-mono text-[10px] text-(--ui-text-quaternary) lg:block">
+        Electron Chromium · persistent profile · resources {resourceSnapshot?.resources.length ?? '—'} · cache{' '}
+        {cacheLabel(state.cacheBytes)}
+      </span>
+    </div>
+  )
+}
+
+interface UseAdoptTabOptions {
+  activeTab: null | WorkstationBrowserTabState
+  bridge: undefined | WorkstationBridge
+  navigate: null | ReturnType<typeof useNavigate>
+  setState: Dispatch<SetStateAction<WorkstationBrowserState>>
+}
+
+function useAdoptTabToSession({
+  activeTab,
+  bridge,
+  navigate,
+  setState
+}: UseAdoptTabOptions) {
+  const [adoptBusy, setAdoptBusy] = useState(false)
+  const adoptBusyRef = useRef(false)
+
+  const handleAdoptTab = useCallback(async () => {
+    if (!bridge || adoptBusyRef.current) {
+      return
+    }
+
+    const tab = activeTab
+
+    if (!tab || tab.loading || tab.crashed) {
+      return
+    }
+
+    adoptBusyRef.current = true
+    setAdoptBusy(true)
+
+    try {
+      const profile = normalizeProfileKey($activeGatewayProfile.get())
+
+      // A session is an authenticated Gateway resource, never a renderer UUID.
+      // Fail closed: the manual tab remains untouched if session.create fails.
+      const createRes = await requestGatewayForProfile<{
+        session_id: string
+        stored_session_id?: string
+      }>(
+        profile,
+        'session.create',
+        { profile, title: shortTitle(tab) },
+        undefined,
+        undefined,
+        { spawnPriority: 'foreground' }
+      )
+
+      // The agent's native browser dispatcher keys BrowserTask by the runtime
+      // session ID. Using the stored chat ID (or a random BrowserTask ID) here
+      // would open a DIFFERENT page when the agent next calls browser_*.
+      const runtimeSessionId = createRes?.session_id || ''
+      const storedSessionId = createRes?.stored_session_id || runtimeSessionId
+
+      if (!runtimeSessionId || !storedSessionId) {
+        throw new Error('Gateway did not return a valid session identity for adoption')
+      }
+
+      const adoption = await bridge.adoptTab(tab.id, runtimeSessionId, runtimeSessionId)
+
+      if (!adoption || !adoption.success) {
+        throw new Error('Runtime tab adoption failed')
+      }
+
+      // Bind the preview to the CREATED chat, not the previously focused one.
+      // The tab's Electron WebContentsView and BrowserTask remain the same.
+      openWorkstationBrowserPreview({ fromHub: true, sessionId: storedSessionId })
+
+      if (navigate) {
+        openSession(storedSessionId, navigate, 'main')
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setState(prev => ({ ...prev, lastError: message }))
+    } finally {
+      adoptBusyRef.current = false
+      setAdoptBusy(false)
+    }
+  }, [activeTab, bridge, navigate, setState])
+
+  return { adoptBusy, handleAdoptTab }
+}
+
 export function BrowserView() {
   const bridge = window.hermesDesktop?.workstationBrowser
+  const location = useLocation()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const [state, setState] = useState<WorkstationBrowserState>(EMPTY_STATE)
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(false)
+  const [creativeOpened, setCreativeOpened] = useState(false)
+  const [creativeTabOpen, setCreativeTabOpen] = useState(false)
+  const [creativeActive, setCreativeActive] = useState(false)
+  // Kept independent of publishBounds identity to avoid detach/re-attach on tab switches.
+  const creativeActiveRef = useRef(false)
+
+  const selectCreative = useCallback((active: boolean) => {
+    creativeActiveRef.current = active
+
+    if (active) {
+      setCreativeOpened(true)
+      setCreativeTabOpen(true)
+    }
+
+    setCreativeActive(active)
+  }, [])
+
+  // The desktop agent opens this page through the existing authenticated
+  // desktop_ui event -> route request, including repeated focus requests.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('creative') === '1') {
+      selectCreative(true)
+    }
+  }, [location.key, location.search, selectCreative])
+
   const [showDownloads, setShowDownloads] = useState(false)
   const [auditTaskId, setAuditTaskId] = useState<string | null>(null)
   const [resourceSnapshot, setResourceSnapshot] = useState<WorkstationResourceSnapshot | null>(null)
@@ -163,9 +495,16 @@ export function BrowserView() {
 
   const navigate = useOptionalNavigate()
 
+  const { adoptBusy, handleAdoptTab } = useAdoptTabToSession({
+    activeTab,
+    bridge,
+    navigate,
+    setState
+  })
+
   const publishBounds = useCallback(
     async (attach = false) => {
-      if (!bridge || !hostRef.current) {
+      if (!bridge || !hostRef.current || creativeActiveRef.current) {
         return
       }
 
@@ -180,6 +519,16 @@ export function BrowserView() {
     },
     [bridge]
   )
+
+  // Restoring the native viewport is a layout operation, not a navigation:
+  // reattach the exact WebContentsView after the editor relinquishes the host.
+  useLayoutEffect(() => {
+    if (!creativeActive && creativeOpened && bridge && state.ready) {
+      const frame = requestAnimationFrame(() => void publishBounds(true))
+
+      return () => cancelAnimationFrame(frame)
+    }
+  }, [bridge, creativeActive, creativeOpened, publishBounds, state.ready])
 
   const transferToHub = useCallback(async () => {
     if (!bridge || !hostRef.current) {
@@ -354,7 +703,7 @@ export function BrowserView() {
     }
   }, [bridge, publishBounds])
 
-  useNativeViewOcclusion(bridge, 'hub')
+  useNativeViewOcclusion(bridge, 'hub', { enabled: !creativeActive })
 
   const submitAddress = (event: FormEvent) => {
     event.preventDefault()
@@ -390,12 +739,15 @@ export function BrowserView() {
               <button
                 className={cn(
                   'group flex h-8 max-w-52 min-w-28 items-center gap-1.5 rounded-t-md border border-transparent px-2 text-left text-xs',
-                  tab.active
+                  tab.active && !creativeActive
                     ? 'border-(--ui-stroke-secondary) bg-(--ui-main-surface-background) text-foreground'
                     : 'text-(--ui-text-secondary) hover:bg-(--ui-control-hover-background)'
                 )}
                 key={tab.id}
-                onClick={() => void run(() => bridge.activateTab(tab.id))}
+                onClick={() => {
+                  selectCreative(false)
+                  void run(() => bridge.activateTab(tab.id))
+                }}
                 type="button"
               >
                 {tab.loading ? (
@@ -430,10 +782,48 @@ export function BrowserView() {
                 </span>
               </button>
             ))}
+            {creativeTabOpen && (
+              <div className="flex h-8 shrink-0 items-center rounded-t-md border border-(--ui-stroke-secondary)">
+              <button
+                aria-label="Creative Workstation"
+                aria-selected={creativeActive}
+                className={cn(
+                  'flex h-8 shrink-0 items-center gap-1.5 rounded-t-md px-3 text-xs',
+                  creativeActive ? 'bg-(--ui-main-surface-background) text-foreground' : 'text-(--ui-text-secondary)'
+                )}
+                onClick={() => selectCreative(true)}
+                type="button"
+              >
+                <Codicon name="symbol-color" size="0.8rem" />
+                Creative Workstation
+              </button>
+              <button
+                aria-label="Fechar Creative Workstation"
+                className="rounded px-1.5 text-(--ui-text-secondary) hover:bg-(--ui-control-hover-background)"
+                onClick={() => {
+                  setCreativeTabOpen(false)
+                  selectCreative(false)
+                }}
+                title="Fechar Creative Workstation"
+                type="button"
+              ><Codicon name="close" size="0.75rem" /></button>
+              </div>
+            )}
           </div>
           <Button
+            aria-label="Abrir Creative Workstation"
+            onClick={() => selectCreative(true)}
+            size="sm"
+            variant="ghost"
+          >
+            Abrir Creative Workstation
+          </Button>
+          <Button
             aria-label="New browser tab"
-            onClick={() => void run(() => bridge.newTab())}
+            onClick={() => {
+              selectCreative(false)
+              void run(() => bridge.newTab())
+            }}
             size="icon-sm"
             variant="ghost"
           >
@@ -441,117 +831,30 @@ export function BrowserView() {
           </Button>
         </div>
 
-        <div className="flex h-10 items-center gap-1.5 px-2">
-          <Button
-            aria-label="Back"
-            disabled={!activeTab?.canGoBack}
-            onClick={() => void run(() => bridge.back())}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Codicon name="arrow-left" />
-          </Button>
-          <Button
-            aria-label="Forward"
-            disabled={!activeTab?.canGoForward}
-            onClick={() => void run(() => bridge.forward())}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Codicon name="arrow-right" />
-          </Button>
-          <Button
-            aria-label={activeTab?.loading ? 'Stop loading' : 'Reload'}
-            onClick={() => void run(() => (activeTab?.loading ? bridge.stop() : bridge.reload()))}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Codicon name={activeTab?.loading ? 'debug-stop' : 'refresh'} />
-          </Button>
-
-          <form className="min-w-0 flex-1" onSubmit={submitAddress}>
-            <input
-              className="h-7 w-full rounded-md border border-(--ui-stroke-secondary) bg-(--ui-input-background) px-2.5 font-mono text-[12px] outline-none focus:border-(--ui-stroke-primary)"
-              data-browser-address="true"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => setAddress(event.target.value)}
-              placeholder="Search or enter address"
-              value={address}
+        {!creativeActive && (
+          <>
+            <BrowserAddressBar
+              activeTab={activeTab}
+              address={address}
+              bridge={bridge}
+              run={run}
+              setAddress={setAddress}
+              state={state}
+              submitAddress={submitAddress}
             />
-          </form>
-
-          <div
-            className={cn(
-              'hidden items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium md:flex',
-              state.paused
-                ? 'border-amber-500/40 text-amber-400'
-                : state.controlOwner === 'human'
-                  ? 'border-sky-500/40 text-sky-400'
-                  : 'border-emerald-500/30 text-emerald-400'
-            )}
-            title={`Controller: ${state.controlReady ? 'ready' : 'offline'} · Profile: ${state.profilePath || 'initializing'}`}
-          >
-            <span className="size-1.5 rounded-full bg-current" />
-            {state.paused
-              ? 'Paused'
-              : state.controlOwner === 'human'
-                ? 'Human control'
-                : state.controlReady
-                  ? 'Agent ready'
-                  : 'Controller offline'}
-          </div>
-        </div>
-
-        <div className="flex min-h-8 flex-wrap items-center gap-1 border-t border-(--ui-stroke-tertiary) px-2 py-1">
-          {state.paused ? (
-            <Button onClick={() => void run(() => bridge.resume())} size="sm" variant="ghost">
-              <Codicon name="debug-continue" />
-              Resume
-            </Button>
-          ) : (
-            <Button onClick={() => void run(() => bridge.pause())} size="sm" variant="ghost">
-              <Codicon name="debug-pause" />
-              Pause
-            </Button>
-          )}
-          <Button onClick={() => void run(() => bridge.stop())} size="sm" variant="ghost">
-            <Codicon name="debug-stop" />
-            Stop
-          </Button>
-          <Button onClick={() => void run(() => bridge.focus())} size="sm" variant="ghost">
-            <Codicon name="target" />
-            Focus Browser
-          </Button>
-          {state.controlOwner === 'human' ? (
-            <Button onClick={() => void run(() => bridge.releaseControl())} size="sm" variant="ghost">
-              <Codicon name="robot" />
-              Release Control
-            </Button>
-          ) : (
-            <Button onClick={() => void run(() => bridge.takeControl())} size="sm" variant="ghost">
-              <Codicon name="person" />
-              Take Control
-            </Button>
-          )}
-          <Button aria-label="Transfer Viewport to Chat Right Rail" onClick={transferToChat} size="sm" variant="ghost">
-            <Codicon name="comment-discussion" />
-            Move to Chat
-          </Button>
-          {state.downloads && state.downloads.length > 0 && (
-            <Button
-              aria-label="Toggle Downloads Panel"
-              onClick={() => setShowDownloads(prev => !prev)}
-              size="sm"
-              variant={showDownloads ? 'secondary' : 'ghost'}
-            >
-              <Codicon name="cloud-download" />
-              Downloads ({state.downloads.length})
-            </Button>
-          )}
-          <span className="ml-auto hidden font-mono text-[10px] text-(--ui-text-quaternary) lg:block">
-            Electron Chromium · persistent profile · resources {resourceSnapshot?.resources.length ?? '—'} · cache{' '}
-            {cacheLabel(state.cacheBytes)}
-          </span>
-        </div>
+            <BrowserControlBar
+              adoptBusy={adoptBusy}
+              bridge={bridge}
+              onAdoptTab={handleAdoptTab}
+              resourceSnapshot={resourceSnapshot}
+              run={run}
+              setShowDownloads={setShowDownloads}
+              showDownloads={showDownloads}
+              state={state}
+              transferToChat={transferToChat}
+            />
+          </>
+        )}
       </div>
 
       {showDownloads && state.downloads && state.downloads.length > 0 && (
@@ -611,7 +914,7 @@ export function BrowserView() {
       )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <TaskRail
+        {!creativeActive && <TaskRail
           activeTaskId={activeTab?.ownerTaskId}
           onAuditTask={taskId => setAuditTaskId(prev => (prev === taskId ? null : taskId))}
           onClearParked={taskIds => void handleClearParked(taskIds)}
@@ -621,7 +924,7 @@ export function BrowserView() {
           onSelectTask={task => void handleSelectTask(task)}
           tabs={state.tabs}
           tasks={state.tasks}
-        />
+        />}
 
         {auditTaskId && <TaskJournalDrawer onClose={() => setAuditTaskId(null)} taskId={auditTaskId} />}
 
@@ -631,15 +934,15 @@ export function BrowserView() {
               React tree so it survives route changes and can keep running in the
               background. */}
           <div className="absolute inset-0" ref={hostRef} />
-          {state.attached && state.viewportHost && state.viewportHost !== 'hub' && (
-            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/90 px-3 py-1.5 text-xs font-medium text-black">
-              <span>Live viewport is currently active in Chat ({state.viewportHost})</span>
-              <Button onClick={() => void transferToHub()} size="xs" variant="secondary">
-                Bring Viewport to Hub
-              </Button>
-            </div>
+          <CreativeTabPanel active={creativeActive} opened={creativeOpened} />
+          {!creativeActive && (
+            <ViewportNotice
+              attached={state.attached}
+              onTransfer={() => void transferToHub()}
+              viewportHost={state.viewportHost}
+            />
           )}
-          {!state.ready && (
+          {!creativeActive && !state.ready && (
             <div className="absolute inset-0 grid place-items-center text-xs text-(--ui-text-tertiary)">
               Starting Hermes Browser…
             </div>

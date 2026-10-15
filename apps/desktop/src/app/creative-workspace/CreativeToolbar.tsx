@@ -60,27 +60,25 @@ export function CreativeToolbar() {
           value={project?.name ?? ''} />
       </label>
       <div className="creative-toolbar-group">
-        <button className="creative-toolbar-btn" onClick={() => addLayer('text')} title="Add text">+ Text</button>
-        <button className="creative-toolbar-btn" onClick={() => addLayer('shape')} title="Add rectangle">+ Rectangle</button>
-        <button className="creative-toolbar-btn" disabled={!selection.selectedLayerIds.size}
+        <button aria-label="Add text" className="creative-toolbar-btn" onClick={() => addLayer('text')}>+ Text</button>
+        <button aria-label="Add rectangle" className="creative-toolbar-btn" onClick={() => addLayer('shape')}>+ Rectangle</button>
+        <button aria-label="Remove selected layer" className="creative-toolbar-btn" disabled={!selection.selectedLayerIds.size}
           onClick={() => {
             const id = selection.selectedLayerIds.values().next().value
 
             if (id) {applyEdit({ type: 'removeLayer', id })}
-          }}
-          title="Remove selected layer">Remove layer</button>
-        <button className="creative-toolbar-btn" disabled={!selection.selectedLayerIds.size}
-          onClick={addKeyframe} title="Add opacity keyframe">+ Keyframe</button>
+          }}>Remove layer</button>
+        <button aria-label="Add opacity keyframe" className="creative-toolbar-btn" disabled={!selection.selectedLayerIds.size}
+          onClick={addKeyframe}>+ Keyframe</button>
       </div>
       <div className="creative-toolbar-group">
-        <button className="creative-toolbar-btn" disabled={!isPlaying && !playheadTime}
-          onClick={() => { setIsPlaying(false); setPlayheadTime(0) }} title="Stop">⏹</button>
-        <button className="creative-toolbar-btn" onClick={() => setPlayheadTime(clampTime(playheadTime - 1 / fps))}
-          title="Previous frame">⏮</button>
-        <button className="creative-toolbar-btn" onClick={() => setIsPlaying(!isPlaying)}
-          title={isPlaying ? 'Pause' : 'Play'}>{isPlaying ? '⏸' : '▶'}</button>
-        <button className="creative-toolbar-btn" onClick={() => setPlayheadTime(clampTime(playheadTime + 1 / fps))}
-          title="Next frame">⏭</button>
+        <button aria-label="Stop" className="creative-toolbar-btn" disabled={!isPlaying && !playheadTime}
+          onClick={() => { setIsPlaying(false); setPlayheadTime(0) }}>⏹</button>
+        <button aria-label="Previous frame" className="creative-toolbar-btn" onClick={() => setPlayheadTime(clampTime(playheadTime - 1 / fps))}>⏮</button>
+        <button aria-label={isPlaying ? 'Pause' : 'Play'} className="creative-toolbar-btn" onClick={() => setIsPlaying(!isPlaying)}>
+          {isPlaying ? '⏸' : '▶'}
+        </button>
+        <button aria-label="Next frame" className="creative-toolbar-btn" onClick={() => setPlayheadTime(clampTime(playheadTime + 1 / fps))}>⏭</button>
         <span className="creative-toolbar-time">{playheadTime.toFixed(2)} / {duration}s</span>
         <input aria-label="Seek preview" max={duration} min={0} onChange={e => setPlayheadTime(clampTime(Number(e.target.value)))}
           step={1/fps} type="range" value={playheadTime} />
@@ -96,10 +94,10 @@ export function CreativeToolbar() {
         </select>
       </div>
       <div className="creative-toolbar-group">
-        <button className="creative-toolbar-btn" disabled={!canUndo} onClick={undo} title="Undo">↶</button>
-        <button className="creative-toolbar-btn" disabled={!canRedo} onClick={redo} title="Redo">↷</button>
-        <button className="creative-toolbar-btn" onClick={save} title="Save editable JSON">💾 Save</button>
-        <button className="creative-toolbar-btn" onClick={exportFrame} title="Export current SVG frame">📤 SVG</button>
+        <button aria-label="Undo" className="creative-toolbar-btn" disabled={!canUndo} onClick={undo}>↶</button>
+        <button aria-label="Redo" className="creative-toolbar-btn" disabled={!canRedo} onClick={redo}>↷</button>
+        <button aria-label="Save editable JSON" className="creative-toolbar-btn" onClick={save}>💾 Save</button>
+        <button aria-label="Export current SVG frame" className="creative-toolbar-btn" onClick={exportFrame}>📤 SVG</button>
       </div>
     </div>
   )

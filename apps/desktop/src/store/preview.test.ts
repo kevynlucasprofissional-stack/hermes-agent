@@ -28,6 +28,7 @@ import {
   newBrowserTab,
   noteBrowserPage,
   openPreview,
+  openWorkstationBrowserPreview,
   previewTabId,
   previewTabIdsVisibleTo,
   previewTabsFor,
@@ -82,6 +83,12 @@ describe('preview store', () => {
     unsubscribe()
 
     expect(statuses).toEqual(['idle', 'running'])
+  })
+
+  it('links a transferred Workstation Browser preview to the new chat, not the old active chat', () => {
+    openWorkstationBrowserPreview({ fromHub: true, sessionId: 'stored-new-chat' })
+    const browserTab = $previewTabs.get().find(tab => tab.target.source === 'workstation-browser')
+    expect(browserTab?.sessionId).toBe('stored-new-chat')
   })
 
   it('opens the pane and fronts the new tab', () => {

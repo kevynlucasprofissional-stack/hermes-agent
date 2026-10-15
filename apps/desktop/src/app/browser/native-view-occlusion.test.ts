@@ -140,6 +140,18 @@ describe('Native View Occlusion', () => {
     expect(setVisible).not.toHaveBeenCalledWith(true, 'chat')
   })
 
+  it('does not resurrect a native view when an owner unmounts without an overlay', async () => {
+    const setVisible = vi.fn().mockResolvedValue({})
+    const bridge = { setVisible } as unknown as WorkstationBrowserBridge
+    const { renderHook, waitFor } = await import('@testing-library/react')
+    const { unmount } = renderHook(() => useNativeViewOcclusion(bridge, 'chat'))
+
+    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(true, 'chat'))
+    setVisible.mockClear()
+    unmount()
+    expect(setVisible).not.toHaveBeenCalledWith(true, 'chat')
+  })
+
   it('parks the view for an overlay that is already open when the pane mounts', async () => {
     const setVisible = vi.fn().mockResolvedValue({})
     const bridge = { setVisible } as unknown as WorkstationBrowserBridge

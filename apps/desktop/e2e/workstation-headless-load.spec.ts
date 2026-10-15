@@ -73,7 +73,7 @@ interface WorkstationBridge {
 
 interface DesktopBridgeWindow {
   hermesDesktop: {
-    api: <T>(request: { path: string; timeoutMs?: number }) => Promise<T>
+    api: <T>(request: { path: string; timeoutMs?: number; connectionId?: string }) => Promise<T>
     workstationBrowser: WorkstationBridge
   }
 }
@@ -162,6 +162,24 @@ async function startDeterministicPageServer(): Promise<void> {
         <button type="button" data-testid="commit-once" onclick="fetch('/p0-native-effect-commit', {method:'POST'}).then(() => { document.getElementById('effect-state').textContent = 'COMMITTED'; })">Commit external side effect</button>
         <output id="effect-state">PENDING external effect. This page is intentionally deterministic and local.</output>
         </body></html>`)
+
+      return
+    }
+
+    if (taskId.startsWith('hwh-form')) {
+      response.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store'
+      })
+      response.end(`<!doctype html><html><head><title>HWH Form ${taskId}</title></head><body>
+        <main data-task="${taskId}">
+          <h1>HWH Form ${taskId}</h1>
+          <form onsubmit="return false;">
+            <label for="form-input">Input ${taskId}</label>
+            <input id="form-input" name="field_${taskId}" value="initial_${taskId}" />
+          </form>
+        </main>
+      </body></html>`)
 
       return
     }
@@ -264,7 +282,8 @@ async function browserAction(taskId: string, sessionId: string, url: string): Pr
 
 async function nativeViewportSnapshot(app: MockBackendFixture['app']): Promise<NativeViewportSnapshot | null> {
   return app.evaluate(({ BrowserWindow }): NativeViewportSnapshot | null => {
-    const window = BrowserWindow.getAllWindows()[0]
+    const allWindows = BrowserWindow.getAllWindows()
+    const window = allWindows.find(w => !w.isDestroyed() && w.contentView.children.length > 0) || allWindows[0]
 
     if (!window || window.isDestroyed()) {
       return null
@@ -359,6 +378,25 @@ async function createRealChat(fixture: MockBackendFixture, prompt: string): Prom
         return { id: session.id, label: session.title || session.preview || expected }
       }, prompt)
     )
+}
+
+function activeViewportChildren(snapshot: NativeViewportSnapshot | null): NativeViewportChild[] {
+  const content = snapshot?.contentBounds
+
+  if (!content) {
+    return []
+  }
+
+  return (snapshot?.children ?? []).filter(child => {
+    return (
+      child.bounds.x >= 0 &&
+      child.bounds.y >= 0 &&
+      child.bounds.width > 0 &&
+      child.bounds.height > 0 &&
+      child.bounds.x + child.bounds.width <= content.width &&
+      child.bounds.y + child.bounds.height <= content.height
+    )
+  })
 }
 
 function activeViewportChild(snapshot: NativeViewportSnapshot | null): NativeViewportChild {
@@ -1031,7 +1069,7 @@ test('P0: Browser UI Take Control and Release Control buttons are actually click
 
   // Exercise actual React controls and Electron hit testing, not simulated
   // state or direct bridge calls.
-  await fixture.page.getByRole('button', { name: 'Browser', exact: true }).click()
+  await fixture.page.getByRole('button', { name: /^(Workstation|Browser)$/ }).click()
   const take = fixture.page.getByRole('button', { name: 'Take Control', exact: true })
   await expect(take).toBeVisible()
   await take.click()
@@ -1144,7 +1182,7 @@ test('P0: native UI acknowledges canonical uncertain Browser handoff without rep
     expect.objectContaining({ handoff_id: reviewId, session_id: session.id })
   ]))
 
-  await fixture.page.getByRole('button', { name: 'Browser', exact: true }).click()
+  await fixture.page.getByRole('button', { name: /^(Workstation|Browser)$/ }).click()
   const transfer = fixture.page.getByRole('button', { name: 'Transfer Viewport to Chat Right Rail' })
   await expect(transfer).toBeVisible()
   await transfer.click()
@@ -1181,6 +1219,286 @@ test('P0: native UI acknowledges canonical uncertain Browser handoff without rep
     pageBaseUrl + '/p0-review-unrelated')
 
   expect(another.result?.title).toBe('H013 p0-review-unrelated')
+})
+
+test('HWH-MVP: Creative Workstation internal tab, web tab switching, and manual tab adoption into session', async () => {
+  if (!fixture || !controller) {
+    throw new Error('HWH fixture is not ready')
+  }
+
+  // 1. Navigate to Workstation Hub
+  await fixture.page.getByRole('button', { name: /^(Workstation|Browser)$/ }).click()
+
+  // 2. Open Creative Workstation via button
+  const openCreativeBtn = fixture.page.getByRole('button', { name: 'Abrir Creative Workstation' })
+  await expect(openCreativeBtn).toBeVisible()
+  await openCreativeBtn.click()
+
+  // Verify internal Creative Workstation tab is present
+  const creativeTab = fixture.page.getByRole('button', { name: 'Creative Workstation', exact: true })
+  await expect(creativeTab).toBeVisible()
+  // A new user can work immediately without a pre-existing JSON project.
+  await expect(fixture.page.getByRole('button', { name: 'Add rectangle' })).toBeVisible()
+  await expect(fixture.page.getByRole('button', { name: 'Importar assets' })).toBeVisible()
+  // Closing Creative must reveal the original native Chromium viewport.
+  await fixture.page.getByRole('button', { name: 'Fechar Creative Workstation' }).click()
+  await expect(creativeTab).toHaveCount(0)
+
+  // 3. Open a new web tab and verify web address bar is visible
+  const newTabBtn = fixture.page.getByRole('button', { name: 'New browser tab' })
+  await newTabBtn.click()
+
+  const addressInput = fixture.page.locator('input[data-browser-address="true"]')
+  await expect(addressInput).toBeVisible()
+
+  // 4. Verify "Levar para sessão" button is present
+  const adoptBtn = fixture.page.getByRole('button', { name: 'Levar para sessão' })
+  await expect(adoptBtn).toBeVisible()
+
+  // 5. Adopt tab via bridge and verify WebContentsView and BrowserTask association
+  const adoptionResult = await fixture.page.evaluate(async () => {
+    const bridge = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser as
+      WorkstationBridge & { adoptTab: (tabId: string, sessionId: string, taskId?: string) => Promise<any> }
+
+    const state = await bridge.ensure()
+    const activeTab = (state.tabs as any[]).find((t: any) => t.id === state.activeTabId) || (state.tabs as any[])[0]
+
+    if (!activeTab) {return null}
+
+    return bridge.adoptTab(activeTab.id, 'session-e2e-mvp-1', 'session-e2e-mvp-1')
+  })
+
+  expect(adoptionResult).toBeTruthy()
+  expect(adoptionResult.success).toBe(true)
+  expect(adoptionResult.sessionId).toBe('session-e2e-mvp-1')
+  expect(adoptionResult.taskId).toBe('session-e2e-mvp-1')
+
+  // 6. Verify autonomous agent writes are blocked under human lease
+  const denied = await fetch(`${controller.url}/v1/action`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${controller.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_navigate',
+      task_id: adoptionResult.taskId,
+      session_id: 'session-e2e-mvp-1',
+      arguments: { url: `${pageBaseUrl}/p0-adopt-human-denied` }
+    })
+  })
+
+  expect(denied.status).toBe(409)
+  expect(((await denied.json()) as { error_code?: string }).error_code).toBe('USER_CONTROL_ACTIVE')
+
+  // 7. Explicit release allows resumed agent action
+  await fixture.page.evaluate(async (taskId: string) => {
+    const bridge = (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser as
+      WorkstationBridge & { releaseControl: (taskId?: string) => Promise<unknown> }
+
+    await bridge.releaseControl(taskId)
+  }, adoptionResult.taskId)
+
+  const allowed = await fetch(`${controller.url}/v1/action`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${controller.token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_navigate',
+      task_id: adoptionResult.taskId,
+      session_id: 'session-e2e-mvp-1',
+      arguments: { url: `${pageBaseUrl}/p0-adopt-resumed` }
+    })
+  })
+
+  expect(allowed.status).toBe(200)
+})
+
+test('HWH-OVERLAY: native Browser view detaches on New session and restores without state loss or cross-session leak', async () => {
+  test.setTimeout(180_000)
+
+  if (!fixture || !controller) {
+    throw new Error('HWH-OVERLAY fixture was not initialized')
+  }
+
+  // 1. Create and open session A with native Browser
+  const sessionA = await createRealChat(fixture, 'HWH-OVERLAY Chat A')
+  const urlA = `${pageBaseUrl}/hwh-form-a`
+
+  await openStoredSessionByTitle(fixture.page, sessionA.label, 'HWH-OVERLAY Chat A')
+  await browserAction('hwh-overlay-task-a', sessionA.id, urlA)
+  await expect.poll(async () => activeViewportChildren(await nativeViewportSnapshot(fixture!.app))[0]?.url, { timeout: 30_000 }).toBe(urlA)
+
+  // 2. Local fixture page with form is loaded; register WebContents ID and modify form field
+  const initialSnapshot = await nativeViewportSnapshot(fixture.app)
+  const childA = activeViewportChild(initialSnapshot)
+  const webContentsIdA = childA.webContentsId
+
+  expect(webContentsIdA).toBeTruthy()
+
+  // 3. User modifies form input
+  await fixture.app.evaluate(async ({ webContents }, id) => {
+    const wc = webContents.fromId(id!)
+
+    if (!wc) {
+      throw new Error(`WebContents ${id} not found`)
+    }
+
+    await wc.executeJavaScript(`
+      const input = document.getElementById('form-input');
+      if (input) {
+        input.value = 'user-typed-value-session-a';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    `)
+  }, webContentsIdA)
+
+  const valueA = await fixture.app.evaluate(async ({ webContents }, id) => {
+    const wc = webContents.fromId(id!)
+
+    return wc?.executeJavaScript(`document.getElementById('form-input')?.value`)
+  }, webContentsIdA)
+
+  expect(valueA).toBe('user-typed-value-session-a')
+
+  // 4. Click "New session" to open B
+  const newSessionBtn = fixture.page.locator('[data-slot="sidebar"] button').filter({ hasText: 'New session' }).first()
+
+  await newSessionBtn.waitFor({ state: 'visible', timeout: 30_000 })
+  await newSessionBtn.click()
+
+  const composer = fixture.page.locator('[contenteditable="true"]').first()
+
+  await expect(composer).toBeVisible({ timeout: 20_000 })
+  await composer.click()
+  await composer.fill('Hello from interactive fresh session B')
+
+  // 5. Verify WebContentsView of session A was removed from visible children of BrowserWindow
+  await expect.poll(async () => {
+    const snap = await nativeViewportSnapshot(fixture!.app)
+
+    return activeViewportChildren(snap).length === 0 && !snap?.children.some(c => c.webContentsId === webContentsIdA)
+  }, { timeout: 20_000 }).toBe(true)
+
+  // 6. Wait and check again to detect late re-attachment
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  const delayedSnap = await nativeViewportSnapshot(fixture.app)
+
+  expect(activeViewportChildren(delayedSnap)).toHaveLength(0)
+  expect(delayedSnap?.children.some(c => c.webContentsId === webContentsIdA)).toBe(false)
+
+  // 7. Click New session again and verify detachment remains solid
+  await newSessionBtn.click()
+  await expect(composer).toBeVisible({ timeout: 20_000 })
+  await new Promise(resolve => setTimeout(resolve, 1500))
+  const secondDelayedSnap = await nativeViewportSnapshot(fixture.app)
+
+  expect(activeViewportChildren(secondDelayedSnap)).toHaveLength(0)
+  expect(secondDelayedSnap?.children.some(c => c.webContentsId === webContentsIdA)).toBe(false)
+
+  // 8. Return to session A
+  await openStoredSessionByTitle(fixture.page, sessionA.label, 'HWH-OVERLAY Chat A')
+
+  // 9. Verify page restored with same webContentsId, URL, and input value
+  await expect.poll(async () => {
+    const snap = await nativeViewportSnapshot(fixture!.app)
+    const child = activeViewportChildren(snap)[0]
+
+    return child?.webContentsId === webContentsIdA && child?.url === urlA
+  }, { timeout: 20_000 }).toBe(true)
+
+  const restoredValueA = await fixture.app.evaluate(async ({ webContents }, id) => {
+    const wc = webContents.fromId(id!)
+
+    return wc?.executeJavaScript(`document.getElementById('form-input')?.value`)
+  }, webContentsIdA)
+
+  expect(restoredValueA).toBe('user-typed-value-session-a')
+
+  const evidenceDir = path.join(fixture.sandbox.root, 'workstation')
+
+  await fixture.page.screenshot({ path: path.join(evidenceDir, 'hwh-overlay-session-a-restored.png') })
+
+  // 10. Switch between two sessions that both have Browser open, in both directions
+  const sessionB = await createRealChat(fixture, 'HWH-OVERLAY Chat B')
+  const urlB = `${pageBaseUrl}/hwh-form-b`
+
+  await openStoredSessionByTitle(fixture.page, sessionB.label, 'HWH-OVERLAY Chat B')
+  await browserAction('hwh-overlay-task-b', sessionB.id, urlB)
+
+  await expect.poll(async () => {
+    const snap = await nativeViewportSnapshot(fixture!.app)
+    const child = activeViewportChildren(snap)[0]
+
+    return child?.url === urlB
+  }, { timeout: 20_000 }).toBe(true)
+
+  const snapB = await nativeViewportSnapshot(fixture.app)
+  const childB = activeViewportChildren(snapB)[0]
+  const webContentsIdB = childB.webContentsId
+
+  expect(webContentsIdB).toBeTruthy()
+  expect(webContentsIdB).not.toBe(webContentsIdA)
+
+  await fixture.app.evaluate(async ({ webContents }, id) => {
+    const wc = webContents.fromId(id!)
+
+    await wc.executeJavaScript(`
+      const input = document.getElementById('form-input');
+      if (input) {
+        input.value = 'user-typed-value-session-b';
+      }
+    `)
+  }, webContentsIdB)
+
+  // Direction 1: Switch B -> A
+  await openStoredSessionByTitle(fixture.page, sessionA.label, 'HWH-OVERLAY Chat A')
+  await expect.poll(async () => {
+    const snap = await nativeViewportSnapshot(fixture!.app)
+    const child = activeViewportChildren(snap)[0]
+
+    return child?.webContentsId === webContentsIdA && child?.url === urlA
+  }, { timeout: 20_000 }).toBe(true)
+
+  const snapBackA = await nativeViewportSnapshot(fixture.app)
+
+  expect(snapBackA?.children.some(c => c.webContentsId === webContentsIdB)).toBe(false)
+
+  const valueAfterSwitchA = await fixture.app.evaluate(async ({ webContents }, id) => {
+    const wc = webContents.fromId(id!)
+
+    return wc?.executeJavaScript(`document.getElementById('form-input')?.value`)
+  }, webContentsIdA)
+
+  expect(valueAfterSwitchA).toBe('user-typed-value-session-a')
+
+  // Direction 2: Switch A -> B
+  await openStoredSessionByTitle(fixture.page, sessionB.label, 'HWH-OVERLAY Chat B')
+  await expect.poll(async () => {
+    const snap = await nativeViewportSnapshot(fixture!.app)
+    const child = activeViewportChildren(snap)[0]
+
+    return child?.webContentsId === webContentsIdB && child?.url === urlB
+  }, { timeout: 20_000 }).toBe(true)
+
+  const snapBackB = await nativeViewportSnapshot(fixture.app)
+
+  expect(snapBackB?.children.some(c => c.webContentsId === webContentsIdA)).toBe(false)
+
+  const valueAfterSwitchB = await fixture.app.evaluate(async ({ webContents }, id) => {
+    const wc = webContents.fromId(id!)
+
+    return wc?.executeJavaScript(`document.getElementById('form-input')?.value`)
+  }, webContentsIdB)
+
+  expect(valueAfterSwitchB).toBe('user-typed-value-session-b')
+
+  await fixture.page.screenshot({ path: path.join(evidenceDir, 'hwh-overlay-session-b.png') })
+
+  // Clean up tasks
+  for (const taskId of ['hwh-overlay-task-a', 'hwh-overlay-task-b']) {
+    await fixture.page.evaluate(
+      id => (window as unknown as DesktopBridgeWindow).hermesDesktop.workstationBrowser.destroyTask(id),
+      taskId
+    )
+  }
 })
 
 test('P0: released and active human leases recover safely across cold Electron restarts', async () => {

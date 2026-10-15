@@ -137,11 +137,20 @@ export interface WorkstationBrowserBridge {
   attach: (
     bounds: WorkstationBrowserBounds,
     host?: string,
-    preferredTaskId?: string
+    preferredTaskId?: string,
+    ownerId?: string
   ) => Promise<WorkstationBrowserState>
-  setBounds: (bounds: WorkstationBrowserBounds, expectedHost?: string) => Promise<WorkstationBrowserState>
-  detach: (expectedHost?: string) => Promise<WorkstationBrowserState>
-  setVisible: (visible: boolean, expectedHost?: string) => Promise<WorkstationBrowserState>
+  setBounds: (
+    bounds: WorkstationBrowserBounds,
+    expectedHost?: string,
+    expectedOwnerId?: string
+  ) => Promise<WorkstationBrowserState>
+  detach: (expectedHost?: string, expectedOwnerId?: string) => Promise<WorkstationBrowserState>
+  setVisible: (
+    visible: boolean,
+    expectedHost?: string,
+    expectedOwnerId?: string
+  ) => Promise<WorkstationBrowserState>
   clearError: () => Promise<WorkstationBrowserState>
   transferViewport: (targetHost: string, bounds: WorkstationBrowserBounds) => Promise<WorkstationBrowserState>
   listTasks: () => Promise<BrowserTask[]>
@@ -158,8 +167,17 @@ export interface WorkstationBrowserBridge {
   expireHumanControl: (taskId?: string) => Promise<WorkstationBrowserState>
   cleanupCache: (force?: boolean) => Promise<WorkstationBrowserState>
   getTaskJournal: (taskId: string) => Promise<TaskTimelineEvent[]>
+  adoptTab: (tabId: string, sessionId: string, taskId?: string) => Promise<TabAdoptionResult>
   onState: (callback: (state: WorkstationBrowserState) => void) => () => void
   onOpenChatPreview?: (callback: (data: { url: string; taskId?: string }) => void) => () => void
+}
+
+export interface TabAdoptionResult {
+  sessionId: string
+  state: WorkstationBrowserState
+  success: boolean
+  tabId: string
+  taskId: string
 }
 
 export interface TaskTimelineEvent {

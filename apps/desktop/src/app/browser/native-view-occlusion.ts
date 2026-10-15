@@ -18,6 +18,7 @@ export interface NativeViewGate {
    * of whatever is actually on screen there.
    */
   enabled?: boolean
+  ownerId?: string
   /** Bump to re-assert the current decision — `attach()` forces the view back on. */
   revision?: number
 }
@@ -41,6 +42,7 @@ export function useNativeViewOcclusion(
   gate?: NativeViewGate
 ): NativeViewOcclusion {
   const enabled = gate?.enabled ?? true
+  const ownerId = gate?.ownerId
   const revision = gate?.revision ?? 0
   const [occluded, setOccluded] = useState(() => isNativeViewOccluded(document))
 
@@ -49,8 +51,12 @@ export function useNativeViewOcclusion(
       return
     }
 
-    void bridge.setVisible(enabled && !isNativeViewOccluded(document), host)
-  }, [bridge, enabled, host])
+    if (ownerId !== undefined) {
+      void bridge.setVisible(enabled && !isNativeViewOccluded(document), host, ownerId)
+    } else {
+      void bridge.setVisible(enabled && !isNativeViewOccluded(document), host)
+    }
+  }, [bridge, enabled, host, ownerId])
 
   // Seed from the document: an overlay can already be open when the pane mounts
   // (switching tabs while a dialog is up) and the observer only fires on the
@@ -90,16 +96,8 @@ export function useNativeViewOcclusion(
     assertVisible()
   }, [assertVisible, occluded, revision])
 
-  // Hand the viewport back on the way out, unless something is still covering
-  // it — the surface that replaces this pane owns visibility from then on.
-  useEffect(
-    () => () => {
-      if (bridge?.setVisible && !isNativeViewOccluded(document)) {
-        void bridge.setVisible(true, host)
-      }
-    },
-    [bridge, host]
-  )
+  // The owning surface detaches or parks the native child on transition.
+  // Unmount MUST NOT reveal it: that would resurrect Chromium above a new chat.
 
   return { assertVisible, occluded }
 }
