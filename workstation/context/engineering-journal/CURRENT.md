@@ -1,5 +1,16 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-16 — OL-MVP P1C: teste integrado nativo é o único próximo investimento (planejado, não executado)
+
+- **Recebido:** log do implementador e decisões OL-MVP reanexadas; PR #94 atualizado em `27b6376535dcfb92025fd4d468411feb0d7d3a34`, com implementação P1B read-only. Relatório: 30 casos focais pelas seis suítes, 53 segurança, pre-commit/ruff e push; **não foram reexecutados nesta revisão**, pois desktop do usuário está offline.
+- **Corrigida classificação do teste:** `test_ol_mvp_p1b_cards_workitems.py` possui três WorkItems persistidos e candidata minerada, porém **todos os itens saem de `worker` com `self.dispatch` sintético**. O teste não percorre chat/Gateway nativo nem faz adoção por `RunLocalAdopter`; docstring foi corrigida na branch P1C para não sobredeclarar prova.
+- **Riscos reais em HEAD P1B:** `canonical_source_for_readback` pode sintetizar op_id/ref/transition com falta de estado canônico e reaproveitar refs `_last_*`; `accept_work_item` permite fallback para último sample ou nova amostra sintética. São pontos de verificação causal prioritários antes de medir sucesso real. Sem fragilizar DIRECT, lease ou autorização.
+- **Patch/deliverable desta revisão:** branch P1C stacked no PR #94 com `P1C_NATIVE_DOGFOOD_PLAN.md`, `P1C_EXACT_PATCH_MAP.md`, `P1C_IMPLEMENTER_PROMPT.md`, template de recibo e validador estático `patches/P1C_evidence_gate.py` + seis testes. Testes locais no contêiner com implementação equivalente: 6/6 PASS, py_compile PASS; código remoto precisa ser executado no ambiente do projeto para se qualificar. O validador NÃO autentica refs nem autoriza runtime.
+- **Fase real:** P1.0 PASS Electron; P1B implementação/testes PASS **segundo relatório**; P1C gateway/TaskRun real NOT_RUN; compilado em Electron NOT_PROVED; reutilização entre TaskRuns NOT_PROVED; LLM real/custo `null`; Stage A/DIRECT/H-079 HOLD salvo autorização humana correspondente. Sem merge main.
+- **Próxima IA:** executar somente [prompt P1C](../ol-mvp-2026-10-16/P1C_IMPLEMENTER_PROMPT.md). Depois de uma prova real, avançar P2; sem hardening lateral/novos motores.
+
+
+
 ## 2026-10-16 — OL-MVP P1B: saída read-only no Compiler (PREPARADO / Stage A HOLD)
 
 - Evidência recebida e inspecionada no GitHub PR #93 HEAD `6e1443079e`: recibo `workstation/context/ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json`. PASS Electron nativo BrowserTask/Chromium, 3 cartões, extração tipada e leitura independente `id/list/title/description`, E2E 1/1 PASS 21,8s. Aviso de build dirty; **nenhuma TaskRun canônica**.
