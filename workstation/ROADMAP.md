@@ -1,5 +1,17 @@
 # Workstation roadmap
 
+## 2026-10-16 — OL-MVP P1B: VERIFICAR RESULTADO DE LEITURA → COMPILAR (PRIORIDADE REAL, 80/20)
+
+**P1.0 APROVADO:** relatório factual no `evidence/P1_NATIVE_RESULT_20261016.json` (commit `6e1443079e` do PR #93): Electron/Chromium nativo, extração tipada e readback DOM independente de 3 cartões, E2E **1/1 PASS 21,8s**. Trata-se de UMA ferramenta lendo 3 cards numa fixture loopback, não de 3 WorkItems em TaskRun canônica. Build dirty warning; sem release. Chamadas LLM/tokens/custo desconhecidos.
+
+**P1.1 HOLD focal:** saída `browser_extract_items` não projeta resultado semântico aceito no `TransitionSample`; inferência e segmentação exigem delta, que uma leitura não produz; `ExperienceCorpus.accept_run` fecha no término da Run e seu readback especial só aceita navegação; `RunLocalAdopter` não admite `browser_extract_items` em `_SUPPORTED/_READBACK`. **Não voltar a boot, navegador ou hardening geral.** Resolver uma única vertical read-only com owner e evidência independente; primeiro 3 WorkItems separados, depois output schema aceito, candidate, run-local, outra TaskRun.
+
+**P1B código proposto, NÃO runtime:** `context/ol-mvp-2026-10-16/patches/P1B_read_output_contract.py` + 5 testes unittest isolados PASS; aplica somente após autorização Stage A. Não importa no runtime, não conclui compilação. [Plano](context/ol-mvp-2026-10-16/P1B_OUTPUT_BRIDGE_PLAN.md) · [Patch/mapa](context/ol-mvp-2026-10-16/P1B_PATCH_INSTALL.md) · [Prompt IA](context/ol-mvp-2026-10-16/P1B_IMPLEMENTER_PROMPT.md).
+
+**Foco:** conclusão da tarefa é soberana; evidência independentemente vinculada a owner/TaskRun; candidate não implica promoção nem DIRECT; sem efeitos mutantes no piloto. **GO** para P2 memória/seleção apenas após prova honesta de pelo menos uma adoção em TaskRun real ou única dependência externa de autorização isolada com restante comprovado; enquanto faltar ponte, HOLD. O modelo arquitetural de 4 ImprovementRuns, orçamento global do usuário, telemetria separada, versão global otimista e seleção determinístico→BM25/embeddings→LAYA→LLM permanece aprovado, mas fora deste PR.
+
+
+
 ## 2026-10-16 — Evidência OL-MVP: P1.0 PASS; P1.1/P1.2 HOLD
 
 **P1.0 PASS:** build desktop passou (Vite: 40,74 s), E2E focal Electron passou 1/1 em 21,8 s e checagem TypeScript focal passou. O teste verificou três cartões loopback com `browser_extract_items`, snapshot e readback DOM independente via `webContents` de teste. Recibo e provenance: [P1_NATIVE_RESULT_20261016.json](context/ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
