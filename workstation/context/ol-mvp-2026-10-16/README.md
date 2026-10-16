@@ -1,5 +1,15 @@
 # OL-MVP — Índice de execução (2026-10-16)
 
+## PRIORIDADE ATUAL (16/10/2026): P1B — leitura verificada → capacidade executável
+
+**P1.0 Browser nativo já PASS** no PR #93 `6e1443079e`, E2E 1/1 em 21,8s. Três cartões obtidos numa ação `browser_extract_items` e verificados por leitura DOM independente; sem TaskRun/learning real. Não investir mais em boot/fixture.
+
+**A IA deve começar por [P1B_IMPLEMENTER_PROMPT.md](P1B_IMPLEMENTER_PROMPT.md)**, consultar [P1B_OUTPUT_BRIDGE_PLAN.md](P1B_OUTPUT_BRIDGE_PLAN.md) para estado causal, [P1B_PATCH_INSTALL.md](P1B_PATCH_INSTALL.md) para locais exatos e `patches/P1B_read_output_contract.py` + teste para código puro preparado e validado em isolamento (5 PASS).
+
+P1.1 ainda HOLD. Stage A pendente: patch não instalado no runtime, nenhuma política DIRECT alterada, sem merge main. Os antigos P1_*.md são históricos e foram preservados por rastreabilidade.
+
+
+
 **AGORA: P1 Native Browser Dogfood (80/20).** P0 Python foi demonstrado em fixtures; P1 prova execução real Chromium/BrowserTask e depois Experience Compiler dentro de uma TaskRun. A meta é qualidade *decente e verificada* em um fluxo, não hardening de todos os sistemas.
 
 **A IA implementadora deve abrir APENAS estes 3 documentos e executar:**
