@@ -1,5 +1,9 @@
 # Current State
 
+## 2026-10-16 — One-Click regression KI-044 / D-046 (documentation-only)
+Inspeção da `main@d2ab172a43b1d4719dbf9572078fb4b5fda5da0c` e log do usuário: upstream Python 3.14/Node/npm/Git saudável, `uv pip install -e .` e `npm ci` concluídos, `hermes_cli` importado; dependência gate falha tanto no Check quanto no Record com `Checked 77 packages...`, abortando antes do Doctor/desktop. Hipótese PowerShell 5.1 `stderr` + `ErrorActionPreference=Stop` é **code-grounded mas NATIVE RED ainda pendente**. Fingerprint composto que reinstala Python + Node mesmo para drift de um só domínio é defeito arquitetural confirmado na fonte. D-046 define P0 stderr exit status e P1 split health/repair, KI-044 acompanha. [Pacote completo de código DRAFT](oneclick-bootstrap-2026-10-16/README.md) e [prompt](oneclick-bootstrap-2026-10-16/IMPLEMENTER_PROMPT.md). Nenhuma alteração ao runtime/prod ocorreu nesta entrega documental; **NOT WINDOWS-QUALIFIED / NOT RELEASE QUALIFIED**, H-079 e CI exato em aberto. Sem confundir 39 npm vulnerabilities com root cause.
+
+
 ## 2026-10-12 — Fork CI cost containment and Stage A qualification
 
 For `kevynlucasprofissional-stack/hermes-agent`, GitHub API listed 57 workflow definitions before this settings change. The authorized reversible settings update disabled 11 inherited workflows; the fork-owned Workstation CI/Browser workflows and the named targeted/security workflows remain active. That settings operation did not edit workflow files. Later local, uncommitted YAML edits narrowed the Ubuntu lane and made the owned Windows lane manual-only; no Actions run was started, and neither source change is qualification evidence. The exact IDs, event scopes, and fork lane contract are in [CI_COST_CONTROL.md](CI_COST_CONTROL.md).
