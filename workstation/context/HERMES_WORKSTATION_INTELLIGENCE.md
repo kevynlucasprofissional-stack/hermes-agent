@@ -1,5 +1,11 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-16 — One-Click: separar readiness, reparo e inicialização (D-046, KI-044)
+**Inteligência de produto, não qualificação de runtime.** Evidência trazida de Windows 11: upstream saudável e pulado; Python 3.14/Node 26.7.0/npm/Git ativos; `uv pip install -e .` e `npm ci` completados; `hermes_cli` importou; `oneclick_dependency_gate.ps1` falha antes/depois da instalação com `Could not validate cached install: Checked 77 packages in 44ms/6ms`. O bootstrap exige `-Action Record` antes do Doctor e aborta. **Hipótese provável não comprovada nativamente:** saída informativa de `uv pip check` via stderr é promovida pelo PowerShell 5.1 sob `ErrorActionPreference=Stop`. Uma falha real do uv deve continuar recusada.
+**Defeito arquitetural comprovado no código:** fingerprint único agrega `pyproject/uv.lock` e `package-lock/npm workspaces`. Qualquer invalidade chama instalador completo (`uv pip install -e .` + `npm ci`), agravando latência e acoplamento à rede. Objetivo: readiness offline independente por domínio; reparar apenas Python ou Node; stamps verificáveis só após health; lazy startup não significa aceitar ambiente quebrado. `npm ci` instalou 1.342 pacotes de monorepo (não equivalem a dependências runtime); 39 alertas npm devem ser tratados separadamente e com escopo.
+**Entrega deste ciclo:** documentação e [kit de drafts completos](oneclick-bootstrap-2026-10-16/README.md), não source runtime alterado. Fases P0 falso negativo → P1 split → E2E/CI exato e H-079; preservar Browser data, `.venv`, PM, contrato de isolamento e segurança, no releases alegados. Evidência detalhada no [jornal](engineering-journal/oneclick-bootstrap-2026-10-15.md).
+
+
 ## Inteligência preservada — transição estratégica 2026-10-12 (não significa release)
 
 A sessão de 11–12/10 demonstrou que a sensação de Hermes "travado" envolve um ciclo causal de **auto-admissão indevida de Task/TaskRun**, **efeitos mal classificados**, **handoffs de mutações incertas**, **SUPERSEDED** e **autoridade/UI nativa**. Não reduzir o problema a latência. A decisão D-045 separa conversa, Task durável e TaskRun; PRs #71–#83 implementaram fatias em draft que permanecem fora de main.
