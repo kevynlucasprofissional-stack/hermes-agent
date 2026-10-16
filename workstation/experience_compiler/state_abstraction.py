@@ -30,6 +30,17 @@ def abstract_state(route, data, artifact_ref=None):
     fields = _BROWSER_FIELDS if route == 'native_browser' else _FS_FIELDS if route == 'filesystem' else _PROCESS_FIELDS
     predicates = {k: data[k] for k in sorted(fields & data.keys())
                   if isinstance(data[k], (str, int, float, bool)) or data[k] is None}
+    for k, v in data.items():
+        if k.startswith("read.") and isinstance(v, (str, int, float, bool)):
+            predicates[k] = v
+    if isinstance(data.get("semantic_predicates"), dict):
+        for k, v in data["semantic_predicates"].items():
+            if k.startswith("read.") and isinstance(v, (str, int, float, bool)):
+                predicates[k] = v
+    if isinstance(data.get("projection"), dict) and isinstance(data["projection"].get("semantic_predicates"), dict):
+        for k, v in data["projection"]["semantic_predicates"].items():
+            if k.startswith("read.") and isinstance(v, (str, int, float, bool)):
+                predicates[k] = v
     if route == 'native_browser':
         if data.get('readiness') == 'stable':
             predicates['ready'] = True

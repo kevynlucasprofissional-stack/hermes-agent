@@ -259,11 +259,12 @@ def plan_item_adoption(
             return None, [f"effect_unmappable:{primitive}"]
         if not owner.supports(primitive):
             return None, [f"primitive_not_certified:{primitive}"]
-        if step_effects and not owner.can_readback(primitive):
+        requires_readback = bool(step_effects) or primitive == "browser_extract_items" or bool(step.get("readback"))
+        if requires_readback and not owner.can_readback(primitive):
             return None, [f"readback_unavailable:{primitive}"]
         effects.extend(step_effects)
         steps.append({"id": step.get("id", primitive), "tool": primitive, "args": args,
-                      "_effects": step_effects})
+                      "_effects": step_effects, "_requires_readback": requires_readback})
 
     required = join_all([extract_effect_authority_requirements(e) for e in effects]) if effects \
         else AuthorityScope(level=AuthorityLevel.READ)
@@ -400,9 +401,9 @@ class RunLocalAdopter:
 
         handoff_steps = []
         for step in plan.steps:
-            handoff = {k: v for k, v in step.items() if k != "_effects"}
+            handoff = {k: v for k, v in step.items() if k not in ("_effects", "_requires_readback")}
             handoff["pre_condition_check"] = lambda _args, _payload: live_effect_authority()
-            if step["_effects"]:
+            if step["_effects"] or step.get("_requires_readback"):
                 handoff.update(readback=True, verifier_fn=make_verifier(step))
             handoff_steps.append(handoff)
 
@@ -423,8 +424,8 @@ class RunLocalAdopter:
             failure = f"handoff_exception:{type(exc).__name__}"
         stored = owner.task_store.get_item(item.item_id)
         completed = bool(stored is not None and stored.status == WorkItemStatus.COMPLETED)
-        mutating = [s for s in plan.steps if s["_effects"]]
-        readbacks_ok = len(readbacks) == len(mutating) and all(r["ok"] for r in readbacks)
+        verifying = [s for s in plan.steps if s["_effects"] or s.get("_requires_readback")]
+        readbacks_ok = len(readbacks) == len(verifying) and all(r["ok"] for r in readbacks)
         verified = bool(not failure and outcome.get("status") == "COMPLETED" and completed and readbacks_ok
                         and stored.validation_result.get("valid") is True)
         if not verified and not failure:

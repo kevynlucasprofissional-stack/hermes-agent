@@ -12,6 +12,11 @@ from workstation.integrations.hermes import run_local_adoption as module
 
 
 class RunLocalOwnerWiringTests(unittest.TestCase):
+    def test_card_extraction_requires_owner_readback_support(self):
+        owner = module.build_run_adoption_owner(self.agent)
+        self.assertTrue(owner.supports("browser_extract_items"))
+        self.assertTrue(owner.can_readback("browser_extract_items"))
+
     def setUp(self):
         self.operations = []
         self.files = {}

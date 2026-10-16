@@ -27,6 +27,40 @@ def workstation_durable_dispatch(agent: Any):
         if getattr(agent, "_interrupt_requested", False) or getattr(agent, "_tool_guardrail_halt_decision", None):
             raise InterruptedError("Durable work interrupted")
         if name not in getattr(agent, "valid_tool_names", set()):
+            from tools.browser_workstation import _WORKSTATION_SCHEMA_TOOLS
+            if name in _WORKSTATION_SCHEMA_TOOLS:
+                import time
+                from workstation.integrations.hermes.browser_controller import (
+                    dispatch_workstation_browser_authoritative,
+                )
+                from workstation.integrations.hermes.tool_observer import (
+                    workstation_pre_dispatch_hook,
+                    workstation_raw_post_tool_observer,
+                )
+                session_id = str(
+                    getattr(agent, "_conversation_root_id", lambda: None)()
+                    or getattr(agent, "session_id", "")
+                    or ""
+                )
+                run_id = getattr(agent, "_canonical_work_run_id", None)
+                ctx = {"agent": agent, "dispatched": True}
+                workstation_pre_dispatch_hook(name, args, call_id, ctx)
+                start_t = time.monotonic()
+                try:
+                    res = dispatch_workstation_browser_authoritative(
+                        name,
+                        args,
+                        task_id=task_id,
+                        session_id=session_id,
+                        run_id=str(run_id) if run_id is not None else None,
+                        operation_id=call_id,
+                    )
+                finally:
+                    duration = time.monotonic() - start_t
+                workstation_raw_post_tool_observer(name, args, call_id, res, duration, ctx)
+                capture_raw_result(call_id, res)
+                return take_raw_result(call_id, res)
+
             from tools.tool_search import scoped_deferrable_names
             from model_tools import get_tool_definitions
             scoped = scoped_deferrable_names(
