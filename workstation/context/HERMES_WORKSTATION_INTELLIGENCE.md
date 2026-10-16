@@ -1,5 +1,21 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-16 — P1C: diferenciar candidato minerado de adoção real (prioridade agora)
+
+**Evidência atualizada (PR #94 `27b6376535dc`):** P1B foi implementado em branch: `browser_extract_items` readback tipado com inspeções frescas antes/depois, raw receipt, `accept_work_item`, inferência de efeitos `read.*` e mineração candidata. O relatório registra 30 testes focais (somatório das seis suítes, sem recontar subtests) e 53 regressões de segurança aprovados; estão **reportados**, não reexecutados aqui. Estágio A da autorização continua pendente; sem merge nem DIRECT. Browser nativo P1.0 já possui E2E próprio aprovado.
+
+**Distinção epistemológica crucial:** em `test_ol_mvp_p1b_cards_workitems.py`, o `worker()` despacha todos os cartões usando `self.dispatch` sintético e o teste chama diretamente captura/monitor/mineração. Ele verifica leitura, candidato e os três WorkItems DURÁVEIS, **mas não verifica rota compilada nos itens 2/3**; somente recibos do `RunLocalAdopter` produzidos no caminho do gateway real podem provar adoção. Não confundir `Candidate DISCOVERED` com `QUALIFIED OFFER`, `ADOPTED`, `PROMOTED` e `ECONOMIA FINANCEIRA`.
+
+**Risco focal a investigar:** `canonical_source_for_readback` em `integrations/hermes/run_local_adoption.py` cai em `_last_raw_result_ref`/ `_last_progressive_ref`, e na ausência chega a criar ref/op id; `ExperienceCorpus.accept_work_item` recorre a `candidates[-1]` ou cria um TransitionSample para recibo não encontrado. Produção exige associação exata ao resultado do dispatch e ao sample, não autoatribuição de confiança por proximidade temporal. `_readback_browser_extract_items` retorna evidência de verificação não atômica (`non_atomic_parent_bracket`): isso é bom para o MVP read-only, NÃO é captura simultânea garantida nem licença para efeitos mutáveis.
+
+**Próxima experiência P1C:** entrar pelo chat desktop/`work_execute` real, originar três WorkItems separados e readback correto, capturar sample e oferecer capacidade via monitor conforme política, executar próximo item compilado apenas se DIRECT legítimo, persistir e recuperar noutra TaskRun, medir custo/provider quando disponível. Não criar infraestrutura de IA nem manipular manualmente `mine_candidate_in_run` no teste de produto. Script P1C de audit é informativo, não confere autenticidade.
+
+**Arquitetura aprovada preservada:** telemetria independente/memória universal compacta + compilação seletiva; capacidades hierárquicas versionadas com atualização global otimista e rollback contextual; seleção determinístico/exato→BM25/embeddings opcionais→LAYA→System-2 com Router+Policy; quatro ImprovementRuns no mesmo executor, budget absoluto definido pelo usuário; SourceResearchRun cria hipóteses/patches experimentais, nunca integra fonte operacional sem autorização. Não implementar essas camadas antes da prova P1C.
+
+Links: [plano](ol-mvp-2026-10-16/P1C_NATIVE_DOGFOOD_PLAN.md) · [integração mínima](ol-mvp-2026-10-16/P1C_EXACT_PATCH_MAP.md) · [prompt](ol-mvp-2026-10-16/P1C_IMPLEMENTER_PROMPT.md).
+
+
+
 ## 2026-10-16 — P1B: leitura observável não é mutação, resultado compilável precisa aceitação
 
 **Último resultado operacional (PR #93 `6e1443079e`):** navegador Electron real funcionou; `browser_extract_items` conseguiu extrair `id/list/title/description` de três cartões e uma leitura DOM independente confirmou os valores. Teste 1/1 PASS, 21,8s. **Não há TaskRun canônica**, promoção ou custo de LLM medido: 3 cards em uma operação não são 3 repetições de uma capacidade. Status P1.0 PASS; P1.1 HOLD; P1.2 NOT_DEMONSTRATED. Arquivo `evidence/P1_NATIVE_RESULT_20261016.json` é fonte primária.
