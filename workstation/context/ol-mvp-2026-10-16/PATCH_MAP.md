@@ -1,4 +1,8 @@
-# Patch V2 — checkpoint seguro entre itens + reconciliacao duravel
+# Patch V2 — checkpoint seguro entre itens + reconciliacao duravel (HISTÓRICO P0)
+
+**P0 já aplicado** na branch do PR draft #92. Para P1 não replicar este patch: usar [P1_PATCH_MAP.md](P1_PATCH_MAP.md), código Electron/test fixture e [P1_IMPLEMENTER_PROMPT.md](P1_IMPLEMENTER_PROMPT.md).
+
+## Patch P0 original preservado
 Fonte auditada: main em 16/10/2026. P0a JA APLICADO em workstation/batch_runner.py na branch docs/ol-mvp-inflight-learning-20261016 e verificado por 3 testes novos + 52 regressões. P0b wiring owner e produto Electron AINDA NAO IMPLEMENTADOS/QUALIFICADOS.
 
 ## Mudanca 1: workstation/batch_runner.py
