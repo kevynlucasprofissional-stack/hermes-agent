@@ -1,5 +1,15 @@
 # OL-MVP — Índice de execução (2026-10-16)
 
+## PRIORIDADE VIGENTE — P1C: uma TaskRun REAL usando capacidade compilada
+
+O PR #94 `27b6376535dc` concluiu em código o P1B (aceitação/verificação de leitura; 30 testes focais + 53 regressões reportados). **NÃO comprovou o `RunLocalAdopter` executando 2/3 cartões**: o teste de três WorkItems utiliza `worker` com dispatcher sintético para TODOS os itens. P1C deve validar a rota completa `desktop chat/Gateway → TaskCompiler → 3 WorkItems → ExperienceCompiler → RunLocalAdopter → outra TaskRun` e os artefatos do owner. Stage A/qualificação DIRECT em HOLD.
+
+**Entregas P1C:** [PROMPT IMPLEMENTADOR](P1C_IMPLEMENTER_PROMPT.md) · [MAPA DE PATCH](P1C_EXACT_PATCH_MAP.md) · [PLANO / GATES](P1C_NATIVE_DOGFOOD_PLAN.md) · [TEMPLATE DE RECIBO](P1C_NATIVE_RECEIPT_TEMPLATE.json). Código auxiliar: `patches/P1C_evidence_gate.py` (validação **só estrutural**, não de identidade/authority, com 6 testes) e `patches/test_P1C_strict_read_acceptance.py` (testes RED propostos; **NÃO executados**, copiar para `workstation/tests` antes do patch de fail-closed).
+
+Não reconstruir P0, P1.0, P1B; manter planos anteriores como histórico. No P1C, a prioridade é uma execução de produto real, não quatro ImprovedRuns nem novo sistema de embeddings.
+
+
+
 ## PRIORIDADE ATUAL (16/10/2026): P1B — leitura verificada → capacidade executável
 
 **P1.0 Browser nativo já PASS** no PR #93 `6e1443079e`, E2E 1/1 em 21,8s. Três cartões obtidos numa ação `browser_extract_items` e verificados por leitura DOM independente; sem TaskRun/learning real. Não investir mais em boot/fixture.
