@@ -1,5 +1,12 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-16 — Resultado P1 native dogfood
+
+**P1.0 PASS:** `npm run build` passou (Vite reportou 40,74 s); o E2E focal passou 1/1 em 21,8 s e o `tsc` focal passou. Extração tipada, snapshot e readback DOM independente via Electron `webContents` verificaram ID, lista, título e descrição de três cartões da fixture loopback. [Recibo observado e proveniência](../ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
+
+**P1.1/P1.2 não demonstrados:** nenhum TaskRun real iniciou; métricas TaskRun, uso/custo, falhas e fallbacks são null/desconhecidos. Os três cartões são contagem separada da fixture (`native_verified_items=3`). O seam é projeção output-only ausente em `TransitionSample`/abstração → inferência de efeitos por delta → segmento verificado → factory run-local, embora o contrato e a classificação read-only já existam (`operational_capabilities.py:112-124`, `run_adoption.py:128-132`; exclusão em `integrations/hermes/run_local_adoption.py:31-35`). O owner canônico `kanban.py:473-479` aceita a run no fechamento, não cada item; falta essa aceitação por item para adoção in-run. Stage A segue pendente/não qualificado; runtime em HOLD até esse gate. Não reiniciar P0 nem ampliar hardening.
+
+
 ## 2026-10-16 — OL-MVP P1, pacote de dogfood nativo pronto para implementação (P1 E2E NÃO QUALIFICADO)
 
 **Material base:** P0 local integrado em PR draft #92; relatório anterior 91 testes aprovados (7 específicos rechecados). P0 benchmark instrumentado: 3/5 adaptativos e 2/5 reutilizados; não há comprovação de 40% de economia monetária. Cross-TaskRun: promoção manual no setup. Subsequente teste Electron headless falhou antes de `browser_navigate`: `beforeAll` timeout 90000ms enquanto `waitForAppReady(...120000)` aguardava UI `Waking up/Reconnecting`, stack em `tests-js/scripts/desktop-chat-smoke.ts::waitForChatReady`; causa de backend não identificada. Evidências locais: `apps/desktop/test-results/workstation-headless-load--595fa-ller-and-IPC-while-headless/{error-context.md,trace.zip}` (16/10).

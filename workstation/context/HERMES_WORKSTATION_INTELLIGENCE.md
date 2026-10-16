@@ -1,5 +1,14 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-16 — Evidência atual OL-MVP P1
+
+P1.0 está PASS apenas para o Browser Electron/Chromium com fixture loopback: build PASS, E2E focal 1/1 em 21,8 s, TypeScript focal PASS; três cartões foram conferidos por extração tipada, snapshot e oracle DOM independente via `webContents`. [Recibo com resultado observado e hashes](ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
+
+P1.1 e P1.2 continuam **NOT DEMONSTRATED**: nenhum TaskRun canônico foi iniciado e métricas de itens/adaptação/compilação/verificação, LLM/custos, falhas e fallbacks não foram medidos. `native_verified_items=3` é exclusivamente a contagem da fixture.
+
+O bloqueio não é falta geral de suporte read-only: `OperationalCapability` aceita `read_only`/`output_schema` (`operational_capabilities.py:112-124`) e `run_adoption.py:128-132` reconhece `browser_extract_items`. Falta expressar a projeção output-only em `TransitionSample`/abstração e encaminhá-la pela inferência/segmentação até a factory, que exclui essa primitiva (`models.py:168-183`, `state_abstraction.py:11-48`, `generalization.py:122-132`, `segmentation.py:55-66`, `compiler.py:89-93`, `integrations/hermes/run_local_adoption.py:31-35`). `kanban.py:473-479` só notifica aceitação canônica no fechamento após `accept_run(journal, outcome)`, sem acceptance por item para adoção na mesma run. Stage A está pendente/não qualificado ([estado atual](CURRENT_STATE.md)); runtime permanece em HOLD. Não reiniciar P0, não ampliar hardening e não inferir que falta provider.
+
+
 ## 2026-10-16 — Inteligência OL-MVP P1: distinguir 3 provas e não voltar ao hardening
 
 **P0 é prova operacional PARCIAL, não release:** a integração de `TaskCompiler`/`RunLocalAdopter` com boundary entre itens passou nos testes Python (91 reportados; 7 repetidos). Três itens adaptativos + dois compilados provam comutação na fixture e não "40% de economia paga"; promoção entre TaskRuns foi configurada pelo teste. Guardar diferença epistemológica entre teste sintético, Electron real, economia de tokens/provider e efeito externo verificado.

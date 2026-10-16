@@ -13,7 +13,6 @@
 import * as fs from 'node:fs'
 import * as http from 'node:http'
 import * as path from 'node:path'
-import { OL_MVP_READONLY_CARDS, OL_MVP_READONLY_PATH, OL_MVP_READONLY_TITLE, renderOlMvpReadOnlyCards } from './ol-mvp-p1-readonly-cards'
 
 import {
   buildAppEnv,
@@ -22,6 +21,7 @@ import {
   setupMockBackend,
   waitForAppReady
 } from './fixtures'
+import { OL_MVP_READONLY_CARDS, OL_MVP_READONLY_PATH, OL_MVP_READONLY_TITLE, renderOlMvpReadOnlyCards } from './ol-mvp-p1-readonly-cards'
 import { expect, test } from './test'
 
 interface ControllerFile {
@@ -472,9 +472,15 @@ test.beforeAll(async () => {
     const status = fixture
       ? await fixture.page.locator('body').innerText({ timeout: 2_000 })
           .then(text => {
-            if (/Reconnecting to Hermes/i.test(text)) return 'reconnecting'
-            if (/Waking up/i.test(text)) return 'waking-up'
-            if (/Preparing/i.test(text)) return 'preparing'
+        if (/Reconnecting to Hermes/i.test(text)) {
+          return 'reconnecting'
+        }
+        if (/Waking up/i.test(text)) {
+          return 'waking-up'
+        }
+        if (/Preparing/i.test(text)) {
+          return 'preparing'
+        }
             return 'other-renderer-state'
           })
           .catch(() => 'renderer-inaccessible')
@@ -514,7 +520,9 @@ test.afterAll(async () => {
 
 test('OL-MVP P1: reads three isolated cards through native BrowserTask without mutation', async () => {
   // Gate P1.0: real Chromium/HTTP live DOM, still NOT a compiler-adoption proof.
-  if (!fixture || !controller) throw new Error('P1: native controller not initialized')
+  if (!fixture || !controller) {
+    throw new Error('P1: native controller not initialized')
+  }
   const taskId = 'ol-mvp-p1-readonly-task'
   const sessionId = 'ol-mvp-p1-readonly-session'
   const url = `${pageBaseUrl}${OL_MVP_READONLY_PATH}`
@@ -522,6 +530,52 @@ test('OL-MVP P1: reads three isolated cards through native BrowserTask without m
   expect(navigation.success).toBe(true)
   expect(navigation.result?.url).toBe(url)
   expect(navigation.result?.title).toBe(OL_MVP_READONLY_TITLE)
+
+  interface ExtractedCard {
+    text: string
+    tag: string
+    attributes: Record<string, string | null>
+  }
+  interface NativeExtraction {
+    count: number
+    items: ExtractedCard[]
+    runtime: string
+    url: string
+    title: string
+  }
+  const extractionArguments = {
+    mode: 'inspect',
+    selector: 'article[data-testid="ol-mvp-card"]',
+    limit: 3,
+    attributes: ['data-card-id', 'data-list'],
+    output_artifact: false,
+  }
+  const extraction = await controllerRequest('/v1/action', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_extract_items',
+      arguments: extractionArguments,
+      task_id: taskId,
+      session_id: sessionId,
+    }),
+  })
+  expect(extraction.success).toBe(true)
+  const extracted = extraction.result as NativeExtraction | undefined
+  expect(extracted?.runtime).toBe('electron-chromium')
+  expect(extracted?.url).toBe(url)
+  expect(extracted?.title).toBe(OL_MVP_READONLY_TITLE)
+  expect(extracted?.count).toBe(3)
+  expect(Array.isArray(extracted?.items)).toBe(true)
+  const extractedItems = extracted?.items ?? []
+  expect(extractedItems).toHaveLength(3)
+  for (const card of OL_MVP_READONLY_CARDS) {
+    const item = extractedItems.find((candidate) => candidate.attributes['data-card-id'] === card.id)
+    expect(item, `Native extraction missing card ${card.id}`).toBeDefined()
+    expect(item?.attributes['data-list']).toBe(card.list)
+    expect(item?.text).toContain(card.title)
+    expect(item?.text).toContain(card.description)
+  }
 
   const snapshot = await controllerRequest('/v1/action', {
     method: 'POST',
@@ -541,7 +595,59 @@ test('OL-MVP P1: reads three isolated cards through native BrowserTask without m
   const observed = JSON.stringify(snapshot.result ?? {})
   for (const card of OL_MVP_READONLY_CARDS) {
     expect(observed, `Native snapshot missing live DOM text for ${card.id}`).toContain(card.title)
+    expect(observed, `Native snapshot missing live DOM description for ${card.id}`).toContain(card.description)
   }
+
+  const nativeState = await nativeViewportSnapshot(fixture.app)
+  if (!nativeState) {
+    throw new Error('P1: native viewport state unavailable')
+  }
+  const matchingChildren = nativeState.children.filter((candidate) => candidate.url === url)
+  expect(matchingChildren).toHaveLength(1)
+  const child = matchingChildren[0]
+  if (!child) {
+    throw new Error('P1: native fixture webContents unavailable')
+  }
+  expect(child.url).toBe(url)
+  const webContentsId = child.webContentsId
+  if (webContentsId === null) {
+    throw new Error('P1: native Browser webContents id unavailable')
+  }
+  const liveCards = await fixture.app.evaluate(({ webContents }, id) => {
+    const contents = webContents.fromId(id)
+    if (!contents) {
+      throw new Error('P1: native viewport webContents missing')
+    }
+    return contents.executeJavaScript(`Array.from(document.querySelectorAll('article[data-testid="ol-mvp-card"]')).map(card => ({
+      id: card.getAttribute('data-card-id'),
+      list: card.getAttribute('data-list'),
+      title: card.querySelector('h2')?.textContent,
+      description: card.querySelector('p')?.textContent,
+    }))`)
+  }, webContentsId)
+  expect(liveCards).toEqual(OL_MVP_READONLY_CARDS)
+
+  await test.info().attach('ol-mvp-p1-native-readonly-evidence', {
+    body: Buffer.from(JSON.stringify({
+      native: true,
+      live_dom: true,
+      verified_card_count: 3,
+      verified_fields: ['id', 'list', 'title', 'description'],
+      operation: { action: 'browser_extract_items', arguments: extractionArguments },
+      browser_task: { task_id: taskId, session_id: sessionId },
+      extraction: extracted,
+      independent_dom_readback: liveCards,
+      snapshot_verified: true,
+      real_llm_calls: null,
+      real_llm_tokens: null,
+      compiled_calls: null,
+      learning_cost_usd: null,
+      gross_savings_usd: null,
+      net_savings_usd: null,
+      compiler_adoption: 'not_demonstrated',
+    }, null, 2)),
+    contentType: 'application/json',
+  })
 })
 
 test('keeps four native Browser tasks aligned across controller and IPC while headless', async () => {

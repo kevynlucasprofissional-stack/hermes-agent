@@ -1,5 +1,14 @@
 # Workstation roadmap
 
+## 2026-10-16 — Evidência OL-MVP: P1.0 PASS; P1.1/P1.2 HOLD
+
+**P1.0 PASS:** build desktop passou (Vite: 40,74 s), E2E focal Electron passou 1/1 em 21,8 s e checagem TypeScript focal passou. O teste verificou três cartões loopback com `browser_extract_items`, snapshot e readback DOM independente via `webContents` de teste. Recibo e provenance: [P1_NATIVE_RESULT_20261016.json](context/ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
+
+**P1.1/P1.2 NÃO DEMONSTRADOS:** nenhum TaskRun canônico real iniciou. Contagens e métricas de TaskRun/adaptação/compilação/verificação, uso/custo LLM, falhas e fallbacks permanecem null/desconhecidos; `native_verified_items=3` é apenas a fixture e não é métrica de TaskRun.
+
+**Bloqueio preciso:** a capability aceita `read_only`/`output_schema` (`workstation/operational_capabilities.py:112-124`) e a tabela de `run_adoption.py:128-132` reconhece extração read-only. O caminho de projeção output-only não atravessa ainda `TransitionSample` (`experience_compiler/models.py:168-183`), estado abstrato (`state_abstraction.py:11-48`), inferência de efeito por delta (`generalization.py:122-132`), segmentação (`segmentation.py:55-66`) e compilação, que rejeita efeito vazio (`compiler.py:89-93`); factory run-local também exclui `browser_extract_items` (`integrations/hermes/run_local_adoption.py:31-35`). O `kanban` só chama `accept_run(journal, outcome)` na conclusão (`workstation/kanban.py:473-479`), não aceita uma amostra por item para adoção dentro da mesma run. Stage A permanece pendente/não qualificado ([estado](context/CURRENT_STATE.md)); não alterar runtime antes do gate. Próximo passo: após Stage A, tratar somente esse seam; sem reiniciar P0/hardening e sem concluir ausência de provider.
+
+
 ## 2026-10-16 — PRIORIDADE ATUAL: OL-MVP P1, DOM vivo + adoção na mesma TaskRun (80/20)
 
 **Estado real:** P0 implementado na branch do PR draft #92, **91/91 PASS segundo relatório implementador**; 7 testes focais repetidos em checkout isolado PASS. O circuito Python usou 3 itens adaptativos e 2 compilados (40% de *contador simulado*, não economia real). Reutilização na segunda TaskRun dependeu de promoção/receipts construídos no setup do teste, não da promoção autônoma comprovada.
