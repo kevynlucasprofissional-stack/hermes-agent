@@ -13,6 +13,7 @@
 import * as fs from 'node:fs'
 import * as http from 'node:http'
 import * as path from 'node:path'
+import { OL_MVP_READONLY_CARDS, OL_MVP_READONLY_PATH, OL_MVP_READONLY_TITLE, renderOlMvpReadOnlyCards } from './ol-mvp-p1-readonly-cards'
 
 import {
   buildAppEnv,
@@ -139,6 +140,12 @@ let uncertainNativeEffectCount = 0
 
 async function startDeterministicPageServer(): Promise<void> {
   pageServer = http.createServer((request, response) => {
+    if (request.url === OL_MVP_READONLY_PATH) {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      response.end(renderOlMvpReadOnlyCards())
+      return
+    }
+
     if (request.url === '/p0-native-effect-state') {
       response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
       response.end(JSON.stringify({ applied: uncertainNativeEffectCount }))
@@ -503,6 +510,38 @@ test.afterAll(async () => {
     pageServer.close(() => resolve())
   })
   pageServer = null
+})
+
+test('OL-MVP P1: reads three isolated cards through native BrowserTask without mutation', async () => {
+  // Gate P1.0: real Chromium/HTTP live DOM, still NOT a compiler-adoption proof.
+  if (!fixture || !controller) throw new Error('P1: native controller not initialized')
+  const taskId = 'ol-mvp-p1-readonly-task'
+  const sessionId = 'ol-mvp-p1-readonly-session'
+  const url = `${pageBaseUrl}${OL_MVP_READONLY_PATH}`
+  const navigation = await browserAction(taskId, sessionId, url)
+  expect(navigation.success).toBe(true)
+  expect(navigation.result?.url).toBe(url)
+  expect(navigation.result?.title).toBe(OL_MVP_READONLY_TITLE)
+
+  const snapshot = await controllerRequest('/v1/action', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_snapshot',
+      arguments: { full: true },
+      task_id: taskId,
+      session_id: sessionId
+    })
+  })
+  expect(snapshot.success).toBe(true)
+  expect(snapshot.result?.url).toBe(url)
+  // Fail explicitly if the controller only supplies URL/title and does NOT
+  // expose live card text; the implementer must then use an authorized typed
+  // DOM-read action, never an opaque browser_console macro.
+  const observed = JSON.stringify(snapshot.result ?? {})
+  for (const card of OL_MVP_READONLY_CARDS) {
+    expect(observed, `Native snapshot missing live DOM text for ${card.id}`).toContain(card.title)
+  }
 })
 
 test('keeps four native Browser tasks aligned across controller and IPC while headless', async () => {
