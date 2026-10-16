@@ -1,5 +1,19 @@
 # Workstation roadmap
 
+## 2026-10-16 — PRIORIDADE ATUAL: OL-MVP P1, DOM vivo + adoção na mesma TaskRun (80/20)
+
+**Estado real:** P0 implementado na branch do PR draft #92, **91/91 PASS segundo relatório implementador**; 7 testes focais repetidos em checkout isolado PASS. O circuito Python usou 3 itens adaptativos e 2 compilados (40% de *contador simulado*, não economia real). Reutilização na segunda TaskRun dependeu de promoção/receipts construídos no setup do teste, não da promoção autônoma comprovada.
+
+**P1.0 — primeiro bloqueio:** teste Electron `workstation-headless-load.spec.ts` falhou **antes das ações de Browser**, em `beforeAll` aos 90s enquanto `waitForAppReady` solicitava 120s. UI em `Waking up … / Reconnecting to Hermes…`; causa-raiz do boot/backend ainda NÃO determinada. P1 patch alinha limites somente de teste, acrescenta diagnóstico por etapa e cria página HTTP local com três cartões e teste de `browser_navigate/browser_snapshot`; patch entregue, E2E **ainda não qualificado**.
+
+**Execução imediata em ordem:** (1) `npm run build` e smoke P1 único no Electron; corrigir apenas causa comprovada da conexão/boot; (2) três cartões no DOM vivo do Chromium, leitura somente com evidência independente; (3) aprender e adotar capacidade na mesma TaskRun pelo owners EXISTENTES; (4) persistir e consultar numa TaskRun nova; (5) medir provider usage real e custo de aprendizagem. Meta 80/20: UM cenário correto de ponta a ponta, sem perseguir 95%/50% no piloto e sem hardening lateral.
+
+**Arquitetura preservada:** eventos tipados no runtime, telemetria independente, memória operacional hierárquica/compilação seletiva, seleção multimétodo determinístico → BM25/embeddings opcionais → LAYA → System-2 sob Router+Policy; quatro ImprovementRuns futuramente no mesmo executor/scheduler. SourceResearchRun investiga e testa em sandbox, NÃO altera código operacional sem aprovação. Orçamento financeiro global só pelo usuário. Nenhuma atualização GLOBAL amplifica autoridade.
+
+**Entregas P1:** [patch/seams](context/ol-mvp-2026-10-16/P1_PATCH_MAP.md), [gates](context/ol-mvp-2026-10-16/P1_EVIDENCE_GATE.md), [prompt plug-and-play](context/ol-mvp-2026-10-16/P1_IMPLEMENTER_PROMPT.md), [plano P1](context/ol-mvp-2026-10-16/P1_NATIVE_BROWSER_80_20.md). Código já preparado em `apps/desktop/e2e/{workstation-headless-load.spec.ts,ol-mvp-p1-readonly-cards.ts}`; P0 técnico permanece no [PR #92](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/92). Não alterar main nem informações privadas do dogfood.
+
+
+
 ## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
 
 **Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
