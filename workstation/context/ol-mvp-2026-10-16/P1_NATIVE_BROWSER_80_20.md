@@ -1,5 +1,13 @@
 # P1 — Native Browser Dogfood, saída 80/20 (16/10/2026)
 
+## Estado MAIS RECENTE — PR #93 6e1443079e (suplanta falha de boot anterior)
+
+**P1.0 PASS** em 16/10: Chromium real operou `browser_extract_items` sobre HTTP fixture local; readback DOM confirmou três cartões e todos `id/list/title/description`; E2E final 1/1 PASS em 21,8s. O antigo `beforeAll` falhando foi superado nesse ambiente. `P1.1 HOLD`, porque não há TaskRun real nem conversão de saída de leitura em experiência compilável; os três cards foram lidos numa única action. `P1.2` não demonstrado, custos LLM `null`.
+
+**Nova missão:** P1B saída verificada → `ExperienceCompiler`. [Plano](P1B_OUTPUT_BRIDGE_PLAN.md) · [Patch](P1B_PATCH_INSTALL.md) · [Prompt](P1B_IMPLEMENTER_PROMPT.md). *Não reexecutar o hardening de boot.* Arquivo de recibo em `evidence/P1_NATIVE_RESULT_20261016.json`. Stage A pendente, código runtime não foi alterado no pacote P1B.
+
+
+
 ## Decisão e limite
 OL-MVP P0 aceito como *prova de integração em Python*, NÃO como produto qualificado. Não voltar ao hardening geral para perseguir perfeição. O próximo marco é usar o Experience Compiler em uma TaskRun real com Browser nativo do Electron. Prioridade: provar utilidade e economia, depois crescer para memoria e selecao.
 
