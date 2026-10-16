@@ -1,5 +1,19 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-16 — P1B: leitura observável não é mutação, resultado compilável precisa aceitação
+
+**Último resultado operacional (PR #93 `6e1443079e`):** navegador Electron real funcionou; `browser_extract_items` conseguiu extrair `id/list/title/description` de três cartões e uma leitura DOM independente confirmou os valores. Teste 1/1 PASS, 21,8s. **Não há TaskRun canônica**, promoção ou custo de LLM medido: 3 cards em uma operação não são 3 repetições de uma capacidade. Status P1.0 PASS; P1.1 HOLD; P1.2 NOT_DEMONSTRATED. Arquivo `evidence/P1_NATIVE_RESULT_20261016.json` é fonte primária.
+
+**Primeira fronteira causal:** `state_abstraction.abstract_state` preserva estados Browser, mas não resultado tipado, e `sample_from_trace` conserva outcome `executed_unverified`. `ExperienceCorpus.accept_run` exige `verified_completed` ao final da Run e a exceção de readback vale só para `browser_navigate`. `segments` exige delta; `infer_action_model` e `compiler` exigem efeito verificado. Uma leitura sem mutação é admissível em `OperationalCapability(effect='read_only')`, mas o caminho atual não emite predicado de **resultado extraído e independentemente verificado**. `run_local_adoption` não possui `browser_extract_items` nas duas listas de suporte/readback. Corrigir nesta ordem, NÃO remover o gate de mutações.
+
+**Padrão proposto P1B:** 3 WorkItems reais via `TaskCompiler`; cada `browser_extract_items` tem owner, operação, parâmetros e DOM readback independente. Depois de verificação CANÔNICA por item e resolução íntegra do receipt no ArtifactStore: clonar amostra, projetar invariantes `read.output_shape=native_browser.card_fields.v1`, `read.fields_complete=True` como resultado (não estado do DOM), manter valores privados em artefatos necessários. Só então alimentar `ExperienceCompiler`; `RunLocalAdopter` admite a primitiva apenas com readback fresco e comprovado. Promotion/DIRECT permanece governada e independente.
+
+**Implementação proposta em isolamento:** [`P1B_read_output_contract.py`](ol-mvp-2026-10-16/patches/P1B_read_output_contract.py) e testes; cinco unittest passaram. **Não integrada:** Stage A pendente, patch não ganha autoridade por existir. Links [plano](ol-mvp-2026-10-16/P1B_OUTPUT_BRIDGE_PLAN.md), [instalação](ol-mvp-2026-10-16/P1B_PATCH_INSTALL.md), [implementador](ol-mvp-2026-10-16/P1B_IMPLEMENTER_PROMPT.md).
+
+**Decisões preservadas:** aprendizagem durante TaskRun e posterior; memória universal hierárquica/compilação seletiva; telemetria independente com custo líquido; hierarquia de capacidades e atualizações globais versionadas/rollback contextual; quatro ImprovementRuns no mesmo runtime; SourceResearchRun apenas pesquisa/patch isolado sem alteração de fonte operacional; orçamento com teto imutável do usuário; seleção multimétodo determinístico, BM25, embeddings opcionais, LAYA e System-2 com Router+Policy. Implementar depois que P1B demonstrar núcleo; sem mais design.
+
+
+
 ## 2026-10-16 — Evidência atual OL-MVP P1
 
 P1.0 está PASS apenas para o Browser Electron/Chromium com fixture loopback: build PASS, E2E focal 1/1 em 21,8 s, TypeScript focal PASS; três cartões foram conferidos por extração tipada, snapshot e oracle DOM independente via `webContents`. [Recibo com resultado observado e hashes](ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
