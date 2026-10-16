@@ -1,12 +1,13 @@
 # Workstation Known Issues
 
-### KI-044 — One-Click bloqueia início após install saudável e reinstala pacotes não afetados [OPEN / P0]
-- **Detectado:** 2026-10-16, Windows 11, Python 3.14, Node 26.7.0. **Estado:** OPEN; provável causa por inspeção de fonte, falta prova RED/GREEN no PowerShell nativo.
-- **Fingerprint observável:** `[deps] Could not validate cached install: Checked 77 packages in 44ms`; após `uv pip install -e .` e `npm ci`, `[deps] Recording completed Workstation install... failed (exit code 1)`, com a mesma mensagem em 6ms. Doctor e Desktop não são alcançados.
-- **Causa provável imediata:** `workstation/scripts/oneclick_dependency_gate.ps1` executa `uv pip check --python $VenvPython 2>$null` sob `$ErrorActionPreference=Stop`; PowerShell 5.1 pode tratar stderr informativo como exceção. Confirmar o exit code verdadeiro antes de concluir.
-- **Causa arquitetural verificada:** gate de fingerprint único e `workstation/scripts/oneclick_bootstrap.ps1` levam a `workstation/install.ps1` completo mesmo quando só Python ou só Node está stale. `npm ci` instalou 1.342 pacotes; relatório de 39 vulnerabilidades é frente distinta e **não** a falha de boot observada.
-- **Correção/aceite:** P0 teste nativo de uv stderr exit 0/exit 1 + Record/Check; P1 stamps e reparos Python/Node independentes; warm start offline, integração Electron, perfil/checkout preservados, regressão e CI exato, H-079 upstream-first. Sem `npm audit fix --force` automático.
-- **Estado do código:** somente [arquivos de implementação propostos](oneclick-bootstrap-2026-10-16/README.md), **NÃO APLICADOS AO RUNTIME**. Anterior KI-040 permanece histórico, não alterado por esta classificação.
+### KI-044 — One-Click bloqueia início após install saudável e reinstala pacotes não afetados [RESOLVED_LOCALLY_WINDOWS_PS51]
+- **Detectado:** 2026-10-16, Windows 11, Python 3.14, Node 26.7.0. **Estado:** RESOLVIDO NO RUNTIME E QUALIFICADO LOCALMENTE EM WINDOWS POWERSHELL 5.1; PENDENTE CI EXATO.
+- **Fingerprint observável:** `[deps] Could not validate cached install: Checked 77 packages in 44ms`; após `uv pip install -e .` e `npm ci`, `[deps] Recording completed Workstation install... failed (exit code 1)`, com a mesma mensagem em 6ms. Doctor e Desktop não eram alcançados.
+- **Causa confirmada empiricamente:** `workstation/scripts/oneclick_dependency_gate.ps1` executava `uv pip check --python $VenvPython 2>$null` sob `$ErrorActionPreference=Stop`. No Windows PowerShell 5.1, o fluxo de erro informativo de `uv` (`Checked 77 packages in ...`) era promovido a NativeCommandError/exceção terminante antes da consulta ao `$LASTEXITCODE` (que era 0).
+- **Causa arquitetural resolvida:** gate com fingerprints independentes para Python (`pyproject.toml`, `uv.lock`, `.python-version`, interpretador) e Node (`package.json`, `package-lock.json`, `.npmrc`, manifests de workspaces, versões de node e npm); ações `CheckPython`, `CheckNode`, `RecordPython`, `RecordNode`; switches `-SkipPythonDependencies` e `-SkipNodeDependencies` em `install.ps1`; bootstrap reparando estritamente o domínio danificado sem reinstalar desnecessariamente.
+- **Mitigações de Hardening implementadas:** proteção contra duas inicializações concorrentes via lock com exclusão mútua (`oneclick-install.lock`); migração criptográfica de stamp legado com fail-closed em divergência; caminhos absolutos no probe de resolução de módulos desktop do Node; preservação de diagnósticos reais em caso de falha autêntica do grafo (exit != 0).
+- **Evidências RED/GREEN e Test Matrix:** Matriz de 11 testes automatizados em Windows PowerShell 5.1 aprovada com 100% PASS (exit code 0); Doctor Estrito aprovado; warm start validado offline sem chamadas a registries ou reinstalações redundantes. Relatório de 31–39 vulnerabilidades do npm audit classificado e mantido separado da estabilidade de boot.
+- **Estado do código:** aplicado diretamente aos arquivos de runtime: `workstation/scripts/oneclick_dependency_gate.ps1`, `workstation/install.ps1` e `workstation/scripts/oneclick_bootstrap.ps1`. Decisão canônica: D-046.
 
 
 ## Pausa estratégica de 2026-10-12 — KI-028…KI-043 (registro canônico)

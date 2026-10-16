@@ -1,7 +1,15 @@
 # Current State
 
-## 2026-10-16 — One-Click regression KI-044 / D-046 (documentation-only)
-Inspeção da `main@d2ab172a43b1d4719dbf9572078fb4b5fda5da0c` e log do usuário: upstream Python 3.14/Node/npm/Git saudável, `uv pip install -e .` e `npm ci` concluídos, `hermes_cli` importado; dependência gate falha tanto no Check quanto no Record com `Checked 77 packages...`, abortando antes do Doctor/desktop. Hipótese PowerShell 5.1 `stderr` + `ErrorActionPreference=Stop` é **code-grounded mas NATIVE RED ainda pendente**. Fingerprint composto que reinstala Python + Node mesmo para drift de um só domínio é defeito arquitetural confirmado na fonte. D-046 define P0 stderr exit status e P1 split health/repair, KI-044 acompanha. [Pacote completo de código DRAFT](oneclick-bootstrap-2026-10-16/README.md) e [prompt](oneclick-bootstrap-2026-10-16/IMPLEMENTER_PROMPT.md). Nenhuma alteração ao runtime/prod ocorreu nesta entrega documental; **NOT WINDOWS-QUALIFIED / NOT RELEASE QUALIFIED**, H-079 e CI exato em aberto. Sem confundir 39 npm vulnerabilities com root cause.
+## 2026-10-16 — One-Click Windows: resolução D-046 / KI-044 qualificada em Windows PS5.1
+Implementação aplicada e validada diretamente no runtime Windows 11 com Windows PowerShell 5.1:
+1. **Falso negativo eliminado:** Reproduzida e eliminada a falha onde `uv pip check` com exit code 0 sob `$ErrorActionPreference=Stop` era capturado como falha pelo stderr informativo (`Checked 77 packages...`). O wrapper `Invoke-Probe` isola a preferência de erro e lê diretamente `$global:LASTEXITCODE`.
+2. **Separação de Domínios e Reparo Inteligente:** `workstation/scripts/oneclick_dependency_gate.ps1` opera com fingerprints e stamps separados para Python e Node (`CheckPython`, `CheckNode`, `RecordPython`, `RecordNode`). `workstation/install.ps1` possui os switches `-SkipPythonDependencies` e `-SkipNodeDependencies`. Alteração em um domínio repara estritamente aquele domínio, sem rodar `npm ci` ou `uv pip install` desnecessariamente.
+3. **Hardening de Produção:**
+   - Proteção de concorrência com exclusão mútua de arquivo no sistema operacional (`oneclick-install.lock`) com double-checked locking, prevenindo corrupção por duplo clique simultâneo.
+   - Migração segura do fingerprint legado baseada em igualdade de hash e aprovação dos health probes de ambos os domínios.
+   - Resolução de módulos do desktop com caminhos absolutos garantindo execução independente do diretório de chamada.
+   - Diagnósticos acionáveis preservados em falhas reais de dependências (exit != 0).
+4. **Qualificação Empírica:** 11/11 testes automatizados na matriz PowerShell 5.1 (`scratch/test_oneclick_matrix.ps1`) aprovados com Exit Code 0; Strict Doctor passou (`workstation/doctor.ps1 -Strict`); dois warm starts consecutivos verificados sem reinstalações ou chamadas externas. Vulnerabilidades do npm audit mantidas isoladas da camada de boot. Decisão: D-046. Issue: KI-044.
 
 
 ## 2026-10-12 — Fork CI cost containment and Stage A qualification

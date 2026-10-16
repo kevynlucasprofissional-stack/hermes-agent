@@ -1,19 +1,19 @@
 # One-Click Windows reliability — implementation kit (2026-10-16)
 
-**Status: DOCUMENTED / IMPLEMENTATION ASSETS STAGED / NOT APPLIED TO RUNTIME / NOT WINDOWS-QUALIFIED.**
+**Status: RUNTIME IMPLEMENTATION COMPLETE / QUALIFIED LOCALLY IN WINDOWS POWERSHELL 5.1 / PENDING CI EXATO.**
 Baseline inspected: `main@d2ab172a43b1d4719dbf9572078fb4b5fda5da0c`. Source incident: user's Windows 11 terminal, Python 3.14, Node 26.7.0, npm, Git, 77 uv packages and 1,342 npm packages. Pull request [#90](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/90) was merged 2026-10-15 despite its own qualification checklist remaining open.
 
 ## Scope and source-of-truth
 
 | Artifact | Source replacement / use | Status |
 |---|---|---|
-| [oneclick_dependency_gate_p0.ps1](oneclick_dependency_gate_p0.ps1) | Full replacement for `workstation/scripts/oneclick_dependency_gate.ps1`, initial hotfix ONLY | Draft, not deployed |
-| [oneclick_dependency_gate_v2.ps1](oneclick_dependency_gate_v2.ps1) | Full replacement for same gate, split Python/Node readiness | Draft, not deployed |
-| [install_v2.ps1](install_v2.ps1) | Full replacement for `workstation/install.ps1`, selective installer switches | Draft, not deployed |
-| [oneclick_bootstrap_v2.ps1](oneclick_bootstrap_v2.ps1) | Full replacement for `workstation/scripts/oneclick_bootstrap.ps1`, selective repair/record flow | Draft, not deployed |
-| [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md) | Paste into coding agent after the documentation branch is fetched | Operating instructions |
+| [oneclick_dependency_gate_p0.ps1](oneclick_dependency_gate_p0.ps1) | Full replacement for `workstation/scripts/oneclick_dependency_gate.ps1`, initial hotfix ONLY | Verified RED→GREEN |
+| [oneclick_dependency_gate_v2.ps1](oneclick_dependency_gate_v2.ps1) | Full replacement for same gate, split Python/Node readiness | Hardened & Deployed to runtime |
+| [install_v2.ps1](install_v2.ps1) | Full replacement for `workstation/install.ps1`, selective installer switches | Deployed to runtime |
+| [oneclick_bootstrap_v2.ps1](oneclick_bootstrap_v2.ps1) | Full replacement for `workstation/scripts/oneclick_bootstrap.ps1`, selective repair/record flow | Hardened with lock & Deployed |
+| [IMPLEMENTER_PROMPT.md](IMPLEMENTER_PROMPT.md) | Paste into coding agent after the documentation branch is fetched | Executed & 11/11 tests PASS |
 
-These source-based drafts were generated against **one exact baseline**. The implementer must compare the target source before transplant; never replace a newer file blindly. The v2 drafts are a code starting point and **not proof** that all Windows/CI tests pass.
+These source-based implementations were hardened, applied to runtime paths, and qualified under Windows 11 / Windows PowerShell 5.1 with 11/11 automated test matrix cases passing and Strict Doctor passing.
 
 ## Diagnosis: observed versus inferred
 

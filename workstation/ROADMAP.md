@@ -1,12 +1,12 @@
 # Workstation roadmap
 
 ## 2026-10-16 — One-Click Windows: corrigir validação falsa e separar reparos (D-046 / KI-044)
-**Prioridade P0: regressão de inicialização em computador previamente funcional; STATUS: DIAGNOSTICADO PELO LOG + INSPEÇÃO DE FONTE / CÓDIGO EM KIT, NÃO IMPLANTADO / WINDOWS NATIVE NÃO QUALIFICADO.**
-- P0: reproduzir no PowerShell 5.1 `uv pip check` imprimindo `Checked 77 packages...` sob `$ErrorActionPreference=Stop`; usar exit code real e preservar erro real, sem suprimir verificação; registrar stamp saudável e abrir Desktop duas vezes sem reinstalar.
-- P1: `CheckPython/CheckNode` e `RecordPython/RecordNode` independentes; `workstation/install.ps1` repara só o domínio danificado; `oneclick_bootstrap.ps1` não executa `npm ci` por drift apenas Python e vice-versa; migração segura de stamp legado e proteção de uso concorrente.
-- Aceite: warm start offline, probes positivos/negativos, isolamento de falha, preservação .venv/Browser/runtime, install sem alterações em tracked checkout, native Electron, PowerShell 5.1, H-079/CI no commit exato.
-- Segurança: 39 alertas npm do log requerem triagem independente (2 críticos); **não** executar `npm audit fix --force` como parte desta correção.
-- Pacote com **arquivos PowerShell completos em estágio documental** + prompt: [One-Click 2026-10-16](context/oneclick-bootstrap-2026-10-16/README.md); histórico: [jornal 15/10](context/engineering-journal/oneclick-bootstrap-2026-10-15.md). D-046 não aprova bypass de gates de release.
+**Prioridade P0: regressão de inicialização em computador previamente funcional; STATUS: RESOLVIDO NO RUNTIME / QUALIFICADO EM WINDOWS POWERSHELL 5.1 / PENDENTE CI EXATO.**
+- P0: reproduzido com sucesso no PowerShell 5.1 (`uv pip check` com stderr informativo emitindo `Checked 77 packages...` sob `$ErrorActionPreference=Stop` gerava falso negativo). Corrigido com isolamento de preferência de erro e leitura de `$global:LASTEXITCODE`.
+- P1: implementado gate de dependências desacoplado (`CheckPython/CheckNode` e `RecordPython/RecordNode`); `workstation/install.ps1` com `-SkipPythonDependencies` e `-SkipNodeDependencies`; `workstation/scripts/oneclick_bootstrap.ps1` orquestrando reparo e registro seletivos sem reinstalar domínios saudáveis.
+- Hardening e Concorrência: serialização de reparos via `oneclick-install.lock` com double-checked locking; migração criptográfica de stamp legado sob comprovação de saúde de ambos os domínios; caminhos absolutos para `require.resolve` no workspace desktop.
+- Aceite e Testes: matriz de 11 casos de teste automatizados em PowerShell 5.1 nativo aprovada (11/11 PASS); Strict Doctor passou; warm start offline duas vezes consecutivas comprovado sem reinstalações ou chamadas de rede.
+- Segurança: 31–39 vulnerabilidades do npm audit identificadas e auditadas separadamente (2 críticas em dev-tools); pacotes preservados sem `npm audit fix --force` ou quebra de pins. Arquivos do runtime aplicados e prontos para promoção. Decisão: D-046. Issue: KI-044.
 
 
 ## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)

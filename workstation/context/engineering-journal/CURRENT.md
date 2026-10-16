@@ -1,8 +1,32 @@
 # CURRENT — Workstation Engineering Journal
 
-## 2026-10-16 — EXP-ONECLICK-016: uv stderr, gate Record e instalação seletiva (PLANNED / UNEXECUTED)
-**Hipótese:** em Windows PowerShell 5.1, `oneclick_dependency_gate.ps1` falha no `uv pip check --python ... 2>$null` mesmo quando uv conclui com exit 0, porque `$ErrorActionPreference="Stop"` transforma stderr informativo `Checked 77 packages...` em erro terminante. **Suporte:** log de usuário com Python 3.14 / 77 packages resolvidos, sucesso de npm ci e import, então falha do gate Check e Record; fonte consultada em `main@d2ab172a43b1`. **Refutação:** `uv` retorna exit não zero real, ou erro ocorre antes/depois do bloco, comprovado por instrumentação. **Experimento mínimo:** capturar stderr/stdout + exit code no powershell.exe 5.1; RED gate antigo, GREEN [draft P0](../oneclick-bootstrap-2026-10-16/oneclick_dependency_gate_p0.ps1). **Estado:** PLANNED / não executado no host; nenhum sucesso de correção alegado.
-**Experimento seguinte:** se P0 passar, aplicar três [drafts v2](../oneclick-bootstrap-2026-10-16/README.md) em branch protegida, qualificar de modo independente mudança Python/Node, warm start offline, stamps e Electron. O trabalho desta sessão foi DOCUMENTAÇÃO + KIT + PROMPT, não checkout runtime ou native CI. KI-044 e D-046 abertos. **Não repetir** reinstalação integral sem input materialmente modificado ou evidência de ambiente danificado.
+## 2026-10-16 — EXP-ONECLICK-016: uv stderr, gate Record e instalação seletiva (QUALIFIED_LOCALLY_WINDOWS_PS51 / GREEN)
+- **Hipótese comprovada:** em Windows PowerShell 5.1 (`powershell.exe`), `oneclick_dependency_gate.ps1` falhava ao executar `uv pip check --python ... 2>$null` porque `$ErrorActionPreference="Stop"` convertia o stderr informativo de sucesso (`Checked 77 packages in 3ms` / `All installed packages are compatible`) em `NativeCommandError` terminante antes da leitura de `$LASTEXITCODE` (que era 0).
+- **Correção P0:** `Invoke-Probe` salva `$ErrorActionPreference`, ajusta para `"Continue"`, reseta e captura `$global:LASTEXITCODE` imediatamente após o processo nativo. Testes RED→GREEN comprovaram exit code 0 e aceitação normal pelo gate.
+- **Implementação P1 (Arquitetura Seletiva e Hardening):**
+  - Gate desacoplado (`oneclick_dependency_gate.ps1`): fingerprints e stamps independentes para Python (`oneclick-python-dependencies.sha256`) e Node (`oneclick-node-dependencies.sha256`). Ações: `Check`, `Record`, `CheckPython`, `CheckNode`, `RecordPython`, `RecordNode`.
+  - Instalador seletivo (`install.ps1`): adicionados switches `-SkipPythonDependencies` e `-SkipNodeDependencies`, preservando `-SkipDependencies` e a validação de integridade de checkout.
+  - Orquestrador inteligente (`oneclick_bootstrap.ps1`): verifica domínios individualmente, executando reparo apenas no componente com falha.
+  - Hardening de concorrência: `Invoke-WithWorkstationInstallLock` com serialização por exclusão mútua de arquivo no OS (`oneclick-install.lock` com `[System.IO.FileShare]::None`) e padrão double-checked locking para evitar instalações redundantes em inicializações simultâneas.
+  - Hardening de migração: `Try-MigrateLegacyStamp` migra `oneclick-dependencies.sha256` somente quando o hash coincide exatamente com os manifests atuais e ambos os domínios passam nos health checks; se inválido, falha de forma fechada (fail closed).
+  - Hardening de resolução de módulos: `node -e require.resolve` com caminhos absolutos do checkout e `apps/desktop`.
+- **Resultados da Matriz de Testes Automatizada (11/11 PASS em PS 5.1):**
+  1. uv stderr informativo com exit 0: PASS
+  2. uv falha real com exit != 0: PASS
+  3. Record e Check em ambiente saudável: PASS (Exit 0)
+  4. Stamps ausentes falham Check de forma fechada: PASS
+  5. Stamp legado corrompido/divergente falha fechado: PASS
+  6. Migração de stamp legado válido para Python/Node: PASS
+  7. Desvio exclusivo em Python: CheckPython falha, CheckNode passa (PASS)
+  8. Desvio exclusivo em Node: CheckPython passa, CheckNode falha (PASS)
+  9. Executável do Electron ausente: detectado com falha em Node sem afetar Python (PASS)
+  10. Switches seletivos de `install.ps1` (`-SkipPythonDependencies` / `-SkipNodeDependencies`): PASS
+  11. Serialização de concorrência com lock em uso concorrente: PASS
+- **Verificações de Integração:**
+  - `workstation/doctor.ps1 -Strict`: [OK] Strict doctor passed all required checks.
+  - Duas execuções consecutivas de warm start verificadas: zero reinstalações, zero chamadas de rede.
+  - Triage de segurança do npm audit: 31–39 findings (incluindo 2 críticos: `shell-quote` via dev tool `concurrently`, `sprintf-js` via build tool `@electron/get`) registrados como frente separada sem uso de `npm audit fix --force` ou rebaixamento de dependências.
+- **Arquivos modificados no runtime:** `workstation/scripts/oneclick_dependency_gate.ps1`, `workstation/install.ps1`, `workstation/scripts/oneclick_bootstrap.ps1`. Decisão: D-046. Issue: KI-044.
 
 
 ## 2026-10-13 — HWH-001 user dogfood corrective round
