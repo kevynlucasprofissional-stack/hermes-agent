@@ -1,5 +1,13 @@
 # Decisoes arquiteturais OL-MVP (16/10/2026)
 
+## D18 — Critério de avanço após P1B implementado (16/10/2026)
+
+`P1B` implementou readback de `browser_extract_items`/aceitação por WorkItem e mineração read-only no PR #94 `27b6376535dc`. Seu teste de 3 WorkItems é integração **sintética**: todos os cards processados por `worker`, não há execução de oferta por `RunLocalAdopter` e não há consumo real de modelo. **Candidato ≠ oferta qualificada ≠ adoção na TaskRun ≠ persistência noutra TaskRun ≠ economia paga.** P1C deve provar essas transições no gateway/Electron real, sob owner e política legítimos.
+
+O vínculo `task_id/run_id/operation_id/raw_result_ref/transition_ref` é uma cadeia causal exata; em produto, falta de prova NÃO permite criar sample/op ID nem escolher a última amostra. `readback` indep. não é atestado DIRECT, e resultados read-only não ampliam permissões. Se Stage A impedir DIRECT, continuar a TaskRun adaptativa, registrar SHADOW e não declarar produto verificado. Após prova real ou dependência externa de qualificação isolada, começar P2 enxuta, preservando D01–D17: seleção híbrida evolutiva, memória hierárquica, 4 especialidades futuras e orçamento global de usuário.
+
+
+
 ## D17 — Aplicação 80/20 após o primeiro Browser nativo (16/10/2026)
 
 `P1.0 PASS` implica que **não** se deve refazer Browser nativo/boot agora. As provas máximas são observações de runtime real e aceitação canônica, não êxito de fixture. Uma leitura read-only verificada tem **resultado** generalizável, não mutação do DOM; pode alimentar compilação por uma projeção específica após verificador independente do owner. Um `browser_extract_items` com três cartões não são três WorkItems da TaskRun. P1B trata output → accepted sample → compiler → run-local, preservando D01–D16 e Stage A. Código fonte operacional só modificado com autorização explícita, mesmo quando proposta experimental passa testes. PR P1B é pacote de pesquisa/patch experimental, não aprovação do executor.
