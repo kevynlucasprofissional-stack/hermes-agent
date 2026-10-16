@@ -1,5 +1,14 @@
 # Workstation roadmap
 
+## 2026-10-16 — One-Click Windows: corrigir validação falsa e separar reparos (D-046 / KI-044)
+**Prioridade P0: regressão de inicialização em computador previamente funcional; STATUS: DIAGNOSTICADO PELO LOG + INSPEÇÃO DE FONTE / CÓDIGO EM KIT, NÃO IMPLANTADO / WINDOWS NATIVE NÃO QUALIFICADO.**
+- P0: reproduzir no PowerShell 5.1 `uv pip check` imprimindo `Checked 77 packages...` sob `$ErrorActionPreference=Stop`; usar exit code real e preservar erro real, sem suprimir verificação; registrar stamp saudável e abrir Desktop duas vezes sem reinstalar.
+- P1: `CheckPython/CheckNode` e `RecordPython/RecordNode` independentes; `workstation/install.ps1` repara só o domínio danificado; `oneclick_bootstrap.ps1` não executa `npm ci` por drift apenas Python e vice-versa; migração segura de stamp legado e proteção de uso concorrente.
+- Aceite: warm start offline, probes positivos/negativos, isolamento de falha, preservação .venv/Browser/runtime, install sem alterações em tracked checkout, native Electron, PowerShell 5.1, H-079/CI no commit exato.
+- Segurança: 39 alertas npm do log requerem triagem independente (2 críticos); **não** executar `npm audit fix --force` como parte desta correção.
+- Pacote com **arquivos PowerShell completos em estágio documental** + prompt: [One-Click 2026-10-16](context/oneclick-bootstrap-2026-10-16/README.md); histórico: [jornal 15/10](context/engineering-journal/oneclick-bootstrap-2026-10-15.md). D-046 não aprova bypass de gates de release.
+
+
 ## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)
 
 A fase 0 estabelece UMA branch (`feat/hermes-workstation-mvp-20261013`), um checkout (`C:\Github\hermes-agent`), leases cooperativos de arquivos, um integrador Git e checkpoint recursivo, evitando quatro agentes abrirem worktrees/branches por ajuste. Ver [protocolo](context/AGENT_COLLABORATION_PROTOCOL.md), [board](context/workstation-hub-mvp/TEAM_BOARD.md) e [3 etapas de implementação](context/workstation-hub-mvp/IMPLEMENTATION_STAGES.md). Produto ainda NÃO qualificado: (1) Agent abre Creative interno sem search; (2) Browser→Workstation + aba Creative React; (3) aba web manual→nova sessão real via mesma WebContentsView e lease humano. Plano 20/80: Fase 1 HWH01+02, Fase 2 HWH03, Fase 3 native E2E/CI/PR; sem merge automático ou bypass H-079.
