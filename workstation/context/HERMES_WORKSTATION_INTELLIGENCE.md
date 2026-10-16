@@ -1,5 +1,21 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-16 — Inteligência OL-MVP P1: distinguir 3 provas e não voltar ao hardening
+
+**P0 é prova operacional PARCIAL, não release:** a integração de `TaskCompiler`/`RunLocalAdopter` com boundary entre itens passou nos testes Python (91 reportados; 7 repetidos). Três itens adaptativos + dois compilados provam comutação na fixture e não "40% de economia paga"; promoção entre TaskRuns foi configurada pelo teste. Guardar diferença epistemológica entre teste sintético, Electron real, economia de tokens/provider e efeito externo verificado.
+
+**Hipótese crítica de P1:** a primeira execução do E2E de `workstation-headless-load.spec.ts` ficou presa em `Waking up…` / `Reconnecting to Hermes…` no `beforeAll`, nunca alcançando o controlador Chromium; timeout do hook 90 s era incompatível com `waitForAppReady(120 s)`. A branch P1 muda limite de teste para 160 s **e registra fase/status**, sem assegurar que a causa do backend está resolvida. Build `dist/` existente não prova frescor; verificar `npm run build` antes da rerun. Corrigir uma causa, não reconfigurar toda a camada Browser.
+
+**Fixture P1 tipada e isolada:** `apps/desktop/e2e/ol-mvp-p1-readonly-cards.ts` devolve 3 cartões HTML do loopback; `workstation-headless-load.spec.ts` os serve e lê por BrowserTask/controller Electron. Se `browser_snapshot` retornar apenas URL/title, o teste explicitamente falha e obriga seam de leitura do DOM tipada. A página local é **DOM vivo no Chromium**, não Trello autenticado nem aprendizagem automática. Snapshots HTML históricos do dogfood só são fixtures.
+
+**Rota para demonstrar verdade operacional:** captura read-only tipada em Browser → accepted evidence + readback independente → `procedure_trace`/`compilability_monitor` → candidato/offer qualificado → `create_safe_item_boundary_callback` + `RunLocalAdopter` na mesma identidade canônica → segundo cartão → nova TaskRun via `OperationalCapabilityRegistry`/`TaskCompiler`. Falha na oferta ou DIRECT = abstenção relatada, nunca bypass. Medir quantidade REAL de chamadas/tokens, custo de mineração e custo líquido apenas com dados válidos.
+
+**Decisões permanentes não descartadas:** aprendizado proativo universal com compilação seletiva; telemetria independente; composição hierárquica; atualização global otimista de capacidades com versionamento, rollback contextual e sem ampliar permissões; filas persistentes e quatro especialidades (skills, capabilities, source research investigativo, selection); limites financeiros imutáveis pelo agente e seleção barata/exata/BM25/embeddings/LAYA/LLM conforme necessidade. P1 comprova o núcleo ANTES de implementá-las todas.
+
+Links: [P1 patch map](ol-mvp-2026-10-16/P1_PATCH_MAP.md) · [P1 GO/HOLD](ol-mvp-2026-10-16/P1_EVIDENCE_GATE.md) · [P1 implementador](ol-mvp-2026-10-16/P1_IMPLEMENTER_PROMPT.md) · [decisões](ol-mvp-2026-10-16/DECISIONS.md).
+
+
+
 ## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
 
 **Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
