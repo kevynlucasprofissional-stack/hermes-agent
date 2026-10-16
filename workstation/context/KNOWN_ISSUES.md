@@ -1,5 +1,14 @@
 # Workstation Known Issues
 
+### KI-044 — One-Click bloqueia início após install saudável e reinstala pacotes não afetados [OPEN / P0]
+- **Detectado:** 2026-10-16, Windows 11, Python 3.14, Node 26.7.0. **Estado:** OPEN; provável causa por inspeção de fonte, falta prova RED/GREEN no PowerShell nativo.
+- **Fingerprint observável:** `[deps] Could not validate cached install: Checked 77 packages in 44ms`; após `uv pip install -e .` e `npm ci`, `[deps] Recording completed Workstation install... failed (exit code 1)`, com a mesma mensagem em 6ms. Doctor e Desktop não são alcançados.
+- **Causa provável imediata:** `workstation/scripts/oneclick_dependency_gate.ps1` executa `uv pip check --python $VenvPython 2>$null` sob `$ErrorActionPreference=Stop`; PowerShell 5.1 pode tratar stderr informativo como exceção. Confirmar o exit code verdadeiro antes de concluir.
+- **Causa arquitetural verificada:** gate de fingerprint único e `workstation/scripts/oneclick_bootstrap.ps1` levam a `workstation/install.ps1` completo mesmo quando só Python ou só Node está stale. `npm ci` instalou 1.342 pacotes; relatório de 39 vulnerabilidades é frente distinta e **não** a falha de boot observada.
+- **Correção/aceite:** P0 teste nativo de uv stderr exit 0/exit 1 + Record/Check; P1 stamps e reparos Python/Node independentes; warm start offline, integração Electron, perfil/checkout preservados, regressão e CI exato, H-079 upstream-first. Sem `npm audit fix --force` automático.
+- **Estado do código:** somente [arquivos de implementação propostos](oneclick-bootstrap-2026-10-16/README.md), **NÃO APLICADOS AO RUNTIME**. Anterior KI-040 permanece histórico, não alterado por esta classificação.
+
+
 ## Pausa estratégica de 2026-10-12 — KI-028…KI-043 (registro canônico)
 
 **Status de execução:** `PAUSED_BY_STRATEGY`. Os problemas abaixo não foram encerrados; são a indexação de pendências reveladas na sessão de 11–12/10. Esta seção complementa KI-001…KI-027 sem renumerá-los; conflitos históricos já existentes de identificadores anteriores não foram apagados. Consultar [Strategic Handoff](HERMES_WORK_STRATEGIC_HANDOFF_2026-10-12.md), [source manifest](HERMES_WORK_SOURCE_EVIDENCE_MANIFEST_2026-10-12.md) e [dossiê](HERMES_WORK_P0_ISSUES_DETAIL_2026-10-12.md). O dossiê mantém comportamentos observados, causas, testes e próximos seams; estes itens são os **estados canônicos**.
