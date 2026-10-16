@@ -1,4 +1,8 @@
-# Prompt plug-and-play — IA implementadora Hermes OL-MVP V2
+# Prompt plug-and-play — IA implementadora Hermes OL-MVP V2 (ARQUIVO HISTÓRICO DE P0)
+
+**SUPERSEDIDO EM P1:** O P0 in-flight já está integrado na branch do PR draft #92; para continuar agora consulte [P1_IMPLEMENTER_PROMPT.md](P1_IMPLEMENTER_PROMPT.md). Não reimplementar o circuito P0, não repetir fases red/green, salvo regressão causal encontrada no P1. O primeiro smoke Electron falhou em boot e o código novo da branch P1 diagnostica e testa 3 cartões em DOM Chromium local.
+
+## Prompt original P0 preservado para rastreabilidade
 
 Voce vai IMPLEMENTAR em kevynlucasprofissional-stack/hermes-agent a aprendizagem operacional autonoma durante a propria TaskRun. NAO redesenhar arquitetura e NAO fazer novo questionario.
 
