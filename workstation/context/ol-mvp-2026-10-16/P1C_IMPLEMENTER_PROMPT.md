@@ -1,5 +1,10 @@
 # PROMPT PRONTO — HERMES WORK OL-MVP P1C | PROVAR ADOCÃO NO PRODUTO REAL (80/20)
 
+### Testes RED de operação exata já preparados
+Antes da fase 2 de vinculação, copie `workstation/context/ol-mvp-2026-10-16/patches/test_P1C_strict_read_acceptance.py` para `workstation/tests/test_p1c_strict_read_acceptance.py` e rode somente esse arquivo em RED. A correção deve fazer 3 testes passarem rejeitando sample inexistente, outra operação e raw_ref trocado. Os testes foram **preparados, NÃO executados** nesta preparação; adaptar somente se APIs concretas divergirem. Não baixar a segurança para fazê-los passar.
+
+
+
 Você é a IA executora do Hermes Work. **Execute mudanças e testes; não recomece a arquitetura, não reimplemente P1B, não se concentre em hardening geral.** O objetivo é provar que o código existente trabalha automaticamente no Hermes real.
 
 ### Repositório e estado
