@@ -1,5 +1,19 @@
 # Workstation roadmap
 
+## 2026-10-16 — OL-MVP P1C: provar reutilização NATIVA em TaskRun real (prioridade 80/20)
+
+**P1B CÓDIGO CONCLUÍDO:** PR draft #94 commit `27b6376535dcfb92025fd4d468411feb0d7d3a34` contém readback tipado, owner/dispatcher, aceitação por WorkItem, saída semântica `read.*` e mineração candidata. O relatório do implementador apresenta **30 testes focais (8+8+5+5+3+1)** e **53 regressões de segurança** verdes; não reexecutamos essa bateria nesta atualização. P1.0 Chromium/Electron já passou 1/1 E2E com 3 cartões DOM loopback em 21,8s.
+
+**P1B ≠ P1C:** `test_ol_mvp_p1b_cards_workitems.py` usa dispatcher Python sintético e `worker()` executa **todos** os três cartões; candidate minerado `DISCOVERED` não significa `RunLocalAdopter` executando item 2/3. Nenhum E2E integrado `desktop_chat/work_execute → TaskRun → RunLocalAdopter → segunda TaskRun` ou redução real de tokens foi apresentado. Stage A continua PENDENTE; exceção autoriza apenas desenvolvimento isolado. Portanto, implementação P1B aprovada para avançar, mas **produto/DIRECT/promocão em HOLD**.
+
+**P1C = o próximo experimento, sem hardening geral:** gateway/chat real + 3 WorkItems nativos separados → amostra/recibo vinculados por operation_id exato → candidata e offer legítima → reuse receipt de `RunLocalAdopter` em item seguinte, quando a qualificação real permitir → nova TaskRun com parâmetros diferentes; uso do provedor real ou `null`. Primeiro inspecionar riscos focais em `canonical_source_for_readback` e `ExperienceCorpus.accept_work_item` (fallback para last sample/fabricação de amostra); exigir fail-closed e comprovante por operação real.
+
+**Gates P1C:** GO P2 ao comprovar caminho real; GO P2 SOMENTE SHADOW/observabilidade caso o único bloqueio seja autorização externa de Stage A; HOLD técnico quando ainda faltar TaskRun nativa ou prova causal. P2 futura: memória leve e seleção contrato/exato/BM25→LAYA opcional/LLM, quatro ImprovementRuns com infraestrutura comum e orçamento com teto exclusivo do usuário. Sem segunda plataforma de automação.
+
+**Handoff:** [plano P1C](context/ol-mvp-2026-10-16/P1C_NATIVE_DOGFOOD_PLAN.md) · [mapa](context/ol-mvp-2026-10-16/P1C_EXACT_PATCH_MAP.md) · [prompt implementador](context/ol-mvp-2026-10-16/P1C_IMPLEMENTER_PROMPT.md) · [recibo/template](context/ol-mvp-2026-10-16/P1C_NATIVE_RECEIPT_TEMPLATE.json). Codigo de auditoria `patches/P1C_evidence_gate.py` é estrutura-only, NÃO valida ArtifactStore nem altera runtime; testes Python de protótipo locais 6/6 PASS, aguarda qualificação no HEAD da branch.
+
+
+
 ## 2026-10-16 — OL-MVP P1B: VERIFICAR RESULTADO DE LEITURA → COMPILAR (PRIORIDADE REAL, 80/20)
 
 **P1.0 APROVADO:** relatório factual no `evidence/P1_NATIVE_RESULT_20261016.json` (commit `6e1443079e` do PR #93): Electron/Chromium nativo, extração tipada e readback DOM independente de 3 cartões, E2E **1/1 PASS 21,8s**. Trata-se de UMA ferramenta lendo 3 cards numa fixture loopback, não de 3 WorkItems em TaskRun canônica. Build dirty warning; sem release. Chamadas LLM/tokens/custo desconhecidos.
