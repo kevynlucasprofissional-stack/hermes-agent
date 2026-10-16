@@ -1,5 +1,10 @@
 # P1C — Mapa de código exato e prioridade de alterações
 
+### Código RED já preparado (não instalado)
+`patches/test_P1C_strict_read_acceptance.py` contém três casos negativos para `ExperienceCorpus.accept_work_item` (amostra inexistente, `operation_id` divergente e `raw_result_ref` divergente). Copiar para `workstation/tests/test_p1c_strict_read_acceptance.py`, executar RED e corrigir EXCLUSIVAMENTE a correspondência de amostra/ref com fail-closed. Este código está em docs/patches e não foi executado contra o runtime — não alegar PASS. O helper `P1C_evidence_gate.py` e seus seis testes são estruturais e separados.
+
+
+
 Base `docs/ol-mvp-p1c-native-taskrun-20261016` sobre `docs/ol-mvp-p1b-read-output-20261016@27b6376535dc` PR #94. **Não modificar main nem sobrescrever worktree da IA anterior.**
 
 | Ordem | Owner/arquivo | Ação mínima e critério |
