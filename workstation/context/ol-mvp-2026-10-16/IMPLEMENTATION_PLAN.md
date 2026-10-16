@@ -1,5 +1,5 @@
 # OL-MVP V2 — Aprendizagem operacional dentro da TaskRun
-Data: 2026-10-16 | Status: PLANEJADO, NAO QUALIFICADO | Prioridade: P0, foco 80/20
+Data: 2026-10-16 | Status: P0a PATCH+55 TESTES PASSARAM; P0b wiring e Electron NAO QUALIFICADOS | Prioridade: P0, foco 80/20
 
 ## Objetivo
 Aprender autonomamente com o item 1, compilar a capacidade candidata a partir de evidencia independente, reutilizar no proximo item elegivel ainda NA MESMA TaskRun e executar os demais itens sem redescoberta por LLM. Preservar autoridade, lease, estado duravel, verificacao e conclusao integral da tarefa. Depois provar persistencia em outra TaskRun e economia liquida.
