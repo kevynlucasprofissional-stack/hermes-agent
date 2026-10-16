@@ -1,5 +1,15 @@
 # P1 — Critérios 80/20, evidências e avanço
 
+## Atualização factual P1.0 / P1B — 16/10/2026 (PR #93 HEAD 6e1443079e)
+
+**Esta seção substitui o antigo estado "boot failed / E2E NOT_RUN" abaixo.** O `evidence/P1_NATIVE_RESULT_20261016.json` confirma **P1.0 PASS**: build/tsc/hooks relatados PASS e teste Electron Chromium `browser_extract_items`/DOM independente **1/1 PASS 21,8s**; observados três cards e campos `id/list/title/description`. Foi **uma operação de extração de três cartões**, numa fixture loopback e com BrowserTask de teste, não três WorkItems da TaskRun. Aviso de working tree dirty no build.
+
+**P1.1 HOLD:** falha focal de representação do RESULTADO de leitura no ciclo Experience Compiler (aceitação só no fechamento, sem output projection, compiler exige efeito semântico, owner não admite extração para readback). **P1.2 NOT_DEMONSTRATED**, custos LLM nulos por indisponibilidade de dados. Não afirmar reuso, promoção autônoma ou economia de 40%.
+
+**Novo gate 80/20:** B0 três WorkItems canônicos, B1 readback owner independente, B2 amostra `VERIFIED_SUCCESS` com contrato estável de saída, B3 candidato no compiler, B4 adoção do próximo WorkItem se DIRECT legítimo, B5 segunda TaskRun sem fixture de promoção artificial. Sem Stage A autorizado: código apenas em `patches/`; PR documenta HOLD. Ver [plano](P1B_OUTPUT_BRIDGE_PLAN.md), [patch de instalação](P1B_PATCH_INSTALL.md), [prompt de implementação](P1B_IMPLEMENTER_PROMPT.md).
+
+
+
 ## Situação de partida (16/10/2026)
 - P0 Python: relatório anterior **91/91 PASS** em suites focalizadas, incluindo 3 itens adaptativos/2 compilados numa fixture de filesystem; validação de 7 testes focalizados foi repetida no checkout reconciliado e passou.
 - O "40%" é uma **contagem instrumentada em fixture**, não economia monetária.
