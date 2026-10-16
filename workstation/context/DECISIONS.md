@@ -1,5 +1,16 @@
 # Architectural Decisions
 
+## D-046 — One-Click Windows: health offline e reparo mínimo por domínio (2026-10-16)
+**Status: DECISÃO DE ARQUITETURA DOCUMENTADA / CÓDIGO PROPOSTO / NÃO IMPLEMENTADA NEM WINDOWS-QUALIFICADA.** Complementa o princípio de [boot startup reliability](WORKSTATION_BOOTSTRAP_STARTUP_RELIABILITY_2026-10-07.md) e não altera gate H-079.
+1. **Diferenciar validar e instalar.** Em warm start com as dependências saudáveis e os manifests inalterados, `START-HERMES-WORKSTATION.bat` não deve executar `uv pip install` ou `npm ci`; Doctor e Desktop devem poder abrir offline.
+2. **Checar exit code, não stderr.** `uv pip check` pode escrever saída informativa no fluxo de erros; o PowerShell 5.1 deve capturar `$LASTEXITCODE` imediatamente. Uma falha real de dependências deve manter exit não zero e diagnóstico acionável. Hipótese do incidente ainda aguarda reprodução nativa.
+3. **Isolar fingerprints/reparos.** Python e Node possuem arquivos de entrada, probes e stamps independentes. Alteração só Python não reinstala Node; alteração só Node não reinstala Python; código-fonte sem mudança de manifests não invalida dependências. Flags explícitas no installer preservam `-SkipDependencies` legado.
+4. **Fail closed e migração honesta.** Record só após health do respectivo domínio; stamp antigo pode ser migrado automaticamente apenas com igualdade criptográfica ao fingerprint legado e probes reais saudáveis. Sem prova, reparar sem inventar cache válido.
+5. **Não remover dependências por volume aparente.** Os 1.342 pacotes npm incluem workspaces/dev toolchain que podem ser necessários ao `npm run dev --workspace apps/desktop`. Revisar mapa runtime/build antes de modularizar o install. Vulnerabilidades do npm são uma frente de segurança separada; não usar `audit fix --force` automático.
+6. **Prevenir corridas e preservar estado.** Duas inicializações não podem executar `npm ci` simultaneamente; nunca apagar `.venv`, node_modules ou Browser profiles cegamente. H-079 upstream/seams, PowerShell 5.1 real, Windows native Electron, regressões e CI exato são pré-requisitos de promoção.
+**Rationale + arquivos plug-and-play propostos:** [kit 2026-10-16](oneclick-bootstrap-2026-10-16/README.md). Issue canônico: KI-044. Esta decisão **não** autoriza merge/release sem provas.
+
+
 ## D-045 — Smart Kanban admission: Session ≠ Task ≠ TaskRun (2026-10-11, P0; pausa estratégica 2026-10-12)
 **Status: isolated code + RED/GREEN development; native product qualification OPEN; pausa estratégica 2026-10-12.**
 
