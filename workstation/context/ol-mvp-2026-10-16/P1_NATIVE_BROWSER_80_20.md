@@ -45,3 +45,11 @@ Evidencia original: `workstation/dogfood/dados/Sessões Hermes` e log entregue e
 - Evidência local: `apps/desktop/test-results/workstation-headless-load--595fa-ller-and-IPC-while-headless/error-context.md` e `trace.zip`.
 - **Única correção P1.0 autorizada no 80/20:** verificar startup do mock backend/boot readiness e se o build em `apps/desktop/dist` corresponde ao HEAD atual; fazer uma única rerun focal quando a causa for corrigida. Não estender timeouts como substituto de readiness nem abrir hardening lateral de Browser/Kanban.
 - Fase P1 permanece ATIVA, evidência de aprendizagem em DOM vivo = PENDENTE. P0 Python continua GREEN.
+
+## Atualização P1 — pacote de implementação verificável (16/10)
+**Branch de desenvolvimento:** `docs/ol-mvp-p1-native-dogfood-20261016` (base PR #92), sem merge main. Já preparados **em código**:
+- `apps/desktop/e2e/workstation-headless-load.spec.ts`: `beforeAll` com timeout TEST-ONLY consistente (160s > `waitForAppReady` 120s), diagnóstico `phase/status/reason`, rota HTTP local e teste `OL-MVP P1: reads three isolated cards...`.
+- `apps/desktop/e2e/ol-mvp-p1-readonly-cards.ts`: página DOM local de 3 cartões somente leitura, sem login.
+- Teste P1 novo ainda **NOT_RUN** ao registrar o pacote; não é validação de Experience Compiler.
+
+**Implementação dirigida:** [P1 patch map](P1_PATCH_MAP.md), [P1 evidence gate](P1_EVIDENCE_GATE.md) e [P1 implementer prompt](P1_IMPLEMENTER_PROMPT.md) são as fontes operacionais. Corrigir primeiro mock backend/boot se falhar, depois provar o ciclo real adaptive → compiled → readback na mesma TaskRun, reuso em outra e provider usage real. Antigo prompt P0 serve apenas como histórico.
