@@ -1,0 +1,282 @@
+[CmdletBinding()]
+param(
+  # Kept for backwards compatibility. Dependency installation is now the normal path.
+  [switch]$InstallDependencies,
+  [switch]$SkipDependencies,
+  [switch]$SkipPythonDependencies,
+  [switch]$SkipNodeDependencies
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$VenvRoot = Join-Path $Root ".venv"
+$VenvPython = Join-Path $VenvRoot "Scripts\python.exe"
+
+function Invoke-NativeChecked {
+  param(
+    [Parameter(Mandatory = $true)][string]$Command,
+    [object[]]$Arguments = @()
+  )
+
+  & $Command @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Command failed with exit code ${LASTEXITCODE}: $Command $($Arguments -join ' ')"
+  }
+}
+
+function Test-PythonCandidate {
+  param(
+    [Parameter(Mandatory = $true)][string]$Command,
+    [string[]]$Prefix = @()
+  )
+
+  try {
+    $probeArgs = @()
+    $probeArgs += $Prefix
+    $probeArgs += @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
+    $out = & $Command @probeArgs 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $out) { return $null }
+    return [pscustomobject]@{
+      Command = $Command
+      Prefix = $Prefix
+      Version = [version]($out | Select-Object -Last 1)
+    }
+  }
+  catch {
+    return $null
+  }
+}
+
+function Resolve-Python {
+  if ($env:HERMES_PYTHON) {
+    $candidate = Test-PythonCandidate -Command $env:HERMES_PYTHON
+    if ($candidate) { return $candidate }
+    throw "HERMES_PYTHON is set but could not be executed: $env:HERMES_PYTHON"
+  }
+
+  if (Get-Command py -ErrorAction SilentlyContinue) {
+    foreach ($selector in @("-3.14")) {
+      $candidate = Test-PythonCandidate -Command "py" -Prefix @($selector)
+      if ($candidate) { return $candidate }
+    }
+  }
+
+  if (Get-Command python -ErrorAction SilentlyContinue) {
+    $candidate = Test-PythonCandidate -Command "python"
+    if ($candidate) { return $candidate }
+  }
+
+  throw "Python was not found. Hermes requires Python >=3.14,<3.15. Install Python 3.14 and retry."
+}
+
+$Python = Resolve-Python
+
+function Invoke-HermesPython {
+  param([object[]]$Arguments = @())
+
+  $pythonArgs = @()
+  $pythonArgs += $Python.Prefix
+  $pythonArgs += $Arguments
+  & $Python.Command @pythonArgs
+  if ($LASTEXITCODE -ne 0) {
+    throw "Python command failed with exit code ${LASTEXITCODE}: $($Python.Command) $($pythonArgs -join ' ')"
+  }
+}
+
+function Ensure-WorkstationVenv {
+  if (Test-Path $VenvPython) {
+    # Capture the native exit code before piping; Windows PowerShell 5.1
+    # can report -1 after a successful external command in a pipeline.
+    $probeRaw = & $VenvPython -c "import sys; print('HERMES_VENV_OK' if (3, 14) <= sys.version_info[:2] < (3, 15) else 'HERMES_VENV_UNSUPPORTED')"
+    $probeExit = $LASTEXITCODE
+    $probe = $probeRaw | Select-Object -Last 1
+    if ($probeExit -ne 0 -or $probe -ne "HERMES_VENV_OK") {
+      throw "Existing Workstation venv is invalid or unsupported: $VenvRoot. Preserve it and prepare a Python 3.14 environment in a separate checkout."
+    }
+    Write-Host "Using existing isolated Python environment: $VenvRoot" -ForegroundColor Green
+    return
+  }
+
+  if ($Python.Version -lt [version]"3.14.0" -or $Python.Version -ge [version]"3.15.0") {
+    throw "Hermes dependency installation requires Python >=3.14,<3.15, but selected Python is $($Python.Version)."
+  }
+
+  Write-Host "Creating isolated Python environment: $VenvRoot" -ForegroundColor Cyan
+  Invoke-HermesPython -Arguments @("-m", "venv", $VenvRoot)
+  if (-not (Test-Path $VenvPython)) {
+    throw "Python venv creation completed without producing $VenvPython"
+  }
+}
+
+function Test-WorkstationVenvPip {
+  # Probe via importlib instead of invoking ``python -m pip``. In PowerShell 7
+  # a missing module's expected non-zero native exit is promoted to a workflow
+  # failure before this predicate can return false.
+  $hasPip = & $VenvPython -c "import importlib.util; print('1' if importlib.util.find_spec('pip') else '0')"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect pip availability in $VenvPython."
+  }
+  return $hasPip.Trim() -eq "1"
+}
+
+function Install-HermesEditable {
+  # uv-managed virtual environments intentionally may not contain pip. Prefer
+  # uv so a healthy existing .venv is reusable without installing pip into it.
+  if (Get-Command uv -ErrorAction SilentlyContinue) {
+    Write-Host "Installing Hermes into .venv with uv..." -ForegroundColor Cyan
+    Invoke-NativeChecked -Command "uv" -Arguments @(
+      "pip", "install", "--python", $VenvPython, "-e", "."
+    )
+    return
+  }
+
+  if (-not (Test-WorkstationVenvPip)) {
+    Write-Host "pip is missing from the existing .venv; bootstrapping with ensurepip..." -ForegroundColor Yellow
+    & $VenvPython -m ensurepip --upgrade
+    if ($LASTEXITCODE -ne 0 -or -not (Test-WorkstationVenvPip)) {
+      throw "Workstation .venv has no pip, uv is unavailable, and ensurepip could not bootstrap pip. Install uv or repair this Python installation, then retry."
+    }
+  }
+
+  Write-Host "Installing Hermes into .venv with pip..." -ForegroundColor Cyan
+  & $VenvPython -m pip install -e "."
+  if ($LASTEXITCODE -ne 0) {
+    throw "Hermes Python installation failed with exit code ${LASTEXITCODE}."
+  }
+}
+
+function Get-CheckoutStatus {
+  if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return $null }
+  $insideRaw = & git -C $Root rev-parse --is-inside-work-tree 2>$null
+  $gitExit = $LASTEXITCODE
+  $inside = $insideRaw | Select-Object -Last 1
+  if ($gitExit -ne 0 -or $inside -ne "true") { return $null }
+  $status = & git -C $Root status --porcelain=v1 --untracked-files=all 2>$null
+  if ($LASTEXITCODE -ne 0) { throw "Could not read Git checkout status." }
+  return @($status) -join "`n"
+}
+
+function Assert-CheckoutUnchanged {
+  param([AllowNull()][string]$Before)
+  if ($null -eq $Before) { return }
+  $after = Get-CheckoutStatus
+  if ($null -eq $after) { throw "Git checkout became unavailable during installation." }
+  if ($after -ne $Before) {
+    Write-Host "Checkout status changed during install (possibly concurrent Git activity):" -ForegroundColor Red
+    $beforeLines = @($Before -split "`n" | Where-Object { $_ -ne "" })
+    $afterLines = @($after -split "`n" | Where-Object { $_ -ne "" })
+    foreach ($line in $beforeLines) {
+      if ($afterLines -notcontains $line) {
+        Write-Host "  before only: $line" -ForegroundColor Yellow
+      }
+    }
+    foreach ($line in $afterLines) {
+      if ($beforeLines -notcontains $line) {
+        Write-Host "  after only:  $line" -ForegroundColor Yellow
+      }
+    }
+    Write-Host "Compare the before-only and after-only entries above before retrying." -ForegroundColor DarkGray
+    throw "Git checkout status changed during installation. Investigate concurrent Git activity or source modifications before retrying."
+  }
+}
+
+function Assert-NodeToolchain {
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    throw "Node.js was not found. Hermes Desktop requires Node >=22.22.0; .nvmrc selects Node 26."
+  }
+  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
+    throw "npm was not found. Install a compatible Node.js distribution and retry."
+  }
+
+  $nodeRaw = (& node -p "process.versions.node" 2>$null).Trim()
+  if ($LASTEXITCODE -ne 0 -or -not $nodeRaw) { throw "Could not determine the Node.js version." }
+  $nodeVersion = [version]$nodeRaw
+  $minimumNode = [version]"22.22.0"
+  if ($nodeVersion -lt $minimumNode) {
+    throw "Node $nodeVersion is below the Hermes Desktop minimum $minimumNode."
+  }
+  if ($nodeVersion.Major -ne 26) {
+    Write-Host ("[WARN] Node {0} satisfies the minimum, but .nvmrc selects Node 26. CI validates on Node 26." -f $nodeVersion) -ForegroundColor Yellow
+  }
+}
+
+function Prepare-RuntimeDirectories {
+  if ($env:HERMES_WORKSTATION_HOME -and $env:HERMES_WORKSTATION_HOME.Trim()) {
+    $RuntimeHome = [System.IO.Path]::GetFullPath($env:HERMES_WORKSTATION_HOME.Trim())
+  } elseif ($env:LOCALAPPDATA) {
+    $RuntimeHome = Join-Path $env:LOCALAPPDATA "HermesWorkstation"
+  } else {
+    $RuntimeHome = Join-Path $HOME ".hermes-workstation"
+  }
+  New-Item -ItemType Directory -Force -Path (Join-Path $RuntimeHome "Runtime") | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $RuntimeHome "Browser") | Out-Null
+  Write-Host "Runtime home: $RuntimeHome"
+}
+
+Write-Host "Hermes Workstation - install" -ForegroundColor Cyan
+Write-Host "Root: $Root"
+Write-Host ("Bootstrap Python: {0} {1} ({2})" -f $Python.Command, ($Python.Prefix -join ' '), $Python.Version)
+Write-Host ""
+
+$CheckoutBefore = Get-CheckoutStatus
+if ($null -eq $CheckoutBefore) {
+  Write-Host "[WARN] Git checkout could not be validated; source-cleanliness assertion is unavailable." -ForegroundColor Yellow
+} else {
+  Write-Host "[1/6] Git checkout detected; source state captured." -ForegroundColor Green
+}
+
+$IntegrationScript = Join-Path $PSScriptRoot "scripts\apply_core_integration.py"
+$LockScript = Join-Path $PSScriptRoot "scripts\validate_lock.py"
+$LicenseScript = Join-Path $PSScriptRoot "scripts\verify_licenses.py"
+
+Write-Host "[2/6] Validating committed Workstation integration..." -ForegroundColor Cyan
+Invoke-HermesPython -Arguments @($IntegrationScript, "--root", $Root, "--check")
+
+Write-Host "[3/6] Validating Workstation component lock..." -ForegroundColor Cyan
+Invoke-HermesPython -Arguments @($LockScript)
+
+Write-Host "[4/6] Validating third-party license policy..." -ForegroundColor Cyan
+Invoke-HermesPython -Arguments @($LicenseScript)
+
+Assert-NodeToolchain
+
+if (-not $SkipDependencies) {
+  Write-Host "[5/6] Preparing isolated dependencies..." -ForegroundColor Cyan
+  if (-not $SkipPythonDependencies) {
+    Ensure-WorkstationVenv
+  } elseif (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
+    throw "Python dependencies were skipped, but the Workstation .venv is missing."
+  }
+  Push-Location $Root
+  try {
+    if (-not $SkipPythonDependencies) {
+      Install-HermesEditable
+    } else {
+      Write-Host "[deps:python] Healthy Python environment reused." -ForegroundColor Green
+    }
+
+    if (-not $SkipNodeDependencies) {
+      Write-Host "Installing Node workspaces from package-lock.json..." -ForegroundColor Cyan
+      Invoke-NativeChecked -Command "npm" -Arguments @("ci")
+    } else {
+      Write-Host "[deps:node] Healthy Node workspaces reused." -ForegroundColor Green
+    }
+  } finally { Pop-Location }
+} else {
+  Write-Host "[5/6] Dependency installation skipped by explicit request." -ForegroundColor Yellow
+}
+
+Write-Host "[6/6] Preparing runtime and running health checks..." -ForegroundColor Cyan
+Prepare-RuntimeDirectories
+if (-not $SkipDependencies) {
+  & $VenvPython -c "import hermes_cli; print('OK: hermes_cli import')"
+  if ($LASTEXITCODE -ne 0) { throw "Installed .venv cannot import hermes_cli." }
+}
+Assert-CheckoutUnchanged -Before $CheckoutBefore
+
+Write-Host ""
+Write-Host "Hermes Workstation install is healthy; committed source was not modified." -ForegroundColor Green
+Write-Host "Next:"
+Write-Host "  workstation\doctor.cmd"
+Write-Host "  workstation\start.cmd"
