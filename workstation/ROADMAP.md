@@ -1,5 +1,18 @@
 # Workstation roadmap
 
+## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
+
+**Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
+
+**Descoberta dirigida em main (16/10):** workstation/experience_compiler/compilability_monitor.py já produz offers qualificados, workstation/run_adoption.py já possui RunLocalAdopter, e operational_resolution.py já chama o checkpoint na fronteira PRÉ-raciocínio. O DurableBatchRunner mantém um snapshot work_items para iterar; o P0 é acrescentar boundary seguro ENTRE itens e refetch do estado durável, sem um segundo executor, sem provocar duplicação. SHADOW é padrão e DIRECT exige qualificação autêntica. É proposta de correção e NÃO evidência de E2E aprovado.
+
+**Decisões de evolução:** memória operacional universal hierárquica e compilação seletiva; telemetria independente; capacidade compartilhada com versionamento e propagação otimista, rollback contextual; seleção determinística/BM25/embeddings/LAYA/LLM com Router+Policy; SkillImprovementRun, CapabilityImprovementRun, SourceResearchRun e SelectionImprovementRun em infraestrutura comum. Código-fonte somente investigação/patch experimental isolado sem autorização para implementação; orçamento global absoluto é exclusivo do usuário.
+
+**Ordem 80/20:** baseline e segurança (Gate 0) → patch de callback entre itens e reconciliacao no DurableBatchRunner (P0) → ligação ao owner runtime e teste real item1→item2 (P0) → Trello leitura/Electron + reuso nova TaskRun (P1) → métricas líquidas e evolução (P2) → quatro especialidades, fila econômica e seleção multimétodo (P3). Os patches old explicit_seed.py/test_explicit_seed.py não devem ser instalados.
+
+**Handoff e código-patch:** [plano](context/ol-mvp-2026-10-16/IMPLEMENTATION_PLAN.md) · [decisões](context/ol-mvp-2026-10-16/DECISIONS.md) · [patch preciso](context/ol-mvp-2026-10-16/PATCH_MAP.md) · [prompt](context/ol-mvp-2026-10-16/IMPLEMENTER_PROMPT.md). Fonte prioritária: 56 sessões, 10 snapshots HTML e 40 docs do dogfood auditados em 16/10, com limites explicitados; produto real ainda não requalificado.
+
+
 ## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)
 
 A fase 0 estabelece UMA branch (`feat/hermes-workstation-mvp-20261013`), um checkout (`C:\Github\hermes-agent`), leases cooperativos de arquivos, um integrador Git e checkpoint recursivo, evitando quatro agentes abrirem worktrees/branches por ajuste. Ver [protocolo](context/AGENT_COLLABORATION_PROTOCOL.md), [board](context/workstation-hub-mvp/TEAM_BOARD.md) e [3 etapas de implementação](context/workstation-hub-mvp/IMPLEMENTATION_STAGES.md). Produto ainda NÃO qualificado: (1) Agent abre Creative interno sem search; (2) Browser→Workstation + aba Creative React; (3) aba web manual→nova sessão real via mesma WebContentsView e lease humano. Plano 20/80: Fase 1 HWH01+02, Fase 2 HWH03, Fase 3 native E2E/CI/PR; sem merge automático ou bypass H-079.
