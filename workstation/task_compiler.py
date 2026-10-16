@@ -43,6 +43,7 @@ _dispatch_context: ContextVar[Any] = ContextVar("workstation_work_dispatch", def
 _constraints: ContextVar[Any] = ContextVar("workstation_work_constraints", default=None)
 _execution_active: ContextVar[bool] = ContextVar("workstation_durable_active", default=False)
 _canonical_caller_run: ContextVar[Any] = ContextVar("workstation_caller_run", default=None)
+_safe_item_boundary: ContextVar[Any] = ContextVar("workstation_safe_item_boundary", default=None)
 
 
 def batch_intent(prompt: Any) -> bool:
@@ -126,8 +127,10 @@ def discovery_guidance(agent=None):
 def execution_context(dispatch: Callable, session_id: str, progress: Callable | None = None,
                       constraints: dict | None = None, provider_usage: dict | None = None,
                       completed_mutations: dict | None = None, event_bus=None, canonical_task_id=None,
-                      mutation_evidence=None, capabilities=None, canonical_run_id=None):
+                      mutation_evidence=None, capabilities=None, canonical_run_id=None,
+                      safe_item_boundary: Callable[[WorkItem], None] | None = None):
     run_token = _canonical_caller_run.set(canonical_run_id)
+    boundary_token = _safe_item_boundary.set(safe_item_boundary)
     token = _dispatch_context.set((dispatch, session_id, {}, [], progress, provider_usage,
         completed_mutations or {}, event_bus, canonical_task_id, mutation_evidence or {},
         capabilities if capabilities is not None else {}))
@@ -137,7 +140,9 @@ def execution_context(dispatch: Callable, session_id: str, progress: Callable | 
     finally:
         _constraints.reset(constraint_token)
         _dispatch_context.reset(token)
+        _safe_item_boundary.reset(boundary_token)
         _canonical_caller_run.reset(run_token)
+
 
 
 def active_constraints() -> dict:
@@ -276,9 +281,10 @@ class TaskCompiler:
         return {**discovery_guidance(), "code": "PREFLIGHT_COMPLETE" if probes and all(r["verified"] for r in results)
                 else "PREFLIGHT_REQUIRED", "results": results, "plan_frozen": False}
 
-    def execute(self, request: dict, *, task_id: str, session_id: str, dispatch: Callable,
+    def execute(self, request: dict, *, task_id: str, session_id: str, dispatch: Callable,  # health: allow CC FUNC_LINES -- on_safe_item_boundary parameter and context wiring
                 progress: Callable | None = None, provider_usage: dict | None = None,
-                environment: str | None = None, event_bus=None, canonical_task_id: str | None = None) -> dict:
+                environment: str | None = None, event_bus=None, canonical_task_id: str | None = None,
+                on_safe_item_boundary: Callable[[WorkItem], None] | None = None) -> dict:
         # An ingress-triaged responsibility owns no Run. Open its first Run only
         # when a real executable plan reaches the existing TaskCompiler boundary.
         # Discovery, status and contracts remain non-executing observations.
@@ -516,6 +522,10 @@ class TaskCompiler:
         metadata = {"classification": kind.value, "constraints": constraints,
                     "objective_ref": objective.ref, "fingerprint": fingerprint,
                     "browser_task_id": task_id, "verbosity": normalize_verbosity(request.get("verbosity")).value}
+        if request.get("operation_family") or (request.get("operation_intent") or {}).get("operation_family"):
+            metadata["operation_family"] = request.get("operation_family") or (request.get("operation_intent") or {}).get("operation_family")
+        if request.get("target_family") or (request.get("operation_intent") or {}).get("target_family"):
+            metadata["target_family"] = request.get("target_family") or (request.get("operation_intent") or {}).get("target_family")
         from hermes_cli import kanban_db
         conn = self.store.get_connection()
         candidate_id = canonical_task_id or task_id
@@ -920,6 +930,7 @@ class TaskCompiler:
             guardrails = ToolCallGuardrailController()
             runner = DurableBatchRunner(durable_id, task_store=self.store, artifact_store=self.artifacts,
                                         max_retries=2, backoff_seconds=0)
+            boundary_cb = on_safe_item_boundary or _safe_item_boundary.get()
             summary = runner.execute_batch(request.get("title", key), work_payloads,
                 worker_fn=worker, validator_fn=lambda raw, _: {
                     "valid": raw.get("valid") is True, "reason": raw.get("code", ""),
@@ -928,7 +939,9 @@ class TaskCompiler:
                     "expected_delta": "verified_step", "actual_delta": raw.get("valid") is True},
                 session_id=session_id, metadata=metadata,
                 stop_on_exception=kind in {WorkClass.BROWSER_TRANSACTION, WorkClass.PROMPT_QUEUE},
-                can_start_item=can_start, guardrails=guardrails)
+                can_start_item=can_start, guardrails=guardrails,
+                on_safe_item_boundary=boundary_cb)
+
         finally:
             _execution_active.reset(execution_token)
             _constraints.reset(token)
@@ -1583,6 +1596,10 @@ class TaskCompiler:
         for k in ('verification_evidence', 'verification_expected', 'observer_fn', 'readback_fn', 'observer_args', 'observed_predicates', 'resource_id', 'resource_version', 'operation_id', 'expected_task_id', 'expected_run_id', 'expected_operation_id'):
             if k in request:
                 exec_context[k] = request[k]
+        if isinstance(request.get("scope"), dict):
+            exec_context.update(request["scope"])
+        elif isinstance(request.get("recipe_scope"), dict):
+            exec_context.update(request["recipe_scope"])
         result = kernel.execute_capability(cap, inputs, dispatch=scoped_dispatch, owner=owner, context=exec_context)
         projected_output = blob_references(self.artifacts, owner, sanitize(result.get('output')))
         if len(json.dumps(projected_output, ensure_ascii=False).encode('utf-8', 'surrogatepass')) > 2048:

@@ -82,6 +82,17 @@ def workstation_scoped_execution(
     tool_guardrails = getattr(agent, "_tool_guardrails", None)
     mark_progress = tool_guardrails.mark_verified_progress if tool_guardrails else None
 
+    boundary_callback = None
+    if agent is not None:
+        try:
+            from workstation.integrations.hermes.run_local_adoption import (
+                create_safe_item_boundary_callback,
+            )
+            boundary_callback = create_safe_item_boundary_callback(agent)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).debug("Failed to create safe item boundary callback", exc_info=True)
+
     work_capabilities = getattr(agent, "_work_capabilities", {})
     work_context = execution_context(
         _durable_dispatch,
@@ -95,7 +106,9 @@ def workstation_scoped_execution(
         mutation_evidence=getattr(agent, "_work_mutation_evidence", {}),
         capabilities=work_capabilities,
         canonical_run_id=getattr(agent, "_canonical_work_run_id", None),
+        safe_item_boundary=boundary_callback,
     )
+
 
     with work_context:
         try:

@@ -431,6 +431,16 @@ class DurableTaskStore:
             )
             row = cur.fetchone()
             if not row:
+                try:
+                    cur = conn.execute(
+                        "SELECT * FROM work_plans WHERE json_extract(metadata, '$.canonical_task_id') = ? "
+                        "ORDER BY created_at DESC LIMIT 1",
+                        (plan_id_or_task_id,),
+                    )
+                    row = cur.fetchone()
+                except sqlite3.OperationalError:
+                    pass
+            if not row:
                 return None
             col_names = [d[0] for d in cur.description]
             return WorkPlan.from_dict(dict(zip(col_names, row)))
@@ -462,9 +472,13 @@ class DurableTaskStore:
                 )
             rows = cur.fetchall()
             if not rows:
+                plan = self.get_plan(plan_id_or_task_id)
+                if plan and plan.id != plan_id_or_task_id and plan.task_id != plan_id_or_task_id:
+                    return self.get_work_items(plan.id, status=status)
                 return []
             col_names = [d[0] for d in cur.description]
             return [WorkItem.from_dict(dict(zip(col_names, row))) for row in rows]
+
 
     def get_item(self, item_id: str) -> Optional[WorkItem]:
         with self.get_connection() as conn:

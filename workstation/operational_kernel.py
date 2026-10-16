@@ -457,7 +457,7 @@ class OperationalKernel:
     # Execution & Composition
     # -------------------------------------------------------------------------
 
-    def execute_capability(
+    def execute_capability(  # health: allow CC FUNC_LINES -- scoped filesystem base_dir fallback and bound_args propagation
         self,
         capability_or_id: str | OperationalCapability,
         inputs: dict[str, Any],
@@ -611,7 +611,8 @@ class OperationalKernel:
                 step = steps[-1] if output is not None else steps[0]
                 args = interpolate_variables(step.get('args', {}), exec_context)
                 path = args.get('path') or args.get('src')
-                return filesystem_state(_resolve_path(path, args.get('base_dir'))).semantic_predicates if path else {}
+                fs_base = args.get('base_dir') or exec_context.get('base_dir') or filesystem_scope.get('base_dir')
+                return filesystem_state(_resolve_path(path, fs_base)).semantic_predicates if path else {}
             if cap.route == 'host_process':
                 observer = exec_context.get('process_observer')
                 if not callable(observer):
@@ -628,7 +629,8 @@ class OperationalKernel:
                             arguments = interpolate_variables(selected.get('args', {}), exec_context)
                             path = arguments.get('path') or arguments.get('src')
                             if path:
-                                state.update(filesystem_state(_resolve_path(path, arguments.get('base_dir'))).semantic_predicates)
+                                fs_base = arguments.get('base_dir') or exec_context.get('base_dir') or filesystem_scope.get('base_dir')
+                                state.update(filesystem_state(_resolve_path(path, fs_base)).semantic_predicates)
                     elif backend == 'host_process':
                         observer = exec_context.get('process_observer')
                         if not callable(observer):
@@ -732,6 +734,9 @@ class OperationalKernel:
                 if learned and cap.route == 'native_browser' and primitive == 'browser_navigate':
                     navigation_target = bound_args.get('url')
                 filesystem_scope = cap.scope.get('backends', {}).get('filesystem', cap.scope)
+                fs_base = bound_args.get('base_dir') or exec_context.get('base_dir') or filesystem_scope.get('base_dir')
+                if fs_base and 'base_dir' not in bound_args:
+                    bound_args['base_dir'] = fs_base
                 if learned and durable_store and mutating and route == 'filesystem':
                     if not callable(admission):
                         raise CapabilityDriftError('owner primitive admission required for durable mutation')
@@ -740,7 +745,7 @@ class OperationalKernel:
                 if learned and route == 'filesystem' and filesystem_scope.get('base_dir'):
                     base = Path(filesystem_scope['base_dir']).resolve()
                     for key in ('path', 'src', 'dst'):
-                        if key in bound_args and not _resolve_path(bound_args[key], bound_args.get('base_dir')).is_relative_to(base):
+                        if key in bound_args and not _resolve_path(bound_args[key], bound_args.get('base_dir') or filesystem_scope.get('base_dir')).is_relative_to(base):
                             raise CapabilityDriftError('filesystem target escaped exact learned scope')
                 # EC-04: observe a single filesystem mutation through this
                 # existing durable owner, before the dispatch checkpoint.
@@ -763,7 +768,7 @@ class OperationalKernel:
                             or current_plan.status != 'running'
                             or current_item.status not in {WorkItemStatus.PENDING, WorkItemStatus.RUNNING}):
                         raise CapabilityDriftError('canonical durable item/lease is no longer admissible')
-                    target = _resolve_path(bound_args['path'], bound_args.get('base_dir'))
+                    target = _resolve_path(bound_args['path'], bound_args.get('base_dir') or filesystem_scope.get('base_dir'))
                     scoped_base = Path(filesystem_scope['base_dir']).resolve()
                     if not target.is_relative_to(scoped_base):
                         raise CapabilityDriftError('filesystem prestate target escaped capability scope')

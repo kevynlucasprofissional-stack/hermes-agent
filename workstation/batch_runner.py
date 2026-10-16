@@ -91,7 +91,7 @@ class DurableBatchRunner:
         self.max_retries = max_retries
         self.backoff_seconds = backoff_seconds
 
-    def execute_batch(
+    def execute_batch(  # health: allow CC -- safe item boundary dispatch and item refresh
         self,
         title: str,
         items: List[Dict[str, Any]],
