@@ -1,5 +1,18 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
+
+**Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
+
+**Descoberta dirigida em main (16/10):** workstation/experience_compiler/compilability_monitor.py já produz offers qualificados, workstation/run_adoption.py já possui RunLocalAdopter, e operational_resolution.py já chama o checkpoint na fronteira PRÉ-raciocínio. O DurableBatchRunner mantém um snapshot work_items para iterar; o P0 é acrescentar boundary seguro ENTRE itens e refetch do estado durável, sem um segundo executor, sem provocar duplicação. SHADOW é padrão e DIRECT exige qualificação autêntica. É proposta de correção e NÃO evidência de E2E aprovado.
+
+**Decisões de evolução:** memória operacional universal hierárquica e compilação seletiva; telemetria independente; capacidade compartilhada com versionamento e propagação otimista, rollback contextual; seleção determinística/BM25/embeddings/LAYA/LLM com Router+Policy; SkillImprovementRun, CapabilityImprovementRun, SourceResearchRun e SelectionImprovementRun em infraestrutura comum. Código-fonte somente investigação/patch experimental isolado sem autorização para implementação; orçamento global absoluto é exclusivo do usuário.
+
+**Ordem 80/20:** baseline e segurança (Gate 0) → patch de callback entre itens e reconciliacao no DurableBatchRunner (P0) → ligação ao owner runtime e teste real item1→item2 (P0) → Trello leitura/Electron + reuso nova TaskRun (P1) → métricas líquidas e evolução (P2) → quatro especialidades, fila econômica e seleção multimétodo (P3). Os patches old explicit_seed.py/test_explicit_seed.py não devem ser instalados.
+
+**Handoff e código-patch:** [plano](ol-mvp-2026-10-16/IMPLEMENTATION_PLAN.md) · [decisões](ol-mvp-2026-10-16/DECISIONS.md) · [patch preciso](ol-mvp-2026-10-16/PATCH_MAP.md) · [prompt](ol-mvp-2026-10-16/IMPLEMENTER_PROMPT.md). Fonte prioritária: 56 sessões, 10 snapshots HTML e 40 docs do dogfood auditados em 16/10, com limites explicitados; produto real ainda não requalificado.
+
+
 ## Inteligência preservada — transição estratégica 2026-10-12 (não significa release)
 
 A sessão de 11–12/10 demonstrou que a sensação de Hermes "travado" envolve um ciclo causal de **auto-admissão indevida de Task/TaskRun**, **efeitos mal classificados**, **handoffs de mutações incertas**, **SUPERSEDED** e **autoridade/UI nativa**. Não reduzir o problema a latência. A decisão D-045 separa conversa, Task durável e TaskRun; PRs #71–#83 implementaram fatias em draft que permanecem fora de main.
