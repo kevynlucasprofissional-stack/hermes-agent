@@ -8,19 +8,25 @@ is not provable it simply returns so ordinary reasoning continues.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextvars import ContextVar
 import hashlib
 import json
 import logging
 import re
+from types import SimpleNamespace
 import uuid
 from typing import Any
 
 from workstation.artifacts import ArtifactStore
-from workstation.durable_tasks import DurableTaskStore
+from workstation.durable_tasks import DurableTaskStore, WorkItem
 from workstation.integrations.hermes.effect_authority import trusted_effect_authority_from_agent
 from workstation.run_adoption import AdoptionReport, DurableRunAdoptionOwner, RunLocalAdopter
 
 logger = logging.getLogger(__name__)
+
+_in_adoption_checkpoint: ContextVar[bool] = ContextVar("workstation_in_adoption_checkpoint", default=False)
+
 
 # Primitives supported by the owner. Readback admission is narrower: a raw tool
 # response is not an independent verifier for browser_snapshot / trello_api_get.
@@ -226,3 +232,38 @@ def workstation_run_local_checkpoint(context: Any) -> AdoptionReport | None:
     if report.items:
         agent._run_local_adoption_reports = [*getattr(agent, "_run_local_adoption_reports", []), report]
     return report
+
+
+def create_safe_item_boundary_callback(
+    agent: Any, context: Any = None, drain_timeout: float = 0.5
+) -> Callable[[WorkItem], None]:
+    """Create a non-reentrant safe item boundary callback for the real TaskRun owner."""
+    def on_safe_item_boundary(completed_item: WorkItem) -> None:
+        if _in_adoption_checkpoint.get():
+            return
+        token = _in_adoption_checkpoint.set(True)
+        try:
+            # Drain briefly to allow the async learning worker to finish candidate mining/validation if pending
+            from workstation.experience_compiler.compilability_monitor import peek_compilability_monitor
+            monitor = peek_compilability_monitor()
+            if monitor is not None and getattr(monitor, "enabled", False):
+                try:
+                    monitor.drain(timeout=drain_timeout)
+                except Exception:  # health: allow BLE001 S110 -- bounded drain timeout failure falls through safely
+                    pass
+            ctx = context or SimpleNamespace(
+                agent=agent,
+                api_call_count=int(
+                    getattr(agent, "_current_turn_api_calls", 0)
+                    or getattr(agent, "api_call_count", 0)
+                    or 0
+                ),
+            )
+            workstation_run_local_checkpoint(ctx)
+        except Exception:
+            logger.warning("run-local adoption checkpoint at safe boundary failed closed", exc_info=True)
+        finally:
+            _in_adoption_checkpoint.reset(token)
+
+    return on_safe_item_boundary
+
