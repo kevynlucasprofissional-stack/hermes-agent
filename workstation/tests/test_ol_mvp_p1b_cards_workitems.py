@@ -1,11 +1,10 @@
-"""OL-MVP P1B 80/20 Qualification Test — 3 WorkItems in a single TaskRun with browser_extract_items.
+"""OL-MVP P1B synthetic integration test: three durable WorkItems, candidate mined.
 
-Demonstrates:
-1. First adaptive and verified extraction of Card 1.
-2. Formation of a candidate capability by the Experience Compiler.
-3. Recognition of subsequent WorkItems (Card 2 and Card 3) by the same extraction family.
-4. Independent owner readback confirming every item's result.
-5. Preserved safety invariants (preconditions, zero effect budget, lease validity, no re-execution).
+All three cards are dispatched by this test's synthetic adaptive worker.
+This test DOES NOT prove live Electron/desktop-chat dispatch, qualified DIRECT
+adoption via RunLocalAdopter, compiled execution of items 2/3, or cross-Run
+reuse. Those remain P1C native-dogfood acceptance gates. It does establish
+per-item readback, candidate mining and durable safety invariants in isolation.
 """
 
 from copy import deepcopy
@@ -280,8 +279,9 @@ class OlMvpP1bCardsWorkItemsTests(unittest.TestCase):
             self.assertEqual(receipt["projection"]["semantic_predicates"]["read.output_shape"], "native_browser.card_fields.v1")
             self.assertEqual(receipt["projection"]["semantic_predicates"]["read.fields_complete"], True)
 
-        # Verification 3: Candidate capability formation
-        # The monitor yielded candidate capabilities for browser_extract_items:native_browser
+        # Verification 3: candidate mining only (not RunLocalAdopter execution).
+        # All three items above went through the synthetic worker; the monitor
+        # yielding a candidate does NOT imply that any item used a compiled path.
         self.assertTrue(len(mined_during_run) >= 1)
         cap = mined_during_run[-1]
         self.assertEqual(cap.effect, "read_only")
