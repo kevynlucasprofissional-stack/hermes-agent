@@ -30,7 +30,7 @@ Windows checkout original: docs/oneclick-bootstrap-reliability-20261016@73a1ca37
 - Rerun via installed system Python: python -m pytest -q workstation/tests/test_ol_mvp_inflight_boundary.py -> **3 PASSED in 2.86 s**.
 - python -m compileall -q workstation/batch_runner.py workstation/tests/test_ol_mvp_inflight_boundary.py -> exit 0.
 - git diff --check in test worktree -> exit 0.
-- Wider suite execution attempted separately; include its actual result in later journal update, do not assume it passes.
+- Wider regression: python -m pytest -q workstation/tests/test_batch_runner_and_exceptions.py workstation/tests/test_in_flight_handoff.py workstation/tests/test_online_compilability_safety.py workstation/tests/test_current_command_resolution.py -> **52 PASSED in 35.55 s** on isolated worktree.
 
 ## Open and exact next step
 P0b — connect optional boundary from authenticated runtime context (not user/model payload) to workstation_run_local_checkpoint, with correct TaskRun ownership; ensure no callback recursion, no false DIRECT qualification, no polling without bound, no duplicate effect. Add E2E via real native Electron and independent readbacks. P1 — persist/reuse cross-TaskRun and compare true LLM cost. Failing native qualification -> NOT VERIFIED, never declare release.
