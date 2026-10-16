@@ -1,5 +1,16 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-16 — OL-MVP P1B: saída read-only no Compiler (PREPARADO / Stage A HOLD)
+
+- Evidência recebida e inspecionada no GitHub PR #93 HEAD `6e1443079e`: recibo `workstation/context/ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json`. PASS Electron nativo BrowserTask/Chromium, 3 cartões, extração tipada e leitura independente `id/list/title/description`, E2E 1/1 PASS 21,8s. Aviso de build dirty; **nenhuma TaskRun canônica**.
+- Diagnóstico código efetivo: `state_abstraction.py` não representa saída, `corpus.accept_run` só aceita no fechamento global e `browser_navigate` para native readback, `segmentation` exige delta, `infer_action_model`/`compiler` recusam efeito vazio, owner `run_local_adoption.py` não suporta nem verifica `browser_extract_items`. Uma leitura sem mudança de DOM pode ser sucesso, mas requer receipt do RESULTADO produzido, não fabricar state mutation.
+- Proposta em nova branch de docs/patch isolado: `patches/P1B_read_output_contract.py` (parâmetros e output schema de cartões, compara resultado tipado com readback separado, sem dados privados no modelo) e `P1B_test_read_output_contract.py`. **5/5 unittest PASS** em scratch local no Windows; não são E2E nem autorização para marcar VERIFIED.
+- Próxima implementação 80/20: 3 WorkItems verdadeiros por TaskRun → owner readback independente → `verified_success` em amostra canônica por item → projeção semântica de resultado → `ExperienceCompiler` → oferta validada → `RunLocalAdopter` no próximo item → outra TaskRun. **Stage A pendente: não aplicar patch em runtime por esta revisão**, não forçar DIRECT, sem merge main. Monitor/telemetria continuam independentes da concessão de autoridade.
+- Documentação: [plano P1B](../ol-mvp-2026-10-16/P1B_OUTPUT_BRIDGE_PLAN.md), [patch exato](../ol-mvp-2026-10-16/P1B_PATCH_INSTALL.md), [prompt](../ol-mvp-2026-10-16/P1B_IMPLEMENTER_PROMPT.md).
+- Estado: **P1.0 PASS / P1.1 HOLD / P1.2 NOT_DEMONSTRATED / E2E P1B NOT_RUN / custo real NULL**. Proposta não equivale a qualificação do produto.
+
+
+
 ## 2026-10-16 — Resultado P1 native dogfood
 
 **P1.0 PASS:** `npm run build` passou (Vite reportou 40,74 s); o E2E focal passou 1/1 em 21,8 s e o `tsc` focal passou. Extração tipada, snapshot e readback DOM independente via Electron `webContents` verificaram ID, lista, título e descrição de três cartões da fixture loopback. [Recibo observado e proveniência](../ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
