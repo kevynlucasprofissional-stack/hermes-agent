@@ -437,18 +437,48 @@ function expectViewportWithinContent(snapshot: NativeViewportSnapshot | null): v
 }
 
 test.beforeAll(async () => {
-  await startDeterministicPageServer()
-  fixture = await setupMockBackend({ headless: true })
-  await waitForAppReady(fixture, 120_000, false)
+  // P1/OL-MVP: the readiness wait below takes up to 120s. Playwright's
+  // default 90s hook limit previously killed the diagnostic prematurely.
+  // This is a bounded test-only limit; it does NOT change production boot.
+  test.setTimeout(160_000)
+  let phase = 'start'
+  try {
+    phase = 'fixture-http'
+    await startDeterministicPageServer()
+    phase = 'mock-backend-and-electron'
+    fixture = await setupMockBackend({ headless: true })
+    phase = 'renderer-and-backend-ready'
+    await waitForAppReady(fixture, 120_000, false)
 
-  const controlPath = path.join(fixture.sandbox.root, 'workstation', 'Runtime', 'browser-control.json')
+    phase = 'native-controller-file'
+    const controlPath = path.join(fixture.sandbox.root, 'workstation', 'Runtime', 'browser-control.json')
+    await expect.poll(() => fs.existsSync(controlPath), { timeout: 25_000 }).toBe(true)
+    controller = await readControllerFile(controlPath)
 
-  await expect.poll(() => fs.existsSync(controlPath), { timeout: 30_000 }).toBe(true)
-  controller = await readControllerFile(controlPath)
-
-  expect(controller.runtime).toBe('electron-chromium')
-  const health = await controllerRequest('/health')
-  expect(health.runtime).toBe('electron-chromium')
+    phase = 'native-controller-health'
+    expect(controller.runtime).toBe('electron-chromium')
+    const health = await controllerRequest('/health')
+    expect(health.runtime).toBe('electron-chromium')
+  } catch (error) {
+    // Only test-created mock data. No credentials, user session or DOM dump.
+    // Keep the actual stack; readiness failures are NOT compiler failures.
+    const status = fixture
+      ? await fixture.page.locator('body').innerText({ timeout: 2_000 })
+          .then(text => {
+            if (/Reconnecting to Hermes/i.test(text)) return 'reconnecting'
+            if (/Waking up/i.test(text)) return 'waking-up'
+            if (/Preparing/i.test(text)) return 'preparing'
+            return 'other-renderer-state'
+          })
+          .catch(() => 'renderer-inaccessible')
+      : 'electron-not-launched'
+    console.error('[P1/OL-MVP] Electron native smoke blocked', {
+      phase,
+      status,
+      reason: error instanceof Error ? error.message : String(error)
+    })
+    throw error
+  }
 })
 
 test.afterAll(async () => {
