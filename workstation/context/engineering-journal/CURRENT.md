@@ -1,5 +1,19 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-16 — OL-MVP P1, pacote de dogfood nativo pronto para implementação (P1 E2E NÃO QUALIFICADO)
+
+**Material base:** P0 local integrado em PR draft #92; relatório anterior 91 testes aprovados (7 específicos rechecados). P0 benchmark instrumentado: 3/5 adaptativos e 2/5 reutilizados; não há comprovação de 40% de economia monetária. Cross-TaskRun: promoção manual no setup. Subsequente teste Electron headless falhou antes de `browser_navigate`: `beforeAll` timeout 90000ms enquanto `waitForAppReady(...120000)` aguardava UI `Waking up/Reconnecting`, stack em `tests-js/scripts/desktop-chat-smoke.ts::waitForChatReady`; causa de backend não identificada. Evidências locais: `apps/desktop/test-results/workstation-headless-load--595fa-ller-and-IPC-while-headless/{error-context.md,trace.zip}` (16/10).
+
+**Intervenção P1 nesta branch:** `apps/desktop/e2e/workstation-headless-load.spec.ts` adiciona limite de hook 160 s (restrito ao teste), log da etapa do startup, rota HTTP determinística; `apps/desktop/e2e/ol-mvp-p1-readonly-cards.ts` implementa HTML de três cartões e teste Chromium nativo, somente leitura, com exigência de snapshot dos títulos. Documentação operacional: `P1_PATCH_MAP.md`, `P1_EVIDENCE_GATE.md`, `P1_IMPLEMENTER_PROMPT.md`, `P1_NATIVE_BROWSER_80_20.md`.
+
+**Não alegar:** Electron E2E green; DOM nativo de cartões comprovado; compilação browser in-flight real; economia em USD; promoção autônoma global. O teste deve ser rodado após rebuild de `apps/desktop/dist`; o caminho feliz ainda pode falhar devido a mock backend desconectado.
+
+**Critério de continuidade 80/20:** smoke único e diagnóstico, leitura de 3 cards em DOM vivo, adoção compilada sob owner real na mesma TaskRun, reuso numa segunda Run, custo/provider real ou null. Não abrir nova infraestrutura de aprendizagem nem enfraquecer lease/SHADOW/DIRECT. Não sobrescrever arquivos não commitados do usuário ou alterar main.
+
+[Handoff detalhado](../ol-mvp-2026-10-16/P1_IMPLEMENTER_PROMPT.md) · [evidence gate](../ol-mvp-2026-10-16/P1_EVIDENCE_GATE.md).
+
+
+
 ## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
 
 **Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
