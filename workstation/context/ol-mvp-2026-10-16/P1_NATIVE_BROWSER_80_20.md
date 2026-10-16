@@ -38,3 +38,10 @@ P2.a Memoria operacional universal leve e captação automatica de experiencias 
 
 ## Fonte de verdade e risco
 Evidencia original: `workstation/dogfood/dados/Sessões Hermes` e log entregue em 16/10. 56 sessoes/10 HTMLs sao inventario historico, nao provas do build de hoje. Testes Python nao substituem Electron/DOM vivo. Nao declarar economias em USD sem provider usage e tarifa conhecidos.
+
+## Resultado do primeiro smoke P1.0 executado nesta revisão
+- No checkout local com build Electron existente: `node ../../node_modules/@playwright/test/cli.js test --config=playwright.config.ts workstation-headless-load.spec.ts --grep "keeps four native Browser tasks" --reporter=line`.
+- **FAIL no setup antes de entrar nas ações do Browser:** `beforeAll hook timeout of 90000ms exceeded` em `waitForAppReady(...)`; tela `Waking up …` / `Reconnecting to Hermes…`; `locator.count: Target page, context or browser has been closed`. O Browser controller não chegou a ser testado; não associar a falha ao patch de adoção.
+- Evidência local: `apps/desktop/test-results/workstation-headless-load--595fa-ller-and-IPC-while-headless/error-context.md` e `trace.zip`.
+- **Única correção P1.0 autorizada no 80/20:** verificar startup do mock backend/boot readiness e se o build em `apps/desktop/dist` corresponde ao HEAD atual; fazer uma única rerun focal quando a causa for corrigida. Não estender timeouts como substituto de readiness nem abrir hardening lateral de Browser/Kanban.
+- Fase P1 permanece ATIVA, evidência de aprendizagem em DOM vivo = PENDENTE. P0 Python continua GREEN.
