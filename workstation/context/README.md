@@ -1,5 +1,9 @@
 # Hermes Workstation — Coding-Agent Context
 
+## 2026-10-16 — One-Click Windows: incident entry point (D-046 / KI-044)
+O `oneclick_dependency_gate.ps1` bloqueia warm-start após install aparentemente saudável (log: `Checked 77 packages...` no Check/Record); o gate global também reinstala Python+Node por drift de um único domínio. A causa de stderr do uv em PowerShell 5.1 é **hipótese aguardando repro**. A correção foi preparada **apenas como documentação e scripts de implementação propostos** em [One-Click Reliability Kit](oneclick-bootstrap-2026-10-16/README.md) e [prompt implementador](oneclick-bootstrap-2026-10-16/IMPLEMENTER_PROMPT.md). Antes de código, cumprir leitura/Stage A H-079 e coordenação abaixo; não declarar produção/Windows qualificados. KI-044 OPEN; D-046 arquitetura aceita em documento.
+
+
 ## 2026-10-12 — Inteligência preservada / frente P0 em pausa
 
 **Entrada recuperável antes de qualquer retomada:** [Strategic Handoff](HERMES_WORK_STRATEGIC_HANDOFF_2026-10-12.md) → [Known Issues canônicos KI-028–KI-043](KNOWN_ISSUES.md) → [Dossiê de evidências](HERMES_WORK_P0_ISSUES_DETAIL_2026-10-12.md) → [PRs e dependências](HERMES_WORK_PR_RECONCILIATION_2026-10-12.md) → [Manifesto de fontes](HERMES_WORK_SOURCE_EVIDENCE_MANIFEST_2026-10-12.md) → [Fundamentos/ADRs](HERMES_WORK_DECISION_RATIONALE_2026-10-12.md) → [Prompt arquivado](HERMES_WORK_RESUME_PROMPT_2026-10-12.md). **PAUSED_BY_STRATEGY ≠ RESOLVED.** Não executar o prompt nem voltar ao PR #83 sem nova decisão do maintainer. Documentos de P0 detalhados continuam no branch do PR #83, não na main deste snapshot.
