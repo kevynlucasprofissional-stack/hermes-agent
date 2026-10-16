@@ -290,7 +290,7 @@ async function browserAction(taskId: string, sessionId: string, url: string): Pr
 async function nativeViewportSnapshot(app: MockBackendFixture['app']): Promise<NativeViewportSnapshot | null> {
   return app.evaluate(({ BrowserWindow }): NativeViewportSnapshot | null => {
     const allWindows = BrowserWindow.getAllWindows()
-    const window = allWindows.find(w => !w.isDestroyed() && w.contentView.children.length > 0) || allWindows[0]
+    const window = allWindows.find((w: { isDestroyed(): boolean; contentView: { children: unknown[] } }) => !w.isDestroyed() && w.contentView.children.length > 0) || allWindows[0]
 
     if (!window || window.isDestroyed()) {
       return null
