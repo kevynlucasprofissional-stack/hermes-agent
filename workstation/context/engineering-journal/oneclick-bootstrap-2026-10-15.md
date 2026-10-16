@@ -1,5 +1,10 @@
 # One-click Windows bootstrap — 2026-10-15
 
+## Follow-up de usuário 2026-10-16 — log real falha no Record (KNOWN INCIDENT / NOT YET FIXED)
+O estado `NOT WINDOWS-QUALIFIED` registrado acima para PR #90 era procedente: merge para `main` ocorreu 2026-10-15 sem aquela evidência. Windows com Python 3.14 e Node 26.7.0 validou upstream, completou `uv pip install -e .`, `npm ci` (1.342 pacotes; 39 audit findings), importou `hermes_cli`, mas falhou `-Action Check` e `-Action Record` com `Could not validate cached install: Checked 77 packages ...`. O bootstrap impediu Doctor/start. Causa provável: native stderr do `uv pip check` transformado em erro sob `$ErrorActionPreference="Stop"` no Windows PowerShell 5.1; requer reprodução discriminante (uv exit 0 vs não zero).
+O código confere acoplamento de todos os manifests em único fingerprint: qualquer drift implica reinstalar editable Python **e** npm workspaces. Decisão D-046 / KI-044: P0 tratar saída informativa separadamente do status real; P1 fingerprints/stamps Python+Node separados e reparo incremental; CI Windows exato + H-079 before release. [Kit com scripts completos](../oneclick-bootstrap-2026-10-16/README.md), [prompt](../oneclick-bootstrap-2026-10-16/IMPLEMENTER_PROMPT.md). **Esta nota não relata implementação do fix nem testes nativos passados.**
+
+
 Status: **IMPLEMENTED ON ISOLATED BRANCH / NOT WINDOWS-QUALIFIED / NOT READY FOR MAIN**.
 
 ## Scope and baseline
