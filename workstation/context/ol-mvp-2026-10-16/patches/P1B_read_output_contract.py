@@ -81,9 +81,13 @@ def prepare_read_shape(
         if item_list != expected["list"]:
             raise UnverifiedRead("list_mismatch")
         visible = _clean(item.get("text"))
-        # The typed extractor returns title + description as concatenated text;
-        # exact case-sensitive normalized membership preserves the real values.
-        if _clean(expected["title"] + expected["description"]) not in visible:
+        # Native textContent can concatenate fields with or without DOM whitespace.
+        # Require both non-overlapping semantic fields, in their DOM order, but
+        # do not insist on a particular whitespace join between them.
+        title, description = expected["title"], expected["description"]
+        title_at = visible.find(title)
+        desc_at = visible.find(description, title_at + len(title)) if title_at >= 0 else -1
+        if title_at < 0 or (description and desc_at < 0):
             raise UnverifiedRead("title_description_mismatch")
         seen.add(item_id)
     if seen != set(oracle):
