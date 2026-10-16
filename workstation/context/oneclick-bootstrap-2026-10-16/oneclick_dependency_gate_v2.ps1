@@ -61,7 +61,7 @@ function Get-PythonFingerprint {
   if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) { return $null }
   $versionProbe = Invoke-Probe $VenvPython @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
   if ($versionProbe.ExitCode -ne 0 -or -not $versionProbe.Output) { return $null }
-  return Get-Fingerprint @("pyproject.toml","uv.lock",".python-version") @("venv-python=$($versionProbe.Output)")
+  return (Get-Fingerprint -Patterns @("pyproject.toml","uv.lock",".python-version") -EnvironmentFacts @("venv-python=$($versionProbe.Output)"))
 }
 
 function Get-NodeFingerprint {
@@ -70,11 +70,11 @@ function Get-NodeFingerprint {
   $nodeProbe = Invoke-Probe "node" @("--version")
   $npmProbe = Invoke-Probe "cmd.exe" @("/d", "/c", "npm --version 2>NUL")
   if ($nodeProbe.ExitCode -ne 0 -or $npmProbe.ExitCode -ne 0) { return $null }
-  return Get-Fingerprint @(
+  return (Get-Fingerprint -Patterns @(
     "package.json","package-lock.json",".npmrc",".nvmrc",
     "apps/*/package.json","ui-tui/package.json",
     "ui-tui/packages/*/package.json","web/package.json","tests-js/package.json"
-  ) @("node=$($nodeProbe.Output)","npm=$($npmProbe.Output)")
+  ) -EnvironmentFacts @("node=$($nodeProbe.Output)","npm=$($npmProbe.Output)"))
 }
 
 function Test-PythonHealth {
@@ -131,9 +131,11 @@ function Test-NodeHealth {
     return $false
   }
   # Key imports required by the desktop dev runtime; not a complete npm audit.
-  $probe = Invoke-Probe "node" @(
+  $probe = Invoke-Probe -Command "node" -Arguments @(
     "-e",
-    "for (const x of ['react','vite','typescript','concurrently']) require.resolve(x, { paths: [process.cwd()] });"
+    "for (const x of ['react','vite','typescript','concurrently']) require.resolve(x, { paths: [process.argv[1], process.argv[2]] });",
+    $Root,
+    (Join-Path $Root "apps\desktop")
   )
   if ($probe.ExitCode -ne 0) {
     Write-Host "[deps:node] Desktop module resolution failed: $($probe.Output)"
@@ -157,7 +159,41 @@ function Set-Stamp {
   [System.IO.File]::WriteAllText($Path, $Fingerprint)
 }
 
+# Legacy composite stamp upgrade without unnecessarily reinstalling a healthy checkout.
+# Import only when BOTH the old combined hash matches exact current manifests and
+# both component health probes pass. Never trust an absent/stale/corrupted stamp.
+function Try-MigrateLegacyStamp {
+  $legacyPath = Join-Path $StampDir "oneclick-dependencies.sha256"
+  if (-not (Test-Path -LiteralPath $legacyPath -PathType Leaf)) { return }
+  if ((Test-Path -LiteralPath $PythonStamp -PathType Leaf) -and
+      (Test-Path -LiteralPath $NodeStamp -PathType Leaf)) { return }
+  if (-not (Get-Command node -ErrorAction SilentlyContinue) -or
+      -not (Get-Command npm -ErrorAction SilentlyContinue)) { return }
+  $nodeProbe = Invoke-Probe -Command "node" -Arguments @("--version")
+  $npmProbe = Invoke-Probe -Command "cmd.exe" -Arguments @("/d","/c","npm --version 2>NUL")
+  if ($nodeProbe.ExitCode -ne 0 -or $npmProbe.ExitCode -ne 0) { return }
+  $legacyHash = Get-Fingerprint -Patterns @(
+    "package.json", "package-lock.json", ".npmrc", ".nvmrc",
+    "pyproject.toml", "uv.lock", "apps/*/package.json", "ui-tui/package.json",
+    "ui-tui/packages/*/package.json", "web/package.json", "tests-js/package.json"
+  ) -EnvironmentFacts @("node=$($nodeProbe.Output)","npm=$($npmProbe.Output)")
+  if ([System.IO.File]::ReadAllText($legacyPath).Trim() -ne $legacyHash) {
+    Write-Host "[deps] Legacy stamp exists but does not match; safe repair required."
+    return
+  }
+  $pythonHash = Get-PythonFingerprint
+  $nodeHash = Get-NodeFingerprint
+  if (-not $pythonHash -or -not $nodeHash) { return }
+  if (-not (Test-PythonHealth) -or -not (Test-NodeHealth)) { return }
+  Set-Stamp -Path $PythonStamp -Fingerprint $pythonHash
+  Set-Stamp -Path $NodeStamp -Fingerprint $nodeHash
+  Write-Host "[deps] Valid legacy fingerprint safely migrated to Python/Node stamps."
+}
+
 try {
+  if ($Action -in @("Check","CheckPython","CheckNode")) {
+    Try-MigrateLegacyStamp
+  }
   # Fingerprint evaluation and health checks are independent per domain.
   $checkPython = $Action -in @("Check","CheckPython")
   $checkNode = $Action -in @("Check","CheckNode")
