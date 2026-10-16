@@ -1,4 +1,10 @@
 # Decisoes arquiteturais OL-MVP (16/10/2026)
+
+## D17 — Aplicação 80/20 após o primeiro Browser nativo (16/10/2026)
+
+`P1.0 PASS` implica que **não** se deve refazer Browser nativo/boot agora. As provas máximas são observações de runtime real e aceitação canônica, não êxito de fixture. Uma leitura read-only verificada tem **resultado** generalizável, não mutação do DOM; pode alimentar compilação por uma projeção específica após verificador independente do owner. Um `browser_extract_items` com três cartões não são três WorkItems da TaskRun. P1B trata output → accepted sample → compiler → run-local, preservando D01–D16 e Stage A. Código fonte operacional só modificado com autorização explícita, mesmo quando proposta experimental passa testes. PR P1B é pacote de pesquisa/patch experimental, não aprovação do executor.
+
+
 Estas sao DECISOES DE PRODUTO, nao implementacoes ja comprovadas.
 
 D01 — TaskRun tem dois objetivos simultaneos: concluir solicitacao e observar oportunidades; aprender nao bloqueia indefinidamente tarefa.
