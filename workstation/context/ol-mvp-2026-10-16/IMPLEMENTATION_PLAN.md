@@ -1,5 +1,9 @@
 # OL-MVP V2 — Aprendizagem operacional dentro da TaskRun
-Data: 2026-10-16 | Status: P0a PATCH+55 TESTES PASSARAM; P0b wiring e Electron NAO QUALIFICADOS | Prioridade: P0, foco 80/20
+Data: 2026-10-16 | Status atualizado: P0 Python implementado e relatado 91 PASS; P1 native Electron BLOCKED no boot e ainda não qualificado | Prioridade: P1, 80/20. Plano original P0 abaixo preservado como histórico.
+
+## Status P1 — ler antes do histórico P0
+
+Código P0 do wiring local foi integrado ao PR draft #92 (7 testes específicos rechecados). A antiga descrição "P0b pendente" deixou de ser a prioridade; o E2E Electron falhou no `beforeAll`, não no Experience Compiler. Novo código TEST-ONLY de diagnóstico + fixture DOM em `apps/desktop/e2e/workstation-headless-load.spec.ts` e `ol-mvp-p1-readonly-cards.ts` está na branch P1, aguardando qualificação. Executar [P1_IMPLEMENTER_PROMPT.md](P1_IMPLEMENTER_PROMPT.md), [P1_PATCH_MAP.md](P1_PATCH_MAP.md) e [P1_EVIDENCE_GATE.md](P1_EVIDENCE_GATE.md). Não refazer P0 nem chamar suite inteira antes do smoke focal.
 
 ## Objetivo
 Aprender autonomamente com o item 1, compilar a capacidade candidata a partir de evidencia independente, reutilizar no proximo item elegivel ainda NA MESMA TaskRun e executar os demais itens sem redescoberta por LLM. Preservar autoridade, lease, estado duravel, verificacao e conclusao integral da tarefa. Depois provar persistencia em outra TaskRun e economia liquida.
