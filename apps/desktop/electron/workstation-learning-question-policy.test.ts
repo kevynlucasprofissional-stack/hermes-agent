@@ -29,7 +29,7 @@ describe('Hermes Learning Mode question policy (inert)', () => {
     expect(decideLearningQuestion(candidate, {...context, userPausedQuestions: true}).action).toBe('observe')
   })
   it('changes question budget immediately with intensity (same session)', () => {
-    const previous = [570_000, 575_000]
+    const previous = [490_000, 550_000]
     expect(decideLearningQuestion(candidate, {...context, intensity: 'equilibrado', recentlyPresentedAtMs: previous}).action).toBe('queue')
     expect(decideLearningQuestion(candidate, {...context, intensity: 'intensivo', recentlyPresentedAtMs: previous}).action).toBe('ask')
   })
