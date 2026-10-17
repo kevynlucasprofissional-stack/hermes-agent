@@ -1,5 +1,9 @@
 # Experience Compiler — From Traces to Verified Operational Capability
 
+## 2026-10-17 — D-047: ingresso de demonstrações HUMANAS (PROPOSTO, NÃO WIRED)
+As novas `LearningSession` e `human_demonstration` descrevem conhecimento adquirido observando operador no Browser Electron, diferente de execução/verificação do Hermes. Perguntas, intenção confirmada, vídeo e gestos são **evidências para candidatas DISCOVERED ou CandidateLesson**, nunca `VERIFIED_SUCCESS`. Os gates atuais de `capture_progressive`, ExperiencePromotionPolicy, owner/replay/verifier, causalidade e autorização permanecem soberanos. Não fornecer `task_id/run_id` fictícios para forçar entrada; se API atual só aceita observações confiáveis de TaskRuns, use registro **inerte/review-only** separado até provar adaptação autorizada. Intensidade ao vivo afeta apenas Question Engine, não `SHADOW/DIRECT`. [D-047](LEARNING_MODE_HUMAN_DEMONSTRATIONS_2026-10-17.md).
+
+
 ## 2026-10-17 — Prioridade operacional D-046 (sem alterar contratos de aprendizagem)
 Preservar a implementação e as decisões existentes; priorizar **prova de execução real -> experiência -> capacidade candidata validada -> reuso** e resultado econômico mensurável, preferindo o caminho de compilação assistida por LLM quando for o menor experimento útil. Autonomia geral/mineração não devem virar pré-requisito para usar editores ou entregar trabalho. **A decisão não desativa aprendizagem nem certifica qualquer comportamento.** [D-046](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 
