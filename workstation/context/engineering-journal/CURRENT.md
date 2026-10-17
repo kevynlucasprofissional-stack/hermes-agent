@@ -139,6 +139,33 @@
 ## 2026-10-17 — D-046: correção estratégica do escopo de integrações (DOCUMENTAÇÃO; SEM EXPERIMENTO)
 **Observação:** o mantenedor esclareceu que painéis de aplicativos e o Browser nativo já fazem parte da experiência Hermes; integrar PhotoCraft/EffectCraft/Remotion inicialmente significa **abri-los nesses recursos existentes**, não construir um painel/editor novo. **Decisão:** priorizar entrega 80/20; utilizar motores independentes, testar automação do navegador e só depois considerar adapters ou acoplamento de código por gargalo demonstrado. Baixo acoplamento pode ser a configuração definitiva. **Hipótese operacional a testar posteriormente:** tarefas reais poderão ser concluídas/exportadas com confiabilidade satisfatória sem integração profunda; medir e falsificar por trabalho concluído, tempo, qualidade, intervenções e erros. **Resultado desta entrada:** decisão registrada, sem alteração de produto, sem testes ou benchmark; não afirmar funcionamento de apps. **Próximo experimento:** uma tarefa criativa real, duas execuções, medição de gargalos; manter D-043 em backlog condicionado. [D-046 canônica](../CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 
+## 2026-10-16 — EXP-ONECLICK-016: uv stderr, gate Record e instalação seletiva (QUALIFIED_LOCALLY_WINDOWS_PS51 / GREEN)
+- **Hipótese comprovada:** em Windows PowerShell 5.1 (`powershell.exe`), `oneclick_dependency_gate.ps1` falhava ao executar `uv pip check --python ... 2>$null` porque `$ErrorActionPreference="Stop"` convertia o stderr informativo de sucesso (`Checked 77 packages in 3ms` / `All installed packages are compatible`) em `NativeCommandError` terminante antes da leitura de `$LASTEXITCODE` (que era 0).
+- **Correção P0:** `Invoke-Probe` salva `$ErrorActionPreference`, ajusta para `"Continue"`, reseta e captura `$global:LASTEXITCODE` imediatamente após o processo nativo. Testes RED→GREEN comprovaram exit code 0 e aceitação normal pelo gate.
+- **Implementação P1 (Arquitetura Seletiva e Hardening):**
+  - Gate desacoplado (`oneclick_dependency_gate.ps1`): fingerprints e stamps independentes para Python (`oneclick-python-dependencies.sha256`) e Node (`oneclick-node-dependencies.sha256`). Ações: `Check`, `Record`, `CheckPython`, `CheckNode`, `RecordPython`, `RecordNode`.
+  - Instalador seletivo (`install.ps1`): adicionados switches `-SkipPythonDependencies` e `-SkipNodeDependencies`, preservando `-SkipDependencies` e a validação de integridade de checkout.
+  - Orquestrador inteligente (`oneclick_bootstrap.ps1`): verifica domínios individualmente, executando reparo apenas no componente com falha.
+  - Hardening de concorrência: `Invoke-WithWorkstationInstallLock` com serialização por exclusão mútua de arquivo no OS (`oneclick-install.lock` com `[System.IO.FileShare]::None`) e padrão double-checked locking para evitar instalações redundantes em inicializações simultâneas.
+  - Hardening de migração: `Try-MigrateLegacyStamp` migra `oneclick-dependencies.sha256` somente quando o hash coincide exatamente com os manifests atuais e ambos os domínios passam nos health checks; se inválido, falha de forma fechada (fail closed).
+  - Hardening de resolução de módulos: `node -e require.resolve` com caminhos absolutos do checkout e `apps/desktop`.
+- **Resultados da Matriz de Testes Automatizada (11/11 PASS em PS 5.1):**
+  1. uv stderr informativo com exit 0: PASS
+  2. uv falha real com exit != 0: PASS
+  3. Record e Check em ambiente saudável: PASS (Exit 0)
+  4. Stamps ausentes falham Check de forma fechada: PASS
+  5. Stamp legado corrompido/divergente falha fechado: PASS
+  6. Migração de stamp legado válido para Python/Node: PASS
+  7. Desvio exclusivo em Python: CheckPython falha, CheckNode passa (PASS)
+  8. Desvio exclusivo em Node: CheckPython passa, CheckNode falha (PASS)
+  9. Executável do Electron ausente: detectado com falha em Node sem afetar Python (PASS)
+  10. Switches seletivos de `install.ps1` (`-SkipPythonDependencies` / `-SkipNodeDependencies`): PASS
+  11. Serialização de concorrência com lock em uso concorrente: PASS
+- **Verificações de Integração:**
+  - `workstation/doctor.ps1 -Strict`: [OK] Strict doctor passed all required checks.
+  - Duas execuções consecutivas de warm start verificadas: zero reinstalações, zero chamadas de rede.
+  - Triage de segurança do npm audit: 31–39 findings (incluindo 2 críticos: `shell-quote` via dev tool `concurrently`, `sprintf-js` via build tool `@electron/get`) registrados como frente separada sem uso de `npm audit fix --force` ou rebaixamento de dependências.
+- **Arquivos modificados no runtime:** `workstation/scripts/oneclick_dependency_gate.ps1`, `workstation/install.ps1`, `workstation/scripts/oneclick_bootstrap.ps1`. Decisão: D-046. Issue: KI-044.
 ## 2026-10-13 — HWH-001 user dogfood corrective round
 
 Reference: `workstation/context/workstation-hub-mvp/DOGFOOD_REPAIR_20261013.md`. CSS do Creative estava desconectado e primeiro uso exigia projeto JSON. A aba agora abre projeto vazio, oferece preview temporário de assets e fecha sem destruir o componente. `Levar para sessão` não fabrica IDs quando Gateway falha e separa `runtime session_id` (BrowserTask/agent tools) do `stored_session_id` (chat/preview). Vitest 84/84 PASS, E2E Electron 1/1 PASS, ESLint 0 issues, build PASS; os testes não demonstram a jornada real de criação Gateway pelo botão seguida de ação do modelo sobre a mesma DOM, nem persistência de media; manter evidência parcial. Alterações de usuário em `workstation/dogfood/` preservadas. H-079 permanece PASS_WITH_AUTHORIZATION exclusivamente nesta branch.

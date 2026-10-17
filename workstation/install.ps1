@@ -2,7 +2,9 @@
 param(
   # Kept for backwards compatibility. Dependency installation is now the normal path.
   [switch]$InstallDependencies,
-  [switch]$SkipDependencies
+  [switch]$SkipDependencies,
+  [switch]$SkipPythonDependencies,
+  [switch]$SkipNodeDependencies
 )
 
 Set-StrictMode -Version Latest
@@ -241,17 +243,26 @@ Assert-NodeToolchain
 
 if (-not $SkipDependencies) {
   Write-Host "[5/6] Preparing isolated dependencies..." -ForegroundColor Cyan
-  Ensure-WorkstationVenv
+  if (-not $SkipPythonDependencies) {
+    Ensure-WorkstationVenv
+  } elseif (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
+    throw "Python dependencies were skipped, but the Workstation .venv is missing."
+  }
   Push-Location $Root
   try {
-    Install-HermesEditable
+    if (-not $SkipPythonDependencies) {
+      Install-HermesEditable
+    } else {
+      Write-Host "[deps:python] Healthy Python environment reused." -ForegroundColor Green
+    }
 
-    Write-Host "Installing Node workspaces from package-lock.json..." -ForegroundColor Cyan
-    Invoke-NativeChecked -Command "npm" -Arguments @("ci")
-  }
-  finally {
-    Pop-Location
-  }
+    if (-not $SkipNodeDependencies) {
+      Write-Host "Installing Node workspaces from package-lock.json..." -ForegroundColor Cyan
+      Invoke-NativeChecked -Command "npm" -Arguments @("ci")
+    } else {
+      Write-Host "[deps:node] Healthy Node workspaces reused." -ForegroundColor Green
+    }
+  } finally { Pop-Location }
 } else {
   Write-Host "[5/6] Dependency installation skipped by explicit request." -ForegroundColor Yellow
 }

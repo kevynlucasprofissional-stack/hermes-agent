@@ -1,5 +1,9 @@
 # One-click Windows bootstrap — 2026-10-15
 
+## Follow-up 2026-10-16 — Resolução D-046 / KI-044 (RESOLVED AND QUALIFIED LOCALLY)
+O incidente do falso negativo em `uv pip check` sob PowerShell 5.1 com `$ErrorActionPreference="Stop"` foi reproduzido, diagnosticado e resolvido definitivamente. A arquitetura de instalação inteligente com fingerprints e stamps separados para Python e Node, switches seletivos (`-SkipPythonDependencies`, `-SkipNodeDependencies`), serialização concorrente com lock de arquivo (`oneclick-install.lock`), migração criptográfica de stamp legado e probes de módulo absolutos foi implementada no runtime (`oneclick_dependency_gate.ps1`, `install.ps1`, `oneclick_bootstrap.ps1`) e qualificada com 11/11 testes aprovados em Windows PowerShell 5.1 e Doctor Estrito green. Ver detalhes no [Engineering Journal CURRENT](CURRENT.md) e [D-046](../DECISIONS.md).
+
+
 Status: **IMPLEMENTED ON ISOLATED BRANCH / NOT WINDOWS-QUALIFIED / NOT READY FOR MAIN**.
 
 ## Scope and baseline

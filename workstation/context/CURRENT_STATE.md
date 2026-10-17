@@ -1,5 +1,4 @@
 # Current State
-
 ## 2026-10-17 — Human Demonstration Learning Mode (D-047)
 **IMPLEMENTED (M0–M2) / REPLAY ON HOLD (M3)** na branch `feat/hermes-learning-mode-mvp-20261017`.
 - **M0:** `LearningSessionRecorder` integrado em `apps/desktop/electron/workstation-learning-session.ts` com lifecycle (`start/stop/discard`), consentimento, sanitização restrita via `workstation-learning-events.ts`, vídeo local e append-only síncrono em `events.jsonl` e `questions.jsonl`. Controles de UI em `apps/desktop/src/app/browser/learning-controls.tsx` integrados no Browser Hub e no painel lateral do chat com alternância de intensidade ao vivo (`Discreto`, `Equilibrado`, `Intensivo`, padrão inicial `Intensivo`) sem reiniciar sessão.
@@ -30,6 +29,17 @@
 
 ## 2026-10-17 — Direção operacional D-046 (decisão documental)
 O mantenedor decidiu priorizar uso de aplicativos criativos independentes (PhotoCraft/EffectCraft/Remotion e equivalentes) via Browser/painéis existentes, automação oportunista com ferramentas atuais e integração profunda somente após gargalo/ROI demonstrados. Creative Workstation profunda fica como **backlog condicionado**, sem desfazer D-043 nem alterar o estado técnico dos PRs e gates anteriores. **Não foram testados editores, instalados motores, editado runtime ou executado CI nesta atualização.** [Registro canônico](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
+## 2026-10-16 — One-Click Windows: resolução D-046 / KI-044 qualificada em Windows PS5.1
+Implementação aplicada e validada diretamente no runtime Windows 11 com Windows PowerShell 5.1:
+1. **Falso negativo eliminado:** Reproduzida e eliminada a falha onde `uv pip check` com exit code 0 sob `$ErrorActionPreference=Stop` era capturado como falha pelo stderr informativo (`Checked 77 packages...`). O wrapper `Invoke-Probe` isola a preferência de erro e lê diretamente `$global:LASTEXITCODE`.
+2. **Separação de Domínios e Reparo Inteligente:** `workstation/scripts/oneclick_dependency_gate.ps1` opera com fingerprints e stamps separados para Python e Node (`CheckPython`, `CheckNode`, `RecordPython`, `RecordNode`). `workstation/install.ps1` possui os switches `-SkipPythonDependencies` e `-SkipNodeDependencies`. Alteração em um domínio repara estritamente aquele domínio, sem rodar `npm ci` ou `uv pip install` desnecessariamente.
+3. **Hardening de Produção:**
+   - Proteção de concorrência com exclusão mútua de arquivo no sistema operacional (`oneclick-install.lock`) com double-checked locking, prevenindo corrupção por duplo clique simultâneo.
+   - Migração segura do fingerprint legado baseada em igualdade de hash e aprovação dos health probes de ambos os domínios.
+   - Resolução de módulos do desktop com caminhos absolutos garantindo execução independente do diretório de chamada.
+   - Diagnósticos acionáveis preservados em falhas reais de dependências (exit != 0).
+4. **Qualificação Empírica:** 11/11 testes automatizados na matriz PowerShell 5.1 (`scratch/test_oneclick_matrix.ps1`) aprovados com Exit Code 0; Strict Doctor passou (`workstation/doctor.ps1 -Strict`); dois warm starts consecutivos verificados sem reinstalações ou chamadas externas. Vulnerabilidades do npm audit mantidas isoladas da camada de boot. Decisão: D-046. Issue: KI-044.
 
 ## 2026-10-12 — Fork CI cost containment and Stage A qualification
 

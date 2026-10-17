@@ -187,6 +187,35 @@ function Enter-UpstreamEnvironment {
   }
 }
 
+function Invoke-WithWorkstationInstallLock {
+  param([scriptblock]$ActionBlock)
+  $lockDir = Join-Path $RuntimeRoot "Runtime"
+  New-Item -ItemType Directory -Force -Path $lockDir | Out-Null
+  $lockFile = Join-Path $lockDir "oneclick-install.lock"
+  $timeoutSeconds = 300
+  $startTime = [DateTime]::UtcNow
+  $lockStream = $null
+  while ($true) {
+    try {
+      $lockStream = [System.IO.File]::Open($lockFile, [System.IO.FileMode]::OpenOrCreate, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+      break
+    } catch [System.IO.IOException] {
+      if (([DateTime]::UtcNow - $startTime).TotalSeconds -ge $timeoutSeconds) {
+        throw "Timed out waiting for concurrent Hermes Work install/repair lock to be released ($lockFile)."
+      }
+      Write-Host "[bootstrap] Another instance is currently modifying dependencies; waiting for lock..." -ForegroundColor Yellow
+      Start-Sleep -Seconds 2
+    }
+  }
+  try {
+    & $ActionBlock
+  } finally {
+    if ($lockStream) {
+      $lockStream.Dispose()
+    }
+  }
+}
+
 function Invoke-Step {
   param([string]$Name, [string]$Script, [string[]]$Arguments = @())
   Write-Host ""
@@ -210,19 +239,29 @@ try {
       catch { Write-Host "[bootstrap] Previous install record unreadable; repairing." -ForegroundColor Yellow }
     }
     if (-not $stampMatches -or -not (Enter-UpstreamEnvironment)) {
-      Write-Host "[0/4] Installing or repairing pinned upstream tools and Python dependencies..." -ForegroundColor Cyan
-      Write-Host "      First run requires internet to fetch SHA256-verified archives."
-      # Official upstream package-management path, including optional defaults.
-      # setup-hermes.ps1 explicitly calls exit 0 under -RuntimeOnly. Running
-      # it in-process would terminate THIS launcher before Electron starts.
-      & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $SetupScript -RuntimeOnly
-      if ($LASTEXITCODE -ne 0) { throw "Upstream package manager failed (exit code $LASTEXITCODE)." }
-      if (-not (Enter-UpstreamEnvironment)) {
-        throw "Upstream setup returned without a usable Python 3.14 / Node / npm / Git environment."
+      Invoke-WithWorkstationInstallLock {
+        $recheckStampMatches = $false
+        if (Test-Path -LiteralPath $UpstreamStamp -PathType Leaf) {
+          try { $recheckStampMatches = ([IO.File]::ReadAllText($UpstreamStamp).Trim() -eq $fingerprint) } catch {}
+        }
+        if (-not $recheckStampMatches -or -not (Enter-UpstreamEnvironment)) {
+          Write-Host "[0/4] Installing or repairing pinned upstream tools and Python dependencies..." -ForegroundColor Cyan
+          Write-Host "      First run requires internet to fetch SHA256-verified archives."
+          # Official upstream package-management path, including optional defaults.
+          # setup-hermes.ps1 explicitly calls exit 0 under -RuntimeOnly. Running
+          # it in-process would terminate THIS launcher before Electron starts.
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $SetupScript -RuntimeOnly
+          if ($LASTEXITCODE -ne 0) { throw "Upstream package manager failed (exit code $LASTEXITCODE)." }
+          if (-not (Enter-UpstreamEnvironment)) {
+            throw "Upstream setup returned without a usable Python 3.14 / Node / npm / Git environment."
+          }
+          New-Item -ItemType Directory -Force -Path (Split-Path -Parent $UpstreamStamp) | Out-Null
+          [IO.File]::WriteAllText($UpstreamStamp, $fingerprint)
+          Write-Host "[bootstrap] Upstream installation fingerprint recorded." -ForegroundColor Green
+        } else {
+          Write-Host "[0/4] Upstream tools repaired by concurrent launch; skipping install." -ForegroundColor Green
+        }
       }
-      New-Item -ItemType Directory -Force -Path (Split-Path -Parent $UpstreamStamp) | Out-Null
-      [IO.File]::WriteAllText($UpstreamStamp, $fingerprint)
-      Write-Host "[bootstrap] Upstream installation fingerprint recorded." -ForegroundColor Green
     } else {
       Write-Host "[0/4] Upstream dependencies unchanged and healthy; skipping install." -ForegroundColor Green
     }
@@ -234,12 +273,35 @@ try {
     Remove-Item Env:VIRTUAL_ENV -ErrorAction SilentlyContinue
 
     Write-Host ""
-    Write-Host "[1/4] Checking Workstation dependency fingerprint..." -ForegroundColor Cyan
-    & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $DependencyGate -Action Check
-    $needsInstall = ($LASTEXITCODE -ne 0)
-    if ($needsInstall) {
-      Invoke-Step -Name "[2/4] Installing missing/changed Workstation dependencies..." -Script $InstallScript
-      Invoke-Step -Name "[deps] Recording completed Workstation install..." -Script $DependencyGate -Arguments @("-Action", "Record")
+    Write-Host "[1/4] Checking independent Workstation dependency fingerprints..." -ForegroundColor Cyan
+    & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $DependencyGate -Action CheckPython
+    $needsPythonInstall = ($LASTEXITCODE -ne 0)
+    & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $DependencyGate -Action CheckNode
+    $needsNodeInstall = ($LASTEXITCODE -ne 0)
+
+    if ($needsPythonInstall -or $needsNodeInstall) {
+      Invoke-WithWorkstationInstallLock {
+        # Double-check inside the lock: another concurrent launch may have completed the repair
+        & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $DependencyGate -Action CheckPython
+        $needsPython = ($LASTEXITCODE -ne 0)
+        & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $DependencyGate -Action CheckNode
+        $needsNode = ($LASTEXITCODE -ne 0)
+
+        if ($needsPython -or $needsNode) {
+          $installArgs = @()
+          if (-not $needsPython) { $installArgs += "-SkipPythonDependencies" }
+          if (-not $needsNode) { $installArgs += "-SkipNodeDependencies" }
+          Invoke-Step -Name "[2/4] Repairing only the unhealthy Workstation components..." -Script $InstallScript -Arguments $installArgs
+          if ($needsPython) {
+            Invoke-Step -Name "[deps:python] Recording successful install..." -Script $DependencyGate -Arguments @("-Action","RecordPython")
+          }
+          if ($needsNode) {
+            Invoke-Step -Name "[deps:node] Recording successful install..." -Script $DependencyGate -Arguments @("-Action","RecordNode")
+          }
+        } else {
+          Write-Host "[2/4] Dependencies already repaired by concurrent launch; proceeding." -ForegroundColor Green
+        }
+      }
     } else {
       Invoke-Step -Name "[2/4] Validating existing Workstation install..." -Script $InstallScript -Arguments @("-SkipDependencies")
     }

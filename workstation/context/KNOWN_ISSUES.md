@@ -8,6 +8,15 @@
 - **HLM-KI-05 (Isolamento de PRs criativas #97/#98):** MITIGADO NA BRANCH. Implementação desenvolvida e testada de forma independente de editores criativos profundos, utilizando fixtures padrão do Chromium e contratos de browser nativo.
 - **HLM-KI-06 (Replay autônomo M3 não comprovado):** ATIVO (HOLD). Replay supervisionado permanece em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável.
 
+### KI-044 — One-Click bloqueia início após install saudável e reinstala pacotes não afetados [RESOLVED_LOCALLY_WINDOWS_PS51]
+- **Detectado:** 2026-10-16, Windows 11, Python 3.14, Node 26.7.0. **Estado:** RESOLVIDO NO RUNTIME E QUALIFICADO LOCALMENTE EM WINDOWS POWERSHELL 5.1; PENDENTE CI EXATO.
+- **Fingerprint observável:** `[deps] Could not validate cached install: Checked 77 packages in 44ms`; após `uv pip install -e .` e `npm ci`, `[deps] Recording completed Workstation install... failed (exit code 1)`, com a mesma mensagem em 6ms. Doctor e Desktop não eram alcançados.
+- **Causa confirmada empiricamente:** `workstation/scripts/oneclick_dependency_gate.ps1` executava `uv pip check --python $VenvPython 2>$null` sob `$ErrorActionPreference=Stop`. No Windows PowerShell 5.1, o fluxo de erro informativo de `uv` (`Checked 77 packages in ...`) era promovido a NativeCommandError/exceção terminante antes da consulta ao `$LASTEXITCODE` (que era 0).
+- **Causa arquitetural resolvida:** gate com fingerprints independentes para Python (`pyproject.toml`, `uv.lock`, `.python-version`, interpretador) e Node (`package.json`, `package-lock.json`, `.npmrc`, manifests de workspaces, versões de node e npm); ações `CheckPython`, `CheckNode`, `RecordPython`, `RecordNode`; switches `-SkipPythonDependencies` e `-SkipNodeDependencies` em `install.ps1`; bootstrap reparando estritamente o domínio danificado sem reinstalar desnecessariamente.
+- **Mitigações de Hardening implementadas:** proteção contra duas inicializações concorrentes via lock com exclusão mútua (`oneclick-install.lock`); migração criptográfica de stamp legado com fail-closed em divergência; caminhos absolutos no probe de resolução de módulos desktop do Node; preservação de diagnósticos reais em caso de falha autêntica do grafo (exit != 0).
+- **Evidências RED/GREEN e Test Matrix:** Matriz de 11 testes automatizados em Windows PowerShell 5.1 aprovada com 100% PASS (exit code 0); Doctor Estrito aprovado; warm start validado offline sem chamadas a registries ou reinstalações redundantes. Relatório de 31–39 vulnerabilidades do npm audit classificado e mantido separado da estabilidade de boot.
+- **Estado do código:** aplicado diretamente aos arquivos de runtime: `workstation/scripts/oneclick_dependency_gate.ps1`, `workstation/install.ps1` e `workstation/scripts/oneclick_bootstrap.ps1`. Decisão canônica: D-046.
+
 
 ## Pausa estratégica de 2026-10-12 — KI-028…KI-043 (registro canônico)
 

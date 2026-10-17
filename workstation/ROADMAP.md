@@ -1,5 +1,4 @@
 # Workstation roadmap
-
 ## 2026-10-17 — HLM-MVP: Aprender com demonstração humana, intensidade ao vivo (D-047; M0–M2 IMPLEMENTADOS, M3 EM HOLD)
 **Ordem 80/20 implementada na branch `feat/hermes-learning-mode-mvp-20261017`:**
 - **M0 (IMPLEMENTADO & TESTADO):** Botão **Aprender** no Browser Hub e no painel do chat com reuso do fluxo `adoptTab` (mesma WebContentsView, sem recarga de aba); `LearningSessionRecorder` com controle de ciclo de vida (`start`, `stop`, `discard`), consentimento explícito, pausa em páginas de autenticação ou fora do allowlist de origem, append-only e flush imediato para `events.jsonl` e `questions.jsonl`, vídeo local da aba; seletor de intensidade ao vivo (`Discreto | Equilibrado | Intensivo`, default `Intensivo`) sem reiniciar sessão ou perder dados.
@@ -22,6 +21,13 @@ Submodules Git adicionados em `external-engines/photocraft` (commit `5f65579e`) 
 
 **Creative Workstation D-043/CWN-00..09:** manter contratos e planos existentes como **backlog condicionado**, não invalidar engenharia anterior nem declarar funcionalidades prontas. **Experience Compiler:** priorizar uma demonstração de tarefa real -> capacidade candidata -> validação -> reutilização; expansões autônomas sem evidência não bloqueiam entregas. Métricas: trabalhos finalizados, tempo total, qualidade/artefato, intervenções humanas, erros e custo de propriedade. Exigir experimento discriminante e nova decisão para internalização de motor. [Decisão canônica D-046](context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 
+## 2026-10-16 — One-Click Windows: corrigir validação falsa e separar reparos (D-046 / KI-044)
+**Prioridade P0: regressão de inicialização em computador previamente funcional; STATUS: RESOLVIDO NO RUNTIME / QUALIFICADO EM WINDOWS POWERSHELL 5.1 / PENDENTE CI EXATO.**
+- P0: reproduzido com sucesso no PowerShell 5.1 (`uv pip check` com stderr informativo emitindo `Checked 77 packages...` sob `$ErrorActionPreference=Stop` gerava falso negativo). Corrigido com isolamento de preferência de erro e leitura de `$global:LASTEXITCODE`.
+- P1: implementado gate de dependências desacoplado (`CheckPython/CheckNode` e `RecordPython/RecordNode`); `workstation/install.ps1` com `-SkipPythonDependencies` e `-SkipNodeDependencies`; `workstation/scripts/oneclick_bootstrap.ps1` orquestrando reparo e registro seletivos sem reinstalar domínios saudáveis.
+- Hardening e Concorrência: serialização de reparos via `oneclick-install.lock` com double-checked locking; migração criptográfica de stamp legado sob comprovação de saúde de ambos os domínios; caminhos absolutos para `require.resolve` no workspace desktop.
+- Aceite e Testes: matriz de 11 casos de teste automatizados em PowerShell 5.1 nativo aprovada (11/11 PASS); Strict Doctor passou; warm start offline duas vezes consecutivas comprovado sem reinstalações ou chamadas de rede.
+- Segurança: 31–39 vulnerabilidades do npm audit identificadas e auditadas separadamente (2 críticas em dev-tools); pacotes preservados sem `npm audit fix --force` ou quebra de pins. Arquivos do runtime aplicados e prontos para promoção. Decisão: D-046. Issue: KI-044.
 ## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)
 
 A fase 0 estabelece UMA branch (`feat/hermes-workstation-mvp-20261013`), um checkout (`C:\Github\hermes-agent`), leases cooperativos de arquivos, um integrador Git e checkpoint recursivo, evitando quatro agentes abrirem worktrees/branches por ajuste. Ver [protocolo](context/AGENT_COLLABORATION_PROTOCOL.md), [board](context/workstation-hub-mvp/TEAM_BOARD.md) e [3 etapas de implementação](context/workstation-hub-mvp/IMPLEMENTATION_STAGES.md). Produto ainda NÃO qualificado: (1) Agent abre Creative interno sem search; (2) Browser→Workstation + aba Creative React; (3) aba web manual→nova sessão real via mesma WebContentsView e lease humano. Plano 20/80: Fase 1 HWH01+02, Fase 2 HWH03, Fase 3 native E2E/CI/PR; sem merge automático ou bypass H-079.

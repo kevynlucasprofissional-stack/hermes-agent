@@ -1,120 +1,257 @@
 [CmdletBinding()]
 param(
-  [ValidateSet("Check", "Record")]
+  [ValidateSet("Check","Record","CheckPython","CheckNode","RecordPython","RecordNode")]
   [string]$Action = "Check"
 )
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
-$RuntimeRoot = if ($env:HERMES_WORKSTATION_HOME) {
-  [System.IO.Path]::GetFullPath($env:HERMES_WORKSTATION_HOME)
-} else {
+$RuntimeRoot = if ($env:HERMES_WORKSTATION_HOME -and $env:HERMES_WORKSTATION_HOME.Trim()) {
+  [System.IO.Path]::GetFullPath($env:HERMES_WORKSTATION_HOME.Trim())
+} elseif ($env:LOCALAPPDATA) {
   Join-Path $env:LOCALAPPDATA "HermesWorkstation"
+} else {
+  Join-Path $HOME ".hermes-workstation"
 }
-$StampFile = Join-Path $RuntimeRoot "Runtime\oneclick-dependencies.sha256"
+$StampDir = Join-Path $RuntimeRoot "Runtime"
+$PythonStamp = Join-Path $StampDir "oneclick-python-dependencies.sha256"
+$NodeStamp = Join-Path $StampDir "oneclick-node-dependencies.sha256"
 
-function Get-InstallFingerprint {
-  $patterns = @(
-    "package.json", "package-lock.json", ".npmrc", ".nvmrc",
-    "pyproject.toml", "uv.lock",
-    "apps/*/package.json", "ui-tui/package.json",
-    "ui-tui/packages/*/package.json", "web/package.json",
-    "tests-js/package.json"
-  )
-  $parts = New-Object System.Collections.Generic.List[string]
-  foreach ($pattern in $patterns) {
-    $matches = @(Get-ChildItem -Path (Join-Path $Root $pattern) -File -ErrorAction SilentlyContinue)
-    if ($matches.Count -eq 0) {
-      $parts.Add("MISSING:$pattern")
+function Invoke-Probe {
+  param([string]$Command, [string[]]$Arguments = @())
+  # Windows PowerShell 5.1 turns some native stderr messages into ErrorRecords.
+  # Do not let a successful uv check ("Checked N packages ...") become a failure.
+  $savedPreference = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "Continue"
+    $global:LASTEXITCODE = -999999
+    $output = @(& $Command @Arguments 2>&1)
+    $nativeExit = $global:LASTEXITCODE  # Capture before any pipeline.
+    if ($nativeExit -eq -999999) {
+      $nativeExit = 1
     }
+  } catch {
+    return [pscustomobject]@{
+      ExitCode = 1
+      Output = $_.Exception.Message
+    }
+  } finally {
+    $ErrorActionPreference = $savedPreference
+  }
+  return [pscustomobject]@{
+    ExitCode = $nativeExit
+    Output = (@($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+  }
+}
+
+function Get-Fingerprint {
+  param([string[]]$Patterns, [string[]]$EnvironmentFacts)
+  $parts = New-Object System.Collections.Generic.List[string]
+  foreach ($pattern in $Patterns) {
+    $matches = @(Get-ChildItem -Path (Join-Path $Root $pattern) -File -ErrorAction SilentlyContinue)
+    if ($matches.Count -eq 0) { $parts.Add("MISSING:$pattern") }
     foreach ($file in ($matches | Sort-Object FullName)) {
       $relative = $file.FullName.Substring($Root.Length).TrimStart('\')
-      $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
-      $parts.Add("$relative=$digest")
+      $parts.Add("$relative=$((Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash)")
     }
   }
-  if (-not (Get-Command node -ErrorAction SilentlyContinue) -or
-      -not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    return $null
-  }
-  # Capture native exit statuses before any PowerShell pipeline; Windows
-  # PowerShell 5.1 can report -1 after piping a successful native command.
-  $nodeOutput = & node --version 2>$null
-  $nodeExit = $LASTEXITCODE
-  if ($nodeExit -ne 0 -or -not $nodeOutput) { return $null }
-  $nodeVersion = $nodeOutput | Select-Object -Last 1
-  $npmOutput = & cmd.exe /d /c "npm --version 2>NUL"
-  $npmExit = $LASTEXITCODE
-  if ($npmExit -ne 0 -or -not $npmOutput) { return $null }
-  $npmVersion = $npmOutput | Select-Object -Last 1
-  $parts.Add("node=$nodeVersion")
-  $parts.Add("npm=$npmVersion")
-  $text = $parts -join "`n"
-  $bytes = [System.Text.Encoding]::UTF8.GetBytes($text)
+  foreach ($fact in $EnvironmentFacts) { $parts.Add($fact) }
   $sha = [System.Security.Cryptography.SHA256]::Create()
-  try { return [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '') }
-  finally { $sha.Dispose() }
+  try {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes(($parts -join "`n"))
+    return [BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '')
+  } finally { $sha.Dispose() }
 }
 
-try {
-  $fingerprint = Get-InstallFingerprint
-  if (-not $fingerprint) { Write-Host "[deps] Toolchain unavailable."; exit 1 }
-  $requiredPaths = @(
-    $VenvPython,
+function Get-PythonFingerprint {
+  if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) { return $null }
+  $versionProbe = Invoke-Probe -Command $VenvPython -Arguments @("-c", "import sys; print('.'.join(map(str, sys.version_info[:3])))")
+  if ($versionProbe.ExitCode -ne 0 -or -not $versionProbe.Output) { return $null }
+  return (Get-Fingerprint -Patterns @("pyproject.toml","uv.lock",".python-version") -EnvironmentFacts @("venv-python=$($versionProbe.Output)"))
+}
+
+function Get-NodeFingerprint {
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) { return $null }
+  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { return $null }
+  $nodeProbe = Invoke-Probe -Command "node" -Arguments @("--version")
+  $npmProbe = Invoke-Probe -Command "cmd.exe" -Arguments @("/d", "/c", "npm --version 2>NUL")
+  if ($nodeProbe.ExitCode -ne 0 -or $npmProbe.ExitCode -ne 0) { return $null }
+  return (Get-Fingerprint -Patterns @(
+    "package.json","package-lock.json",".npmrc",".nvmrc",
+    "apps/*/package.json","ui-tui/package.json",
+    "ui-tui/packages/*/package.json","web/package.json","tests-js/package.json"
+  ) -EnvironmentFacts @("node=$($nodeProbe.Output)","npm=$($npmProbe.Output)"))
+}
+
+function Test-PythonHealth {
+  if (-not (Test-Path -LiteralPath $VenvPython -PathType Leaf)) {
+    Write-Host "[deps:python] Missing virtual environment interpreter."
+    return $false
+  }
+  $probe = Invoke-Probe -Command $VenvPython -Arguments @(
+    "-c",
+    "import sys, hermes_cli, httpx, pydantic; from importlib.metadata import version; assert sys.version_info[:2] == (3,14); version('hermes-agent')"
+  )
+  if ($probe.ExitCode -ne 0) {
+    Write-Host "[deps:python] Runtime import/version failed: $($probe.Output)"
+    return $false
+  }
+  if (Get-Command uv -ErrorAction SilentlyContinue) {
+    $graph = Invoke-Probe -Command "uv" -Arguments @("pip","check","--python",$VenvPython)
+  } else {
+    $graph = Invoke-Probe -Command $VenvPython -Arguments @("-m","pip","check")
+  }
+  if ($graph.ExitCode -ne 0) {
+    Write-Host "[deps:python] Dependency graph invalid (exit $($graph.ExitCode)): $($graph.Output)"
+    return $false
+  }
+  return $true
+}
+
+function Test-NodeHealth {
+  $required = @(
     (Join-Path $Root "node_modules\.bin\vite.cmd"),
     (Join-Path $Root "node_modules\.bin\tsc.cmd"),
-    (Join-Path $Root "node_modules\.bin\concurrently.cmd")
+    (Join-Path $Root "node_modules\.bin\concurrently.cmd"),
+    (Join-Path $Root "node_modules\.package-lock.json")
   )
-  foreach ($path in $requiredPaths) {
+  foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-      Write-Host "[deps] Missing: $path"
-      exit 1
+      Write-Host "[deps:node] Missing: $path"
+      return $false
     }
   }
-  # npm workspaces may hoist Electron to root or keep it locally. Either
-  # layout is valid, but the actual downloaded Windows executable is needed.
   $electronRoots = @(
     (Join-Path $Root "node_modules\electron"),
     (Join-Path $Root "apps\desktop\node_modules\electron")
   )
   $electronReady = $false
-  foreach ($electronRoot in $electronRoots) {
-    $binary = Join-Path $electronRoot "dist\electron.exe"
-    if (Test-Path -LiteralPath $binary -PathType Leaf) {
+  foreach ($dir in $electronRoots) {
+    if (Test-Path -LiteralPath (Join-Path $dir "dist\electron.exe") -PathType Leaf) {
       $electronReady = $true
       break
     }
   }
   if (-not $electronReady) {
-    Write-Host "[deps] Electron executable is missing; npm workspace install needs repair."
-    exit 1
+    Write-Host "[deps:node] Electron executable is missing."
+    return $false
   }
-  # Importing hermes_cli from the checkout is insufficient: it succeeds even
-  # when its editable distribution or transitive libraries are not installed.
-  & $VenvPython -c "import sys, hermes_cli, httpx, pydantic; from importlib.metadata import version; assert sys.version_info[:2] == (3,14); version('hermes-agent')" 2>$null
-  if ($LASTEXITCODE -ne 0) { Write-Host "[deps] Workstation Python environment needs repair."; exit 1 }
-  if (Get-Command uv -ErrorAction SilentlyContinue) {
-    & uv pip check --python $VenvPython 2>$null
-    if ($LASTEXITCODE -ne 0) {
-      Write-Host "[deps] Python dependency graph is incomplete or incompatible; repairing."
+  # Key imports required by the desktop dev runtime; not a complete npm audit.
+  $probe = Invoke-Probe -Command "node" -Arguments @(
+    "-e",
+    "for (const x of ['react','vite','typescript','concurrently']) require.resolve(x, { paths: [process.argv[1], process.argv[2]] });",
+    $Root,
+    (Join-Path $Root "apps\desktop")
+  )
+  if ($probe.ExitCode -ne 0) {
+    Write-Host "[deps:node] Desktop module resolution failed: $($probe.Output)"
+    return $false
+  }
+  return $true
+}
+
+function Test-Stamped {
+  param([string]$Stamp, [string]$Fingerprint)
+  if (-not $Fingerprint) { return $false }
+  if (-not (Test-Path -LiteralPath $Stamp -PathType Leaf)) { return $false }
+  return ([System.IO.File]::ReadAllText($Stamp).Trim() -eq $Fingerprint)
+}
+
+function Set-Stamp {
+  param([string]$Path, [string]$Fingerprint)
+  if (-not $Fingerprint) { throw "Cannot record an empty dependency fingerprint." }
+  New-Item -ItemType Directory -Force -Path $StampDir | Out-Null
+  # Stamp write is only after a passing component health check.
+  [System.IO.File]::WriteAllText($Path, $Fingerprint)
+}
+
+# Legacy composite stamp upgrade without unnecessarily reinstalling a healthy checkout.
+# Import only when BOTH the old combined hash matches exact current manifests and
+# both component health probes pass. Never trust an absent/stale/corrupted stamp.
+function Try-MigrateLegacyStamp {
+  $legacyPath = Join-Path $StampDir "oneclick-dependencies.sha256"
+  if (-not (Test-Path -LiteralPath $legacyPath -PathType Leaf)) { return }
+  if ((Test-Path -LiteralPath $PythonStamp -PathType Leaf) -and
+      (Test-Path -LiteralPath $NodeStamp -PathType Leaf)) { return }
+  if (-not (Get-Command node -ErrorAction SilentlyContinue) -or
+      -not (Get-Command npm -ErrorAction SilentlyContinue)) { return }
+  $nodeProbe = Invoke-Probe -Command "node" -Arguments @("--version")
+  $npmProbe = Invoke-Probe -Command "cmd.exe" -Arguments @("/d","/c","npm --version 2>NUL")
+  if ($nodeProbe.ExitCode -ne 0 -or $npmProbe.ExitCode -ne 0) { return }
+  $legacyHash = Get-Fingerprint -Patterns @(
+    "package.json", "package-lock.json", ".npmrc", ".nvmrc",
+    "pyproject.toml", "uv.lock", "apps/*/package.json", "ui-tui/package.json",
+    "ui-tui/packages/*/package.json", "web/package.json", "tests-js/package.json"
+  ) -EnvironmentFacts @("node=$($nodeProbe.Output)","npm=$($npmProbe.Output)")
+  if ([System.IO.File]::ReadAllText($legacyPath).Trim() -ne $legacyHash) {
+    Write-Host "[deps] Legacy stamp exists but does not match; safe repair required."
+    return
+  }
+  $pythonHash = Get-PythonFingerprint
+  $nodeHash = Get-NodeFingerprint
+  if (-not $pythonHash -or -not $nodeHash) { return }
+  if (-not (Test-PythonHealth) -or -not (Test-NodeHealth)) { return }
+  Set-Stamp -Path $PythonStamp -Fingerprint $pythonHash
+  Set-Stamp -Path $NodeStamp -Fingerprint $nodeHash
+  Write-Host "[deps] Valid legacy fingerprint safely migrated to Python/Node stamps."
+}
+
+try {
+  if ($Action -in @("Check","CheckPython","CheckNode")) {
+    Try-MigrateLegacyStamp
+  }
+  # Fingerprint evaluation and health checks are independent per domain.
+  $checkPython = $Action -in @("Check","CheckPython")
+  $checkNode = $Action -in @("Check","CheckNode")
+  $recordPython = $Action -in @("Record","RecordPython")
+  $recordNode = $Action -in @("Record","RecordNode")
+
+  if ($checkPython -or $recordPython) {
+    $pythonFingerprint = Get-PythonFingerprint
+    if (-not $pythonFingerprint -or -not (Test-PythonHealth)) { exit 1 }
+    if ($checkPython -and -not (Test-Stamped $PythonStamp $pythonFingerprint)) {
+      Write-Host "[deps:python] Fingerprint missing or changed."
       exit 1
     }
   }
+  if ($checkNode -or $recordNode) {
+    $nodeFingerprint = Get-NodeFingerprint
+    if (-not $nodeFingerprint -or -not (Test-NodeHealth)) { exit 1 }
+    if ($checkNode -and -not (Test-Stamped $NodeStamp $nodeFingerprint)) {
+      Write-Host "[deps:node] Fingerprint missing or changed."
+      exit 1
+    }
+  }
+  if ($recordPython) {
+    Set-Stamp $PythonStamp $pythonFingerprint
+    Write-Host "[deps:python] Healthy install recorded."
+  }
+  if ($recordNode) {
+    Set-Stamp $NodeStamp $nodeFingerprint
+    Write-Host "[deps:node] Healthy install recorded."
+  }
   if ($Action -eq "Record") {
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $StampFile) | Out-Null
-    [System.IO.File]::WriteAllText($StampFile, $fingerprint)
+    $nodeProbe = Invoke-Probe -Command "node" -Arguments @("--version")
+    $npmProbe = Invoke-Probe -Command "cmd.exe" -Arguments @("/d","/c","npm --version 2>NUL")
+    if ($nodeProbe.ExitCode -eq 0 -and $npmProbe.ExitCode -eq 0) {
+      $legacyHash = Get-Fingerprint -Patterns @(
+        "package.json", "package-lock.json", ".npmrc", ".nvmrc",
+        "pyproject.toml", "uv.lock", "apps/*/package.json", "ui-tui/package.json",
+        "ui-tui/packages/*/package.json", "web/package.json", "tests-js/package.json"
+      ) -EnvironmentFacts @("node=$($nodeProbe.Output)","npm=$($npmProbe.Output)")
+      if ($legacyHash) {
+        $legacyPath = Join-Path $StampDir "oneclick-dependencies.sha256"
+        [System.IO.File]::WriteAllText($legacyPath, $legacyHash)
+      }
+    }
     Write-Host "[deps] Successful dependency install fingerprint recorded."
-    exit 0
   }
-  if ((Test-Path -LiteralPath $StampFile) -and
-      ([System.IO.File]::ReadAllText($StampFile).Trim() -eq $fingerprint)) {
-    Write-Host "[deps] Verified cached dependencies; install not required."
-    exit 0
-  }
-  Write-Host "[deps] Dependency inputs changed (or no successful-install record); full install required."
-  exit 1
+  if ($Action -eq "Check") { Write-Host "[deps] Cached Python and Node dependencies healthy." }
+  if ($Action -eq "CheckPython") { Write-Host "[deps:python] Cached dependencies healthy." }
+  if ($Action -eq "CheckNode") { Write-Host "[deps:node] Cached dependencies healthy." }
+  exit 0
 } catch {
-  Write-Host "[deps] Could not validate cached install: $($_.Exception.Message)"
+  Write-Host "[deps] Validation error: $($_.Exception.Message)"
   exit 1
 }
