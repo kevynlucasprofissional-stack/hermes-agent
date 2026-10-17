@@ -1,4 +1,8 @@
 # Current State
+
+## 2026-10-17 — HLM-MVP product truth ERRATA (main `2e5b042`)
+O HLM existe no código atual da main (UI + `LearningSessionRecorder` + intensidade live + sanitização parcial + método Python de CandidateLesson), mas **o verdadeiro MVP não está qualificado**: vídeo grava preto sintético 1s; perguntas são templates por 1 gesto sem LLM contextual; ingestão via console não autentica tab/owner; timestamps não relativos; candidata não disparada produtivamente. Tratar M0–M2 como **PARTIAL / NOT E2E QUALIFIED**, M3 HOLD. [Auditoria](LEARNING_MODE_AUDIT_2026-10-17.md); [corretiva](../learning-mode/HLM_MVP_CORRECTIVE_IMPLEMENTER_PROMPT.md). Este registro corrige a afirmação histórica abaixo sem apagar seus commits/testes.
+
 ## 2026-10-17 — Human Demonstration Learning Mode (D-047)
 **IMPLEMENTED (M0–M2) / REPLAY ON HOLD (M3)** na branch `feat/hermes-learning-mode-mvp-20261017`.
 - **M0:** `LearningSessionRecorder` integrado em `apps/desktop/electron/workstation-learning-session.ts` com lifecycle (`start/stop/discard`), consentimento, sanitização restrita via `workstation-learning-events.ts`, vídeo local e append-only síncrono em `events.jsonl` e `questions.jsonl`. Controles de UI em `apps/desktop/src/app/browser/learning-controls.tsx` integrados no Browser Hub e no painel lateral do chat com alternância de intensidade ao vivo (`Discreto`, `Equilibrado`, `Intensivo`, padrão inicial `Intensivo`) sem reiniciar sessão.
