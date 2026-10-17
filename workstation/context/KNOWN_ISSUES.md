@@ -1,5 +1,17 @@
 # Workstation Known Issues
 
+## 2026-10-17 — DOGFOOD-01…08 (ATIVOS; D-048)
+- **DOGFOOD-01 P0:** navegador preto em pesquisa; suspeita de navegação/viewport/host, ainda sem causa confirmada. `workstation-browser-runtime.ts`, Hub/chat, Electron; requer repro + recuperação sem perda de sessão.
+- **DOGFOOD-02 P0:** navegador preto após notificações/overlays; `native-view-occlusion.ts` remove/reanexa a view por `setVisible`. Verificar corrida de MutationObserver, ownership e reattach. Não marcar corrigido por cobertura de mocks.
+- **DOGFOOD-03 P0:** gravação de vídeo do modo Aprender é sintética (`lavfi color=black -t 1`), apesar de status `stopped`; screenshot callback não persistiu snapshots na demonstração observada. Corrigir captura **real** com consentimento e validação.
+- **DOGFOOD-04 P1:** perguntas proativas invadem editor PhotoCraft; `learning-controls.tsx` renderiza card dentro de seu host; mover renderização para o chat, manter controls no browser.
+- **DOGFOOD-05 P1:** Question Engine pergunta genericamente coordenadas de Canvas, sem contexto visual/causal.
+- **DOGFOOD-06 P1:** botão stop LearningSession não demonstrou chamada de produção a `record_human_demonstration_candidate`; M2 só fronteira/teste isolado.
+- **DOGFOOD-07 P1:** falta pergunta essencial de formato no briefing de convite; operação PhotoCraft depende de passos e scripts ad hoc.
+- **DOGFOOD-08 P1:** pouca observabilidade no transcript de identificação/compilação/reuso; `SUGGEST_COMPILE` ainda não fecha uma rota validada.
+**Nota de reconciliação HLM-KI-01…05:** estados anteriores "MITIGADO/IMPLEMENTADO" descrevem mecanismos e testes declarados, não evidência E2E da sessão real. Nenhum item é encerrado por esta atualização documental. [Reproduções e gates](HERMES_WORK_DOGFOOD_RECOVERY_PLAN_2026-10-17.md).
+
+
 ## HLM-MVP — Riscos conhecidos e estado de mitigação (2026-10-17, pós-implementação M0–M2)
 - **HLM-KI-01 (Conteúdo sensível / Login):** MITIGADO NO RUNTIME. Captura restrita à aba e origem permitida; navegação para origem não autorizada ou página de login pausa imediatamente a gravação (`status="paused"`) ANTES da emissão de novos frames ou eventos. Gestos ignoram inputs editáveis e campos sensíveis. Arquivos persistidos localmente sem upload externo.
 - **HLM-KI-02 (Conflito CDP / WebContentsView):** MITIGADO NO RUNTIME. `LearningSessionRecorder` opera via WebContentsView nativa e listeners do Electron (`did-navigate`, `console-message`, `render-process-gone`), sem attach paralelo de CDP conflitante com a automação principal.
