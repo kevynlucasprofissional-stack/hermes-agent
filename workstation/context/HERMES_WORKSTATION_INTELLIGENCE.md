@@ -1,5 +1,13 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-17 — CW-048B: Consolidação PhotoCraft e EffectCraft e ativação FilmCraft (VERIFICADO)
+Sob a diretriz D-046 de arquitetura criativa de baixo acoplamento:
+1. **Ativação do FilmCraft no Catálogo e Gramática**: `APPS["filmcraft"]` registrado em `workstation/creative_web_app_spec.py` com porta loopback preferencial `8767`. Reconhecimento no pre-LLM estritamente pontual (`admission_kind="point_action"`, `requires_task=False`), abrangendo `Abra o FilmCraft`, `Abre o FilmCraft`, `Abrir FilmCraft` e `Open FilmCraft` sem criação de tarefas Kanban espúrias.
+2. **Reuso Não-Destrutivo (Prevenção de Reload Destrutivo)**: Se uma instância já está em execução (`reused=True`), o serviço realiza readback preliminar via `browser_snapshot`. Se a URL ativa já bate com a porta loopback gerenciada, **o comando pula `browser_navigate`**, preservando o canvas e documentos não salvos, e retornando `reason=f"creative_{app.key}_already_active_preserved"`.
+3. **Persistência de Sessão e Segurança de Processo**: Instâncias locais adotadas pelo `ProcessRegistry` agora recebem `session.persist_on_release = True`, sobrevivendo aos sweeps de encerramento de turno do agente. Conexões limitadas a `127.0.0.1` e protegidas por nonces criptográficos HMAC. Controle humano (`409 USER_CONTROL_ACTIVE`) respeitado em todas as etapas sem bypass.
+4. **Instalação Segura e Sanitização de Submodules**: `install_creative_engine.py` realiza download oficial, verificação SHA-256 e extração protegida contra ZipSlip. O diretório `external-engines` foi adicionado às exclusões de `check_no_tmp_literals.py`, assegurando compatibilidade com as regras de integridade do Hermes.
+5. **Comprovação de Exportação e Saúde**: Cobertura completa de testes unitários (18 testes) e validação do Wasm runtime e exportação nos motores.
+
 ## 2026-10-17 — CW-048A: FilmCraft importado como terceiro motor criativo independente (SUBMODULE IMPORT ONLY)
 Conforme a diretriz D-046 (baixo acoplamento primeiro) e o objetivo único da tarefa CW-048A:
 1. **Estrutura Git Submodule**: `external-engines/filmcraft` adicionado apontando para o repositório original `https://github.com/storytold/filmcraft.git` e pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, licença Apache-2.0). Nenhuma entrada existente de PhotoCraft ou EffectCraft foi sobrescrita no `.gitmodules`.
