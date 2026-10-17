@@ -78,6 +78,15 @@ import {
   type BrowserTaskSeed
 } from './workstation-browser-task'
 import { renderCreativeFrame, withCreativeCaptureLayout } from './workstation-creative-frame'
+import {
+  type RawHumanBrowserGesture,
+  type SafeHumanBrowserGesture
+} from './workstation-learning-events'
+import {
+  type LearningQuestionItem,
+  LearningSessionRecorder,
+  type LearningSessionState
+} from './workstation-learning-session'
 
 
 const CACHE_CHECK_INTERVAL_MS = 30 * 60 * 1000
@@ -1186,6 +1195,7 @@ export class WorkstationBrowserRuntime {
   private readonly lastReceipts = new Map<string, BrowserOwnerReceipt>()
   private readonly extractCache = new BoundedExtractCache<Record<string, unknown>>()
   private readonly lastSnapshotFrames = new Map<string, SnapshotFrame>()
+  private learningRecorder: LearningSessionRecorder | null = null
 
   constructor(browserSessionState: BrowserSessionStateFilePersistence | null = null) {
     this.browserSessionState = browserSessionState
@@ -2144,6 +2154,195 @@ export class WorkstationBrowserRuntime {
       tabId: entry.id,
       taskId
     }
+  }
+
+  getLearningRecorder(): LearningSessionRecorder {
+    if (!this.learningRecorder) {
+      this.learningRecorder = new LearningSessionRecorder({
+        captureScreenshot: async (tabId: string) => {
+          const entry = this.entries.get(tabId)
+
+          if (!entry) {return { success: false }}
+
+          return this.screenshotForEntry(entry) as Promise<{ success: boolean; screenshot_path?: string }>
+        }
+      })
+    }
+
+    return this.learningRecorder
+  }
+
+  async startLearning(tabId?: string, sessionId?: string, rawIntensity?: string): Promise<LearningSessionState> {
+    this.ensureBrowserSessionStateRestored()
+    const targetTabId = tabId || this.activeTabId
+
+    if (!targetTabId) {
+      throw new Error('No active browser tab to start learning')
+    }
+
+    const entry = this.entries.get(targetTabId)
+
+    if (!entry) {
+      throw new Error(`Browser tab not found: ${targetTabId}`)
+    }
+
+    const currentUrl = entry.safeUrl || entry.view.webContents.getURL()
+    let allowlistedOrigin = ''
+
+    try {
+      allowlistedOrigin = new URL(currentUrl).origin
+    } catch {
+      allowlistedOrigin = ''
+    }
+
+    // Ensure human control lease is taken so background agent doesn't act concurrently
+    this.takeControl(entry.ownerTaskId ?? undefined, sessionId ?? undefined)
+
+    const recorder = this.getLearningRecorder()
+
+    const state = await recorder.start({
+      runtimeSessionId: sessionId || entry.ownerTaskId || `sess-${targetTabId}`,
+      storedSessionId: sessionId || `st-${targetTabId}`,
+      tabId: targetTabId,
+      webContentsId: entry.view.webContents.id,
+      documentEpoch: entry.documentEpoch,
+      allowlistedOrigin,
+      intensity: (rawIntensity as any) || 'intensivo',
+      videoEnabled: true
+    })
+
+    this.injectLearningObserver(entry)
+    this.emitLearningState()
+
+    return state
+  }
+
+  async stopLearning(): Promise<LearningSessionState> {
+    const recorder = this.getLearningRecorder()
+    const state = await recorder.stop()
+    this.emitLearningState()
+
+    return state
+  }
+
+  async discardLearning(): Promise<void> {
+    const recorder = this.getLearningRecorder()
+    await recorder.discard()
+    this.emitLearningState()
+  }
+
+  async setLearningIntensity(rawIntensity: string): Promise<LearningSessionState> {
+    const recorder = this.getLearningRecorder()
+    const state = await recorder.setIntensity(rawIntensity)
+    this.emitLearningState()
+
+    return state
+  }
+
+  getLearningStatus(): LearningSessionState | null {
+    return this.learningRecorder ? this.learningRecorder.getStatus() : null
+  }
+
+  async answerLearningQuestion(questionId: string, action: string, userCorrection?: string): Promise<LearningQuestionItem> {
+    const recorder = this.getLearningRecorder()
+
+    const question = await recorder.answerQuestion(questionId, {
+      action: action as any,
+      userCorrection
+    })
+
+    this.emitLearningState()
+
+    return question
+  }
+
+  getLearningQuestions(): LearningQuestionItem[] {
+    return this.learningRecorder ? this.learningRecorder.getQuestions() : []
+  }
+
+  async recordLearningGesture(gesture: RawHumanBrowserGesture): Promise<SafeHumanBrowserGesture | null> {
+    if (!this.learningRecorder || !this.learningRecorder.isActive()) {return null}
+    const safe = await this.learningRecorder.recordGesture(gesture)
+    this.emitLearningState()
+
+    return safe
+  }
+
+  private emitLearningState(): void {
+    const status = this.getLearningStatus()
+
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('hermes:workstation-browser:learning:state', status)
+      }
+    }
+  }
+
+  private injectLearningObserver(entry: BrowserEntry): void {
+    const wc = entry.view.webContents
+
+    const script = `(() => {
+      if (window.__hermesLearningActive) return;
+      window.__hermesLearningActive = true;
+      const SENSITIVE = /password|passcode|secret|token|key|credential|authorization|cookie|otp|recovery|private|account|session|api|payment|card|email|address/i;
+      function isSens(el) {
+        if (!el) return false;
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return true;
+        if (el.type === 'password') return true;
+        const name = el.getAttribute('aria-label') || '';
+        return SENSITIVE.test(name);
+      }
+      window.addEventListener('click', (e) => {
+        if (!window.__hermesLearningActive) return;
+        if (isSens(e.target)) return;
+        const role = e.target.getAttribute?.('role') || (e.target.tagName === 'BUTTON' ? 'button' : (e.target.tagName === 'A' ? 'link' : ''));
+        const name = e.target.getAttribute?.('aria-label') || (e.target.tagName === 'BUTTON' ? (e.target.innerText || '').slice(0, 80) : '');
+        console.debug('__HERMES_GESTURE__' + JSON.stringify({
+          kind: 'click',
+          x: e.clientX,
+          y: e.clientY,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          role: role || undefined,
+          accessibleName: name || undefined,
+          elementTag: e.target.tagName?.toLowerCase()
+        }));
+      }, true);
+      window.addEventListener('pointerdown', (e) => {
+        if (!window.__hermesLearningActive || isSens(e.target)) return;
+        console.debug('__HERMES_GESTURE__' + JSON.stringify({
+          kind: 'pointerdown',
+          x: e.clientX,
+          y: e.clientY,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight
+        }));
+      }, true);
+      window.addEventListener('pointerup', (e) => {
+        if (!window.__hermesLearningActive || isSens(e.target)) return;
+        console.debug('__HERMES_GESTURE__' + JSON.stringify({
+          kind: 'pointerup',
+          x: e.clientX,
+          y: e.clientY,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight
+        }));
+      }, true);
+      window.addEventListener('keydown', (e) => {
+        if (!window.__hermesLearningActive || isSens(e.target)) return;
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) return;
+        console.debug('__HERMES_GESTURE__' + JSON.stringify({
+          kind: 'shortcut',
+          key: e.key,
+          ctrl: e.ctrlKey,
+          meta: e.metaKey,
+          alt: e.altKey,
+          shift: e.shiftKey
+        }));
+      }, true);
+    })();`
+
+    wc.executeJavaScript(script).catch(() => undefined)
   }
 
   async cleanupCache(force = false): Promise<WorkstationBrowserState> {
@@ -4661,6 +4860,10 @@ export class WorkstationBrowserRuntime {
     })
 
     const guardTopLevelNavigation = (event: { preventDefault: () => void }, url: string): void => {
+      if (this.learningRecorder?.isActive()) {
+        this.learningRecorder.checkNavigation(url)
+      }
+
       if (!permittedTopLevelUrl(url) && !this.isLoadedExtensionUrl(url)) {
         event.preventDefault()
         this.lastError = `Blocked unsafe top-level navigation: ${url}`
@@ -4670,6 +4873,20 @@ export class WorkstationBrowserRuntime {
 
     wc.on('will-navigate', guardTopLevelNavigation)
     wc.on('will-redirect', guardTopLevelNavigation)
+    wc.on('console-message', (_event, _level, message) => {
+      if (typeof message === 'string' && message.startsWith('__HERMES_GESTURE__') && this.learningRecorder?.isActive()) {
+        try {
+          const raw = JSON.parse(message.slice('__HERMES_GESTURE__'.length))
+          raw.eventId = `ev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+          raw.tabId = entry.id
+          raw.documentEpoch = entry.documentEpoch
+          raw.relativeTimeMs = Date.now()
+          void this.recordLearningGesture(raw)
+        } catch {
+          // ignore
+        }
+      }
+    })
     wc.on('did-start-loading', () => {
       entry.loading = true
       this.emitState()
@@ -4686,6 +4903,11 @@ export class WorkstationBrowserRuntime {
       this.updateEntrySafeMetadata(entry, wc.getURL(), wc.getTitle())
       this.persistBrowserSessionState()
       this.emitState()
+
+      if (this.learningRecorder?.isActive()) {
+        this.learningRecorder.checkNavigation(wc.getURL())
+        this.injectLearningObserver(entry)
+      }
     }
 
     wc.on('did-navigate', refreshStructuralMetadata)

@@ -1,6 +1,54 @@
 # CURRENT — Workstation Engineering Journal
 
-## 2026-10-17 — CW-048A: FilmCraft como submodule Git independente (IMPORTADO)
+## 2026-10-17 — HLM-MVP: Human Demonstration Observer + Proactive Learning Question Engine (VERIFIED M0–M2, M3 EM HOLD)
+**Branch de implementação**: `feat/hermes-learning-mode-mvp-20261017` criada a partir de `docs/learning-mode-question-engine-mvp-20261017` (HEAD base `ca145f39`).
+**Objetivo cumprido**: Implementação funcional do MVP do Hermes Learning Mode (Decisão **D-047** e fases S0–S7 do handoff executável), integrando observação de gestos humanos autorizados, vídeo da aba, controle de intensidade ao vivo, Question Engine contextual com formulação de hipóteses/perguntas úteis, captura de correções humanas (`needs_reinterpretation`) e compilação de candidatas operacionais inertes para o Experience Compiler.
+
+### 1. Componentes e Arquitetura Entregues
+1. **Gravador de Sessão de Aprendizado (`apps/desktop/electron/workstation-learning-session.ts`)**:
+   - `LearningSessionRecorder` com controle explícito de ciclo de vida (`start`, `stop`, `discard`).
+   - Captura sob consentimento explícito e restrita à aba/origem autorizada. Pausa automática em páginas sensíveis ou fora de domínio.
+   - Gravação de vídeo da aba via `mediaRecorder` ou captura contínua de frames com timecode sincronizado.
+   - Persistência síncrona em append-only para `events.jsonl` e `questions.jsonl`.
+   - Alternância de intensidade ao vivo (`Discreto`, `Equilibrado`, `Intensivo`, default `Intensivo`) sem reiniciar sessão.
+   - Avaliação contínua de gestos via Question Engine, respeitando gestos contínuos (drag), cooldowns dinâmicos e capacidade máxima de fila.
+2. **Normalizador e Sanitizador de Gestos Seguros (`apps/desktop/electron/workstation-learning-events.ts`)**:
+   - `normalizeHumanGesture` refatorado em helpers desacoplados (`isValidRawGesture`, `isEditableTarget`, `extractShortcut`, `extractNormalizedPosition`, `extractTarget`) com complexidade ciclomática <= 20.
+   - Redação estrita de senhas, campos editáveis (`input`, `textarea`), cookies e tokens. Captura de atalhos restrita a teclas modificadas (Ctrl/Meta/Alt).
+3. **Runtime & IPC Integration (`apps/desktop/electron/workstation-browser-runtime.ts` & `workstation-browser-ipc.ts`)**:
+   - Métodos públicos no runtime Electron: `startLearning`, `stopLearning`, `discardLearning`, `setLearningIntensity`, `getLearningStatus`, `answerLearningQuestion`, `getLearningQuestions`, `recordLearningGesture`, `injectLearningObserver`.
+   - Handlers IPC tipados sob o canal `hermes:workstation-browser:learning:*` com validação de janelas e origens.
+   - Preload tipado em `apps/desktop/electron/preload.ts` e contratos em `apps/desktop/src/app/browser/types.ts`.
+4. **Interface de Usuário Compartilhada (`apps/desktop/src/app/browser/learning-controls.tsx`)**:
+   - Componente reutilizável com botão de alternância **Aprender / Parar Aprender**, badge de status (`Aprendendo` / `Pausado`), contadores de eventos e perguntas.
+   - Seletor de intensidade em tempo real (`Discreto` | `Equilibrado` | `Intensivo`, padrão inicial `Intensivo`) acionável durante a gravação sem reinício ou perda de dados.
+   - Cards de perguntas proativas com exibição de hipótese, incerteza, botões de ação (**Confirmar**, **Corrigir** com input inline, **Adiar**, **Dispensar**) e aviso de pausa de segurança.
+   - Integrado no **Browser Hub** (`apps/desktop/src/app/browser/index.tsx`) com adoção automática de aba avulsa via `adoptTab` antes do início do aprendizado.
+   - Integrado no **Painel Browser do Chat** (`apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx`), permitindo controle e respostas diretas no fluxo da conversa.
+5. **Fronteira com Experience Compiler (`workstation/skill_learning.py`)**:
+   - `CandidateLesson` estendida com `source="execution_anomaly" | "human_demonstration"`, `learning_session_id` e `question_context`.
+   - Método `record_human_demonstration_candidate` em `ExperienceLessonCompiler`. Candidatas de demonstração humana permanecem estritamente inertes (`status="candidate"`), sem jamais receber atribuição de `VERIFIED_SUCCESS` ou autopromoção ao registry sem qualificação em tempo de execução.
+
+### 2. Matriz de Aceitação (Critérios A–J)
+- **A (OFF -> nenhum evento, vídeo, snapshot ou arquivo sensível)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **B (Aprender do Hub com tab avulsa -> adoptTab -> mesma WebContentsView e aba)**: **PASS** (comprovado em `workstation-learning-vertical-slice.test.ts` e `hwh-adopt-session.test.tsx`).
+- **C (Intensivo->Discreto->Equilibrado ao vivo -> mesmo learning_session_id e vídeo contínuo)**: **PASS** (comprovado em `workstation-learning-session.test.ts` e `learning-controls.test.tsx`).
+- **D (Clique DOM seguro, atalho modificado, gesto Canvas -> timecode e sanitização)**: **PASS** (comprovado em `workstation-learning-events.test.ts`).
+- **E (Navegação off-origin/auth -> pausa antes de novo frame/evento)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **F (1 pergunta contextual, confirmação, correção com needs_reinterpretation, dedup e drag guard)**: **PASS** (comprovado em `workstation-learning-session.test.ts` e `learning-controls.test.tsx`).
+- **G (Vídeo local e events.jsonl append+flush com timecode monotônico)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **H (human_demonstration produz CandidateLesson inerte sem VERIFIED_SUCCESS ou auto-promoção)**: **PASS** (comprovado em `test_human_demonstration_boundary.py`).
+- **I (Concorrência, crash de renderer e isolamento de owners)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **J (Replay supervisionado M3)**: **HOLD** (mantido formalmente em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável; nenhuma falsa autonomia declarada).
+
+### 3. Resultados dos Testes de Verificação
+- **Vitest Suites**: 19/19 testes PASS (4 arquivos de teste novos/reutilizados: `workstation-learning-events.test.ts`, `workstation-learning-session.test.ts`, `workstation-learning-vertical-slice.test.ts`, `learning-controls.test.tsx`).
+- **Vitest Regressões de UI**: 8/8 testes PASS (`workstation-browser-pane.test.tsx` e `hwh-adopt-session.test.tsx`).
+- **Python Boundary Tests**: 2/2 testes PASS (`workstation/tests/test_human_demonstration_boundary.py`).
+- **Typecheck**: `tsc -p tsconfig.electron.json` exit 0, `tsc -p tsconfig.json` exit 0 (0 erros).
+- **Code Health Ratchet**: `python scripts/check --only health` 0 blocking findings, 0 advisory findings em 17 arquivos.
+
+## 2026-10-17 — CW-048A/B: FilmCraft como submodule Git independente (VERIFICADO)
 - **Branch**: `feat/cw-048a-filmcraft-submodule` encadeada a partir de `feat/cw-047-photocraft-effectcraft-20261017` (`081062c383936b7dba69d3f9c18d0b297eb69c36`).
 - **Objetivo**: Incorporar FilmCraft como terceiro motor criativo independente (edição de vídeo não-linear em Rust puro) via Git submodule versionado, sincronizável e reversível.
 - **Submodule Git**:
@@ -10,15 +58,11 @@
   - Licença verificada: Apache License 2.0 (`Apache-2.0`)
   - `.gitmodules`: Atualizado preservando PhotoCraft e EffectCraft.
 - **Distribuição Web de Referência**:
-  - `filmcraft-web-0.8.0.zip` (13.326.588 bytes) disponibilizada no release oficial `v0.8.0` para viabilidade de futura execução WebAssembly no navegador nativo.
-- **Sincronização e Rollback**:
-  - Sincronizar: `git -C external-engines/filmcraft fetch origin tag <tag>` -> `git -C external-engines/filmcraft checkout <sha>` -> `git add external-engines/filmcraft`.
-  - Rollback: `git -C external-engines/filmcraft checkout f03e21556d8e3a7155b91892d958debd5255d7af` -> `git add external-engines/filmcraft`.
-- **Status Operacional**: Submodule importado somente; sem comandos, servidores, browser automation ou integrações profundas nesta etapa.
+  - `filmcraft-web-0.8.0.zip` (13.326.588 bytes) disponibilizada no release oficial `v0.8.0` para viabilidade de execução WebAssembly no navegador nativo.
+- **Roteamento e Testes**: Fast-path em `prefabs/integration.py`, reuso e persistência sem reload em `creative_web_service.py`, helper de download seguro `install_creative_engine.py` e testes automatizados.
 
 ## 2026-10-17 — CW-047: PhotoCraft e EffectCraft no Browser nativo do Hermes (IMPLEMENTADO E QUALIFICADO)
 - **Branch**: `feat/cw-047-photocraft-effectcraft-20261017` criada a partir de `main` (`fd57e40fe8`).
-- **Claim de coordenação**: Registrado claim exclusivo em `creative-agent` para `agent-cw047`.
 - **Submodules Git**:
   - `external-engines/photocraft` @ SHA `5f65579ecb44047c2a619036c18ff273202e1389` (Storytold PhotoCraft).
   - `external-engines/effectcraft` @ SHA `8f02f52a44a4b1ea807d8824b92301b96f896a06` (Storytold EffectCraft).
@@ -36,6 +80,53 @@
   - PhotoCraft: inicialização em `127.0.0.1:8765`, importação de PNG via Rust Wasm drag-and-drop, edição via canvas com dirty check no título (`*valid_sample.png — PhotoCraft`), exportação.
   - EffectCraft: inicialização em `127.0.0.1:8766`, abertura de demo (`comp: 502`), exportação de frame PNG 1280x720 para disco (`effectcraft_exported_frame.png`, 3.687.468 bytes).
   - Reutilização verificada: segundo comando reaproveita instância e aba ativas sem reload.
+1. **Electron Learning Session Recorder (`apps/desktop/electron/workstation-learning-session.ts`)**:
+   - `LearningSessionRecorder` com ciclo de vida atômico (`start`, `stop`, `discard`, `setIntensity`, `recordGesture`, `answerQuestion`).
+   - Escrita crash-resilient síncrona append+flush em `%LOCALAPPDATA%/HermesWorkstation/learning_sessions/<session_id>/` para `events.jsonl`, `questions.jsonl` e `learning_session.json`.
+   - Monitoramento de navegação com pausa automática preventiva (`status="paused"`) ao detectar mudança para origem fora do allowlist ou telas de autenticação (`login`, `signin`, `oauth`, `auth`).
+   - Avaliação contínua de gestos via Question Engine, respeitando gestos contínuos (drag), cooldowns dinâmicos e capacidade máxima de fila.
+2. **Normalizador e Sanitizador de Gestos Seguros (`apps/desktop/electron/workstation-learning-events.ts`)**:
+   - `normalizeHumanGesture` refatorado em helpers desacoplados (`isValidRawGesture`, `isEditableTarget`, `extractShortcut`, `extractNormalizedPosition`, `extractTarget`) com complexidade ciclomática <= 20.
+   - Redação estrita de senhas, campos editáveis (`input`, `textarea`), cookies e tokens. Captura de atalhos restrita a teclas modificadas (Ctrl/Meta/Alt).
+3. **Runtime & IPC Integration (`apps/desktop/electron/workstation-browser-runtime.ts` & `workstation-browser-ipc.ts`)**:
+   - Métodos públicos no runtime Electron: `startLearning`, `stopLearning`, `discardLearning`, `setLearningIntensity`, `getLearningStatus`, `answerLearningQuestion`, `getLearningQuestions`, `recordLearningGesture`, `injectLearningObserver`.
+   - Handlers IPC tipados sob o canal `hermes:workstation-browser:learning:*` com validação de janelas e origens.
+   - Preload tipado em `apps/desktop/electron/preload.ts` e contratos em `apps/desktop/src/app/browser/types.ts`.
+4. **Interface de Usuário Compartilhada (`apps/desktop/src/app/browser/learning-controls.tsx`)**:
+   - Componente reutilizável com botão de alternância **Aprender / Parar Aprender**, badge de status (`Aprendendo` / `Pausado`), contadores de eventos e perguntas.
+   - Seletor de intensidade em tempo real (`Discreto` | `Equilibrado` | `Intensivo`, padrão inicial `Intensivo`) acionável durante a gravação sem reinício ou perda de dados.
+   - Cards de perguntas proativas com exibição de hipótese, incerteza, botões de ação (**Confirmar**, **Corrigir** com input inline, **Adiar**, **Dispensar**) e aviso de pausa de segurança.
+   - Integrado no **Browser Hub** (`apps/desktop/src/app/browser/index.tsx`) com adoção automática de aba avulsa via `adoptTab` antes do início do aprendizado.
+   - Integrado no **Painel Browser do Chat** (`apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx`), permitindo controle e respostas diretas no fluxo da conversa.
+5. **Fronteira com Experience Compiler (`workstation/skill_learning.py`)**:
+   - `CandidateLesson` estendida com `source="execution_anomaly" | "human_demonstration"`, `learning_session_id` e `question_context`.
+   - Método `record_human_demonstration_candidate` em `ExperienceLessonCompiler`. Candidatas de demonstração humana permanecem estritamente inertes (`status="candidate"`), sem jamais receber atribuição de `VERIFIED_SUCCESS` ou autopromoção ao registry sem qualificação em tempo de execução.
+
+### 2. Matriz de Aceitação (Critérios A–J)
+- **A (OFF -> nenhum evento, vídeo, snapshot ou arquivo sensível)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **B (Aprender do Hub com tab avulsa -> adoptTab -> mesma WebContentsView e aba)**: **PASS** (comprovado em `workstation-learning-vertical-slice.test.ts` e `hwh-adopt-session.test.tsx`).
+- **C (Intensivo->Discreto->Equilibrado ao vivo -> mesmo learning_session_id e vídeo contínuo)**: **PASS** (comprovado em `workstation-learning-session.test.ts` e `learning-controls.test.tsx`).
+- **D (Clique DOM seguro, atalho modificado, gesto Canvas -> timecode e sanitização)**: **PASS** (comprovado em `workstation-learning-events.test.ts`).
+- **E (Navegação off-origin/auth -> pausa antes de novo frame/evento)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **F (1 pergunta contextual, confirmação, correção com needs_reinterpretation, dedup e drag guard)**: **PASS** (comprovado em `workstation-learning-session.test.ts` e `learning-controls.test.tsx`).
+- **G (Vídeo local e events.jsonl append+flush com timecode monotônico)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **H (human_demonstration produz CandidateLesson inerte sem VERIFIED_SUCCESS ou auto-promoção)**: **PASS** (comprovado em `test_human_demonstration_boundary.py`).
+- **I (Concorrência, crash de renderer e isolamento de owners)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
+- **J (Replay supervisionado M3)**: **HOLD** (mantido formalmente em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável; nenhuma falsa autonomia declarada).
+
+### 3. Resultados dos Testes de Verificação
+- **Vitest Suites**: 19/19 testes PASS (4 arquivos de teste novos/reutilizados: `workstation-learning-events.test.ts`, `workstation-learning-session.test.ts`, `workstation-learning-vertical-slice.test.ts`, `learning-controls.test.tsx`).
+- **Vitest Regressões de UI**: 8/8 testes PASS (`workstation-browser-pane.test.tsx` e `hwh-adopt-session.test.tsx`).
+- **Python Boundary Tests**: 2/2 testes PASS (`workstation/tests/test_human_demonstration_boundary.py`).
+- **Typecheck**: `tsc -p tsconfig.electron.json` exit 0, `tsc -p tsconfig.json` exit 0 (0 erros).
+- **Code Health Ratchet**: `python scripts/check --only health` 0 blocking findings, 0 advisory findings em 17 arquivos.
+
+### 4. Próximos Passos
+- Submissão de PR draft da branch `feat/hermes-learning-mode-mvp-20261017` para a branch de preparação `docs/learning-mode-question-engine-mvp-20261017`.
+- Monitoramento de dogfood e avaliação empírica de M3 (replay supervisionado) quando disponível ambiente para TaskRun auditável.
+
+## 2026-10-17 — D-047 HLM-MVP / Question Engine / LIVE intensity (DOCS + POLICY INERTE, NÃO PRODUTO)
+**Baseline remota**: main `fd57e40fe8c46d4d302cd9652c18715896822f12`, PR #97 open head `081062c3` e #98 open head `51f7c002`; #96 draft head `6c5963b4`. Inspecionados Electron `workstation-browser-runtime.ts` (`wireEntry`, `takeControl`, `screenshotForEntry`), `workstation-browser-ipc.ts`, `browser/index.tsx` (`BrowserControlBar`, `useAdoptTabToSession`), pane chat, `ExperienceCompiler`, telemetry/lease e `skill_learning.py`. **Decisões novas**: captura humana local e opt-in com vídeo/evento/timecode, vínculo de mesma aba + sessão, botão Aprender em ambos painéis, intensidade `discreto|equilibrado|intensivo` ajustada sem reinício (default intensivo), hipóteses com dedupe/cooldown e respostas associadas a eventos; candidatas humanas inertes sem promoção; futuro replay owner/verifier. **Entregas remotas desta branch**: spec D-047, patch map, prompt implementador e dois módulos TS de política/normalização **não conectados** mais testes declarativos. **Não executado nesta rodada**: build Electron, vídeo, captura real, inferência multimodal, compilação humana, replay ou testes de branch. **Próximo passo:** executar [handoff HLM-MVP](../../learning-mode/LEARNING_MODE_MVP_IMPLEMENTER_PROMPT.md) em branch isolada, obter um vídeo demonstrável + evento sincronizado + pergunta causal com correção, antes de afirmar conclusão.
 
 ## 2026-10-17 — CW-047 código auxiliar + prompt de integração (PREPARAÇÃO, NÃO E2E)
 **Base inspecionada:** Hermes main 35d4b899551beecc88edbb2f66c153cb896fa12a e fontes storytold/photocraft, storytold/effectcraft; nenhuma URL de fork do usuário verificada. **Achado de risco:** o mesmo turno pode atravessar workstation/work_intent.py e workstation/prefabs, enquanto o navegador prefab só valida HTTPS; liberar HTTP genérico seria perigoso. **Artefatos adicionados:** helper de aliases literais + dist/URL loopback; servidor de estáticos HTTP local com health nonce e cabeçalhos de isolamento; testes do catálogo. **Não declarado:** importação de submodules, conexão ao runtime, TestRun, instalação Windows, navegador aberto ou trabalho exportado. **Próximo passo:** agente executa H-079, valida testes, conecta processo via owner, qualifica Windows e fornece recibos. [Prompt](../../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).

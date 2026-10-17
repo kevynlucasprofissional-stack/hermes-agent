@@ -74,6 +74,22 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     getTaskJournal: taskId => ipcRenderer.invoke('hermes:workstation-browser:task-journal', taskId),
     adoptTab: (tabId: string, sessionId: string, taskId?: string) =>
       ipcRenderer.invoke('hermes:workstation-browser:adopt-tab', tabId, sessionId, taskId),
+    learningStart: (tabId?: string, sessionId?: string, intensity?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:learning:start', tabId, sessionId, intensity),
+    learningStop: () => ipcRenderer.invoke('hermes:workstation-browser:learning:stop'),
+    learningDiscard: () => ipcRenderer.invoke('hermes:workstation-browser:learning:discard'),
+    learningStatus: () => ipcRenderer.invoke('hermes:workstation-browser:learning:status'),
+    learningSetIntensity: (intensity: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:learning:intensity', intensity),
+    learningAnswerQuestion: (questionId: string, action: string, userCorrection?: string) =>
+      ipcRenderer.invoke('hermes:workstation-browser:learning:answer', questionId, action, userCorrection),
+    learningGetQuestions: () => ipcRenderer.invoke('hermes:workstation-browser:learning:questions'),
+    onLearningState: callback => {
+      const listener = (_event, state) => callback(state)
+      ipcRenderer.on('hermes:workstation-browser:learning:state', listener)
+
+      return () => ipcRenderer.removeListener('hermes:workstation-browser:learning:state', listener)
+    },
     onState: callback => {
       const listener = (_event, state) => callback(state)
       ipcRenderer.on('hermes:workstation-browser:state', listener)

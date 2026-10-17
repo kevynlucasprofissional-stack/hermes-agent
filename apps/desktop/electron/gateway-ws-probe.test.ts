@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 
 import { afterEach, beforeEach, describe, test, vi } from 'vitest'
 
-import { probeGatewayWebSocket, probeGatewayWebSocketWithRetry, DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_PROGRESS_CHECK_INTERVAL_MS, SPAWNED_BACKEND_MAX_CONNECT_WAIT_MS, spawnedBackendProbeOptions } from './gateway-ws-probe'
+import { DEFAULT_CONNECT_TIMEOUT_MS, DEFAULT_PROGRESS_CHECK_INTERVAL_MS, probeGatewayWebSocket, probeGatewayWebSocketWithRetry, SPAWNED_BACKEND_MAX_CONNECT_WAIT_MS, spawnedBackendProbeOptions } from './gateway-ws-probe'
 
 // Minimal WebSocket double: records listeners synchronously (the probe attaches
 // them in its executor) and exposes emit() so the test can replay events.

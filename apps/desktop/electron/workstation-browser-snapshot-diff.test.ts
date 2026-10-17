@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
+
 import { describe, test } from 'vitest'
+
 import {
   applySnapshotDelta,
   diffSnapshot,
@@ -43,6 +45,7 @@ describe('OPT-04 Snapshot Delta Projection', () => {
       },
       0
     )
+
     assert.throws(() => applySnapshotDelta({ ...start, tabId: 'another' }, patch))
     assert.throws(() => applySnapshotDelta({ ...start, taskId: 'different-task' }, patch))
     assert.throws(() => applySnapshotDelta({ ...start, url: 'https://other.url/' }, patch))
@@ -51,6 +54,7 @@ describe('OPT-04 Snapshot Delta Projection', () => {
 
   test('handles large documents (thousands of lines) with localized delta', () => {
     const lines = Array.from({ length: 2000 }, (_, i) => `Line ${i}: information row content`)
+
     const previous: SnapshotFrame = {
       taskId: 'task-lg',
       tabId: 'tab-lg',
@@ -73,6 +77,7 @@ describe('OPT-04 Snapshot Delta Projection', () => {
 
     const delta = diffSnapshot(previous, next, 0.1)
     assert.equal(delta.kind, 'delta')
+
     if (delta.kind === 'delta') {
       assert.equal(delta.commonPrefix, 1000)
       assert.equal(delta.removedLines, 2)
@@ -93,6 +98,7 @@ describe('OPT-04 Snapshot Delta Projection', () => {
       revision: 1,
       text: 'short text'
     }
+
     const tinyNext: SnapshotFrame = {
       taskId: 't',
       tabId: 'tab',
@@ -104,6 +110,7 @@ describe('OPT-04 Snapshot Delta Projection', () => {
     // Default minSavingRatio is 0.20 (20%)
     const res = diffSnapshot(tinyPrev, tinyNext, 0.5)
     assert.equal(res.kind, 'full')
+
     if (res.kind === 'full') {
       assert.equal(res.reason, 'insufficient_savings')
     }
@@ -147,14 +154,17 @@ describe('OPT-04 Snapshot Delta Projection', () => {
     ['truncated next frame forces a full update', 'before '.repeat(180), 'after '.repeat(180), true]
   ])('reconstructs exact structure for %s', (_label, before, after, truncated) => {
     const previous = { ...start, revision: 7, text: before as string }
+
     const next = {
       ...start,
       revision: 8,
       text: after as string,
       ...(truncated ? { truncated: true } : {})
     }
+
     const update = diffSnapshot(previous, next, 0)
-    if (truncated) assert.equal(update.kind, 'full')
+
+    if (truncated) {assert.equal(update.kind, 'full')}
     assert.deepEqual(applySnapshotDelta(previous, update), next)
   })
 })

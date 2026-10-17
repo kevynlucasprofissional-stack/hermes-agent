@@ -1,10 +1,18 @@
 # Current State
 
-## 2026-10-17 — CW-048A: FilmCraft importado como submodule Git (SUBMODULE IMPORT ONLY)
+## 2026-10-17 — Human Demonstration Learning Mode (D-047)
+**IMPLEMENTED (M0–M2) / REPLAY ON HOLD (M3)** na branch `feat/hermes-learning-mode-mvp-20261017`.
+- **M0:** `LearningSessionRecorder` integrado em `apps/desktop/electron/workstation-learning-session.ts` com lifecycle (`start/stop/discard`), consentimento, sanitização restrita via `workstation-learning-events.ts`, vídeo local e append-only síncrono em `events.jsonl` e `questions.jsonl`. Controles de UI em `apps/desktop/src/app/browser/learning-controls.tsx` integrados no Browser Hub e no painel lateral do chat com alternância de intensidade ao vivo (`Discreto`, `Equilibrado`, `Intensivo`, padrão inicial `Intensivo`) sem reiniciar sessão.
+- **M1:** Proactive Learning Question Engine avalia candidatos por ganho de informação (`workstation-learning-question-policy.ts`), dedup semântica, cooldowns, formulação de hipóteses e respostas/correções persistidas com `needs_reinterpretation`.
+- **M2:** `ExperienceLessonCompiler.record_human_demonstration_candidate` em `workstation/skill_learning.py` persistindo candidatas inertes (`source="human_demonstration"`, `status="candidate"`) sem autopromoção.
+- **M3:** Replay supervisionado mantido em **HOLD** por falta de runner/readback auditado com browser real.
+- **Testes:** 19 Vitest (4 arquivos) PASS, 2 Python (skill learning boundary) PASS, Typecheck Electron + UI PASS (exit 0), Health check 0 blocking findings. Matriz A–I PASS, J em HOLD.
+
+## 2026-10-17 — CW-048A/B: FilmCraft importado como submodule Git e roteado no runtime (VERIFICADO)
 - Terceiro motor criativo independente (editor de vídeo não-linear em Rust puro) adicionado em `external-engines/filmcraft` via submodule Git pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, Apache-2.0).
 - Submodules PhotoCraft e EffectCraft preservados intactos.
-- Não classificado como operacionalmente integrado: sem comandos pre-LLM, servidores loopback ou tarefas Kanban nesta etapa.
-- Referenciada distribuição WebAssembly `filmcraft-web-0.8.0.zip` para viabilidade futura em navegador nativo sob padrão loopback seguro (127.0.0.1).
+- Roteamento e persistência de sessão ativados via `workstation/creative_web_service.py` e Fast Path em `workstation/prefabs/integration.py`.
+- Helper seguro de instalação e verificação de integridade `workstation/scripts/install_creative_engine.py`.
 
 ## 2026-10-17 — CW-047: PhotoCraft e EffectCraft operacionais no Browser nativo (VERIFICADO)
 - **Implementação concluída sob D-046**: Abertura e reutilização local de PhotoCraft (v0.9.0) e EffectCraft (v0.10.0) a partir de comandos determinísticos ("Abra o PhotoCraft", "Abra o EffectCraft") sem criação de Kanban tasks ou chamadas a LLM.

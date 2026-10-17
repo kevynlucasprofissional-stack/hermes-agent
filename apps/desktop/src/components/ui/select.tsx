@@ -69,8 +69,8 @@ function SelectContent({
             'max-h-[min(18rem,var(--radix-select-content-available-height))] origin-(--radix-select-content-transform-origin)',
           className
         )}
-        data-native-view-occluder="true"
         collisionPadding={position === 'popper' ? collisionPadding : undefined}
+        data-native-view-occluder="true"
         data-slot="select-content"
         position={position}
         sideOffset={position === 'popper' ? sideOffset : undefined}

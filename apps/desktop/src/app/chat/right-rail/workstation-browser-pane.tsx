@@ -1,9 +1,15 @@
 import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { LearningControls } from '@/app/browser/learning-controls'
 import { useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
 import { TaskJournalDrawer } from '@/app/browser/task-journal-drawer'
-import type { WorkstationBrowserBounds, WorkstationBrowserState, WorkstationBrowserTabState } from '@/app/browser/types'
+import type {
+  LearningSessionState,
+  WorkstationBrowserBounds,
+  WorkstationBrowserState,
+  WorkstationBrowserTabState
+} from '@/app/browser/types'
 import { isElementInHiddenPane, usePaneVisible } from '@/components/pane-shell/pane-visibility'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -99,6 +105,15 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
   const [nativeReviews, setNativeReviews] = useState<NativeHumanReview[]>([])
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewNotice, setReviewNotice] = useState('')
+  const [learningState, setLearningState] = useState<LearningSessionState | null>(null)
+
+  useEffect(() => {
+    if (!bridge?.onLearningState) {return}
+    bridge.learningStatus?.().then(status => setLearningState(status)).catch(() => undefined)
+    const cleanup = bridge.onLearningState(state => setLearningState(state))
+
+    return cleanup
+  }, [bridge])
 
   const hostRef = useRef<HTMLDivElement | null>(null)
   const paneVisible = usePaneVisible()
@@ -608,6 +623,14 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
           </button>
         </div>
       )}
+
+      <LearningControls
+        activeTabId={state.activeTabId}
+        bridge={bridge}
+        busy={busy}
+        learningState={learningState}
+        sessionId={activeSessionKey}
+      />
 
       <div className="relative min-h-0 flex-1 bg-black">
         <div className="absolute inset-0" ref={hostRef} />

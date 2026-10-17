@@ -1,6 +1,5 @@
 import { atom, onMount } from 'nanostores'
 import type { ReactNode } from 'react'
-import { CreativeWorkspacePage } from '@/app/creative-workspace'
 
 import { noteActiveTreeGroup, revealTreePane } from '@/components/pane-shell/tree/store'
 import { registry } from '@/contrib/registry'

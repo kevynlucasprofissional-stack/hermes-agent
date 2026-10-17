@@ -168,7 +168,15 @@ export interface WorkstationBrowserBridge {
   cleanupCache: (force?: boolean) => Promise<WorkstationBrowserState>
   getTaskJournal: (taskId: string) => Promise<TaskTimelineEvent[]>
   adoptTab: (tabId: string, sessionId: string, taskId?: string) => Promise<TabAdoptionResult>
+  learningStart: (tabId?: string, sessionId?: string, intensity?: LearningIntensity) => Promise<LearningSessionState>
+  learningStop: () => Promise<LearningSessionState>
+  learningDiscard: () => Promise<void>
+  learningStatus: () => Promise<LearningSessionState | null>
+  learningSetIntensity: (intensity: LearningIntensity) => Promise<LearningSessionState>
+  learningAnswerQuestion: (questionId: string, action: 'confirm' | 'correct' | 'defer' | 'dismiss', userCorrection?: string) => Promise<LearningQuestionItem>
+  learningGetQuestions: () => Promise<LearningQuestionItem[]>
   onState: (callback: (state: WorkstationBrowserState) => void) => () => void
+  onLearningState?: (callback: (state: LearningSessionState | null) => void) => () => void
   onOpenChatPreview?: (callback: (data: { url: string; taskId?: string }) => void) => () => void
 }
 
@@ -194,3 +202,58 @@ export interface TaskTimelineEvent {
   metadata?: Record<string, unknown>
   evidence?: Array<{ kind: string; uri: string; summary?: string }>
 }
+
+export type LearningIntensity = 'discreto' | 'equilibrado' | 'intensivo'
+
+export type LearningQuestionKind =
+  | 'intent'
+  | 'causality'
+  | 'decision'
+  | 'heuristic'
+  | 'generalization'
+  | 'alternative'
+  | 'validation'
+
+export interface LearningQuestionItem {
+  id: string
+  sessionId: string
+  tabId: string
+  eventRefs: string[]
+  fromMs: number
+  toMs: number
+  kind: LearningQuestionKind
+  category: string
+  hypothesis: string
+  uncertainty: number
+  score: number
+  dedupeKey: string
+  proposedQuestion: string
+  state: 'pending' | 'confirmed' | 'corrected' | 'deferred' | 'dismissed'
+  userResponse?: string
+  needsReinterpretation: boolean
+  createdAt: string
+  answeredAt?: string
+}
+
+export interface LearningSessionState {
+  schema: 'hermes.learning_session.v1'
+  sessionId: string
+  runtimeSessionId: string
+  storedSessionId: string
+  tabId: string
+  webContentsId: number
+  documentEpoch: string
+  status: 'idle' | 'learning' | 'paused' | 'failed'
+  intensity: LearningIntensity
+  startedAt: string
+  endedAt: string | null
+  allowlistedOrigin: string
+  eventsCount: number
+  questionsCount: number
+  pendingQuestions: LearningQuestionItem[]
+  videoStatus: 'recording' | 'stopped' | 'blocked' | 'error' | 'disabled'
+  lastError: string | null
+  sessionDir: string
+  userBusy: boolean
+}
+

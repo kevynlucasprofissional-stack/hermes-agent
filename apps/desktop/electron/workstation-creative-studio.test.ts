@@ -2,13 +2,17 @@ import { expect, it } from 'vitest'
 
 function validateStudioTarget(targetUrl: string): { port: number; safeUrl: string } {
   const parsed = new URL(targetUrl)
+
   if (parsed.hostname !== '127.0.0.1' && parsed.hostname !== 'localhost') {
     throw new Error('creative_studio_loopback_required')
   }
+
   const port = Number(parsed.port)
+
   if (!port || port < 1024 || port > 65535) {
     throw new Error('invalid_creative_studio_port')
   }
+
   // Safe URL for receipts and journals must strip token parameter
   return {
     port,

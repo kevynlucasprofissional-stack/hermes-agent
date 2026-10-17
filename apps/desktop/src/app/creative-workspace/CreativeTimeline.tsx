@@ -1,7 +1,7 @@
+import { useCallback } from 'react'
+
 import { useCreativeWorkspace } from './CreativeWorkspaceContext'
-import { useStore } from '@nanostores/react'
-import { useMemo, useCallback, useRef, useEffect } from 'react'
-import type { CreativeTrack, CreativeClip } from './types'
+import type { CreativeClip, CreativeTrack } from './types'
 
 export function CreativeTimeline() {
   const { project, selection, playheadTime, setPlayheadTime, selectClip, selectTrack, workspaceMode } = useCreativeWorkspace()
@@ -35,13 +35,14 @@ export function CreativeTimeline() {
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     const frames = Math.floor((seconds % 1) * 30)
+
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`
   }
 
-  if (!composition) return null
+  if (!composition) {return null}
 
   return (
-    <div className="creative-timeline" role="region" aria-label="Timeline">
+    <div aria-label="Timeline" className="creative-timeline" role="region">
       <div className="creative-timeline-header">
         <div className="creative-timeline-track-headers" style={{ height: headerHeight }}>
           <div className="creative-timeline-track-header" style={{ width: '200px' }}>
@@ -50,13 +51,13 @@ export function CreativeTimeline() {
         </div>
         <div
           className="creative-timeline-time-ruler"
-          style={{ height: timeRulerHeight, width: timelineWidth }}
           onClick={handleTimeRulerClick}
+          style={{ height: timeRulerHeight, width: timelineWidth }}
         >
           {Array.from({ length: Math.ceil(totalDuration) }, (_, i) => (
             <div
-              key={i}
               className="creative-timeline-time-marker"
+              key={i}
               style={{ left: i * pixelsPerSecond }}
             >
               <span className="creative-timeline-time-label">{formatTime(i)}</span>
@@ -70,10 +71,10 @@ export function CreativeTimeline() {
         <div className="creative-timeline-track-list" style={{ width: '200px' }}>
           {tracks.map((track: CreativeTrack) => (
             <div
-              key={track.trackId}
               className={`creative-timeline-track ${track.locked ? 'locked' : ''} ${track.muted ? 'muted' : ''} ${selection.selectedTrackIds.has(track.trackId) ? 'selected' : ''}`}
-              style={{ height: trackHeight }}
+              key={track.trackId}
               onClick={e => handleTrackClick(track.trackId, e)}
+              style={{ height: trackHeight }}
             >
               <div className="creative-timeline-track-info">
                 <span className="creative-timeline-track-kind">{track.kind}</span>
@@ -89,8 +90,8 @@ export function CreativeTimeline() {
         <div className="creative-timeline-clips-area" style={{ width: timelineWidth }}>
           {tracks.map((track: CreativeTrack) => (
             <div
-              key={track.trackId}
               className={`creative-timeline-track-clips ${track.locked ? 'locked' : ''}`}
+              key={track.trackId}
               style={{ height: trackHeight }}
             >
               {track.clips.map((clip: CreativeClip) => {
@@ -100,13 +101,13 @@ export function CreativeTimeline() {
 
                 return (
                   <div
-                    key={clip.clipId}
                     className={`creative-timeline-clip ${isSelected ? 'selected' : ''} ${clip.reverse ? 'reverse' : ''} ${clip.freeze ? 'freeze' : ''} ${clip.speed !== 1 ? 'speed-changed' : ''}`}
+                    key={clip.clipId}
+                    onClick={e => handleClipClick(clip.clipId, e)}
                     style={{
                       left: startX,
                       width: Math.max(clipWidth, 20),
                     }}
-                    onClick={e => handleClipClick(clip.clipId, e)}
                     title={`${clip.name} (${formatTime(clip.timelineRange.start)} - ${formatTime(clip.timelineRange.end)})`}
                   >
                     <div className="creative-timeline-clip-name">{clip.name}</div>
@@ -122,9 +123,9 @@ export function CreativeTimeline() {
           ))}
 
           <div
+            aria-label={`Playhead at ${formatTime(playheadTime)}`}
             className="creative-timeline-playhead"
             style={{ left: playheadTime * pixelsPerSecond }}
-            aria-label={`Playhead at ${formatTime(playheadTime)}`}
           >
             <div className="creative-timeline-playhead-line" />
             <div className="creative-timeline-playhead-time">{formatTime(playheadTime)}</div>

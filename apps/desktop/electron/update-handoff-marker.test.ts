@@ -51,11 +51,13 @@ function runPosix(installRoot: string, startedAt?: string) {
 
 function runWindows(installRoot: string, startedAt?: string) {
   const env: NodeJS.ProcessEnv = { ...process.env, HERMES_HOME: path.dirname(installRoot) }
+
   if (startedAt === undefined) {
     delete env.HERMES_UPDATE_STARTED_AT
   } else {
     env.HERMES_UPDATE_STARTED_AT = startedAt
   }
+
   return spawnSync('powershell.exe', [
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', WINDOWS_SCRIPT,
     '-InstallRoot', installRoot, '-NoUi', '-NoMarkerCleanup', '-SelfTestMarker'

@@ -11,6 +11,7 @@ import { renderCreativeFrame } from './workstation-creative-frame'
 function fixture() {
   const initialBounds = { x: 90, y: 50, width: 900, height: 500 }
   const state = { bounds: { ...initialBounds }, zoom: 1.25, url: '' }
+
   const view = {
     getBounds: () => ({ ...state.bounds }),
     setBounds: (bounds: typeof initialBounds) => { state.bounds = { ...bounds } },
@@ -23,8 +24,10 @@ function fixture() {
       isDestroyed: () => false
     }
   } as unknown as WebContentsView
+
   const source = JSON.stringify({ schemaVersion: 1, width: 32, height: 32, background: '#112233', elements: [] })
   const args = { source_json: source, source_sha256: crypto.createHash('sha256').update(source).digest('hex') }
+
   return { initialBounds, state, view, args }
 }
 
@@ -32,10 +35,13 @@ it('lost owner after asynchronous capture restores geometry and publishes no out
   const { initialBounds, state, view, args } = fixture()
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-creative-owner-'))
   let owned = true
+
   try {
     await expect(renderCreativeFrame(view, args, directory, () => {
-      if (!owned) throw new Error('owner revoked')
-    }, async () => { owned = false; return Buffer.alloc(0) })).rejects.toThrow('owner revoked')
+      if (!owned) {throw new Error('owner revoked')}
+    }, async () => { owned = false;
+
+ return Buffer.alloc(0) })).rejects.toThrow('owner revoked')
     expect(state.bounds).toEqual(initialBounds)
     expect(state.zoom).toBe(1.25)
     expect(fs.readdirSync(directory)).toEqual([])
@@ -49,9 +55,11 @@ it('capture timeout restores geometry and a late completion cannot publish outpu
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-creative-timeout-'))
   vi.useFakeTimers()
   let complete!: (png: Buffer) => void
+
   try {
     const pending = renderCreativeFrame(view, args, directory, () => {},
       () => new Promise<Buffer>(resolve => { complete = resolve }))
+
     const rejected = expect(pending).rejects.toThrow('creative_capture_timeout')
     await vi.advanceTimersByTimeAsync(8000)
     await rejected

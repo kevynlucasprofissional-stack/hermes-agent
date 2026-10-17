@@ -1,14 +1,16 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
-## 2026-10-17 — CW-048A: FilmCraft importado como terceiro motor criativo independente (SUBMODULE IMPORT ONLY)
-Conforme a diretriz D-046 (baixo acoplamento primeiro) e o objetivo único da tarefa CW-048A:
+## 2026-10-17 — D-047: Human Demonstration Observer + Proactive Learning Question Engine (M0–M2 IMPLEMENTADOS)
+**Visão operacional implementada:** usar a experiência do especialista como nova **fonte de aprendizagem**, não como outro executor. O mesmo browser Electron/WebContentsView serve para demonstração, evento seguro, snapshots seletivos e gravação de vídeo local; o chat integra o fluxo `useAdoptTabToSession` mantendo runtime e stored session ID. A IA observa gestos seguros, segmenta ações, formula hipóteses, estima ganho de informação esperado (`workstation-learning-question-policy.ts`), pergunta em pausas apropriadas (bloqueando perguntas durante drag ativo), registra correções explícitas (`needs_reinterpretation`) e compila candidatas inertes via `ExperienceLessonCompiler` (`workstation/skill_learning.py`). **Intensidade ao vivo** é controle de proatividade (`discreto, equilibrado, intensivo`, default intensivo), mutável durante a gravação sem reinício ou perda de dados. `human_demonstration` não tem atribuição fictícia de `VERIFIED_SUCCESS` de runtime e nunca autopromove sem qualificação. M0 (recorder + UI live intensity), M1 (question engine + correções) e M2 (candidata inerte) 100% implementados e testados; M3 (replay autônomo) em HOLD documentado.
+
+## 2026-10-17 — CW-048A/B: FilmCraft importado como terceiro motor criativo independente (VERIFICADO)
+Conforme a diretriz D-046 (baixo acoplamento primeiro) e os objetivos CW-048A/B:
 1. **Estrutura Git Submodule**: `external-engines/filmcraft` adicionado apontando para o repositório original `https://github.com/storytold/filmcraft.git` e pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, licença Apache-2.0). Nenhuma entrada existente de PhotoCraft ou EffectCraft foi sobrescrita no `.gitmodules`.
 2. **Sem invasão do core**: O código-fonte do FilmCraft não foi copiado como arquivos comuns do Hermes; o diretório permanece estritamente um gitlink de submodule (modo 160000).
-3. **Perspectiva de execução**: Documentada a referência da distribuição oficial WebAssembly pré-compilada `filmcraft-web-0.8.0.zip` (13.3 MB) para futura execução web loopback no navegador nativo do Hermes sob o mesmo padrão de segurança e isolamento de processo (127.0.0.1, nonce criptográfico e COOP/COEP).
+3. **Perspectiva de execução**: Roteamento de comandos rápidos "Abra o FilmCraft" em `workstation/prefabs/integration.py` e `workstation/creative_web_service.py`, suporte a persistência e reuso sem reload de aba, helper seguro de instalação prévia `workstation/scripts/install_creative_engine.py` e cobertura de testes automatizados.
 4. **Instruções de ciclo de vida**:
    - Sincronização: `git -C external-engines/filmcraft fetch origin tag <tag>` -> `git -C external-engines/filmcraft checkout <sha>` -> `git add external-engines/filmcraft`.
    - Rollback: `git -C external-engines/filmcraft checkout f03e21556d8e3a7155b91892d958debd5255d7af` -> `git add external-engines/filmcraft`.
-5. **Estado operacional**: Estritamente não integrado operacionalmente ao runtime nesta etapa (sem comandos pre-LLM, sem servidores loopback e sem automação de browser).
 
 ## 2026-10-17 — CW-047: Operação de PhotoCraft e EffectCraft no Browser nativo (VERIFICADO)
 A implementação do fluxo CW-047 sob a diretriz D-046 foi concluída com sucesso:

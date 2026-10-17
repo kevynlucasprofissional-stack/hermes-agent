@@ -138,4 +138,47 @@ export function registerWorkstationBrowserIpc(): void {
       typeof taskId === 'string' ? taskId : undefined
     )
   )
+  ipcMain.handle('hermes:workstation-browser:learning:start', (event, tabId, sessionId, intensity) => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().startLearning(
+      typeof tabId === 'string' ? tabId : undefined,
+      typeof sessionId === 'string' ? sessionId : undefined,
+      typeof intensity === 'string' ? intensity : undefined
+    )
+  })
+  ipcMain.handle('hermes:workstation-browser:learning:stop', event => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().stopLearning()
+  })
+  ipcMain.handle('hermes:workstation-browser:learning:discard', event => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().discardLearning()
+  })
+  ipcMain.handle('hermes:workstation-browser:learning:status', event => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().getLearningStatus()
+  })
+  ipcMain.handle('hermes:workstation-browser:learning:intensity', (event, intensity) => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().setLearningIntensity(String(intensity ?? 'intensivo'))
+  })
+  ipcMain.handle('hermes:workstation-browser:learning:answer', (event, questionId, action, userCorrection) => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().answerLearningQuestion(
+      String(questionId ?? ''),
+      String(action ?? 'confirm'),
+      typeof userCorrection === 'string' ? userCorrection : undefined
+    )
+  })
+  ipcMain.handle('hermes:workstation-browser:learning:questions', event => {
+    senderWindow(event)
+
+    return getWorkstationBrowserRuntime().getLearningQuestions()
+  })
 }

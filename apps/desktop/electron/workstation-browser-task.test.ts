@@ -225,10 +225,12 @@ test('two web sessions keep distinct pages through repeated activation and bindi
   const pageB = browser.pages.get('task-b')
   assert.ok(pageA && pageB)
   assert.notEqual(pageA.id, pageB.id)
+
   for (let i = 0; i < 10; i += 1) {
     lifecycle.showTask('task-a', { host: 'session-a' })
     lifecycle.showTask('task-b', { host: 'session-b' })
   }
+
   assert.throws(() => lifecycle.bindSessionHost('task-a', 'session-b'), /session identity mismatch/)
   assert.equal(browser.pages.get('task-a'), pageA)
   assert.equal(browser.pages.get('task-b'), pageB)

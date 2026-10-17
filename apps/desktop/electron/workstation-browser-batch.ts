@@ -56,8 +56,9 @@ function optionalBoolean(value: unknown): boolean {
 }
 
 function validAnchor(value: unknown): boolean {
-  if (value === undefined) return true
-  if (!isRecord(value)) return false
+  if (value === undefined) {return true}
+
+  if (!isRecord(value)) {return false}
 
   return (
     (value.type === undefined || boundedString(value.type, 128)) &&
@@ -66,11 +67,12 @@ function validAnchor(value: unknown): boolean {
 }
 
 export function isBrowserBatchStep(value: unknown): value is BrowserBatchStep {
-  if (!isRecord(value)) return false
+  if (!isRecord(value)) {return false}
 
   switch (value.kind) {
     case 'click':
       return boundedString(value.ref, 256) && validAnchor(value.anchor)
+
     case 'type':
       return (
         boundedString(value.ref, 256) &&
@@ -80,10 +82,13 @@ export function isBrowserBatchStep(value: unknown): value is BrowserBatchStep {
         optionalBoolean(value.append) &&
         validAnchor(value.anchor)
       )
+
     case 'press':
       return boundedString(value.key, 128)
+
     case 'scroll':
       return value.direction === 'up' || value.direction === 'down'
+
     default:
       return false
   }
@@ -117,9 +122,11 @@ export async function executeAuthorizedBatch(
   }
 
   let invalidStep = -1
+
   for (let i = 0; i < steps.length; i++) {
     if (!Object.hasOwn(steps, i) || !isBrowserBatchStep(steps[i])) {
       invalidStep = i
+
       break
     }
   }
@@ -141,6 +148,7 @@ export async function executeAuthorizedBatch(
 
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]
+
     try {
       // Recheck real lease and policy at every step; never trust an earlier batch approval.
       await owner.checkBefore(step, context, i)
@@ -156,6 +164,7 @@ export async function executeAuthorizedBatch(
     }
 
     let result: unknown
+
     try {
       result = await owner.perform(step, context, i)
       completedSteps++
@@ -175,6 +184,7 @@ export async function executeAuthorizedBatch(
       const evidence = await owner.verifyAfter(step, context, i, result)
       receipts.push(evidence.receiptRef)
       await owner.checkpoint(context, i, evidence)
+
       if (!evidence.verified || !evidence.receiptRef) {
         return {
           status: 'uncertain',
@@ -185,6 +195,7 @@ export async function executeAuthorizedBatch(
           reason: evidence.uncertaintyReason ?? 'unverified_effect'
         }
       }
+
       verifiedSteps++
     } catch {
       return {

@@ -1,5 +1,14 @@
 # Workstation Known Issues
 
+## HLM-MVP — Riscos conhecidos e estado de mitigação (2026-10-17, pós-implementação M0–M2)
+- **HLM-KI-01 (Conteúdo sensível / Login):** MITIGADO NO RUNTIME. Captura restrita à aba e origem permitida; navegação para origem não autorizada ou página de login pausa imediatamente a gravação (`status="paused"`) ANTES da emissão de novos frames ou eventos. Gestos ignoram inputs editáveis e campos sensíveis. Arquivos persistidos localmente sem upload externo.
+- **HLM-KI-02 (Conflito CDP / WebContentsView):** MITIGADO NO RUNTIME. `LearningSessionRecorder` opera via WebContentsView nativa e listeners do Electron (`did-navigate`, `console-message`, `render-process-gone`), sem attach paralelo de CDP conflitante com a automação principal.
+- **HLM-KI-03 (Interrupção / Questões falsas):** MITIGADO NA POLÍTICA. `decideLearningQuestion` aplica limiares estritos de ganho de informação, bloqueia perguntas durante gestos contínuos (drag), respeita cooldowns e limites de fila por intensidade (`discreto`, `equilibrado`, `intensivo`) e deduplica semântica.
+- **HLM-KI-04 (Ausência de recibo de runtime / Falsa promoção):** MITIGADO NA FRONTEIRA. `CandidateLesson` recebe `source="human_demonstration"` e permanece estritamente como candidata inerte (`status="candidate"`), rejeitando promoção ou atribuição de `VERIFIED_SUCCESS` sem execução autônoma verificada sob TaskRun.
+- **HLM-KI-05 (Isolamento de PRs criativas #97/#98):** MITIGADO NA BRANCH. Implementação desenvolvida e testada de forma independente de editores criativos profundos, utilizando fixtures padrão do Chromium e contratos de browser nativo.
+- **HLM-KI-06 (Replay autônomo M3 não comprovado):** ATIVO (HOLD). Replay supervisionado permanece em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável.
+
+
 ## Pausa estratégica de 2026-10-12 — KI-028…KI-043 (registro canônico)
 
 **Status de execução:** `PAUSED_BY_STRATEGY`. Os problemas abaixo não foram encerrados; são a indexação de pendências reveladas na sessão de 11–12/10. Esta seção complementa KI-001…KI-027 sem renumerá-los; conflitos históricos já existentes de identificadores anteriores não foram apagados. Consultar [Strategic Handoff](HERMES_WORK_STRATEGIC_HANDOFF_2026-10-12.md), [source manifest](HERMES_WORK_SOURCE_EVIDENCE_MANIFEST_2026-10-12.md) e [dossiê](HERMES_WORK_P0_ISSUES_DETAIL_2026-10-12.md). O dossiê mantém comportamentos observados, causas, testes e próximos seams; estes itens são os **estados canônicos**.
