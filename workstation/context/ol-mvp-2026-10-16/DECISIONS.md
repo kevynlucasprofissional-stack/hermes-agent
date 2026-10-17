@@ -1,5 +1,15 @@
 # Decisoes arquiteturais OL-MVP (16/10/2026)
 
+## D20 — P2.0 aceite como avanço; P2.1 prioriza comprovar adoção e seleção real (17/10/2026)
+
+Com base no relatório P2.0 (1/1 E2E Electron 52,8 s, duas TaskRuns reais, seis WorkItems `COMPLETED`, owner readbacks e Python 8/8+40/40+7/7): **encerrar hardening de Browser/TaskRun básico e avançar**. Não equiparar plano concluído a um procedimento aprendido. Sem recibo de `RunLocalAdopter` e qualificação formal, compilação in-flight e cross-Run permanecem NÃO PROVADAS. Métricas reais de LLM/tokens/US$ `null` em scripted mock.
+
+Após verificar código `TaskCompiler.execute`, `_execute_route`, `CapabilityRouter.route`, `OperationalCapabilityRegistry.find_matching`, **confirmado que o Router JÁ possui candidate search por família e certificados**; `operation_fingerprint` e `operation_intent` são caminhos distintos. A decisão arquitetural de seleção multimétodo é incremental: primeiro qualificar/reutilizar o Router existente, depois BM25/embeddings/LAYA quando benchmarks justifiquem. Não criar segundo mecanismo de busca para `operation_intent` por instinto.
+
+Stage A registrado `PASS_WITH_AUTORIZATION` no contexto fornecido autoriza pesquisa/implementação em ambiente controlado; não afrouxa exigências de DIRECT, política, readback, lease, promoção, gastos pagos ou controle humano sobre código operacional. Preservar D01–D19, quatro ImprovementRuns futuras, orçamento de usuário e experiência universal com compilação seletiva. GO P2.2 apenas com reuse real ou PARTIAL explícito só para telemetria/SHADOW.
+
+
+
 ## D19 — Separar avanço de desenvolvimento e comprovação de produto (17/10/2026)
 
 Dado o relatório P1C local de 17/10/2026: é permitido avançar ao **P2-PREFLIGHT** e interromper hardening indiscriminado, pois testes reportaram 5/5 P1C + 40/40 compiler + 7/7 boundary. Mas a publicação PR #95 não contém as mudanças recentes e o recibo com IDs `"real"` e refs de arquivos de testes não prova `RunLocalAdopter` nativo, qualificação DIRECT, persistência inter-run ou custo líquido. **P2 não deve transformar relatório de fixture em credencial operacional.**
