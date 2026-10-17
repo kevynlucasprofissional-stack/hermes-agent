@@ -1,5 +1,9 @@
 # Workstation Known Issues
 
+## HLM-MVP — Riscos conhecidos de produto (2026-10-17, pré-implementação)
+**HLM-KI-01:** captura de vídeo de aba Electron/Canvas pode registrar conteúdo sensível; exigir allowlist/consent, pausa pré-navegação, arquivo local sem upload e prova E2E de proteção. **HLM-KI-02:** `WebContentsView` e CDP estão sob Browser owner; não anexar segunda instância de debugger nem violar lease humano ou efeito canônico. **HLM-KI-03:** Question Engine pode gerar interrupções excessivas ou hipóteses falsas; política de ganho de informação, dedupe, cooldown, fila e revisão humana. **HLM-KI-04:** `human_demonstration` não possui recibos de runtime; rejeitar falsa promoção e falso `VERIFIED_SUCCESS`. **HLM-KI-05:** PRs criativas #97/#98 não estão na `main`; fixture independente para primeiros testes. **Estado:** riscos PROPOSTOS, não bugs observados em produto nem issues fechadas; [D-047](LEARNING_MODE_HUMAN_DEMONSTRATIONS_2026-10-17.md).
+
+
 ## Pausa estratégica de 2026-10-12 — KI-028…KI-043 (registro canônico)
 
 **Status de execução:** `PAUSED_BY_STRATEGY`. Os problemas abaixo não foram encerrados; são a indexação de pendências reveladas na sessão de 11–12/10. Esta seção complementa KI-001…KI-027 sem renumerá-los; conflitos históricos já existentes de identificadores anteriores não foram apagados. Consultar [Strategic Handoff](HERMES_WORK_STRATEGIC_HANDOFF_2026-10-12.md), [source manifest](HERMES_WORK_SOURCE_EVIDENCE_MANIFEST_2026-10-12.md) e [dossiê](HERMES_WORK_P0_ISSUES_DETAIL_2026-10-12.md). O dossiê mantém comportamentos observados, causas, testes e próximos seams; estes itens são os **estados canônicos**.
