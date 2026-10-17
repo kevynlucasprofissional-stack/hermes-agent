@@ -1,5 +1,15 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-17 — P2 preflight: resultado P1C reportado, não reconciliado no GitHub
+
+- Relatório anexo da IA: P1C `5/5`, ExperienceCompiler `40/40`, inflight `7/7`, Ruff e health PASS, alegando `TaskCompiler.compile_and_execute`, `PromotionGate`, `P1C_RESULT_20261016.json` com `GO P2`. **Não houve reexecução desses testes nesta revisão**.
+- Fonte remota verificada: PR #95 HEAD ainda `2b9f7162507cf5db0fe32a7c77fb28f121d1e8f3`, sem `workstation/tests/test_P1C_strict_read_acceptance.py` e sem `workstation/context/ol-mvp-2026-10-16/evidence/P1C_RESULT_20261016.json`. Máquina Desktop Commander offline (última atividade há ~9h). Não foi possível obter diff local; mudanças possivelmente não commitadas.
+- O JSON colado como recibo usa IDs genéricos `real` e referências para teste P1C/histórico P1.0, não `artifact://tasks/...` da execução. Tampouco há novo teste Electron/Gateway identificado nos comandos do log; distinguir código Python validado de P1C de produto nativo comprovado.
+- Nova branch de DOCUMENTAÇÃO P2, empilhada sobre PR #95, sem alterar runtime/main. Novo `P2_80_20_DECISION_AND_PLAN.md`, `P2_PATCH_MAP.md`, `P2_IMPLEMENTER_PROMPT.md` e journal `OL_MVP_P2_2026-10-17.md`. `patches/p2_receipt_gate.py` + 5 testes unitários PASS em Python contêiner; valida somente esquema e evidências estruturais (não autentica owner/ArtifacStore/qualificação).
+- Decisão: **GO P2-preflight** para recuperar trabalho local, 1 fluxo real E2E, seleção determinística existente e telemetria real. **HOLD** de afirmações P1C produção PASS, adoção compilada real, Stage A/DIRECT global, economia em dinheiro e merge main. Nunca usar wrapper de testes/flags autoatribuídas como prova de execução.
+
+
+
 ## 2026-10-16 — OL-MVP P1C: teste integrado nativo é o único próximo investimento (planejado, não executado)
 
 - **Recebido:** log do implementador e decisões OL-MVP reanexadas; PR #94 atualizado em `27b6376535dcfb92025fd4d468411feb0d7d3a34`, com implementação P1B read-only. Relatório: 30 casos focais pelas seis suítes, 53 segurança, pre-commit/ruff e push; **não foram reexecutados nesta revisão**, pois desktop do usuário está offline.
