@@ -1,5 +1,19 @@
 # Workstation roadmap
 
+## 2026-10-17 — OL-MVP P2.1: primeira adoção COMPILADA no Hermes real, sem duplicar Router
+
+**Novo marco comprovado no relatório (não revalidado remotamente):** E2E Electron `--grep "OL-MVP P2"` 1/1 PASS 52,8s, 2 TaskRuns, 2 planos, 6 WorkItems `COMPLETED` (3/3 em cada), readback `hermes.browser_card_readback.v1` com `raw_result_ref/transition_ref/operation_id/browser_task_id`. Correções locais em `scoped_execution.py` (`capture_raw_result` e BrowserTask), `task_compiler.py` (run_id), `run_local_adoption.py` (COMPLETED), `corpus.py/progressive.py/tool_observer.py` (health). Python 8/8 in-flight, 40/40 compiler, 7/7 durable, health 0 reportados. **P2.0 EXECUÇÃO REAL ACEITA para avançar 80/20.**
+
+**Prova que FALTA:** nenhuma evidência apresentada de item realmente executado por `RunLocalAdopter` após oferta DIRECT qualificada, de candidato/versão recuperado em segunda Run pelo `CapabilityRouter` ou de redução real de chamadas ao provedor. 2 TaskRuns adaptativas não equivalem a reuso aprendido. Custo/tokens do provider scripted mock = `null`. Stage A tem autorização de DESENVOLVIMENTO `PASS_WITH_AUTORIZATION` no relatório anterior, mas DIRECT/global promotion permanecem sob gates.
+
+**P2.1 agora:** (1) localizar/publicar patch P2.0 local e evidence sem sobrescrever claims; (2) auditar accepted sample/candidate por operação; (3) obter 1 `RunLocalAdopter.run_checkpoint` com receipt verificado, quando autorizado, ou motivo real SHADOW; (4) recuperar capacidade numa nova TaskRun com `CapabilityRouter.route` JÁ EXISTENTE; (5) medir motivo de abstenção, latência e chamadas reais quando disponíveis. **O Router já possui indexação por `operation_family/target_family/family_id`, fallback promovidas e System-1 opcional**; não criar nova seleção por fingerprint na intent sem provar necessidade.
+
+**Somente depois:** P2.2 telemetria/economia líquida; P3 melhorias recuperador BM25/embeddings/LAYA somente quando false negatives medidos justificarem; quatro ImprovementRuns/memória hierárquica/ orçamento adaptativo mais adiante. Não reabrir boot, n8n ou segundo executor.
+
+Handoff: [Plano P2.1](context/ol-mvp-2026-10-16/P2_1_NATIVE_ADOPTION_PLAN.md) · [Mapa exato](context/ol-mvp-2026-10-16/P2_1_PATCH_MAP.md) · [Prompt IA](context/ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md). Nova branch DOCUMENTAL empilhada sobre #96, sem alteração runtime/main.
+
+
+
 ## 2026-10-17 — P2 80/20: reconciliar P1C local → prova causal → seleção pré-LLM e métricas
 
 **Decisão GO P2-preflight / HOLD qualificação produto:** relatório da IA (17/10 03:04 BRT) diz 5/5 testes P1C + 40/40 ExperienceCompiler + 7/7 boundary + lint/health, porém **PR #95 remoto continua em `2b9f7162507cf5db0fe32a7c77fb28f121d1e8f3`**, sem as alterações declaradas em `task_compiler.py`/`compiler.py`/`promotion.py` e sem `workstation/tests/test_P1C_strict_read_acceptance.py` ou `evidence/P1C_RESULT_20261016.json`. Desktop Commander offline. **Não marcar P1C native E2E PASS** sem novo evento por chat/Gateway e refs reais.
