@@ -15,7 +15,7 @@ Você é a IA executora. Não reabra debate de arquitetura, não aumente escopo 
 ## ASSETS PRONTOS NO REPOSITÓRIO (CÓDIGO-FONTE REAL, AINDA NÃO INTEGRADO)
 - workstation/creative_web_app_spec.py — catálogo tipado (PhotoCraft e EffectCraft), reconhecimento literal exato, verificação de dist prebuilt e validação da URL gerenciada 127.0.0.1:porta.
 - workstation/creative_web_static_server.py — servidor HTTP de arquivos estáticos, 127.0.0.1 apenas; root explícito; COOP/COEP/CORP e health nonce, sem instalar/compilar ou abrir um browser.
-- workstation/tests/test_creative_web_app_spec.py — testes RED/GREEN das funções auxiliares. **Executar e ampliar; o autor do kit ainda não executou esses testes dentro do Hermes.**
+- workstation/tests/test_creative_web_app_spec.py e workstation/tests/test_creative_web_static_server.py — testes de aliases, loopback, health nonce e servidor. **Executar e ampliar; o autor do kit ainda não executou esses testes dentro do Hermes.**
 Esses módulos **não estão ligados ao roteador ou ao Desktop**. Mover/refatorar somente se o owner canônico exigir; não substitua a arquitetura existente por módulos paralelos.
 
 ## ORIGENS E POLÍTICA DE REPOSITÓRIOS
@@ -87,7 +87,7 @@ Reutilizar todo o percurso do PhotoCraft variando somente configuração do dist
 
 ### Fase 5: Testes obrigatórios e prova operacional
 1. Primeiro executar os testes unitários do kit e adicionar RED reproduzível antes de cada ajuste funcional:
-   python -m pytest workstation/tests/test_creative_web_app_spec.py -q
+   python -m pytest workstation/tests/test_creative_web_app_spec.py workstation/tests/test_creative_web_static_server.py -q
    python -m pytest workstation/tests/test_current_command_resolution.py -q
    python -m pytest workstation/tests/test_current_command_native_intent_contract.py -q
    python -m pytest workstation/tests/test_creative_studio_service.py -q

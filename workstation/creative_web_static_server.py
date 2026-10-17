@@ -85,9 +85,14 @@ class CreativeStaticHandler(SimpleHTTPRequestHandler):
         if not candidate.is_relative_to(self._root):
             self.send_error(403, "Outside web dist")
             return None
-        if candidate.is_dir() and not (candidate / "index.html").is_file():
-            self.send_error(404, "No directory listing")
-            return None
+        if candidate.is_dir():
+            index = (candidate / "index.html").resolve()
+            if not index.is_file():
+                self.send_error(404, "No directory listing")
+                return None
+            if not index.is_relative_to(self._root):
+                self.send_error(403, "Index outside web dist")
+                return None
         return super().send_head()
 
     def end_headers(self):
