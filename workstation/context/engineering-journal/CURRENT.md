@@ -1,5 +1,19 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-17 — P2.0 E2E CHAIN PASS segundo implementador; P2.1 primeiro reuse real
+
+**Novo relatório recebido:** `scoped_execution.py` corrigiu falta de `capture_raw_result` + associação BrowserTask/task/run; `task_compiler.py` propagou `canonical_run_id`; `run_local_adoption.py` trocou `mark_item_validated` por `complete_item` para não rebaixar WorkItem. `corpus.py`, `progressive.py`, `tool_observer.py` tiveram anotações health. E2E Electron chat/Gateway `--grep "OL-MVP P2"`: **1/1 PASS 52,8s**; 2 TaskRuns distintas, 6 WorkItems `completed`, readback independente `hermes.browser_card_readback.v1` com refs canônicas. Testes Python in-flight 8/8, Compiler 40/40, durable 7/7, health 0. **Todos resultados do relatório, não reexecutados no GitHub remoto.**
+
+**Limite crítico:** relatório não contém `candidate_ref`, `qualified_offer_ref`, `run_local_reuse` nem certificado Router de cross-run demonstrando execução compilada de item posterior; portanto P2.1 compiled adoption **NOT_PROVED**, cross-run capability recovery **NOT_PROVED**, provider usage/cost **null**. Esse resultado não justifica refazer Browser nem retornar a P1C.
+
+**Inspeção independente do código PR #96 `6c5963b4`:** `CapabilityRouter.route` já busca capacidades promovidas por famílias e avalia contrato/Policy, `TaskCompiler._execute_route` já despacha via certificado, `operational_resolution` já é pré-LLM. Próximo passo 80/20 é depurar ligação sample→candidate→qualificação→RunLocalAdopter, depois catalog/Router em nova Run. Não criar novo Router/fingerprint sintético e não forçar DIRECT.
+
+**Limitação repositório:** Desktop Commander DESKTOP-3NA47UH offline na inspeção 17/10; patches E2E/P2.0 podem existir só localmente e precisam de commit/push cuidadoso, sem perder changes concorrentes. Branch documental P2.1 empilhada em #96, sem edits runtime nem merge main. Stage A `PASS_WITH_AUTORIZATION` foi reportado no contexto anterior, mas execução DIRETA continua condicionada aos gates canônicos.
+
+**Handoff:** [P2_1_IMPLEMENTER_PROMPT.md](../ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md) · [Mapa](../ol-mvp-2026-10-16/P2_1_PATCH_MAP.md).
+
+
+
 ## 2026-10-17 — P2 preflight: resultado P1C reportado, não reconciliado no GitHub
 
 - Relatório anexo da IA: P1C `5/5`, ExperienceCompiler `40/40`, inflight `7/7`, Ruff e health PASS, alegando `TaskCompiler.compile_and_execute`, `PromotionGate`, `P1C_RESULT_20261016.json` com `GO P2`. **Não houve reexecução desses testes nesta revisão**.
