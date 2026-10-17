@@ -1,5 +1,9 @@
 # Architectural Decisions
 
+## CW-047 — Proposta operacional: submodules externos pinados e abertura local sob demanda (2026-10-17)
+**Status: PROPOSTA DE PLANO, implementação pendente; não substitui D-046.** Para os motores PhotoCraft/EffectCraft, estudar submodules Git com commits fixados, sincronização explícita com suas origens e lançamento web via loopback autorizado pelo runtime existente, seguido de navegação no Browser nativo ao dizer `abra o PhotoCraft` / `abra o EffectCraft`. Confirmar URLs dos forks **antes** de vinculá-los; upstream original identificado não equivale a fork do mantenedor. Remotion/Three.js preferencialmente como dependências de projeto. A ideia de Three.js como cena/camada vinculada ao EffectCraft está em backlog de pesquisa, **sem mandato de acoplamento profundo**. [Plano detalhado](../creative-workstation/LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md).
+
+
 ## D-046 — Integração por necessidade demonstrada, baixo acoplamento primeiro (2026-10-17)
 **Status: DECISÃO ESTRATÉGICA ACEITA; documentação apenas.** A experiência de um Hermes único não exige absorver motores. Primeiro disponibilizar PhotoCraft, EffectCraft, Remotion e outros apps via Browser/painéis já existentes; depois tentar automação do Browser; apenas diante de gargalo real e ganho líquido demonstrado permitir adapter fino ou incorporação de código. **Cada estágio pode ser o definitivo.** Foco em trabalhos concluídos, tempo poupado, qualidade e intervenções, não no número de integrações. Reprioriza a execução da Creative Workstation e coloca CWN-00..09 como backlog condicionado, preservando a D-043 engine-neutral e os gates de autoridade/segurança. **Não houve implementação ou qualificação nesta decisão.** [Texto canônico e critérios](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 

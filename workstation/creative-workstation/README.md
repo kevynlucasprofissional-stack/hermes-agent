@@ -1,5 +1,9 @@
 # Hermes Creative Workstation
 
+## CW-047 — próxima frente de trabalho: fontes independentes + abertura de editores no Browser (2026-10-17; PLANO)
+**Não construir outro painel.** Candidatos PhotoCraft e EffectCraft em submodules Git pinados (somente depois de confirmar os forks), com builds web existentes, lifecycle localhost/ProcessRegistry e comando humano `abra ...` na infraestrutura de navegação atual. Remotion/Three.js como dependências versionadas quando algum fluxo exigir. Backlog: cena/camada de Three.js vinculada ao EffectCraft no espírito Cinema 4D/After Effects, apenas após prova. Nenhuma destas instalações ou mudanças de runtime ocorreu nesta atualização documental. [Plano, requisitos e gates](LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md).
+
+
 ## D-046 — prioridade operacional atual (2026-10-17; decisão, sem código)
 Antes de iniciar fases de kernel criativo compartilhado: **abrir ferramentas web existentes nos painéis/Browser nativo atuais do Hermes, produzir trabalhos reais e tentar automação já disponível**. PhotoCraft/EffectCraft/Remotion são motores independentes; não criar clones, painéis adicionais ou acoplamentos profundos por antecipação. Se o baixo acoplamento funcionar, é **solução final válida**. D-043 permanece como desenho engine-neutral de longo prazo, mas CWN-00..09 depende de demanda e prova de benefício. [D-046 e gate econômico/técnico](../context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 

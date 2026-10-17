@@ -1,5 +1,11 @@
 # Workstation roadmap
 
+## 2026-10-17 — CW-047: submodules rastreáveis e abertura de editores locais por comando (PLANO; NÃO IMPLEMENTADO)
+**Primeira entrega operacional:** confirmar URLs exatas dos forks PhotoCraft/EffectCraft → adicionar como submodules pinados e independentes, sem sincronização silenciosa → preparar builds web opt-in com servidor loopback somente sob demanda → usar Browser nativo atual → rotear `abra o PhotoCraft` e `abra o EffectCraft` pela mesma autoridade de navegação/ProcessRegistry já existente → validar Windows Electron + edição e exportação real. **Não construir novo painel/browser.** Remotion e Three.js inicialmente dependências versionadas, não monorepos embutidos. **Não afirmar código ou comandos implementados.** [Plano CW-047](creative-workstation/LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md).
+
+**IDEIA FUTURA, não autorizada para implementação:** investigar uma ponte Three.js/editor existente ↔ EffectCraft com cena 3D como camada/fonte temporalmente vinculada, preview e atualização, à maneira de Cinema 4D + After Effects; testar GLB/scene JSON, alfa, tempo, cor, persistência e exportação antes de internalizar qualquer motor. [Hipótese e gate de prova](creative-workstation/LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md#6-backlog-de-pd--threejs--effectcraft-inspiração-cinema-4dafter-effects).
+
+
 ## 2026-10-17 — PRIORIDADE D-046: resultados primeiro, integrações por demanda (DECIDIDO; NÃO EXECUTADO)
 **Ordem de investimento:** (1) usar editores web existentes nos painéis/Browser nativo do Hermes; (2) concluir trabalhos profissionais e medir o esforço; (3) automatizar operações repetitivas com o Browser atual; (4) se houver gargalo medido, testar o menor adapter/API/CLI necessário; (5) só propor integração profunda de código quando provar benefício líquido superior ao custo de manutenção. Baixo acoplamento é resultado final válido. **Não construir painéis, clones, motores, editor 3D próprio ou kernel criativo apenas para avançar roadmap.**
 
