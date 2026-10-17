@@ -1,5 +1,13 @@
 # Decisoes arquiteturais OL-MVP (16/10/2026)
 
+## D19 — Separar avanço de desenvolvimento e comprovação de produto (17/10/2026)
+
+Dado o relatório P1C local de 17/10/2026: é permitido avançar ao **P2-PREFLIGHT** e interromper hardening indiscriminado, pois testes reportaram 5/5 P1C + 40/40 compiler + 7/7 boundary. Mas a publicação PR #95 não contém as mudanças recentes e o recibo com IDs `"real"` e refs de arquivos de testes não prova `RunLocalAdopter` nativo, qualificação DIRECT, persistência inter-run ou custo líquido. **P2 não deve transformar relatório de fixture em credencial operacional.**
+
+Prioridade: (1) recuperar/preservar/push alterações locais, (2) uma E2E real via Gateway→TaskRun→owner com IDs de operação, recibos e readback, (3) seleção barata determinística antes de System-2 usando Router/registry existentes, (4) medir custo e resultado efetivos. Sem perguntas adicionais ou nova infraestrutura. Stage A e permissões são soberania humana, não autoatribuição. Quatro ImprovementRuns, EmbeddingGemma, BM25, LAYA, versionamento hierárquico, fila econômica continuam DECISÕES ARQUITETURAIS válidas, não provas implementadas nem escopo deste patch.
+
+
+
 ## D18 — Critério de avanço após P1B implementado (16/10/2026)
 
 `P1B` implementou readback de `browser_extract_items`/aceitação por WorkItem e mineração read-only no PR #94 `27b6376535dc`. Seu teste de 3 WorkItems é integração **sintética**: todos os cards processados por `worker`, não há execução de oferta por `RunLocalAdopter` e não há consumo real de modelo. **Candidato ≠ oferta qualificada ≠ adoção na TaskRun ≠ persistência noutra TaskRun ≠ economia paga.** P1C deve provar essas transições no gateway/Electron real, sob owner e política legítimos.
