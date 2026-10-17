@@ -1,5 +1,15 @@
 # OL-MVP — Índice de execução (2026-10-16)
 
+## FOCO ATUAL — 17/10/2026: P2.1 primeira capacidade ADOTADA de verdade
+
+Relatório P2.0: Electron chat/Gateway, 2 TaskRuns, 6 WorkItems concluídos e readback DOM independentemente verificado, E2E 1/1 PASS 52,8 s, Python 8/8+40/40+7/7 e health 0. **Isto demonstra execução durável, não necessariamente reutilização COMPILADA.** Falta `RunLocalAdopter` executar item seguinte sob qualified offer e capacidade recuperada na outra Run. Uso de modelos/custo monetário reais = `null` devido scripted mock.
+
+Comece pela [INSTRUÇÃO P2.1](P2_1_IMPLEMENTER_PROMPT.md), [MAPA](P2_1_PATCH_MAP.md), [PLANO](P2_1_NATIVE_ADOPTION_PLAN.md). PR #96 remoto ainda antes do patch P2.0 reportado; a IA deve preservar/commitar esse código local primeiro. `CapabilityRouter.route` já recupera candidatos por família, **não criar Router duplicado**.
+
+P1C/P2 anteriores ficam arquivados como histórico. Stage A com autorização de desenvolvimento não é permissão de DIRECT/global promotion. Nenhum merge main.
+
+
+
 ## PRIORIDADE ATUAL — 17/10/2026: P2-PREFLIGHT com reconciliação P1C
 
 Iniciar por [P2_IMPLEMENTER_PROMPT.md](P2_IMPLEMENTER_PROMPT.md), depois [P2_PATCH_MAP.md](P2_PATCH_MAP.md) e [P2_80_20_DECISION_AND_PLAN.md](P2_80_20_DECISION_AND_PLAN.md). O relatório P1C alegou 5+40+7 testes PASS e GO P2, mas essas mudanças não estão no HEAD remoto PR #95, e o recibo `task_id=real/run_id=real` tem refs de arquivos de teste. Reconciliar código local (sem `git reset/clean/stash`), QUALIFICAR UMA TaskRun nativa por Gateway/owner, medir provider real quando disponível, depois usar seleção determinística pré-LLM no router existente. Sem LAYA/embeddings/4 ImprovementRuns agora.
