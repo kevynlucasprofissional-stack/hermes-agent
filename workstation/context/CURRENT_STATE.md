@@ -1,5 +1,9 @@
 # Current State
 
+## 2026-10-17 — Human Demonstration Learning Mode (D-047)
+**PLANNED / CODE SCAFFOLD INERT** na branch `docs/learning-mode-question-engine-mvp-20261017`. Baseline main `fd57e40`. Observador de demonstrações, vídeo, perguntas via provider e candidatas humanas NÃO existem integrados no produto; dois módulos de política TS e testes foram somente adicionados para reuso. Prioridade MVP M0 captura real + live intensity, M1 Question Engine/feedback, M2 candidata inert, M3 replay supervisionado. Revalidar main, #96, #97 e #98 antes da implementação; [contrato](LEARNING_MODE_HUMAN_DEMONSTRATIONS_2026-10-17.md).
+
+
 ## 2026-10-17 — Direção operacional D-046 (decisão documental)
 O mantenedor decidiu priorizar uso de aplicativos criativos independentes (PhotoCraft/EffectCraft/Remotion e equivalentes) via Browser/painéis existentes, automação oportunista com ferramentas atuais e integração profunda somente após gargalo/ROI demonstrados. Creative Workstation profunda fica como **backlog condicionado**, sem desfazer D-043 nem alterar o estado técnico dos PRs e gates anteriores. **Não foram testados editores, instalados motores, editado runtime ou executado CI nesta atualização.** [Registro canônico](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 
