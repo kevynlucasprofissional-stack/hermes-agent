@@ -37,6 +37,26 @@ DEFAULT_CREATIVE_MAX_PORT = 8899
 WEB_APP_READY_TIMEOUT = 10.0
 WEB_APP_HEALTH_TIMEOUT = 2.0
 
+PREFERRED_CREATIVE_PORTS = {
+    "photocraft": 8765,
+    "effectcraft": 8766,
+    "filmcraft": 8767,
+}
+
+
+def is_port_available(port: int, host: str = "127.0.0.1") -> bool:
+    """Check if loopback port is available for binding strictly on host."""
+    if not isinstance(port, int) or isinstance(port, bool) or not (1024 <= port <= 65535):
+        return False
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        if os.name != "nt":
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind((host, port))
+            return True
+        except OSError:
+            return False
+
 
 class CreativeWebAppError(RuntimeError):
     """Structured error for creative web app lifecycle failures."""
@@ -187,7 +207,14 @@ def start_creative_web_app_server(
         raise CreativeWebAppError(f"missing_prebuilt_web_dist:{engine}")
 
     valid_root = prebuilt_site_root(root)
-    assigned_port = port or allocate_creative_port()
+    if port is not None:
+        assigned_port = port
+    else:
+        pref = PREFERRED_CREATIVE_PORTS.get(engine)
+        if pref is not None and is_port_available(pref):
+            assigned_port = pref
+        else:
+            assigned_port = allocate_creative_port()
     nonce = secrets.token_hex(24)
 
     argv = [
@@ -261,6 +288,7 @@ def start_creative_web_app_server(
             session_key=f"session_creative_{engine}",
             notify_on_complete=False,
         )
+        session.persist_on_release = True
     except BaseException:
         proc.kill()
         proc.wait(timeout=5)
@@ -387,7 +415,43 @@ def open_and_verify_creative_web_app(
             reason=f"server_launch_failed:{type(exc).__name__}:{exc}",
         )
 
-    # 3. Check for human lease / navigate
+    from workstation.prefabs.engine import _has_error, _as_data, extract_controller_url
+
+    # 3. If instance is reused, probe active browser state to prevent destructive reload of unsaved work
+    if reused:
+        try:
+            observation = independent_read() if independent_read else dispatch("browser_snapshot", {"full": False})
+        except Exception as exc:  # health: allow BLE001 -- snapshot observation boundary caught and mapped to launch receipt
+            observation = {"error": f"snapshot_exception:{type(exc).__name__}"}
+
+        if _has_error(observation):
+            obs_data = _as_data(observation)
+            obs_reason = str(obs_data.get("reason", "") or obs_data.get("error", ""))
+            if "USER_CONTROL_ACTIVE" in obs_reason or "user_control_active" in obs_reason:
+                return CreativeWebAppLaunchReceipt(
+                    status="user_control_active",
+                    engine=app.key,
+                    url=instance.url,
+                    port=instance.port,
+                    reason="user_control_active",
+                    reused=True,
+                    dispatch_attempted=False,
+                )
+        else:
+            observed_url = extract_controller_url(observation, allowed_loopback_port=instance.port)
+            if matches_managed_loopback_url(observed_url, instance.port):
+                return CreativeWebAppLaunchReceipt(
+                    status="verified",
+                    engine=app.key,
+                    url=instance.url,
+                    port=instance.port,
+                    observed_url=observed_url,
+                    reason=f"creative_{app.key}_already_active_preserved",
+                    reused=True,
+                    dispatch_attempted=False,
+                )
+
+    # 4. Check for human lease / navigate
     try:
         ack = dispatch("browser_navigate", {"url": instance.url})
     except Exception as exc:  # health: allow BLE001 -- tool dispatch boundary caught and mapped to launch receipt
@@ -413,7 +477,6 @@ def open_and_verify_creative_web_app(
         )
 
     # Check ack for errors or human lease
-    from workstation.prefabs.engine import _has_error, _as_data
     if _has_error(ack):
         ack_data = _as_data(ack)
         reason = str(ack_data.get("reason", "") or ack_data.get("error", ""))
@@ -437,7 +500,7 @@ def open_and_verify_creative_web_app(
             dispatch_attempted=True,
         )
 
-    # 4. Independent readback observation via browser_snapshot
+    # 5. Independent readback observation via browser_snapshot
     try:
         observation = independent_read() if independent_read else dispatch("browser_snapshot", {"full": False})
     except Exception as exc:  # health: allow BLE001 -- snapshot observation boundary caught and mapped to launch receipt
@@ -463,7 +526,6 @@ def open_and_verify_creative_web_app(
         )
 
     # Extract controller-owned URL from snapshot
-    from workstation.prefabs.engine import extract_controller_url
     observed_url = extract_controller_url(observation, allowed_loopback_port=instance.port)
 
     # Validate with matches_managed_loopback_url

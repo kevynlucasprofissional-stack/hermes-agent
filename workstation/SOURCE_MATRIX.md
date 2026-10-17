@@ -21,9 +21,9 @@
   - Repository: `https://github.com/storytold/filmcraft.git`
   - Submodule SHA: `f03e21556d8e3a7155b91892d958debd5255d7af` (tag `v0.8.0`)
   - License: Apache-2.0 (SPDX: `Apache-2.0`)
-  - Prebuilt Web Dist Reference: Official GitHub Release `v0.8.0` (`filmcraft-web-0.8.0.zip`, 13.326.588 bytes)
-  - Lifecycle: Terceiro motor criativo independente (editor de vídeo não-linear open-source escrito em Rust puro). Importado como Git submodule versionado, sincronizável e reversível sem cópia de arquivos comuns para a árvore do Hermes. Viabilidade de hospedar sua versão WebAssembly (`filmcraft-web`) no navegador nativo sob demanda via servidor local seguro loopback (127.0.0.1).
-  - Operational Status: SUBMODULE IMPORT ONLY (CW-048A) — Não integrado operacionalmente ao runtime de comandos/Kanban nesta etapa.
+  - Prebuilt Web Dist: Official GitHub Release `v0.8.0` (`filmcraft-web-0.8.0.zip`), SHA-256 `6b13956fc741522427663517b1e483d6e0777891063fed02b1bd94bfada8a6c7`
+  - Lifecycle: Terceiro motor criativo independente (editor de vídeo não-linear open-source escrito em Rust puro). Importado como Git submodule versionado e ativado via servidor local loopback dedicado (`127.0.0.1:8767`), com verificação de prontidão por nonce HMAC (`X-Hermes-Creative-Nonce`), COOP/COEP isolation, e `persist_on_release = True`.
+  - Operational Status: CONSOLIDATED & ACTIVE (CW-048B) — Reconhecido deterministicamente por comandos pontuais ("Abra o FilmCraft", "Abre o FilmCraft", "Abrir FilmCraft", "Open FilmCraft") no pre-LLM fast path (`workstation/prefabs/integration.py`), aberto no Browser nativo, com verificação de reuso não-destrutivo (prevenção de reload se já ativo). Runtime WebAssembly oficial verificado.
   - Sincronização e Rollback:
     - Sincronização: `git -C external-engines/filmcraft fetch origin tag <tag>` seguido de `git -C external-engines/filmcraft checkout <sha>` e `git add external-engines/filmcraft`.
     - Rollback: `git -C external-engines/filmcraft checkout f03e21556d8e3a7155b91892d958debd5255d7af` e `git add external-engines/filmcraft` para retornar ao commit verificado.

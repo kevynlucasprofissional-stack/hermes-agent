@@ -1,5 +1,13 @@
 # Architectural Decisions
 
+## CW-048B — Consolidação PhotoCraft e EffectCraft e ativação FilmCraft no Hermes Work (2026-10-17)
+**Status: IMPLEMENTADO E TESTADO / BAIXO ACOPLAMENTO QUALIFICADO.**
+1. **Ativação FilmCraft**: Terceiro motor criativo adicionado ao catálogo (`APPS["filmcraft"]`) com porta dedicada `8767`, reconhecimento pontual no pre-LLM sem Kanban tasks, e distribuição web oficial `filmcraft-web-0.8.0.zip` instalada e validada com Wasm e API `window.filmcraft`.
+2. **Reuso Não-Destrutivo (P0-A)**: Para instâncias reutilizadas, `open_and_verify_creative_web_app` realiza leitura de snapshot prévia. Caso a aplicação já esteja na aba ativa, a navegação redundante é evitada, preservando o canvas e documentos não salvos sem recarga.
+3. **Segurança e Ownership (P0-B)**: Processos adotados no `ProcessRegistry` configurados com `session.persist_on_release = True`. Portas estritamente restritas a `127.0.0.1` (8765, 8766, 8767) com HMAC nonce. Human lease (`409 USER_CONTROL_ACTIVE`) respeitado sem bypass.
+4. **Exportação Real (P0-C)**: Exportações verificadas para os três motores: PhotoCraft (PNG magic `\x89PNG\r\n\x1a\n`), EffectCraft (`renderFrame` e OPFS), e FilmCraft (Wasm runtime e gerenciamento de arquivos).
+5. **Instalação Segura**: `install_creative_engine.py` implementado com verificação estrita de SHA-256 e proteção ZipSlip.
+
 ## CW-048A — Adição de FilmCraft como submodule Git independente (2026-10-17)
 **Status: IMPORTADO COMO SUBMODULE GIT; NÃO INTEGRADO OPERACIONALMENTE.**
 Incorporação do FilmCraft (editor de vídeo não-linear open-source em Rust puro, licença Apache-2.0) como terceiro motor criativo independente em `external-engines/filmcraft`, pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`). Segue a diretriz D-046: versionado, sincronizável e reversível sem acoplamento de código ao repositório Hermes. Preparado para futura hospedagem WebAssembly (`filmcraft-web-0.8.0.zip`) no navegador nativo sob demanda.

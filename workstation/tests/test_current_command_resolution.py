@@ -211,3 +211,39 @@ def test_one_shot_creative_web_app_missing_dist_handoff():
     assert res.outcome is OperationalOutcome.HANDOFF
     assert res.reason == "missing_prebuilt_web_dist"
 
+
+def test_one_shot_filmcraft_fast_path_verified():
+    from unittest.mock import patch
+    from workstation.creative_web_service import CreativeWebAppLaunchReceipt
+    from workstation.prefabs.integration import prepare_user_creative_app
+
+    agent, _work = admit("Abra o FilmCraft.")
+    agent._prefab_creative_app_intent = prepare_user_creative_app(agent._message_envelope)
+    assert agent._prefab_creative_app_intent is not None
+    assert agent._prefab_creative_app_intent.key == "filmcraft"
+    agent.valid_tool_names = {"browser_navigate", "browser_snapshot"}
+
+    mock_receipt = CreativeWebAppLaunchReceipt(
+        status="verified",
+        engine="filmcraft",
+        url="http://127.0.0.1:8767/",
+        port=8767,
+        observed_url="http://127.0.0.1:8767/",
+        reason="creative_filmcraft_open_verified",
+        reused=False,
+        dispatch_attempted=True,
+    )
+
+    with patch("workstation.integrations.hermes.scoped_execution.workstation_durable_dispatch",
+               return_value=lambda *a: "{}"):
+        with patch("workstation.creative_web_service.open_and_verify_creative_web_app",
+                   return_value=mock_receipt):
+            res = consult(agent)
+
+    assert res is not None
+    assert res.outcome is OperationalOutcome.EXECUTED
+    assert res.reason == "creative_filmcraft_open_verified"
+    assert "8767" in res.final_response
+    assert "FilmCraft" in res.final_response
+
+

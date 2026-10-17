@@ -1,5 +1,26 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-17 — CW-048B: Consolidação PhotoCraft e EffectCraft e ativação FilmCraft (IMPLEMENTADO E QUALIFICADO)
+- **Branch**: `feat/cw-048b-creative-consolidation-filmcraft` encadeada sobre `feat/cw-048a-filmcraft-submodule` (PR #98).
+- **Pendências de Auditoria Resolvidas**:
+  1. *CI da PR #97*: Verificado que o workflow `workstation-ci.yml` restringe triggers intencionalmente a `push: branches: [main]` conforme diretriz de controle de custos documentada em `CI_COST_CONTROL.md`. Nenhuma falha estrutural de sintaxe.
+  2. *Caminho de Comando*: Fast path pre-LLM comprovado em `workstation/prefabs/integration.py` e `workstation/work_intent.py` para os três motores (PhotoCraft, EffectCraft e FilmCraft).
+  3. *Exportação PhotoCraft*: Comprovada geração de arquivo com assinatura PNG (`\x89PNG\r\n\x1a\n`, 1572 bytes) a partir da viewport de canvas do motor.
+  4. *Exportação EffectCraft*: Comprovada geração nativa de frames via API `window.effectcraft.renderFrame` e persistência OPFS.
+  5. *Reuso Não-Destrutivo (P0-A)*: `open_and_verify_creative_web_app` agora inspeciona o snapshot do navegador antes de disparar `browser_navigate`. Se o editor desejado já estiver na aba ativa, a navegação é ignorada e o estado é preservado sem reload (`reason="creative_<engine>_already_active_preserved"`).
+  6. *Isolamento e Ownership (P0-B)*: Servidores de estáticos adotados no `ProcessRegistry` recebem `persist_on_release = True`, com portas preferenciais estritamente em `127.0.0.1` (8765 PhotoCraft, 8766 EffectCraft, 8767 FilmCraft) e respeito a lease humano (`409 USER_CONTROL_ACTIVE`).
+- **Ativação do FilmCraft**:
+  - Submodule `external-engines/filmcraft` ativado via `APPS["filmcraft"]` em `creative_web_app_spec.py`.
+  - Reconhecimento determinístico de `Abra o FilmCraft`, `Abre o FilmCraft`, `Abrir FilmCraft`, `Open FilmCraft`.
+  - Distribuição oficial `filmcraft-web-0.8.0.zip` (SHA256: `6b13956fc741522427663517b1e483d6e0777891063fed02b1bd94bfada8a6c7`) instalada e validada em `%LOCALAPPDATA%\hermes\workstation\creative\engines\filmcraft\web-dist`.
+  - Script seguro `install_creative_engine.py` com proteção ZipSlip e validação de hash.
+- **Testes & Qualificação**:
+  - `workstation/tests/test_creative_web_service.py`: 18 testes green.
+  - `workstation/tests/test_creative_web_app_spec.py`: 4 testes green.
+  - `workstation/tests/test_current_command_resolution.py`: 9 testes green.
+  - `workstation/tests/test_current_command_native_intent_contract.py`: 4 testes green.
+  - Code health (`scripts/check --only health`): 0 blocking, 0 advisory.
+
 ## 2026-10-17 — CW-048A: FilmCraft como submodule Git independente (IMPORTADO)
 - **Branch**: `feat/cw-048a-filmcraft-submodule` encadeada a partir de `feat/cw-047-photocraft-effectcraft-20261017` (`081062c383936b7dba69d3f9c18d0b297eb69c36`).
 - **Objetivo**: Incorporar FilmCraft como terceiro motor criativo independente (edição de vídeo não-linear em Rust puro) via Git submodule versionado, sincronizável e reversível.
