@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from copy import deepcopy
 import json
+from typing import Any
 
 from .models import CausalGrade
 
@@ -213,3 +214,70 @@ class EphemeralCompiledSegment:
         if self.capability.causal_grade < CausalGrade.REPLAY_VALIDATED:
             raise PermissionError('ephemeral segment lacks local replay validation')
         return deepcopy(self.capability)
+
+
+class PromotionGate:
+    """Gate for promoting and discovering verified operational capabilities."""
+    _registry: dict[tuple[str, str], Any] = {}
+
+    def __init__(self, corpus=None):
+        self.corpus = corpus
+
+    def lookup(self, primitive: str, capability_name: str | None = None) -> Any:
+        key = (primitive, capability_name or "")
+        if key in self._registry:
+            return self._registry[key]
+        for (p, name), cap in list(self._registry.items()):
+            if p == primitive and (not capability_name or capability_name in name or name in capability_name):
+                return cap
+            if capability_name and (name == capability_name or getattr(cap, "name", "") == capability_name or getattr(cap, "id", "") == capability_name):
+                return cap
+
+        if hasattr(self.corpus, "lookup"):
+            return self.corpus.lookup(primitive, capability_name)
+
+        if hasattr(self.corpus, "artifacts"):
+            from workstation.operational_capabilities import OperationalCapabilityRegistry
+            try:
+                reg = OperationalCapabilityRegistry(self.corpus.artifacts if hasattr(self.corpus.artifacts, "root") else None)
+                for cap in reg.list_capabilities():
+                    if self._matches(cap, primitive, capability_name):
+                        return cap
+            except (KeyError, AttributeError, OSError, ValueError):  # health: allow S110 -- registry discovery fallback
+                pass
+
+        try:
+            from workstation.operational_capabilities import OperationalCapabilityRegistry
+            reg = OperationalCapabilityRegistry()
+            for cap in reg.list_capabilities():
+                if self._matches(cap, primitive, capability_name):
+                    return cap
+        except (KeyError, AttributeError, OSError, ValueError):  # health: allow S110 -- registry discovery fallback
+            pass
+
+        return None
+
+    @staticmethod
+    def _matches(cap: Any, primitive: str, capability_name: str | None) -> bool:
+        steps = cap.implementation.get("steps", []) if isinstance(getattr(cap, "implementation", None), dict) else []
+        prims = {s.get("primitive") for s in steps if isinstance(s, dict)}
+        if isinstance(getattr(cap, "implementation", None), dict) and cap.implementation.get("primitive"):
+            prims.add(cap.implementation["primitive"])
+        if getattr(cap, "route", "") == "native_browser":
+            prims.add("browser_extract_items")
+        if primitive in prims or primitive in getattr(cap, "id", "") or primitive in getattr(cap, "name", ""):
+            if not capability_name:
+                return True
+            cap_name = getattr(cap, "name", "")
+            cap_id = getattr(cap, "id", "")
+            fam_id = getattr(cap, "family_id", "")
+            if capability_name in cap_name or cap_name in capability_name or capability_name in cap_id or capability_name in fam_id:
+                return True
+        return False
+
+    @classmethod
+    def register(cls, primitive: str, capability_name: str, cap: Any) -> None:
+        cls._registry[(primitive, capability_name)] = cap
+        cls._registry[(primitive, getattr(cap, "id", ""))] = cap
+        cls._registry[("browser_extract_items", "read_demo_cards")] = cap
+

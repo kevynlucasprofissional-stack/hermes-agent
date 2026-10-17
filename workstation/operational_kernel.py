@@ -580,6 +580,7 @@ class OperationalKernel:
         durable_store = exec_context.get('durable_store')
         durable_item_id = exec_context.get('durable_item_id')
         checkpoint_prefix = cap.id + '@' + cap.version
+        filesystem_scope = cap.scope.get('backends', {}).get('filesystem', cap.scope)
 
         def observe_semantics(output=None):
             from workstation.experience_compiler.state_abstraction import abstract_state, filesystem_state

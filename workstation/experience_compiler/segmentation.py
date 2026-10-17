@@ -37,7 +37,10 @@ def boundaries(samples, recurrence=()):
             signals.append('semantic_delta')
         if sample.operation.effect_class not in {'read_only', 'PURE_READ', 'DISCOVERY'}:
             signals.append('effect')
-        if sample.verification.verified_predicates:
+        if sample.verification.verified_predicates or (
+            sample.operation.effect_class in {'read_only', 'PURE_READ', 'DISCOVERY'}
+            and (sample.verification.status == 'VERIFIED' or sample.verification.evidence_refs)
+        ):
             signals.append('verification')
         if i and sample.operation.canonical_route != samples[i-1].operation.canonical_route:
             signals.append('backend_transition')
@@ -59,7 +62,9 @@ def segments(samples):
         sample = samples[boundary.index]
         semantic_change = any(s.delta.added or s.delta.changed or s.delta.removed
                               for s in samples[start:boundary.index+1])
-        if ('verification' in boundary.signals and semantic_change
+        is_read_only = all(s.operation.effect_class in {'read_only', 'PURE_READ', 'DISCOVERY'}
+                           for s in samples[start:boundary.index+1])
+        if ('verification' in boundary.signals and (semantic_change or is_read_only)
                 and sample.outcome == TransitionOutcome.VERIFIED_SUCCESS):
             result.append(samples[start:boundary.index+1])
             start = boundary.index + 1

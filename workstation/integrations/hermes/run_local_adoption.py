@@ -30,8 +30,8 @@ _in_adoption_checkpoint: ContextVar[bool] = ContextVar("workstation_in_adoption_
 
 # Primitives supported by the owner. Readback admission is narrower: a raw tool
 # response is not an independent verifier for browser_snapshot / trello_api_get.
-_SUPPORTED = ("write_file", "read_file", "browser_navigate", "browser_snapshot", "trello_api_get")
-_READBACK = ("write_file", "browser_navigate")
+_SUPPORTED = ("write_file", "read_file", "browser_navigate", "browser_snapshot", "trello_api_get", "browser_extract_items")
+_READBACK = ("write_file", "browser_navigate", "browser_extract_items")
 _GUTTER = re.compile(r"^\s*\d+\|", re.MULTILINE)
 
 
@@ -132,6 +132,64 @@ def _readback_trello_api_get(dispatch, artifacts: ArtifactStore, task_id: str):
     return readback
 
 
+def _readback_browser_extract_items(dispatch, artifacts: ArtifactStore, task_id: str):
+    """Independent readback for browser_extract_items via browser_snapshot(full=True) DOM verification."""
+    def readback(primitive: str, bound_args: dict, raw: Any) -> dict | None:
+        if primitive != "browser_extract_items":
+            return None
+        extracted = None
+        try:
+            parsed = json.loads(raw) if isinstance(raw, str) else raw
+            if isinstance(parsed, dict):
+                extracted = parsed.get("items") or parsed.get("cards") or [parsed]
+            elif isinstance(parsed, list):
+                extracted = parsed
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+            return {"ok": False, "evidence_ref": None}
+
+        if not extracted or not isinstance(extracted, list):
+            return {"ok": False, "evidence_ref": None}
+
+        try:
+            snapshot_raw = dispatch("browser_snapshot", {"full": True})
+            snapshot = json.loads(snapshot_raw) if isinstance(snapshot_raw, str) else snapshot_raw
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, OSError):
+            return {"ok": False, "evidence_ref": None}
+
+        if not isinstance(snapshot, dict) or snapshot.get("truncated") is True:
+            return {"ok": False, "evidence_ref": None}
+
+        dom_text = snapshot.get("dom") or snapshot.get("html") or snapshot.get("body") or snapshot.get("text") or ""
+        if isinstance(snapshot.get("elements"), list):
+            dom_text += " " + json.dumps(snapshot["elements"])
+        if not dom_text and isinstance(snapshot, dict):
+            dom_text = json.dumps(snapshot)
+
+        ok = True
+        for item in extracted:
+            if not isinstance(item, dict):
+                ok = False
+                break
+            title = str(item.get("title", "")).strip()
+            lst = str(item.get("list", "")).strip()
+            desc = str(item.get("description", "")).strip()
+            if not title or not lst or not desc:
+                ok = False
+                break
+            if title not in dom_text or lst not in dom_text or desc not in dom_text:
+                ok = False
+                break
+
+        ref = artifacts.store(task_id, f"readback_{uuid.uuid4().hex[:10]}.json", {
+            "primitive": primitive,
+            "matched": ok,
+            "items_count": len(extracted),
+            "verified_fields": ["title", "list", "description"],
+        }, schema="workstation.run_local_readback.v1").ref
+        return {"ok": ok, "evidence_ref": ref}
+    return readback
+
+
 def _build_readback_fns(dispatch, artifacts: ArtifactStore, task_id: str) -> dict[str, callable]:
     """Build readback functions for all supported primitives."""
     return {
@@ -139,6 +197,7 @@ def _build_readback_fns(dispatch, artifacts: ArtifactStore, task_id: str) -> dic
         "browser_navigate": _readback_browser_navigate(dispatch, artifacts, task_id),
         "browser_snapshot": _readback_browser_snapshot(dispatch, artifacts, task_id),
         "trello_api_get": _readback_trello_api_get(dispatch, artifacts, task_id),
+        "browser_extract_items": _readback_browser_extract_items(dispatch, artifacts, task_id),
     }
 
 

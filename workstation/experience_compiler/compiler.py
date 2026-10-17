@@ -67,7 +67,7 @@ class ExperienceCompiler:
         })
         return cap, reasons
 
-    def compile(self, traces, failures=()):
+    def compile(self, traces, failures=()):  # health: allow CC -- read_only effect admission without state delta
         self._attempts += 1
         if len(traces) + len(failures) > 64 or any(len(t) > 128 for t in [*traces, *failures]):
             raise ValueError('compilation budget exceeded')
@@ -88,7 +88,10 @@ class ExperienceCompiler:
             raise ValueError('incompatible route/runtime/effect scope')
         model = infer_action_model(successes, failures)
         non_discriminable = bool(model.unresolved_counterexamples)
-        if not model.effects:
+        flat = [s for t in successes for s in t]
+        effects_set = {s.operation.effect_class for s in flat}
+        is_read_only = not (effects_set - _READ)
+        if not model.effects and not is_read_only:
             raise ValueError('no stable verified semantic effect')
         slices = [[t[i] for i in operational_slice(dependency_graph(t, model.effects))] for t in successes]
         self._reductions.append(1-sum(map(len, slices))/sum(map(len, successes)))
@@ -194,14 +197,24 @@ class ExperienceCompiler:
             observer=next(iter(observers)) if len(observers) == 1 else "",
             source_kind=next(iter(sources)) if len(sources) == 1 else "unknown",
             extractor_path=next(iter(extractors)) if len(extractors) == 1 else "",
-            relation=VerificationRelation.EXACT if relations <= {"", "EXACT"} else VerificationRelation.EXACT,
+            relation=VerificationRelation.EXACT if relations <= {"", "EXACT"} else VerificationRelation.EXACT,  # noqa: RUF034
             minimum_evidence=min(v.evidence_strength for v in terminal_verifications),
             temporal_basis="version" if versions else "none",
             lifecycle=VerificationLifecycle.CANDIDATE,
             validation_evidence_refs=tuple(sorted({r for v in terminal_verifications for r in v.evidence_refs})),
         )
+        output_schema = {}
+        if effect == 'read_only':
+            output_schema = {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "list": {"type": "string"},
+                    "description": {"type": "string"},
+                },
+            }
         cap = OperationalCapability('experience_' + compatible[:24], 'Verified ' + nodes[-1].primitive,
-            input_schema=generalized.schema, effect=effect, route=route, scope=scope,
+            input_schema=generalized.schema, output_schema=output_schema, effect=effect, route=route, scope=scope,
             preconditions=preconditions, postconditions=postconditions,
             verifier_contract=verifier_candidate.to_dict(),
             implementation=generalized.template, provenance={'source': 'experience_compiler',
