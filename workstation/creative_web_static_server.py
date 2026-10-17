@@ -20,6 +20,13 @@ from workstation.creative_web_app_spec import APPS, prebuilt_site_root
 
 class CreativeStaticHandler(SimpleHTTPRequestHandler):
     """Serve only an explicit dist, with loopback/host and readiness fencing."""
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".wasm": "application/wasm",
+        ".js": "text/javascript",
+        ".mjs": "text/javascript",
+        ".webmanifest": "application/manifest+json",
+    }
 
     def __init__(self, *args, root: Path, engine: str, port: int,
                  nonce: str, **kwargs):

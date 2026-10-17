@@ -1,7 +1,7 @@
 # Architectural Decisions
 
 ## CW-047/A — Handoff executável e código auxiliar, sem autorização de acoplamento profundo (2026-10-17)
-**Estado: preparação parcial no repositório, não runtime validado.** Os auxiliares de catálogo literal, endereço 127.0.0.1 gerenciado e servidor web estático foram adicionados, porém o agente ainda precisa conectá-los ao dispatcher e ProcessRegistry legítimos. A fonte dos submodules deve ser confirmada (originais storyteller/storytold encontrados; forks pessoais não confirmados). Usar originais como fallback auditável; nenhum fork inventado. Primeiro PhotoCraft, depois EffectCraft. Proibido declarar instalação, init de submodule ou E2E concluído sem evidência. Decisão D-046 preservada: nenhum dever de migrar motores para dentro do core. [Handoff exato](../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).
+**Estado: preparação parcial no repositório, não runtime validado.** Os auxiliares de catálogo literal, endereço 127.0.0.1 gerenciado e servidor web estático foram adicionados, porém o agente ainda precisa conectá-los ao dispatcher e ProcessRegistry legítimos. A fonte dos submodules deve ser confirmada (originais storytold encontrados; forks pessoais não confirmados). Usar originais como fallback auditável; nenhum fork inventado. Primeiro PhotoCraft, depois EffectCraft. Proibido declarar instalação, init de submodule ou E2E concluído sem evidência. Decisão D-046 preservada: nenhum dever de migrar motores para dentro do core. [Handoff exato](../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).
 
 
 ## CW-047 — Proposta operacional: submodules externos pinados e abertura local sob demanda (2026-10-17)
