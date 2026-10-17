@@ -1,4 +1,10 @@
 # CURRENT — Workstation Engineering Journal
+
+## 2026-10-17 — Auditoria pós-dogfood + handoff D-048 [DOCS-ONLY, NOT FIXED]
+**Fontes:** sessão real `20261017_150608_11f39d`, notas `workstation/dogfood/17.10.26.md`, demonstração `learn-1792260534434-05158b7f`, leitura do código `main` em 17/10. `workstation-learning-session.ts::startVideoRecording` inclui `lavfi color=c=black:s=1280x720:r=15 -t 1`, logo vídeo da aba **NÃO** foi confirmado; `generateCandidate` usa gesto único; o método Python `record_human_demonstration_candidate` ainda não foi localizado em chamada de produção. `native-view-occlusion.ts` controla o `WebContentsView` em overlays e pode contribuir para apagamento de viewport; causa real não estabelecida.
+**Recomendação:** seis prompts P01–P06 com critérios separados. Esta alteração é apenas documentação, sem teste/alteração de runtime e sem fechar issues. Trabalhos não commitados na working tree local foram mantidos intocados.
+[Plano](../HERMES_WORK_DOGFOOD_RECOVERY_PLAN_2026-10-17.md).
+
 ## 2026-10-17 — HLM-MVP: Human Demonstration Observer + Proactive Learning Question Engine (VERIFIED M0–M2, M3 EM HOLD)
 **Branch de implementação**: `feat/hermes-learning-mode-mvp-20261017` criada a partir de `docs/learning-mode-question-engine-mvp-20261017` (HEAD base `ca145f39`).
 **Objetivo cumprido**: Implementação funcional do MVP do Hermes Learning Mode (Decisão **D-047** e fases S0–S7 do handoff executável), integrando observação de gestos humanos autorizados, vídeo da aba, controle de intensidade ao vivo, Question Engine contextual com formulação de hipóteses/perguntas úteis, captura de correções humanas (`needs_reinterpretation`) e compilação de candidatas operacionais inertes para o Experience Compiler.
