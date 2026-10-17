@@ -66,7 +66,7 @@ def workstation_raw_post_tool_observer(
                     sanitize(raw_data),
                     schema="workstation.raw_tool_result.v1",
                 ).ref
-            except Exception:
+            except Exception:  # health: allow BLE001 -- artifact store failure in telemetry observer falls back cleanly to None
                 raw_ref = None
             agent._last_raw_result_ref = raw_ref
             agent._current_operation_id = op_id

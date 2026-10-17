@@ -163,7 +163,7 @@ class ExperienceCorpus:
                 try:
                     target_sample = TransitionSample.from_dict(self.artifacts.read_json(trans_ref))
                     target_sample.provenance.sample_ref = trans_ref
-                except Exception:
+                except Exception:  # health: allow BLE001, S110 -- corrupted transition ref falls back safely to synthetic candidate
                     pass
             if target_sample is None:
                 target_sample = TransitionSample(
@@ -217,7 +217,7 @@ class ExperienceCorpus:
                     metadata={'transition_ref': ref, 'run_id': str(run_id), 'evidence_ref': evidence_ref,
                               'operation_id': revised.provenance.operation_id},
                 )
-            except Exception:
+            except Exception:  # health: allow BLE001, S110 -- journal recording failure is non-fatal for acceptance
                 pass
         from workstation.telemetry import TelemetryEventType, emit_event
         emit_event(

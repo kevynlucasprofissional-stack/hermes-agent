@@ -158,7 +158,7 @@ def _readback_browser_extract_items(
             plan = DurableTaskStore.get_plan(str(task_id))
             if plan and isinstance(plan.metadata, dict) and plan.metadata.get("browser_task_id"):
                 return str(plan.metadata["browser_task_id"])
-        except Exception:
+        except Exception:  # health: allow BLE001, S110 -- task plan lookup failure safely falls back to task_id
             pass
         return str(task_id)
 
@@ -263,10 +263,10 @@ def _readback_browser_extract_items(
             try:
                 from workstation.experience_compiler.corpus import ExperienceCorpus
                 ExperienceCorpus(artifacts).accept_work_item(str(task_id), str(run_id), ref)
-            except Exception:
+            except Exception:  # health: allow BLE001, S110 -- non-blocking acceptance notification during readback
                 pass
             return {"ok": True, "evidence_ref": ref}
-        except Exception:
+        except Exception:  # health: allow BLE001 -- observation or verification failure safely returns uncertified readback
             # A failed observation or artifact resolution cannot certify a read.
             return {"ok": False, "evidence_ref": None}
 
@@ -329,7 +329,7 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
             )
             raw_ref = artifacts.store(str(task_id), f"raw_result_{op_id}.json", raw_data,
                                       schema="workstation.raw_tool_result.v1").ref
-        except Exception:
+        except Exception:  # health: allow BLE001 -- raw result storage failure is non-fatal for dispatch execution
             raw_ref = None
 
         trans_ref = getattr(agent, "_last_progressive_ref", None)
@@ -346,7 +346,7 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
                     outcome="observed",
                     state=res if isinstance(res, dict) else None,
                 )
-            except Exception:
+            except Exception:  # health: allow BLE001 -- progressive transition capture failure is non-fatal for dispatch execution
                 trans_ref = None
 
         _last_op_info["operation_id"] = op_id
@@ -362,7 +362,7 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
             plan = DurableTaskStore.get_plan(str(task_id))
             if plan and isinstance(plan.metadata, dict) and plan.metadata.get("browser_task_id"):
                 expected_bt_id = str(plan.metadata["browser_task_id"])
-        except Exception:
+        except Exception:  # health: allow BLE001, S110 -- plan lookup failure safely falls back to task_id
             pass
 
         op_id = getattr(agent, "_current_operation_id", None) or _last_op_info.get("operation_id")

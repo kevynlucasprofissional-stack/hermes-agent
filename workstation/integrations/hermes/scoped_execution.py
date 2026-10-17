@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Any, Optional
 
 from workstation.task_compiler import (
+    capture_raw_result,
     execution_context,
     operational_references,
     take_raw_result,

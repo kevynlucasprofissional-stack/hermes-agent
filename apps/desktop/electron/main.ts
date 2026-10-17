@@ -15073,7 +15073,6 @@ function createWindow() {
   })
 
   const appIcon = icon
-
   if (appIcon && typeof (mainWindow as any).setIcon === 'function') {
     mainWindow.setIcon(appIcon)
   }
@@ -15766,7 +15765,6 @@ registerCreativeCanonicalHandlers(ipcMain, {
 }, event => {
   const invoke = event as IpcMainInvokeEvent
   const browser = BrowserWindow.fromWebContents(invoke.sender)
-
   return Boolean(browser && !browser.isDestroyed() && invoke.senderFrame === invoke.sender.mainFrame)
 })
 registerWindowControlIpc(ipcMain, sender => BrowserWindow.fromWebContents(sender))

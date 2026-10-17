@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "220926 22h07.md",
+                "file": "17.10.26.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "220926 22h07"
+              "title": "17.10.26"
             }
           }
         ]
@@ -190,6 +190,8 @@
   },
   "active": "2f5444958a503cef",
   "lastOpenFiles": [
+    "220926 22h07.md",
+    "17.10.26.md",
     "210926 05h58.md",
     "14.08.26.md",
     "13.10.26.md",
@@ -224,8 +226,6 @@
     "dados/Contexto Hermes/ChatGPT-Comparar Opções De Motion-20261010-1444.md",
     "dados/Contexto Hermes/ChatGPT-Branch · Criar prompt de implementação-20261009-1446.md",
     "dados/Contexto Hermes/ChatGPT-Comparar ferramentas de design-20261008-1029.md",
-    "dados/Contexto Hermes/ChatGPT-Comparar ferramentas de design-20261008-1029 (1).md",
-    "dados/Contexto Hermes/ChatGPT-Calcular variações percentuais-20261008-1030.md",
-    "dados/Contexto Hermes/ChatGPT-Calcular variações percentuais-20261008-1029.md"
+    "dados/Contexto Hermes/ChatGPT-Comparar ferramentas de design-20261008-1029 (1).md"
   ]
 }

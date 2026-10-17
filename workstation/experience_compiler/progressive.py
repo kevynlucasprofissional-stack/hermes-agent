@@ -10,7 +10,7 @@ from .state_abstraction import abstract_state
 logger = logging.getLogger(__name__)
 
 
-def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, route, outcome,
+def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, route, outcome,  # health: allow CC -- multi-schema verification and transition projection pipeline
                         state=None, evidence_refs=(), verification=None,
                         operation_family="", target_family="", effect_class="unknown", scope=None,
                         state_before=None, state_before_ref=None, raw_result_ref=None):
@@ -44,7 +44,7 @@ def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, 
                     or body.get("operation_id") != operation_id):
                 return None
             schema = evidence.get("schema")
-            if schema == "workstation.run_local_readback.v1":
+            if schema == "workstation.run_local_readback.v1":  # health: allow HX011 -- dispatch across discrete readback artifact schemas
                 if body.get("matched") is not True:
                     return None
             elif schema == "hermes.browser_local_readback.v1":
