@@ -1,5 +1,9 @@
 # Workstation roadmap
 
+## 2026-10-17 — HLM-MVP: Aprender com demonstração humana, intensidade ao vivo (D-047; APROVADO PARA MVP)
+**Ordem 80/20:** M0 Browser Hub/chat button **Aprender**, adoptTab real, Human Demonstration Observer com consent/allowlist, eventos JSONL, vídeo sincronizado e intensidade `Discreto|Equilibrado|Intensivo` modificável em tempo real → M1 Question Engine com hipóteses, LLM atual, perguntas por informação útil, correções e logs → M2 skill/capacidade candidata `human_demonstration` **não executável**, com evidências e versão → M3 replay supervisionado sob TaskRun/owner/verifier; HOLD se não comprovável. O MVP não depende de LAYA, modelo de embeddings, FilmCraft ou integração profunda de editores. Preparado código **inert/unwired** de pontuação e sanitização de gestos + testes; produto não implementado nem testado nesta branch. [Contrato D-047](context/LEARNING_MODE_HUMAN_DEMONSTRATIONS_2026-10-17.md) · [Handoff executável](learning-mode/LEARNING_MODE_MVP_IMPLEMENTER_PROMPT.md) · [Patch map](learning-mode/LEARNING_MODE_PATCH_MAP.md). PR #97 e #98 permanecem em branches separadas; não confundir com main.
+
+
 ## 2026-10-17 — CW-047 IMPLEMENTER HANDOFF e kit Python (PREPARADO, NÃO CONECTADO)
 Disponível o prompt executável [CW-047](creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md) e três arquivos de apoio (creative_web_app_spec.py, creative_web_static_server.py, test_creative_web_app_spec.py) para facilitar a integração sem generalização prematura. **Estado real:** módulos auxiliares versionados, mas **sem importação de PhotoCraft/EffectCraft por submodules, sem servidor lançado pela aplicação, sem comando roteado e sem qualificação Windows**. Primeiro gates H-079, depois submodules pinados, um vertical real PhotoCraft e expansão EffectCraft. Remotion/Three.js continuam fora da P0. O ganho só será considerado real com trabalho exportado no Hermes.
 
