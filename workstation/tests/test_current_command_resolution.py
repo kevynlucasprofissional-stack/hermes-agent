@@ -111,3 +111,103 @@ def test_fresh_hyperframe_command_falls_back_safely_without_studio_capability():
         assert not ambiguous_work.requires_task
         assert consult(ambiguous) is None
 
+
+def test_one_shot_creative_web_app_commands_are_point_actions():
+    for text in ("Abre o PhotoCraft.", "Abra o EffectCraft.", "Abrir Photo Craft", "Open Effect Craft"):
+        agent, work = admit(text)
+        assert not work.requires_task
+        assert work.requires_browser
+        assert work.admission_kind == "point_action"
+        assert getattr(agent, "_canonical_work_task_id", None) is None
+        # Without tools in session, falls back to reasoning safely without creating tasks
+        assert consult(agent) is None
+
+
+def test_one_shot_photocraft_fast_path_verified():
+    from unittest.mock import patch
+    from workstation.creative_web_service import CreativeWebAppLaunchReceipt
+    from workstation.prefabs.integration import prepare_user_creative_app
+
+    agent, _work = admit("Abre o PhotoCraft.")
+    agent._prefab_creative_app_intent = prepare_user_creative_app(agent._message_envelope)
+    assert agent._prefab_creative_app_intent is not None
+    assert agent._prefab_creative_app_intent.key == "photocraft"
+    agent.valid_tool_names = {"browser_navigate", "browser_snapshot"}
+
+    mock_receipt = CreativeWebAppLaunchReceipt(
+        status="verified",
+        engine="photocraft",
+        url="http://127.0.0.1:8765/",
+        port=8765,
+        observed_url="http://127.0.0.1:8765/",
+        reason="creative_photocraft_open_verified",
+        reused=False,
+        dispatch_attempted=True,
+    )
+
+    with patch("workstation.integrations.hermes.scoped_execution.workstation_durable_dispatch",
+               return_value=lambda *a: "{}"):
+        with patch("workstation.creative_web_service.open_and_verify_creative_web_app",
+                   return_value=mock_receipt):
+            res = consult(agent)
+
+    assert res is not None
+    assert res.outcome is OperationalOutcome.EXECUTED
+    assert res.reason == "creative_photocraft_open_verified"
+    assert "8765" in res.final_response
+    # Consumed once: second consult returns None
+    assert consult(agent) is None
+
+
+def test_one_shot_creative_web_app_human_lease_handoff():
+    from unittest.mock import patch
+    from workstation.creative_web_service import CreativeWebAppLaunchReceipt
+    from workstation.prefabs.integration import prepare_user_creative_app
+
+    agent, _work = admit("Abre o EffectCraft.")
+    agent._prefab_creative_app_intent = prepare_user_creative_app(agent._message_envelope)
+    agent.valid_tool_names = {"browser_navigate", "browser_snapshot"}
+
+    mock_receipt = CreativeWebAppLaunchReceipt(
+        status="user_control_active",
+        engine="effectcraft",
+        reason="user_control_active",
+        dispatch_attempted=True,
+    )
+
+    with patch("workstation.integrations.hermes.scoped_execution.workstation_durable_dispatch",
+               return_value=lambda *a: "{}"):
+        with patch("workstation.creative_web_service.open_and_verify_creative_web_app",
+                   return_value=mock_receipt):
+            res = consult(agent)
+
+    assert res is not None
+    assert res.outcome is OperationalOutcome.HANDOFF
+    assert res.reason == "user_control_active"
+
+
+def test_one_shot_creative_web_app_missing_dist_handoff():
+    from unittest.mock import patch
+    from workstation.creative_web_service import CreativeWebAppLaunchReceipt
+    from workstation.prefabs.integration import prepare_user_creative_app
+
+    agent, _work = admit("Abre o PhotoCraft.")
+    agent._prefab_creative_app_intent = prepare_user_creative_app(agent._message_envelope)
+    agent.valid_tool_names = {"browser_navigate", "browser_snapshot"}
+
+    mock_receipt = CreativeWebAppLaunchReceipt(
+        status="missing_dist",
+        engine="photocraft",
+        reason="missing_prebuilt_web_dist:photocraft",
+    )
+
+    with patch("workstation.integrations.hermes.scoped_execution.workstation_durable_dispatch",
+               return_value=lambda *a: "{}"):
+        with patch("workstation.creative_web_service.open_and_verify_creative_web_app",
+                   return_value=mock_receipt):
+            res = consult(agent)
+
+    assert res is not None
+    assert res.outcome is OperationalOutcome.HANDOFF
+    assert res.reason == "missing_prebuilt_web_dist"
+

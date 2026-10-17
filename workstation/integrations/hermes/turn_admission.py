@@ -8,7 +8,7 @@ from workstation.contracts import IntentAuthority, MessageEnvelope, MessageOrigi
 from workstation.work_intent import prepare_turn_work
 from workstation.prefabs.integration import (prepare_user_navigation, prepare_user_trello_read,
                                               prepare_user_instagram_read, prepare_user_whatsapp_read,
-                                              prepare_user_chatgpt_read)
+                                              prepare_user_chatgpt_read, prepare_user_creative_app)
 
 
 def workstation_turn_admission(
@@ -121,6 +121,9 @@ def workstation_turn_admission(
         nav_key = prepare_user_navigation(envelope)
         if nav_key:
             agent._prefab_navigation_intent = nav_key
+        creative_app = prepare_user_creative_app(envelope)
+        if creative_app:
+            agent._prefab_creative_app_intent = creative_app
         trello_intent = prepare_user_trello_read(envelope)
         if trello_intent:
             agent._prefab_trello_read_intent = trello_intent

@@ -1,7 +1,7 @@
 # Hermes Creative Workstation
 
-## CW-047 implementação dirigida (2026-10-17)
-Novo [handoff plug-and-play](CW047_IMPLEMENTER_HANDOFF_2026-10-17.md) com owners, código auxiliar pronto no repositório, submodules com SHA pinado, política loopback e ordem de testes. **A inclusão dos helpers NÃO significa que o comando abra os editores:** ainda não estão integrados ao despacho do agente nem foi feito E2E Windows. Manter PhotoCraft primeiro e EffectCraft depois. Tratar Remotion e Three.js como backlog demonstrativo; D-046 prevalece.
+## CW-047 implementado e verificado (2026-10-17)
+Implementação operacional concluída na branch `feat/cw-047-photocraft-effectcraft-20261017`. Os comandos "Abra o PhotoCraft" e "Abra o EffectCraft" iniciam e reutilizam instâncias locais (PhotoCraft v0.9.0 e EffectCraft v0.10.0) servidas em `127.0.0.1` e abertas no Browser nativo do Hermes com validação independente de URL, conformidade com lease humano e isolamento de processo por `ProcessRegistry`. Verificação E2E em Chromium real comprovou importação, edição e exportação de artefatos reais. Submodules Git adicionados em `external-engines/photocraft` e `external-engines/effectcraft`. Consulte o [handoff final](CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).
 
 
 ## CW-047 — próxima frente de trabalho: fontes independentes + abertura de editores no Browser (2026-10-17; PLANO)

@@ -1,5 +1,22 @@
 # Source reuse matrix
 
+## 2026-10-17 — CW-047 Pinned external engines (Git submodules) and local web distribution
+- **PhotoCraft** (`external-engines/photocraft`):
+  - Repository: `https://github.com/storytold/photocraft.git`
+  - Submodule SHA: `5f65579ecb44047c2a619036c18ff273202e1389`
+  - License: Apache-2.0 / MIT
+  - Prebuilt Web Dist: Official GitHub Release `v0.9.0` (`photocraft-web-0.9.0.zip`), SHA-256 `b3fa5ab6a9d32bc5ff7dfdde31939a2337471a196a2e70f1ff961a61b1bb02e6`
+  - Lifecycle: Served via loopback-only (127.0.0.1) static server with HMAC nonce readiness verification; opened via native Browser without downloading or rebuilding at runtime.
+  - Operational Status: VERIFIED in Chromium — loads egui/wgpu backend, imports PNG via drag-and-drop, executes edits on canvas, sets modified document state (`*valid_sample.png`), and renders output.
+
+- **EffectCraft** (`external-engines/effectcraft`):
+  - Repository: `https://github.com/storytold/effectcraft.git`
+  - Submodule SHA: `8f02f52a44a4b1ea807d8824b92301b96f896a06`
+  - License: MIT / Apache-2.0
+  - Prebuilt Web Dist: Official GitHub Release `v0.10.0` (`effectcraft-web-0.10.0.zip`), SHA-256 `b922abeda2420391a7fd887f53ebae6948730e63720bad6a6eb3dc48dc1b46a8`
+  - Lifecycle: Served via loopback-only (127.0.0.1) static server with HMAC nonce readiness verification, COOP/COEP isolation; opened via native Browser without downloading or rebuilding at runtime.
+  - Operational Status: VERIFIED in Chromium — loads egui/wgpu backend, OPFS storage, opens demo composition (`comp: 502`), renders timeline/effects, and exports 1280x720 frame to 3.68 MB PNG.
+
 ## 2026-10-12 — Browser C2C follow-up reuse
 Commits `1c46a508d3`, `3793c46a15`, `b9addc487a`: KEEP/EXTEND native BrowserSessionState, TaskRun/BrowserTask authority, existing ExecutionJournal and CertifiedDispatcher verification contracts. Adapt Playwright-style ambiguous input handling without shipping Playwright or creating another browser owner. Local ACK never promotes to external VERIFIED. [Checkpoint](research/playwright-code-to-code-2026-10-12/10-IMPLEMENTATION-CONTINUITY.md).
 

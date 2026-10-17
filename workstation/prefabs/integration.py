@@ -29,6 +29,19 @@ def prepare_user_navigation(envelope: Any) -> str | None:
     return destination.key if destination is not None else None
 
 
+def prepare_user_creative_app(envelope: Any) -> Any:
+    """Parse only an authenticated human turn requesting PhotoCraft or EffectCraft."""
+    if envelope is None:
+        return None
+    origin = getattr(getattr(envelope, "origin", None), "value", getattr(envelope, "origin", None))
+    authority = getattr(getattr(envelope, "intent_authority", None), "value",
+                        getattr(envelope, "intent_authority", None))
+    if str(origin).lower() != "human" or str(authority).lower() not in {"create_work", "update_work"}:
+        return None
+    from workstation.creative_web_app_spec import recognize_open_creative_app
+    return recognize_open_creative_app(getattr(envelope, "content", ""))
+
+
 def prepare_user_trello_read(envelope: Any):
     """Parse only an authenticated human-origin direct read of known ACIRV boards."""
     if envelope is None:
@@ -154,6 +167,64 @@ def _resolve_chatgpt_read(intent: ChatGPTReadIntent):
     return None
 
 
+def _resolve_creative_app_open(app: Any, agent: Any, context: Any):
+    """Launch or reuse managed creative web app and open in native Browser."""
+    session = str(getattr(context, "session_id", "") or "")
+    task = str(getattr(context, "task_id", "") or getattr(agent, "_canonical_work_task_id", "") or session)
+    if not task or not session:
+        return None
+    valid = getattr(agent, "valid_tool_names", set())
+    if "browser_navigate" not in valid or "browser_snapshot" not in valid:
+        return None
+    from agent.operational_resolution import OperationalOutcome, OperationalResolution
+    from workstation.creative_web_service import open_and_verify_creative_web_app
+    try:
+        from workstation.integrations.hermes.scoped_execution import (
+            workstation_scoped_execution, workstation_durable_dispatch)
+        scoped = workstation_durable_dispatch(agent)
+        with workstation_scoped_execution(agent, task, None):
+            def dispatch(name: str, args: dict):
+                return scoped(name, args, task, f"creative_{app.key}_" + uuid.uuid4().hex[:16])
+            receipt = open_and_verify_creative_web_app(app, dispatch)
+    except Exception as exc:  # health: allow BLE001 -- deliberate pre-LLM boundary handling dispatch failures cleanly as HANDOFF
+        _LOG.warning("Creative web app dispatcher returned uncertain: %s", type(exc).__name__, exc_info=True)
+        return OperationalResolution(
+            outcome=OperationalOutcome.HANDOFF,
+            final_response=f"Abertura de {app.label} solicitada, mas ocorreu um erro no despacho. Confira antes de tentar novamente.",
+            reason="creative_app_dispatch_uncertain", provider="hermes_creative_web")
+
+    if receipt.status == "verified":
+        reused_msg = " (instancia reutilizada)" if receipt.reused else ""
+        return OperationalResolution(
+            outcome=OperationalOutcome.EXECUTED,
+            final_response=f"{app.label} aberto e verificado no Browser nativo: {receipt.url}{reused_msg}.",
+            reason=receipt.reason, provider="hermes_creative_web",
+            details={"engine": app.key, "url": receipt.url, "reused": receipt.reused,
+                     "verification": "independent_browser_snapshot"})
+    if receipt.status == "missing_dist":
+        return OperationalResolution(
+            outcome=OperationalOutcome.HANDOFF,
+            final_response=(f"A distribuicao web oficial de {app.label} nao foi encontrada. "
+                            f"Instale a versao web em ~/.hermes/workstation/creative/engines/{app.key}/web-dist "
+                            f"ou defina HERMES_{app.key.upper()}_WEB_DIST."),
+            reason="missing_prebuilt_web_dist", provider="hermes_creative_web",
+            details={"engine": app.key, "verified": False})
+    if receipt.status == "user_control_active":
+        return OperationalResolution(
+            outcome=OperationalOutcome.HANDOFF,
+            final_response="O controle humano esta ativo no navegador. Libere o controle antes de abrir pelo agente.",
+            reason="user_control_active", provider="hermes_creative_web",
+            details={"engine": app.key, "verified": False})
+    if receipt.dispatch_attempted or receipt.status in {"uncertain", "failed"}:
+        return OperationalResolution(
+            outcome=OperationalOutcome.HANDOFF,
+            final_response=(f"Solicitei a abertura de {app.label}, mas o estado final nao foi confirmado ({receipt.reason}). "
+                            "Confira a aba antes de repetir a operacao."),
+            reason=receipt.reason, provider="hermes_creative_web",
+            details={"engine": app.key, "verified": False})
+    return None
+
+
 def maybe_resolve_navigation(context: Any):
     """One-shot fast path before System-2; uncertain dispatch NEVER falls through.
 
@@ -168,6 +239,7 @@ def maybe_resolve_navigation(context: Any):
     instagram_intent = getattr(agent, "_prefab_instagram_read_intent", None)
     whatsapp_intent = getattr(agent, "_prefab_whatsapp_read_intent", None)
     chatgpt_intent = getattr(agent, "_prefab_chatgpt_read_intent", None)
+    creative_app_intent = getattr(agent, "_prefab_creative_app_intent", None)
     # Consume before touching IO, including on exceptions, so a second
     # resolution iteration cannot cause a duplicate browser dispatch.
     agent._prefab_trello_read_intent = None
@@ -175,10 +247,14 @@ def maybe_resolve_navigation(context: Any):
     agent._prefab_whatsapp_read_intent = None
     agent._prefab_chatgpt_read_intent = None
     agent._prefab_navigation_intent = None
-    if not key and not any([trello_intent, instagram_intent, whatsapp_intent, chatgpt_intent]):
+    agent._prefab_creative_app_intent = None
+    if not key and not any([trello_intent, instagram_intent, whatsapp_intent, chatgpt_intent, creative_app_intent]):
         return None
     if getattr(agent, "_interrupt_requested", False) or getattr(agent, "_tool_guardrail_halt_decision", None):
         return None
+    # Handle creative web app open
+    if creative_app_intent is not None and not key:
+        return _resolve_creative_app_open(creative_app_intent, agent, context)
     # Handle read intents first (API-based, no browser dispatch)
     if trello_intent is not None and not key:
         return _resolve_trello_read(trello_intent)

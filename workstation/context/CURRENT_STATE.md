@@ -1,5 +1,19 @@
 # Current State
 
+## 2026-10-17 — CW-047: PhotoCraft e EffectCraft operacionais no Browser nativo (VERIFICADO)
+- **Implementação concluída sob D-046**: Abertura e reutilização local de PhotoCraft (v0.9.0) e EffectCraft (v0.10.0) a partir de comandos determinísticos ("Abra o PhotoCraft", "Abra o EffectCraft") sem criação de Kanban tasks ou chamadas a LLM.
+- **Isolamento e Segurança**:
+  - Submodules Git dedicados adicionados em `external-engines/photocraft` (SHA `5f65579ecb44047c2a619036c18ff273202e1389`) e `external-engines/effectcraft` (SHA `8f02f52a44a4b1ea807d8824b92301b96f896a06`), sem auto-update em startup.
+  - Distribuições web oficiais pré-compiladas verificadas via SHA-256 e hospedadas estritamente em `127.0.0.1` com nonce criptográfico `X-Hermes-Creative-Nonce` e cabeçalhos COOP/COEP/CORP.
+  - Processos locais supervisionados pelo `ProcessRegistry.adopt_local`.
+  - Navegação no Browser nativo existente (`workstation-browser-ipc.ts` / `prefabs/engine.py`) com validação de loopback via `matches_managed_loopback_url` e leitura independente por `browser_snapshot`.
+  - Lease humano respeitado (`409 USER_CONTROL_ACTIVE` resulta em handoff sem sobrescrita).
+- **Verificação E2E em Chromium real**:
+  - PhotoCraft: Inicializado em `http://127.0.0.1:8765/`, imagem PNG importada com sucesso via drag-and-drop decodificada pelo Rust Wasm, desenho/edição em canvas com transição dirty comprovada, exportação e salvamento.
+  - EffectCraft: Inicializado em `http://127.0.0.1:8766/`, composição de demonstração carregada (`comp: 502`) e renderizada com OPFS/Wasm, frame PNG 1280x720 exportado com sucesso para disco (3.687.468 bytes).
+  - Reutilização de instâncias ativas testada e aprovada sem recarga desnecessária ou duplicidade de processos.
+- **Testes**: 37 testes pytest 100% aprovados (`test_creative_web_app_spec.py`, `test_creative_web_static_server.py`, `test_creative_web_service.py`, `test_current_command_resolution.py`, `test_current_command_native_intent_contract.py`).
+
 ## 2026-10-17 — Direção operacional D-046 (decisão documental)
 O mantenedor decidiu priorizar uso de aplicativos criativos independentes (PhotoCraft/EffectCraft/Remotion e equivalentes) via Browser/painéis existentes, automação oportunista com ferramentas atuais e integração profunda somente após gargalo/ROI demonstrados. Creative Workstation profunda fica como **backlog condicionado**, sem desfazer D-043 nem alterar o estado técnico dos PRs e gates anteriores. **Não foram testados editores, instalados motores, editado runtime ou executado CI nesta atualização.** [Registro canônico](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
 

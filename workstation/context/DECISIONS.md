@@ -1,11 +1,19 @@
 # Architectural Decisions
 
-## CW-047/A — Handoff executável e código auxiliar, sem autorização de acoplamento profundo (2026-10-17)
-**Estado: preparação parcial no repositório, não runtime validado.** Os auxiliares de catálogo literal, endereço 127.0.0.1 gerenciado e servidor web estático foram adicionados, porém o agente ainda precisa conectá-los ao dispatcher e ProcessRegistry legítimos. A fonte dos submodules deve ser confirmada (originais storytold encontrados; forks pessoais não confirmados). Usar originais como fallback auditável; nenhum fork inventado. Primeiro PhotoCraft, depois EffectCraft. Proibido declarar instalação, init de submodule ou E2E concluído sem evidência. Decisão D-046 preservada: nenhum dever de migrar motores para dentro do core. [Handoff exato](../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).
-
-
-## CW-047 — Proposta operacional: submodules externos pinados e abertura local sob demanda (2026-10-17)
-**Status: PROPOSTA DE PLANO, implementação pendente; não substitui D-046.** Para os motores PhotoCraft/EffectCraft, estudar submodules Git com commits fixados, sincronização explícita com suas origens e lançamento web via loopback autorizado pelo runtime existente, seguido de navegação no Browser nativo ao dizer `abra o PhotoCraft` / `abra o EffectCraft`. Confirmar URLs dos forks **antes** de vinculá-los; upstream original identificado não equivale a fork do mantenedor. Remotion/Three.js preferencialmente como dependências de projeto. A ideia de Three.js como cena/camada vinculada ao EffectCraft está em backlog de pesquisa, **sem mandato de acoplamento profundo**. [Plano detalhado](../creative-workstation/LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md).
+## CW-047 — Implementação operacional: submodules externos pinados, servidor local gerenciado e abertura no Browser nativo (2026-10-17)
+**Status: IMPLEMENTADO E TESTADO NO AMBIENTE LOCAL / OPERAÇÃO REAL VERIFICADA.**
+Submodules importados e pinados:
+- `external-engines/photocraft` (commit `5f65579ecb44047c2a619036c18ff273202e1389`)
+- `external-engines/effectcraft` (commit `8f02f52a44a4b1ea807d8824b92301b96f896a06`)
+Web dists oficiais pré-compiladas baixadas e validadas por SHA-256 (v0.9.0 e v0.10.0), instaladas em `~/.hermes/workstation/creative/engines/`.
+Servidor local estático seguro `workstation/creative_web_static_server.py` restrito a loopback `127.0.0.1`, supervisionado por `workstation/creative_web_service.py` no `ProcessRegistry`, com verificação de prontidão por nonce HMAC (`X-Hermes-Creative-Nonce`), prevenção de SSRF e cabeçalhos de isolamento COOP/COEP/CORP.
+Roteamento operacional pontual (sem Kanban Task desnecessária) em `workstation/work_intent.py` e Fast Path em `workstation/prefabs/integration.py` para comandos "Abra o PhotoCraft" e "Abra o EffectCraft". Reutilização de instâncias ativas e saudáveis comprovada.
+Respeito estrito a lease humano (`409 USER_CONTROL_ACTIVE`).
+Leitura e verificação independente via `extract_controller_url` e `matches_managed_loopback_url`.
+Operações reais comprovadas em Chromium:
+1. PhotoCraft: carregamento Wasm/WebGL2, importação de PNG via drag-and-drop, decodificação via codec Rust, edição interativa no canvas com transição para dirty (`*valid_sample.png`), e captura de frame renderizado.
+2. EffectCraft: carregamento Wasm/WebGL2/OPFS, abertura de composição de demonstração (`comp: 502`), renderização de timeline/efeitos e exportação de frame PNG (1280x720, 3.68 MB) verificado no disco.
+Decisão D-046 preservada: nenhum acoplamento profundo desnecessário ou invasão do core.
 
 
 ## D-046 — Integração por necessidade demonstrada, baixo acoplamento primeiro (2026-10-17)

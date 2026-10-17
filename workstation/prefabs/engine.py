@@ -53,8 +53,12 @@ def _has_error(raw: Any) -> bool:
     return False
 
 
-def _extract_known_url(raw: Any) -> str:
-    """Only explicit URL fields, never arbitrary text, tool debug, or HTML links."""
+def extract_controller_url(raw: Any, *, allowed_loopback_port: int | None = None) -> str:
+    """Only explicit URL fields, never arbitrary text, tool debug, or HTML links.
+
+    If allowed_loopback_port is provided, only an authentic 127.0.0.1 URL on that
+    exact port is admissible. Otherwise only canonical HTTPS URLs are accepted.
+    """
     d = _as_data(raw)
     if isinstance(d, dict) and "text" in d and isinstance(d["text"], str):
         # Hermes can wrap native JSON in <untrusted_tool_result>. Parse only
@@ -63,21 +67,35 @@ def _extract_known_url(raw: Any) -> str:
         text = d["text"]
         head = text.split('"snapshot":', 1)[0][:2000]
         if '"snapshot":' in text and '"tab_id":' in head:
-            match = re.search(r'"url"\s*:\s*"(https://[^"\\\s]+)"', head)
-            if match:
-                return match.group(1)
+            if allowed_loopback_port is not None:
+                match = re.search(rf'"url"\s*:\s*"(http://127\.0\.0\.1:{allowed_loopback_port}(?:/[^"\\\s]*)?)"', head)
+                if match:
+                    return match.group(1)
+            else:
+                match = re.search(r'"url"\s*:\s*"(https://[^"\\\s]+)"', head)
+                if match:
+                    return match.group(1)
     if isinstance(d, dict):
         for key in ("url", "current_url", "currentUrl", "page_url", "pageUrl", "final_url", "finalUrl"):
             value = d.get(key)
-            if isinstance(value, str) and value.startswith("https://"):
-                return value
+            if isinstance(value, str):
+                if allowed_loopback_port is not None:
+                    if value.startswith(f"http://127.0.0.1:{allowed_loopback_port}"):
+                        return value
+                elif value.startswith("https://"):
+                    return value
         for key in ("page", "browser", "metadata", "result", "data"):
             v = d.get(key)
             if isinstance(v, dict):
-                found = _extract_known_url(v)
+                found = extract_controller_url(v, allowed_loopback_port=allowed_loopback_port)
                 if found:
                     return found
     return ""
+
+
+def _extract_known_url(raw: Any) -> str:
+    """Legacy helper accepting HTTPS URLs only."""
+    return extract_controller_url(raw)
 
 
 def navigate(destination: Destination, dispatch: Callable[[str, dict], Any], *,

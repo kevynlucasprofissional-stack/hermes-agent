@@ -16,7 +16,7 @@ class StaticWebServerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         (self.root / "index.html").write_text("<title>Test</title>", encoding="utf-8")
         (self.root / "fixture.wasm").write_bytes(b"\x00asm")
         self.nonce = "T" * 48

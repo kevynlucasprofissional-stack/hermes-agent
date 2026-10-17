@@ -20,7 +20,14 @@ _OPEN_COMMANDS = {
 def recognize_current_command(content: str) -> tuple[str, str] | None:
     if not isinstance(content, str):
         return None
-    return _OPEN_COMMANDS.get(" ".join(content.casefold().strip().rstrip(".!").split()))
+    res = _OPEN_COMMANDS.get(" ".join(content.casefold().strip().rstrip(".!").split()))
+    if res is not None:
+        return res
+    from workstation.creative_web_app_spec import recognize_open_creative_app
+    app = recognize_open_creative_app(content)
+    if app is not None:
+        return ("creative.web_app.open", app.key)
+    return None
 
 
 def current_command_objective(envelope: MessageEnvelope, task_id: str, run_id: str) -> dict | None:
@@ -32,8 +39,8 @@ def current_command_objective(envelope: MessageEnvelope, task_id: str, run_id: s
     from workstation.control_plane.intent import OperationIntent
     from workstation.control_plane.ir import AND, CALL, EQ, SET
     family, target = command
-    native = family == "browser.open_site"
-    if native:
+    native = family in {"browser.open_site", "creative.web_app.open"}
+    if family == "browser.open_site":
         parsed = urlsplit(target)
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             return None
@@ -54,6 +61,16 @@ def current_command_objective(envelope: MessageEnvelope, task_id: str, run_id: s
             CALL("browser.navigate", host),
         ]
         inputs = {}
+    elif family == "creative.web_app.open":
+        host = "127.0.0.1"
+        page_family = "/"
+        goal = AND(EQ("host", host), EQ(f"creative.{target}.ready", True))
+        effect_budget = [
+            SET("host", host),
+            SET(f"creative.{target}.ready", True),
+            CALL("browser.navigate", host),
+        ]
+        inputs = {"engine": target}
     else:
         goal = EQ("creative.studio.ready", True)
         effect_budget = [SET("creative.studio.ready", True)]

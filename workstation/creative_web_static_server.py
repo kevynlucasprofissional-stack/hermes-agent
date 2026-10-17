@@ -30,11 +30,11 @@ class CreativeStaticHandler(SimpleHTTPRequestHandler):
 
     def __init__(self, *args, root: Path, engine: str, port: int,
                  nonce: str, **kwargs):
-        self._root = root
+        self._root = Path(root).resolve()
         self._engine = engine
         self._port = port
         self._nonce = nonce
-        super().__init__(*args, directory=str(root), **kwargs)
+        super().__init__(*args, directory=str(self._root), **kwargs)
 
     def _safe_request(self) -> bool:
         host = (self.headers.get("Host") or "").lower()

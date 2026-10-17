@@ -54,3 +54,20 @@ def test_named_site_command_explicitly_budgets_only_its_external_navigation_effe
     assert not can_execute_effect(permitted, intent, read_only)
     assert can_execute_effect(permitted, intent, scoped)
     assert not can_execute_effect(other, intent, scoped)
+
+
+def test_named_creative_web_app_intent_contracts():
+    for name in ("PhotoCraft", "EffectCraft"):
+        envelope = MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK,
+                                   "session-c", f"Abra o {name}")
+        objective = current_command_objective(envelope, "task-c", "run-c")
+        assert objective is not None
+        intent = OperationIntent.from_dict(objective["operation_intent"])
+        assert intent.target == "native_browser"
+        engine_key = name.lower()
+        assert objective["inputs"] == {"engine": engine_key}
+        postconditions = [EQ("host", "127.0.0.1"), EQ(f"creative.{engine_key}.ready", True)]
+        effect_footprint = [SET("host", "127.0.0.1"), SET(f"creative.{engine_key}.ready", True)]
+        assert entails(AND(*postconditions), intent.goal)
+        assert all(effect_contained(e, intent.effect_budget) for e in effect_footprint)
+        assert effect_contained(CALL("browser.navigate", "127.0.0.1"), intent.effect_budget)

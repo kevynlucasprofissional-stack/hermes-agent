@@ -1,5 +1,26 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-17 — CW-047: PhotoCraft e EffectCraft no Browser nativo do Hermes (IMPLEMENTADO E QUALIFICADO)
+- **Branch**: `feat/cw-047-photocraft-effectcraft-20261017` criada a partir de `main` (`fd57e40fe8`).
+- **Claim de coordenação**: Registrado claim exclusivo em `creative-agent` para `agent-cw047`.
+- **Submodules Git**:
+  - `external-engines/photocraft` @ SHA `5f65579ecb44047c2a619036c18ff273202e1389` (Storytold PhotoCraft).
+  - `external-engines/effectcraft` @ SHA `8f02f52a44a4b1ea807d8824b92301b96f896a06` (Storytold EffectCraft).
+  - Nenhum auto-update silencioso no startup.
+- **Distribuições Web**:
+  - PhotoCraft v0.9.0 web-dist instalado em `%LOCALAPPDATA%\hermes\workstation\creative\engines\photocraft\web-dist` (SHA256: `b3fa5ab6a9d32bc5ff7dfdde31939a2337471a196a2e70f1ff961a61b1bb02e6`).
+  - EffectCraft v0.10.0 web-dist instalado em `%LOCALAPPDATA%\hermes\workstation\creative\engines\effectcraft\web-dist` (SHA256: `b922abeda2420391a7fd887f53ebae6948730e63720bad6a6eb3dc48dc1b46a8`).
+- **Runtime e Arquitetura de Serviço**:
+  - `workstation/creative_web_service.py`: ciclo de vida local restrito a `127.0.0.1`, alocação de portas dinâmicas ou preferenciais (8765/8766), geração de nonce criptográfico (`X-Hermes-Creative-Nonce`), adoção via `ProcessRegistry.adopt_local`, pooling de readiness em `/__hermes_health`, reutilização transparente de processos saudáveis, detecção de lease humano (`409 USER_CONTROL_ACTIVE`) e validação de URL do navegador por readback independente do controller (`matches_managed_loopback_url`).
+  - `workstation/prefabs/engine.py`: adição de `allowed_loopback_port` a `extract_controller_url`, admitindo loops gerenciados autenticados sem abrir exceções para HTTP não autorizado.
+  - `workstation/prefabs/integration.py` & `workstation/work_intent.py`: resolução no pre-LLM como `point_action` (sem Kanban task), prevenindo dupla execução ou despacho paralelo.
+- **Resultados de Testes**:
+  - 37 testes pytest green (`test_creative_web_service.py`, `test_creative_web_static_server.py`, `test_creative_web_app_spec.py`, `test_current_command_resolution.py`, `test_current_command_native_intent_contract.py`).
+- **Comprovação E2E com Chromium Real**:
+  - PhotoCraft: inicialização em `127.0.0.1:8765`, importação de PNG via Rust Wasm drag-and-drop, edição via canvas com dirty check no título (`*valid_sample.png — PhotoCraft`), exportação.
+  - EffectCraft: inicialização em `127.0.0.1:8766`, abertura de demo (`comp: 502`), exportação de frame PNG 1280x720 para disco (`effectcraft_exported_frame.png`, 3.687.468 bytes).
+  - Reutilização verificada: segundo comando reaproveita instância e aba ativas sem reload.
+
 ## 2026-10-17 — CW-047 código auxiliar + prompt de integração (PREPARAÇÃO, NÃO E2E)
 **Base inspecionada:** Hermes main 35d4b899551beecc88edbb2f66c153cb896fa12a e fontes storytold/photocraft, storytold/effectcraft; nenhuma URL de fork do usuário verificada. **Achado de risco:** o mesmo turno pode atravessar workstation/work_intent.py e workstation/prefabs, enquanto o navegador prefab só valida HTTPS; liberar HTTP genérico seria perigoso. **Artefatos adicionados:** helper de aliases literais + dist/URL loopback; servidor de estáticos HTTP local com health nonce e cabeçalhos de isolamento; testes do catálogo. **Não declarado:** importação de submodules, conexão ao runtime, TestRun, instalação Windows, navegador aberto ou trabalho exportado. **Próximo passo:** agente executa H-079, valida testes, conecta processo via owner, qualifica Windows e fornece recibos. [Prompt](../../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).
 

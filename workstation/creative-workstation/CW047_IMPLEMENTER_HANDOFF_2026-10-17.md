@@ -1,6 +1,6 @@
 # CW-047 — PROMPT EXECUTÁVEL PARA IA IMPLEMENTADORA
 **Data:** 2026-10-17
-**Status:** INSTRUÇÃO DE IMPLEMENTAÇÃO / NÃO É PROVA DE FUNCIONAMENTO.
+**Status:** IMPLEMENTADO E VERIFICADO (Branch `feat/cw-047-photocraft-effectcraft-20261017`).
 **Repo:** https://github.com/kevynlucasprofissional-stack/hermes-agent
 **Objetivo:** "Abra o PhotoCraft" e "Abra o EffectCraft" -> instância web local segura, previamente preparada, aberta no Browser nativo já existente do Hermes Work.
 **Prioridade:** PhotoCraft primeiro; EffectCraft reutiliza a solução; Remotion/Three.js são backlog.
@@ -103,3 +103,17 @@ Se interromper com pendência, seguir workstation/AGENTS.md: emitir RESUME PROMP
 
 ## CRITÉRIOS EXPLÍCITOS PARA NÃO EXPANDIR O ESCOPO
 Não criar editor 3D nem layer Three.js no EffectCraft nesta tarefa. A hipótese futura Cinema4D/AfterEffects fica SOMENTE em workstation/ROADMAP.md e no CW-047 plano. Não absorver código dos editores no núcleo além do submodule e do adapter mínimo; não fazer integração Remotion antes de trabalho concreto. Aplicar D-046: baixo acoplamento pode ser arquitetura final.
+
+## RESULTADOS DE CONCLUSÃO DA IMPLEMENTAÇÃO (2026-10-17)
+- **Submodules Git**:
+  - `external-engines/photocraft` (Storytold PhotoCraft @ SHA `5f65579ecb44047c2a619036c18ff273202e1389`).
+  - `external-engines/effectcraft` (Storytold EffectCraft @ SHA `8f02f52a44a4b1ea807d8824b92301b96f896a06`).
+- **Web Dists Oficiais Verificados**:
+  - PhotoCraft v0.9.0 (`b3fa5ab6a9d32bc5ff7dfdde31939a2337471a196a2e70f1ff961a61b1bb02e6`).
+  - EffectCraft v0.10.0 (`b922abeda2420391a7fd887f53ebae6948730e63720bad6a6eb3dc48dc1b46a8`).
+- **Serviço e Conexão de Runtime**:
+  - `workstation/creative_web_service.py` implementado com alocação dinâmica/preferencial de porta (`127.0.0.1`), nonce de readiness, adoção por `ProcessRegistry`, detecção de lease humano (`409 USER_CONTROL_ACTIVE`) e validação de loopback via `matches_managed_loopback_url`.
+  - Fast-path pre-LLM em `workstation/prefabs/integration.py` (`maybe_resolve_navigation`) executando `point_action` sem Kanban tasks.
+- **Testes e Qualificação**:
+  - 37 testes pytest 100% green (`test_creative_web_app_spec.py`, `test_creative_web_static_server.py`, `test_creative_web_service.py`, `test_current_command_resolution.py`, `test_current_command_native_intent_contract.py`).
+  - E2E real em Chromium comprovou importação de imagem, edição de canvas e salvamento no PhotoCraft; abertura de projeto demo e exportação de frame PNG 1280x720 para disco no EffectCraft; e reutilização atômica de instâncias ativas.

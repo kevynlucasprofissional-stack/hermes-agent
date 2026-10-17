@@ -1,0 +1,6 @@
+[submodule "external-engines/photocraft"]
+	path = external-engines/photocraft
+	url = https://github.com/storytold/photocraft.git
+[submodule "external-engines/effectcraft"]
+	path = external-engines/effectcraft
+	url = https://github.com/storytold/effectcraft.git
