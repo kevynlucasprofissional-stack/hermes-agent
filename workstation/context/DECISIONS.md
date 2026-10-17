@@ -1,5 +1,8 @@
 # Architectural Decisions
 
+## D-046 — Integração por necessidade demonstrada, baixo acoplamento primeiro (2026-10-17)
+**Status: DECISÃO ESTRATÉGICA ACEITA; documentação apenas.** A experiência de um Hermes único não exige absorver motores. Primeiro disponibilizar PhotoCraft, EffectCraft, Remotion e outros apps via Browser/painéis já existentes; depois tentar automação do Browser; apenas diante de gargalo real e ganho líquido demonstrado permitir adapter fino ou incorporação de código. **Cada estágio pode ser o definitivo.** Foco em trabalhos concluídos, tempo poupado, qualidade e intervenções, não no número de integrações. Reprioriza a execução da Creative Workstation e coloca CWN-00..09 como backlog condicionado, preservando a D-043 engine-neutral e os gates de autoridade/segurança. **Não houve implementação ou qualificação nesta decisão.** [Texto canônico e critérios](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
 ## D-045 — Smart Kanban admission: Session ≠ Task ≠ TaskRun (2026-10-11, P0; pausa estratégica 2026-10-12)
 **Status: isolated code + RED/GREEN development; native product qualification OPEN; pausa estratégica 2026-10-12.**
 

@@ -1,5 +1,10 @@
 # Workstation roadmap
 
+## 2026-10-17 — PRIORIDADE D-046: resultados primeiro, integrações por demanda (DECIDIDO; NÃO EXECUTADO)
+**Ordem de investimento:** (1) usar editores web existentes nos painéis/Browser nativo do Hermes; (2) concluir trabalhos profissionais e medir o esforço; (3) automatizar operações repetitivas com o Browser atual; (4) se houver gargalo medido, testar o menor adapter/API/CLI necessário; (5) só propor integração profunda de código quando provar benefício líquido superior ao custo de manutenção. Baixo acoplamento é resultado final válido. **Não construir painéis, clones, motores, editor 3D próprio ou kernel criativo apenas para avançar roadmap.**
+
+**Creative Workstation D-043/CWN-00..09:** manter contratos e planos existentes como **backlog condicionado**, não invalidar engenharia anterior nem declarar funcionalidades prontas. **Experience Compiler:** priorizar uma demonstração de tarefa real -> capacidade candidata -> validação -> reutilização; expansões autônomas sem evidência não bloqueiam entregas. Métricas: trabalhos finalizados, tempo total, qualidade/artefato, intervenções humanas, erros e custo de propriedade. Exigir experimento discriminante e nova decisão para internalização de motor. [Decisão canônica D-046](context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
 ## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)
 
 A fase 0 estabelece UMA branch (`feat/hermes-workstation-mvp-20261013`), um checkout (`C:\Github\hermes-agent`), leases cooperativos de arquivos, um integrador Git e checkpoint recursivo, evitando quatro agentes abrirem worktrees/branches por ajuste. Ver [protocolo](context/AGENT_COLLABORATION_PROTOCOL.md), [board](context/workstation-hub-mvp/TEAM_BOARD.md) e [3 etapas de implementação](context/workstation-hub-mvp/IMPLEMENTATION_STAGES.md). Produto ainda NÃO qualificado: (1) Agent abre Creative interno sem search; (2) Browser→Workstation + aba Creative React; (3) aba web manual→nova sessão real via mesma WebContentsView e lease humano. Plano 20/80: Fase 1 HWH01+02, Fase 2 HWH03, Fase 3 native E2E/CI/PR; sem merge automático ou bypass H-079.

@@ -1,5 +1,8 @@
 # Hermes Workstation downstream distribution
 
+## 2026-10-17 — Critério de integração por valor operacional (D-046)
+Um único Hermes pode hospedar aplicativos independentes nos painéis/Browser nativo. Primeiro utilizá-los para trabalhos reais, depois automatizar com recursos existentes, e somente integrar código-fonte profundamente diante de gargalo e retorno comprovados. Baixo acoplamento pode ser a arquitetura definitiva; não confundir catálogo de aplicações com autorização para construir editores/clones. [Decisão canônica](workstation/context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md). **Registro de prioridade, sem mudança de runtime.**
+
 This fork carries an integrated Workstation layer under [`workstation/`](workstation/).
 
 The Workstation is **upstream-first**: Hermes Sessions, Gateway, Kanban, Memory,

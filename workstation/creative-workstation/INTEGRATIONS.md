@@ -1,5 +1,8 @@
 # Integrações e skills — catálogo de descoberta
 
+## D-046 — seleção por necessidade comprovada (2026-10-17)
+**O catálogo abaixo NÃO é uma fila de instalações nem autorização para internalizar motores.** Disponibilizar primeiro aplicativos existentes via Browser/painéis nativos (sem construir novos painéis); testar trabalho e automação reais; preferir bridge, CLI ou adapter fino se necessário; absorver código apenas após benchmark do gargalo, custo total, licença e verificação. Baixo acoplamento pode ser solução definitiva. Prioridades P0 históricas abaixo não se sobrepõem ao [gate D-046](../context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md). **Documentação apenas; integrações não validadas por esta nota.**
+
 <!-- creative-D043-overlay -->
 ## Nova política de seleção D-043 (2026-10-10)
 As prioridades por engine da matriz antiga abaixo não são mandatos de instalação ou formato. **HyperFrames, OpenReel, EffectCraft, Penpot, Remotion e Three.js competem como candidatos/implementações específicas**, nunca como soberanos do documento. Primeiro validar Creative Document+Command Bus+tempo e cortes; engines são selecionadas via capacidade, medição de paridade, custo, licenças e sandbox, com referências editáveis preservadas. [Autoridade](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md).

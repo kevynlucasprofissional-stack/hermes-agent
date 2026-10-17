@@ -1,5 +1,8 @@
 # Hermes Workstation — Coding-Agent Context
 
+## Prioridade estratégica D-046 — baixo acoplamento primeiro (2026-10-17)
+**Leitura antes de propor qualquer nova integração criativa ou incorporação de aplicativo:** [decisão D-046 e critérios](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md). Primeiro usar os painéis/Browser nativo já existentes, entregar trabalho real e tentar automação atual. Adaptadores ou código absorvido exigem necessidade comprovada; baixo acoplamento pode ser o estado final. Planos profundos D-043/CWN são backlog condicionado, não execução automática. Preservar todos os owners e gates de segurança; status **DECISÃO, NÃO IMPLEMENTAÇÃO**.
+
 ## 2026-10-12 — Inteligência preservada / frente P0 em pausa
 
 **Entrada recuperável antes de qualquer retomada:** [Strategic Handoff](HERMES_WORK_STRATEGIC_HANDOFF_2026-10-12.md) → [Known Issues canônicos KI-028–KI-043](KNOWN_ISSUES.md) → [Dossiê de evidências](HERMES_WORK_P0_ISSUES_DETAIL_2026-10-12.md) → [PRs e dependências](HERMES_WORK_PR_RECONCILIATION_2026-10-12.md) → [Manifesto de fontes](HERMES_WORK_SOURCE_EVIDENCE_MANIFEST_2026-10-12.md) → [Fundamentos/ADRs](HERMES_WORK_DECISION_RATIONALE_2026-10-12.md) → [Prompt arquivado](HERMES_WORK_RESUME_PROMPT_2026-10-12.md). **PAUSED_BY_STRATEGY ≠ RESOLVED.** Não executar o prompt nem voltar ao PR #83 sem nova decisão do maintainer. Documentos de P0 detalhados continuam no branch do PR #83, não na main deste snapshot.

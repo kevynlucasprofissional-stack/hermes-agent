@@ -1,5 +1,8 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-17 — Inteligência de produto D-046: operar antes de absorver
+**Diretriz permanente de seleção, sujeita a revisão por evidências:** experiência unificada, motores independentes e alto acoplamento apenas quando justificado por um gargalo verificado. Abrir aplicações web no Browser nativo/painéis já disponíveis, produzir artefatos reais e tentar automação existente antes de criar bridges ou internalizar código. A independência dos motores **pode ser o desenho final**; não presumir que cada integração precise amadurecer até um monólito. Priorizar retorno 80/20 e reduzir manutenção assumida, preservando D-043 como hipótese futura; Experience Compiler deve provar reuso real antes de ampliar aprendizagem especulativa. **DECIDIDO, NÃO IMPLEMENTADO OU QUALIFICADO.** [D-046 canônica](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
 ## Inteligência preservada — transição estratégica 2026-10-12 (não significa release)
 
 A sessão de 11–12/10 demonstrou que a sensação de Hermes "travado" envolve um ciclo causal de **auto-admissão indevida de Task/TaskRun**, **efeitos mal classificados**, **handoffs de mutações incertas**, **SUPERSEDED** e **autoridade/UI nativa**. Não reduzir o problema a latência. A decisão D-045 separa conversa, Task durável e TaskRun; PRs #71–#83 implementaram fatias em draft que permanecem fora de main.

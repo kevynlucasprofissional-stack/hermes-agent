@@ -1,5 +1,8 @@
 # Hermes Workstation Architecture
 
+## Diretriz de integração D-046 — 2026-10-17
+A experiência Hermes pode reunir motores independentes no Browser/painéis existentes **sem absorver seus códigos-fonte**. Usar primeiro, automatizar com owners atuais depois, internalizar apenas quando limitações medidas e benefício líquido justificarem custo permanente. Não construir estruturas paralelas nem interpretar D-043 Creative como execução obrigatória. **Decisão documental, não funcionalidade verificada.** [D-046](context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Future Creative Workstation proposal (no runtime implementation)
 

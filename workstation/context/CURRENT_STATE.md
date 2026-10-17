@@ -1,5 +1,8 @@
 # Current State
 
+## 2026-10-17 — Direção operacional D-046 (decisão documental)
+O mantenedor decidiu priorizar uso de aplicativos criativos independentes (PhotoCraft/EffectCraft/Remotion e equivalentes) via Browser/painéis existentes, automação oportunista com ferramentas atuais e integração profunda somente após gargalo/ROI demonstrados. Creative Workstation profunda fica como **backlog condicionado**, sem desfazer D-043 nem alterar o estado técnico dos PRs e gates anteriores. **Não foram testados editores, instalados motores, editado runtime ou executado CI nesta atualização.** [Registro canônico](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
 ## 2026-10-12 — Fork CI cost containment and Stage A qualification
 
 For `kevynlucasprofissional-stack/hermes-agent`, GitHub API listed 57 workflow definitions before this settings change. The authorized reversible settings update disabled 11 inherited workflows; the fork-owned Workstation CI/Browser workflows and the named targeted/security workflows remain active. That settings operation did not edit workflow files. Later local, uncommitted YAML edits narrowed the Ubuntu lane and made the owned Windows lane manual-only; no Actions run was started, and neither source change is qualification evidence. The exact IDs, event scopes, and fork lane contract are in [CI_COST_CONTROL.md](CI_COST_CONTROL.md).

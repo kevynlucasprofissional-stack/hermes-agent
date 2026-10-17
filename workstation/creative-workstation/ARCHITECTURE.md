@@ -1,5 +1,8 @@
 # Creative Runtime — arquitetura candidata
 
+## D-046 — interpretação operacional do desenho (2026-10-17)
+A arquitetura engine-neutral D-043 é uma possibilidade de evolução, **não um compromisso de unificar código/estado de todos os editores**. Primeiro consumir PhotoCraft/EffectCraft/Remotion como aplicativos independentes em painéis do Browser nativo existentes; tentar automação do Browser sob os owners e gates atuais. Um adapter específico só entra por limitação verificada; incorporar código-fonte exige benefício líquido superior ao custo total de propriedade. Não afirmar que Studio/Node/CLI do Remotion funciona integralmente no browser. **A presente decisão não implementa nem qualifica o runtime.** [D-046 canônica](../context/CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md).
+
 <!-- creative-D043-overlay -->
 ## Arquitetura corrente — D-043, 2026-10-10
 O projeto presente é **engine-neutral**: Creative Document versionado/IDs estáveis/rational time → mesmo registro de comandos UI/IA/headless com transações e Undo → Semantic Edit Plan sobre revisões → adaptadores independentes de produção/render → workspaces contextuais. Nenhum source schema, Studio ou motor é obrigatório; preservar HyperFrames existente como candidato e o código útil dos PRs #57–#61. As opções de Remotion/Penpot/Three.js e o manifest antigo abaixo são **históricos**, não prescrição arquitetural. Esta decisão **não é runtime implementado**. [Especificação completa](ENGINE_NEUTRAL_ARCHITECTURE_2026-10-10.md) | [execução](ENGINE_NEUTRAL_IMPLEMENTER_HANDOFF_2026-10-10.md).
