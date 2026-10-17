@@ -27,11 +27,14 @@ APPS = {
     "effectcraft": CreativeWebApp(
         "effectcraft", "EffectCraft", "https://github.com/storytold/effectcraft"
     ),
+    "filmcraft": CreativeWebApp(
+        "filmcraft", "FilmCraft", "https://github.com/storytold/filmcraft"
+    ),
 }
 
 _OPEN = re.compile(
     r"^(?:por favor )?(?:abre|abra|abrir|open) (?:o |a )?"
-    r"(photo ?craft|effect ?craft)(?: por favor)?$"
+    r"(photo ?craft|effect ?craft|film ?craft)(?: por favor)?$"
 )
 
 

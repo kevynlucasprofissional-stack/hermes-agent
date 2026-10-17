@@ -42,8 +42,9 @@ class CreativeWebServiceTests(unittest.TestCase):
     def test_discover_web_app_dist_missing_index(self):
         empty_dir = self.root / "empty_dist"
         empty_dir.mkdir()
-        with patch.dict("os.environ", {"HERMES_PHOTOCRAFT_WEB_DIST": str(empty_dir)}):
-            self.assertIsNone(discover_web_app_dist("photocraft"))
+        with patch("workstation.creative_web_service.get_hermes_home", return_value=self.root / "fake_home"):
+            with patch.dict("os.environ", {"HERMES_PHOTOCRAFT_WEB_DIST": str(empty_dir)}):
+                self.assertIsNone(discover_web_app_dist("photocraft"))
 
     def test_allocate_creative_port_strict_loopback(self):
         with self.assertRaises(ValueError):
@@ -61,6 +62,23 @@ class CreativeWebServiceTests(unittest.TestCase):
         )
         try:
             self.assertEqual(instance.engine, "photocraft")
+            self.assertTrue(instance.url.startswith("http://127.0.0.1:"))
+            self.assertTrue(probe_creative_web_app_health(instance, registry=registry))
+            session = registry.get(instance.process_id)
+            self.assertTrue(getattr(session, "persist_on_release", False))
+        finally:
+            registry.kill_process(instance.process_id)
+
+    def test_start_filmcraft_server(self):
+        registry = ProcessRegistry()
+        instance = start_creative_web_app_server(
+            "filmcraft",
+            dist_root=self.root,
+            registry=registry,
+            timeout=5.0,
+        )
+        try:
+            self.assertEqual(instance.engine, "filmcraft")
             self.assertTrue(instance.url.startswith("http://127.0.0.1:"))
             self.assertTrue(probe_creative_web_app_health(instance, registry=registry))
         finally:
@@ -138,6 +156,87 @@ class CreativeWebServiceTests(unittest.TestCase):
             self.assertEqual(receipt.status, "verified")
             self.assertEqual(receipt.engine, "photocraft")
             self.assertTrue(receipt.observed_url.startswith("http://127.0.0.1:"))
+        finally:
+            stop_creative_web_app_server("photocraft", registry=registry)
+
+    def test_open_and_verify_reuse_preserves_without_reload(self):
+        registry = ProcessRegistry()
+        try:
+            app = APPS["filmcraft"]
+            dispatched_calls = []
+
+            # 1. Initial launch
+            def mock_dispatch_first(name, args):
+                dispatched_calls.append((name, args))
+                if name == "browser_navigate":
+                    return {"success": True, "url": args["url"]}
+                if name == "browser_snapshot":
+                    target_url = next(c[1]["url"] for c in dispatched_calls if c[0] == "browser_navigate")
+                    return {
+                        "text": f'{{"tab_id": 1, "url": "{target_url}"}}\n"snapshot": "<html></html>"'
+                    }
+                return {}
+
+            receipt1 = open_and_verify_creative_web_app(
+                app,
+                mock_dispatch_first,
+                dist_root=self.root,
+                registry=registry,
+            )
+            self.assertEqual(receipt1.status, "verified")
+            self.assertFalse(receipt1.reused)
+            self.assertTrue(receipt1.dispatch_attempted)
+
+            # 2. Second launch: editor already active in browser
+            navigated_again = False
+
+            def mock_dispatch_second(name, args):
+                nonlocal navigated_again
+                if name == "browser_navigate":
+                    navigated_again = True
+                    return {"success": True, "url": args["url"]}
+                if name == "browser_snapshot":
+                    # Browser is still on the active filmcraft loopback URL
+                    return {
+                        "text": f'{{"tab_id": 1, "url": "{receipt1.url}"}}\n"snapshot": "<html>active project</html>"'
+                    }
+                return {}
+
+            receipt2 = open_and_verify_creative_web_app(
+                app,
+                mock_dispatch_second,
+                dist_root=self.root,
+                registry=registry,
+            )
+            self.assertEqual(receipt2.status, "verified")
+            self.assertTrue(receipt2.reused)
+            self.assertFalse(receipt2.dispatch_attempted)
+            self.assertFalse(navigated_again, "browser_navigate must not be called when editor is already active")
+            self.assertEqual(receipt2.reason, "creative_filmcraft_already_active_preserved")
+        finally:
+            stop_creative_web_app_server("filmcraft", registry=registry)
+
+    def test_open_and_verify_reuse_human_lease(self):
+        registry = ProcessRegistry()
+        try:
+            app = APPS["photocraft"]
+            # Pre-launch server
+            _inst, _ = get_or_launch_creative_web_app(app.key, dist_root=self.root, registry=registry)
+
+            # Reusing when human control is active on the browser
+            def mock_dispatch(name, args):
+                if name == "browser_snapshot":
+                    return {"status": "error", "reason": "409 USER_CONTROL_ACTIVE"}
+                return {}
+
+            receipt = open_and_verify_creative_web_app(
+                app,
+                mock_dispatch,
+                dist_root=self.root,
+                registry=registry,
+            )
+            self.assertEqual(receipt.status, "user_control_active")
+            self.assertFalse(receipt.dispatch_attempted)
         finally:
             stop_creative_web_app_server("photocraft", registry=registry)
 

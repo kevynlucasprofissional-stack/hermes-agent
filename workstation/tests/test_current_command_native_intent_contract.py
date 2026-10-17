@@ -57,7 +57,7 @@ def test_named_site_command_explicitly_budgets_only_its_external_navigation_effe
 
 
 def test_named_creative_web_app_intent_contracts():
-    for name in ("PhotoCraft", "EffectCraft"):
+    for name in ("PhotoCraft", "EffectCraft", "FilmCraft"):
         envelope = MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK,
                                    "session-c", f"Abra o {name}")
         objective = current_command_objective(envelope, "task-c", "run-c")

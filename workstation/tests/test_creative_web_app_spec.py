@@ -12,11 +12,21 @@ from workstation.creative_web_app_spec import (
 class CreativeAppSpecTests(unittest.TestCase):
     def test_exact_aliases(self):
         for text in ("Abre o PhotoCraft.", "abra photo craft",
-                     "Abrir o Effect Craft!", "open effectcraft"):
+                     "Abrir o Effect Craft!", "open effectcraft",
+                     "Abra o FilmCraft", "Abre o FilmCraft", "Abrir FilmCraft",
+                     "Open FilmCraft", "abra film craft por favor", "por favor abra o filmcraft"):
             self.assertIsNotNone(recognize_open_creative_app(text), text)
         self.assertEqual(
             recognize_open_creative_app("Abre o PhotoCraft").key,
             "photocraft"
+        )
+        self.assertEqual(
+            recognize_open_creative_app("Abra o FilmCraft").key,
+            "filmcraft"
+        )
+        self.assertEqual(
+            recognize_open_creative_app("Open FilmCraft").key,
+            "filmcraft"
         )
 
     def test_ambiguity_and_injection_do_not_match(self):

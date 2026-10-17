@@ -77,6 +77,7 @@ SKIP_REL_DIRS = {
     Path("website/node_modules"),
     Path("workstation/third_party/laya"),
     Path("workstation/dogfood/dados"),
+    Path("external-engines"),
 }
 
 SKIP_FILE_NAMES = {"package-lock.json", "yarn.lock", "pnpm-lock.yaml", "uv.lock", "poetry.lock"}
