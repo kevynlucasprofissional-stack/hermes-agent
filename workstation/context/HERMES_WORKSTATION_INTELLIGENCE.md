@@ -1,5 +1,21 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-17 — P2: distinguir relatório P1C de competência efetivamente demonstrada
+
+**Sinal reportado:** 5 testes P1C + 40 compilador + 7 batch boundary PASS conforme relatório local de 17/10. Descreve novos `TaskCompiler.compile_and_execute` e `PromotionGate`, alteração em segmentos e readback, e 1 adaptive/2 compiled; o recibo anexo é `hermes.ol_mvp.p1c_result.v1` com identificadores literais `"real"`, referências para *arquivos de teste* e métricas provider `null`. Isso pode ser ótimo avanço em fixture de Python, porém não substitui artefatos canônicos do owner. Os logs não mostram novo E2E Electron de chat.
+
+**Verificação externa direta:** HEAD GitHub PR #95 ainda `2b9f7162507cf5db0fe32a7c77fb28f121d1e8f3`, não contém os testes/recibo novos. Remote Desktop offline. Portanto as mudanças podem estar no working tree ou em commit local; **não afirmamos perda, nem publicação, nem progresso certificado em produto**. A intervenção correta é reconciliar, inspecionar e preservar.
+
+**Prioridade P2 mínima:** concluir prova real chat→work_execute→TaskCompiler/3 WorkItems→owner readback/candidate→qualificação legítima→`RunLocalAdopter` no item seguinte→nova TaskRun; medir reais chamadas System-2 por resultado verificado. Depois resolver capacidades conhecidas PRÉ-LLM usando `workstation/integrations/hermes/operational_resolution.py` (já existe) e `OperationalCapabilityRegistry.find_matching`, nunca um segundo Router; mecanismo determinístico antes BM25/embeddings/LAYA. Fallback apenas se desconhecido e com reconciliação de efeito incerto.
+
+**Preocupações focais:** não declarar execução compilada por `compiled_reused=True` num wrapper sem owner receipt; `PromotionGate` local não pode contornar `ExperiencePromotionPolicy` ou atestação DIRECT; `DurableTaskStore` não ganha wrapper global só para teste passar. O P1C legado ainda tinha candidatos[-1] e identidade `_last_*` como seam a conferir.
+
+**Arquitetura longa preservada (D01–D18):** memória operacional universal hierárquica, telemetria independente, versionamento global otimista com rollback contextual, quatro ImprovementRuns no runtime compartilhado, SourceResearchRun apenas patch isolado até aprovação humana, custo total limitado exclusivamente pelo usuário, multimétodo seleção exato/BM25/embeddings/LAYA/System-2 e prioridade de aprender **durante** a TaskRun. Não construir tudo agora.
+
+**Handoff P2:** [plano](ol-mvp-2026-10-16/P2_80_20_DECISION_AND_PLAN.md) · [código/mapa](ol-mvp-2026-10-16/P2_PATCH_MAP.md) · [prompt](ol-mvp-2026-10-16/P2_IMPLEMENTER_PROMPT.md). Auditor `p2_receipt_gate.py`: estrutura apenas, sem autorização.
+
+
+
 ## 2026-10-16 — P1C: diferenciar candidato minerado de adoção real (prioridade agora)
 
 **Evidência atualizada (PR #94 `27b6376535dc`):** P1B foi implementado em branch: `browser_extract_items` readback tipado com inspeções frescas antes/depois, raw receipt, `accept_work_item`, inferência de efeitos `read.*` e mineração candidata. O relatório registra 30 testes focais (somatório das seis suítes, sem recontar subtests) e 53 regressões de segurança aprovados; estão **reportados**, não reexecutados aqui. Estágio A da autorização continua pendente; sem merge nem DIRECT. Browser nativo P1.0 já possui E2E próprio aprovado.
