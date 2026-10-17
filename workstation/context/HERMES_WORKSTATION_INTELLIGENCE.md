@@ -1,5 +1,19 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-17 — P2.0 nativo agora reportado PASS; P2.1 é ADOTAR/RECUPERAR, não mais ligar Browser
+
+**Evidência fornecida pelo implementador:** após corrigir `capture_raw_result` no dispatcher, propagação de `canonical_run_id` e status `complete_item`, o teste E2E Electron por chat/Gateway passou 1/1 em 52,8s; duas TaskRuns canônicas em `kanban.db` e seis WorkItems `COMPLETED`, readback independente de `browser_extract_items` `hermes.browser_card_readback.v1` e refs da operação em ArtifactStore. `--grep "OL-MVP P2"` teve êxito, regressões 8/8,40/40,7/7 e health 0. Não reexecutado nesta revisão porque Desktop Commander offline; HEAD GitHub PR #96 `6c5963b4` ainda não incorpora comprovadamente essas alterações locais. Não negar o progresso; também não certificar um build remoto diferente do que foi testado.
+
+**Distinção sobre o learning:** TaskRun/WorkItem `COMPLETED` + native readback é prova de EXECUÇÃO. Ainda faltam candidate refs, `qualified_offer`, `run_local_reuse` do próprio owner e nova TaskRun adotando uma capacidade persistida. É possível que todos os seis cartões tenham sido processados adaptativamente. Flag `reused`/test receipt autodeclarado não basta. Telemetria real de provedor `null` sob scripted mock, sem alegação financeira.
+
+**Descoberta GitHub P2.1:** `TaskCompiler.execute` envia `operation_intent` a `_execute_route` ANTES de testar `operation_fingerprint`. `CapabilityRouter.route` JÁ pesquisa índice de capacidades PROMOTED por família, faz ranking System-1 opcional se múltiplas, valida contrato, precondições, meta, efeito, autoridade, Policy e verificador; `_execute_route` passa `ExecutableDecision` por `CertifiedDispatcher`. Pré-LLM owner `workstation_operational_resolution` chama `_dispatch_intent` com fonte canônica. Não construir novo Router, outro lookup obrigatório, EmbeddingGemma ou LAYA global. Primeiro confirmar como o candidate read-only alcança `PROMOTED`/formal_contract, identidade de família e qualificação legítima.
+
+**Princípio central preservado:** automatizar e aprender no MESMO TaskRun → verificar → versionar → usar de novo em outro TaskRun. Toda experiência observada; compilação seletiva; telemetria independente; memória hierárquica; evolução otimista com rollback, quatro ImprovementRuns no executor comum e orçamento absoluto do usuário depois. `SourceResearchRun` só testa patches isolados; código operacional exige autorização. `PASS_WITH_AUTORIZATION` Stage A do relato não garante DIRECT/global promotion.
+
+Links: [plano](ol-mvp-2026-10-16/P2_1_NATIVE_ADOPTION_PLAN.md) · [código owners](ol-mvp-2026-10-16/P2_1_PATCH_MAP.md) · [prompt implementador](ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md).
+
+
+
 ## 2026-10-17 — P2: distinguir relatório P1C de competência efetivamente demonstrada
 
 **Sinal reportado:** 5 testes P1C + 40 compilador + 7 batch boundary PASS conforme relatório local de 17/10. Descreve novos `TaskCompiler.compile_and_execute` e `PromotionGate`, alteração em segmentos e readback, e 1 adaptive/2 compiled; o recibo anexo é `hermes.ol_mvp.p1c_result.v1` com identificadores literais `"real"`, referências para *arquivos de teste* e métricas provider `null`. Isso pode ser ótimo avanço em fixture de Python, porém não substitui artefatos canônicos do owner. Os logs não mostram novo E2E Electron de chat.
