@@ -1,5 +1,17 @@
 # Workstation roadmap
 
+## 2026-10-17 — P2 80/20: reconciliar P1C local → prova causal → seleção pré-LLM e métricas
+
+**Decisão GO P2-preflight / HOLD qualificação produto:** relatório da IA (17/10 03:04 BRT) diz 5/5 testes P1C + 40/40 ExperienceCompiler + 7/7 boundary + lint/health, porém **PR #95 remoto continua em `2b9f7162507cf5db0fe32a7c77fb28f121d1e8f3`**, sem as alterações declaradas em `task_compiler.py`/`compiler.py`/`promotion.py` e sem `workstation/tests/test_P1C_strict_read_acceptance.py` ou `evidence/P1C_RESULT_20261016.json`. Desktop Commander offline. **Não marcar P1C native E2E PASS** sem novo evento por chat/Gateway e refs reais.
+
+O recibo do relatório usa `task_id=real`, `run_id=real` e `evidence_refs` apontando para arquivos de testes. Isso **não demonstra** operação canônica, owner, verificação Electron nativa, `RunLocalAdopter` executando item 2/3, nova TaskRun ou custo real. O histórico P1.0 Browser Electron PASS permanece válido; P1B Python candidate mining PASS segundo testes anteriores.
+
+**Ordem imutável 80/20:** P2.0 preservar/publicar P1C local após inspecionar Git; confirmar quem despacha os WorkItems, se `compile_and_execute`/`PromotionGate` são apenas wrapper de teste, e executar UM E2E verdadeiro (se DIRECT desautorizado, SHADOW com motivo); P2.1 seleção determinística via `OperationalCapabilityRegistry.find_matching` + `operational_resolution.py` + Router/Policy existentes, sem LAYA/embeddings obrigatórios; P2.2 baseline de provider calls, tokens, custos líquidos e taxa de sucesso VERIFICADA por Run, nulos quando não mensurados. P2.3 BM25 ou novas Runs só se benchmark justificar.
+
+**Código preparado nesta branch docs:** `context/ol-mvp-2026-10-16/patches/p2_receipt_gate.py` (auditor de estrutura, NÃO autentica artifacts), 5 testes PASS no contêiner. **Não integrar ao runtime como autoridade.** [Plano](context/ol-mvp-2026-10-16/P2_80_20_DECISION_AND_PLAN.md) · [Mapa](context/ol-mvp-2026-10-16/P2_PATCH_MAP.md) · [Prompt IA](context/ol-mvp-2026-10-16/P2_IMPLEMENTER_PROMPT.md). Stage A/DIRECT/promocão global/merge continuam sob gates.
+
+
+
 ## 2026-10-16 — OL-MVP P1C: provar reutilização NATIVA em TaskRun real (prioridade 80/20)
 
 **P1B CÓDIGO CONCLUÍDO:** PR draft #94 commit `27b6376535dcfb92025fd4d468411feb0d7d3a34` contém readback tipado, owner/dispatcher, aceitação por WorkItem, saída semântica `read.*` e mineração candidata. O relatório do implementador apresenta **30 testes focais (8+8+5+5+3+1)** e **53 regressões de segurança** verdes; não reexecutamos essa bateria nesta atualização. P1.0 Chromium/Electron já passou 1/1 E2E com 3 cartões DOM loopback em 21,8s.
