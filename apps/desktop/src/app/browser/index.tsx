@@ -24,11 +24,13 @@ import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
 import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 
+import { LearningControls } from './learning-controls'
 import { useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
 import { TaskRail } from './task-rail'
 import type {
   BrowserTask,
+  LearningSessionState,
   WorkstationBrowserBounds,
   WorkstationBrowserState,
   WorkstationBrowserTabState,
@@ -399,9 +401,13 @@ function useAdoptTabToSession({
       if (navigate) {
         openSession(storedSessionId, navigate, 'main')
       }
+
+      return { success: true, runtimeSessionId, storedSessionId }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       setState(prev => ({ ...prev, lastError: message }))
+
+      return { success: false }
     } finally {
       adoptBusyRef.current = false
       setAdoptBusy(false)
@@ -501,6 +507,37 @@ export function BrowserView() {
     navigate,
     setState
   })
+
+  const [learningState, setLearningState] = useState<LearningSessionState | null>(null)
+
+  useEffect(() => {
+    if (!bridge?.onLearningState) {return}
+    bridge.learningStatus?.().then(status => setLearningState(status)).catch(() => undefined)
+    const cleanup = bridge.onLearningState(state => setLearningState(state))
+
+    return cleanup
+  }, [bridge])
+
+  const handleStartLearning = useCallback(async () => {
+    if (!bridge || !state.activeTabId) {return}
+    const tab = state.tabs.find(t => t.id === state.activeTabId)
+
+    if (!tab) {return}
+
+    let targetSessionId = tab.ownerTaskId
+
+    if (!targetSessionId) {
+      const adopted = await handleAdoptTab()
+
+      if (!adopted?.success || !adopted.runtimeSessionId) {
+        return
+      }
+
+      targetSessionId = adopted.runtimeSessionId
+    }
+
+    await bridge.learningStart(tab.id, targetSessionId)
+  }, [bridge, state.activeTabId, state.tabs, handleAdoptTab])
 
   const publishBounds = useCallback(
     async (attach = false) => {
@@ -852,6 +889,14 @@ export function BrowserView() {
               showDownloads={showDownloads}
               state={state}
               transferToChat={transferToChat}
+            />
+            <LearningControls
+              activeTabId={state.activeTabId}
+              bridge={bridge}
+              busy={adoptBusy || busy}
+              learningState={learningState}
+              onStartLearning={handleStartLearning}
+              sessionId={activeTab?.ownerTaskId}
             />
           </>
         )}

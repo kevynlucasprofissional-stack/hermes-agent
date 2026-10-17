@@ -1,7 +1,12 @@
 # Workstation Known Issues
 
-## HLM-MVP — Riscos conhecidos de produto (2026-10-17, pré-implementação)
-**HLM-KI-01:** captura de vídeo de aba Electron/Canvas pode registrar conteúdo sensível; exigir allowlist/consent, pausa pré-navegação, arquivo local sem upload e prova E2E de proteção. **HLM-KI-02:** `WebContentsView` e CDP estão sob Browser owner; não anexar segunda instância de debugger nem violar lease humano ou efeito canônico. **HLM-KI-03:** Question Engine pode gerar interrupções excessivas ou hipóteses falsas; política de ganho de informação, dedupe, cooldown, fila e revisão humana. **HLM-KI-04:** `human_demonstration` não possui recibos de runtime; rejeitar falsa promoção e falso `VERIFIED_SUCCESS`. **HLM-KI-05:** PRs criativas #97/#98 não estão na `main`; fixture independente para primeiros testes. **Estado:** riscos PROPOSTOS, não bugs observados em produto nem issues fechadas; [D-047](LEARNING_MODE_HUMAN_DEMONSTRATIONS_2026-10-17.md).
+## HLM-MVP — Riscos conhecidos e estado de mitigação (2026-10-17, pós-implementação M0–M2)
+- **HLM-KI-01 (Conteúdo sensível / Login):** MITIGADO NO RUNTIME. Captura restrita à aba e origem permitida; navegação para origem não autorizada ou página de login pausa imediatamente a gravação (`status="paused"`) ANTES da emissão de novos frames ou eventos. Gestos ignoram inputs editáveis e campos sensíveis. Arquivos persistidos localmente sem upload externo.
+- **HLM-KI-02 (Conflito CDP / WebContentsView):** MITIGADO NO RUNTIME. `LearningSessionRecorder` opera via WebContentsView nativa e listeners do Electron (`did-navigate`, `console-message`, `render-process-gone`), sem attach paralelo de CDP conflitante com a automação principal.
+- **HLM-KI-03 (Interrupção / Questões falsas):** MITIGADO NA POLÍTICA. `decideLearningQuestion` aplica limiares estritos de ganho de informação, bloqueia perguntas durante gestos contínuos (drag), respeita cooldowns e limites de fila por intensidade (`discreto`, `equilibrado`, `intensivo`) e deduplica semântica.
+- **HLM-KI-04 (Ausência de recibo de runtime / Falsa promoção):** MITIGADO NA FRONTEIRA. `CandidateLesson` recebe `source="human_demonstration"` e permanece estritamente como candidata inerte (`status="candidate"`), rejeitando promoção ou atribuição de `VERIFIED_SUCCESS` sem execução autônoma verificada sob TaskRun.
+- **HLM-KI-05 (Isolamento de PRs criativas #97/#98):** MITIGADO NA BRANCH. Implementação desenvolvida e testada de forma independente de editores criativos profundos, utilizando fixtures padrão do Chromium e contratos de browser nativo.
+- **HLM-KI-06 (Replay autônomo M3 não comprovado):** ATIVO (HOLD). Replay supervisionado permanece em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável.
 
 
 ## Pausa estratégica de 2026-10-12 — KI-028…KI-043 (registro canônico)

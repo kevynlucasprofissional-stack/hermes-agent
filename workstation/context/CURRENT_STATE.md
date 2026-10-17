@@ -1,7 +1,12 @@
 # Current State
 
 ## 2026-10-17 — Human Demonstration Learning Mode (D-047)
-**PLANNED / CODE SCAFFOLD INERT** na branch `docs/learning-mode-question-engine-mvp-20261017`. Baseline main `fd57e40`. Observador de demonstrações, vídeo, perguntas via provider e candidatas humanas NÃO existem integrados no produto; dois módulos de política TS e testes foram somente adicionados para reuso. Prioridade MVP M0 captura real + live intensity, M1 Question Engine/feedback, M2 candidata inert, M3 replay supervisionado. Revalidar main, #96, #97 e #98 antes da implementação; [contrato](LEARNING_MODE_HUMAN_DEMONSTRATIONS_2026-10-17.md).
+**IMPLEMENTED (M0–M2) / REPLAY ON HOLD (M3)** na branch `feat/hermes-learning-mode-mvp-20261017`. Baseline docs `ca145f39`.
+- **M0:** `LearningSessionRecorder` integrado em `apps/desktop/electron/workstation-learning-session.ts` com lifecycle (`start/stop/discard`), consentimento, sanitização restrita via `workstation-learning-events.ts`, vídeo local e append-only síncrono em `events.jsonl` e `questions.jsonl`. Controles de UI em `apps/desktop/src/app/browser/learning-controls.tsx` integrados no Browser Hub e no painel lateral do chat com alternância de intensidade ao vivo (`Discreto`, `Equilibrado`, `Intensivo`, padrão inicial `Intensivo`) sem reiniciar sessão.
+- **M1:** Proactive Learning Question Engine avalia candidatos por ganho de informação (`workstation-learning-question-policy.ts`), dedup semântica, cooldowns, formulação de hipóteses e respostas/correções persistidas com `needs_reinterpretation`.
+- **M2:** `ExperienceLessonCompiler.record_human_demonstration_candidate` em `workstation/skill_learning.py` persistindo candidatas inertes (`source="human_demonstration"`, `status="candidate"`) sem autopromoção.
+- **M3:** Replay supervisionado mantido em **HOLD** por falta de runner/readback auditado com browser real.
+- **Testes:** 19 Vitest (4 arquivos) PASS, 2 Python (skill learning boundary) PASS, Typecheck Electron + UI PASS (exit 0), Health check 0 blocking findings. Matriz A–I PASS, J em HOLD.
 
 
 ## 2026-10-17 — Direção operacional D-046 (decisão documental)

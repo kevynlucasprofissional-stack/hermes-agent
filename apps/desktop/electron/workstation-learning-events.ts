@@ -41,10 +41,67 @@ export interface SafeHumanBrowserGesture {
 const SENSITIVE = /password|passcode|secret|token|key|credential|authorization|cookie|otp|recovery|private|account|session|api|payment|card|email|address/i
 const allowedRoles = new Set(['button','menuitem','tab','checkbox','radio','slider','option','switch','link'])
 const allowedKeys = new Set(['Enter','Escape','Backspace','Delete','Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','Home','End','PageUp','PageDown',...'1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')])
+
 function clamp(n: number): number { return Math.min(1, Math.max(0, n)) }
+
+function isValidRawGesture(raw: RawHumanBrowserGesture): boolean {
+  if (!raw.eventId || !raw.tabId || !raw.documentEpoch) {return false}
+
+  if (!Number.isFinite(raw.relativeTimeMs) || raw.relativeTimeMs < 0) {return false}
+
+  return true
+}
+
+function isEditableTarget(raw: RawHumanBrowserGesture): boolean {
+  if (raw.isEditable || raw.inputType) {return true}
+  const tag = raw.elementTag?.toLowerCase()
+
+  return tag === 'input' || tag === 'textarea'
+}
+
+function extractShortcut(raw: RawHumanBrowserGesture): string | null {
+  if (!(raw.ctrl || raw.meta || raw.alt)) {return null}
+  const key = raw.key?.length === 1 ? raw.key.toUpperCase() : raw.key
+
+  if (!key || !allowedKeys.has(key)) {return null}
+
+  return [raw.ctrl ? 'Ctrl' : null, raw.meta ? 'Meta' : null, raw.alt ? 'Alt' : null, raw.shift ? 'Shift' : null, key]
+    .filter(Boolean)
+    .join('+')
+}
+
+function extractNormalizedPosition(raw: RawHumanBrowserGesture): { x: number; y: number } | undefined {
+  const { x, y, viewportWidth, viewportHeight } = raw
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {return undefined}
+
+  if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) {return undefined}
+
+  if ((viewportWidth ?? 0) <= 0 || (viewportHeight ?? 0) <= 0) {return undefined}
+
+  return {
+    x: Math.round(1000 * clamp((x ?? 0) / (viewportWidth ?? 1))) / 1000,
+    y: Math.round(1000 * clamp((y ?? 0) / (viewportHeight ?? 1))) / 1000
+  }
+}
+
+function extractTarget(raw: RawHumanBrowserGesture): { role: string; accessible_name?: string } | undefined {
+  const role = raw.role?.toLowerCase().trim() ?? ''
+
+  if (!allowedRoles.has(role)) {return undefined}
+  const output: { role: string; accessible_name?: string } = { role }
+  const name = raw.accessibleName?.trim()
+
+  if (name && name.length <= 80 && !SENSITIVE.test(name)) {
+    output.accessible_name = name
+  }
+
+  return output
+}
+
 export function normalizeHumanGesture(raw: RawHumanBrowserGesture): SafeHumanBrowserGesture | null {
-  if (!raw.eventId || !raw.tabId || !raw.documentEpoch || !Number.isFinite(raw.relativeTimeMs) || raw.relativeTimeMs < 0) return null
-  if (raw.isEditable || raw.inputType || raw.elementTag?.toLowerCase() === 'input' || raw.elementTag?.toLowerCase() === 'textarea') return null
+  if (!isValidRawGesture(raw) || isEditableTarget(raw)) {return null}
+
   const output: SafeHumanBrowserGesture = {
     schema: 'hermes.human_gesture.v1',
     event_id: raw.eventId.slice(0, 100),
@@ -54,22 +111,23 @@ export function normalizeHumanGesture(raw: RawHumanBrowserGesture): SafeHumanBro
     kind: raw.kind,
     actor: 'human'
   }
+
   if (raw.kind === 'shortcut') {
-    // No ordinary keystroke capture. Only modified, explicitly allowlisted combos.
-    if (!(raw.ctrl || raw.meta || raw.alt)) return null
-    const key = raw.key?.length === 1 ? raw.key.toUpperCase() : raw.key
-    if (!key || !allowedKeys.has(key)) return null
-    output.shortcut = [raw.ctrl?'Ctrl':null,raw.meta?'Meta':null,raw.alt?'Alt':null,raw.shift?'Shift':null,key].filter(Boolean).join('+')
+    const shortcut = extractShortcut(raw)
+
+    if (!shortcut) {return null}
+    output.shortcut = shortcut
+
     return output
   }
-  if (Number.isFinite(raw.x) && Number.isFinite(raw.y) && Number.isFinite(raw.viewportWidth) && Number.isFinite(raw.viewportHeight) && (raw.viewportWidth ?? 0)>0 && (raw.viewportHeight ?? 0)>0) {
-    output.normalized_position = { x: Math.round(1000*clamp((raw.x??0)/(raw.viewportWidth??1)))/1000, y:Math.round(1000*clamp((raw.y??0)/(raw.viewportHeight??1)))/1000 }
-  }
-  const role = raw.role?.toLowerCase().trim() ?? ''
-  if (allowedRoles.has(role)) {
-    const name = raw.accessibleName?.trim()
-    output.target = { role }
-    if (name && name.length <= 80 && !SENSITIVE.test(name)) output.target.accessible_name = name
-  }
+
+  const pos = extractNormalizedPosition(raw)
+
+  if (pos) {output.normalized_position = pos}
+
+  const target = extractTarget(raw)
+
+  if (target) {output.target = target}
+
   return output
 }
