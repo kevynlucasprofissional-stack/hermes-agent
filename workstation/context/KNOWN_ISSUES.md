@@ -1,5 +1,14 @@
 # Workstation Known Issues
 
+## HLM-KI-06…10 — Falhas confirmadas por revisão estática do código da main (2026-10-17)
+- **HLM-KI-06 [P0]: vídeo FAKE:** `LearningSessionRecorder.startVideoRecording` usa FFmpeg `color=black` 1s, não Browser; gates G/M0 errados. Teste de sessão desliga vídeo. **OPEN**.
+- **HLM-KI-07 [P0 SECURITY]: ingestão `console.debug(__HERMES_GESTURE__)` forjável, sem vínculo suficiente de tab/webContents/documentEpoch/origin/owner nos handlers; risco de spoofing e mistura de abas. **OPEN**.
+- **HLM-KI-08 [P0]: navegação off-origin altera status mas não interrompe encoder; `relativeTimeMs=Date.now` sem alinhamento; snapshots sem refs e falhas de gravação silenciadas. **OPEN**.
+- **HLM-KI-09 [P1]: Question Engine usa 3 templates com scores constantes para um evento; nenhum processamento multimodal de segmento e nenhuma reinterpretação efetiva após correção. **OPEN**.
+- **HLM-KI-10 [P1]: `record_human_demonstration_candidate` apenas método Python/testes isolados, sem orquestração de LearningSession→candidata em runtime real. **OPEN**.
+- **Observação:** revisão de código, não reprodução Electron; preservadas entregas locais parciais e M3 HOLD. [Auditoria](LEARNING_MODE_AUDIT_2026-10-17.md) · [Handoff](../learning-mode/HLM_MVP_CORRECTIVE_IMPLEMENTER_PROMPT.md).
+
+
 ## HLM-MVP — Riscos conhecidos e estado de mitigação (2026-10-17, pós-implementação M0–M2)
 - **HLM-KI-01 (Conteúdo sensível / Login):** MITIGADO NO RUNTIME. Captura restrita à aba e origem permitida; navegação para origem não autorizada ou página de login pausa imediatamente a gravação (`status="paused"`) ANTES da emissão de novos frames ou eventos. Gestos ignoram inputs editáveis e campos sensíveis. Arquivos persistidos localmente sem upload externo.
 - **HLM-KI-02 (Conflito CDP / WebContentsView):** MITIGADO NO RUNTIME. `LearningSessionRecorder` opera via WebContentsView nativa e listeners do Electron (`did-navigate`, `console-message`, `render-process-gone`), sem attach paralelo de CDP conflitante com a automação principal.
