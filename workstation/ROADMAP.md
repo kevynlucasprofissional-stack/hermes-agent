@@ -1,4 +1,10 @@
 # Workstation roadmap
+
+## 2026-10-17 — D-048: Dogfood real e recuperação 80/20 (PLANEJADO; BLOQUEIOS NÃO RESOLVIDOS)
+**Ordem executável (6 sessões):** P01 Browser WebContentsView preto em pesquisa/toasts (P0) → P02 vídeo real e screenshots LearningSession (P0) → P03 perguntas Aprender e eventos operacionais no chat (P1) → P04 Question Engine contextual e CandidateLesson a partir de sessão (P1) → P05 briefing criativo e controle PhotoCraft (P1) → P06 compilação e reutilização espontânea com readback entre TaskRuns (P1/P2). Gates independentes; sem novas integrações ou motores.
+**Correção de status histórico:** os enunciados acima "M0–M2 implementados" registram cumprimento de testes contratuais, **não** comprovação em dogfood real. O runtime `startVideoRecording` usa FFmpeg `lavfi color=black -t 1`; não há gravação visual real. `record_human_demonstration_candidate` foi encontrado apenas na implementação/testes, não conectado ao fim da sessão. Todos os seis problemas e a comprovação P06 permanecem **ABERTOS**.
+[Plano com evidências, aceites e ownership](context/HERMES_WORK_DOGFOOD_RECOVERY_PLAN_2026-10-17.md).
+
 ## 2026-10-17 — HLM-MVP: Aprender com demonstração humana, intensidade ao vivo (D-047; M0–M2 IMPLEMENTADOS, M3 EM HOLD)
 **Ordem 80/20 implementada na branch `feat/hermes-learning-mode-mvp-20261017`:**
 - **M0 (IMPLEMENTADO & TESTADO):** Botão **Aprender** no Browser Hub e no painel do chat com reuso do fluxo `adoptTab` (mesma WebContentsView, sem recarga de aba); `LearningSessionRecorder` com controle de ciclo de vida (`start`, `stop`, `discard`), consentimento explícito, pausa em páginas de autenticação ou fora do allowlist de origem, append-only e flush imediato para `events.jsonl` e `questions.jsonl`, vídeo local da aba; seletor de intensidade ao vivo (`Discreto | Equilibrado | Intensivo`, default `Intensivo`) sem reiniciar sessão ou perder dados.
