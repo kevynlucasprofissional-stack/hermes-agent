@@ -1,3 +1,4 @@
+// health: allow FILE_LINES -- OL-MVP P2 and P2.1 native browser and taskrun verification probe
 /**
  * Integrated Desktop/Browser load evidence.
  *
@@ -13,6 +14,7 @@
 import * as fs from 'node:fs'
 import * as http from 'node:http'
 import * as path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 
 import {
   buildAppEnv,
@@ -347,18 +349,26 @@ async function openStoredSessionByTitle(
   }
 }
 
-async function createRealChat(fixture: MockBackendFixture, prompt: string): Promise<{ id: string; label: string }> {
-  const newSession = fixture.page.locator('[data-slot="sidebar"] button').filter({ hasText: 'New session' }).first()
-  await newSession.waitFor({ state: 'visible', timeout: 30_000 })
-  await newSession.click()
+async function createRealChat(fixture: MockBackendFixture, prompt: string, expectedReply = 'boot chain is working', sessionMarker = prompt, existingSession?: { id: string; label: string }): Promise<{ id: string; label: string }> {
+  if (!existingSession) {
+    const newSession = fixture.page.locator('[data-slot="sidebar"] button').filter({ hasText: 'New session' }).first()
+    await newSession.waitFor({ state: 'visible', timeout: 30_000 })
+    await newSession.click()
+  }
 
   const before = fixture.mock.receivedPrompts.length
+  const assistantMessages = fixture.page.locator('[data-slot="aui_assistant-message-content"]')
+  const assistantCount = await assistantMessages.count()
   const composer = fixture.page.locator('[contenteditable="true"]').first()
   await composer.click()
   await composer.fill(prompt)
   await fixture.page.keyboard.press('Enter')
   await expect.poll(() => fixture.mock.receivedPrompts.length, { timeout: 60_000 }).toBeGreaterThan(before)
-  await expect.poll(() => fixture.page.locator('body').textContent(), { timeout: 60_000 }).toContain('boot chain is working')
+  await expect.poll(() => assistantMessages.count(), { timeout: 60_000 }).toBeGreaterThan(assistantCount)
+  await expect.poll(() => assistantMessages.last().textContent(), { timeout: 60_000 }).toContain(expectedReply)
+  await expect.poll(() => fixture.page.locator('[data-slot="composer-root"] button[aria-label="Stop"]').count(), { timeout: 60_000 }).toBe(0)
+
+  if (existingSession) {return existingSession}
 
   return expect
     .poll(
@@ -369,7 +379,7 @@ async function createRealChat(fixture: MockBackendFixture, prompt: string): Prom
           }>({ path: '/api/sessions?limit=50&offset=0&min_messages=1&archived=exclude&order=recent' })
 
           return response.sessions.find(session => session.preview?.includes(expected))?.id
-        }, prompt),
+        }, sessionMarker),
       { timeout: 60_000 }
     )
     .not.toBeUndefined()
@@ -384,7 +394,7 @@ async function createRealChat(fixture: MockBackendFixture, prompt: string): Prom
         if (!session) {throw new Error(`H013 real chat did not persist: ${expected}`)}
 
         return { id: session.id, label: session.title || session.preview || expected }
-      }, prompt)
+      }, sessionMarker)
     )
 }
 
@@ -522,6 +532,221 @@ test.afterAll(async () => {
     pageServer.close(() => resolve())
   })
   pageServer = null
+})
+
+function parseCallResultJson(raw: string | null): Record<string, any> | null {
+  if (!raw) {return null}
+  const marker = 'E2E_CALL_RESULT:'
+  const markerIndex = raw.lastIndexOf(marker)
+
+  if (markerIndex < 0) {return null}
+  const start = raw.indexOf('{', markerIndex + marker.length)
+
+  if (start < 0) {return null}
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let position = start; position < raw.length; position++) {
+    const ch = raw[position]
+
+    if (inString) {
+      if (escaped) {escaped = false}
+      else if (ch === '\\') {escaped = true}
+      else if (ch === '"') {inString = false}
+    } else if (ch === '"') {inString = true}
+    else if (ch === '{') {depth++}
+    else if (ch === '}') {
+      depth--
+
+      if (depth === 0) {
+        try { return JSON.parse(raw.slice(start, position + 1)) }
+        catch { return null }
+      }
+    }
+  }
+
+  return null
+}
+
+function collectArtifactFiles(root: string, unresolved: string[]): Array<{ path: string; value: any }> {
+  const artifacts: Array<{ path: string; value: any }> = []
+
+  try {
+    const pending = [root]
+
+    while (pending.length) {
+      const directory = pending.pop()!
+
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name)
+
+        if (entry.isDirectory()) {pending.push(file)}
+        else if (entry.isFile() && entry.name.endsWith('.json')) {
+          try { artifacts.push({ path: path.relative(root, file), value: JSON.parse(fs.readFileSync(file, 'utf8')) }) }
+          catch (error) { unresolved.push(`${path.relative(root, file)}: ${String(error)}`) }
+        }
+      }
+    }
+  } catch (error) { unresolved.push(String(error)) }
+
+  return artifacts
+}
+
+test('OL-MVP P2: two real chat work_execute batches require canonical owner evidence', async () => {
+  test.setTimeout(240_000)
+  const url = `${pageBaseUrl}${OL_MVP_READONLY_PATH}`
+  const attempts: Array<Record<string, any>> = []
+  const artifactRoot = path.join(fixture.sandbox.hermesHome, 'workstation', 'artifacts')
+
+  for (const [index, cards] of [OL_MVP_READONLY_CARDS, [...OL_MVP_READONLY_CARDS].reverse()].entries()) {
+    const marker = `OLP2-${Date.now()}-${index}`
+
+    const request = {
+      operation_key: 'ol-mvp-p2-readonly-cards', kind: 'batch', title: 'Read three cards without mutation', verbosity: 'full',
+      items: cards.map(card => ({ card_id: card.id, selector: index === 0 ? `article[data-card-id="${card.id}"]` : `article[data-testid="ol-mvp-card"][data-card-id="${card.id}"]` })),
+      steps: [
+        { id: 'extract', tool: 'browser_extract_items', args: { mode: 'inspect', selector: '$item.selector', limit: 1, attributes: ['data-card-id', 'data-list'], output_artifact: false }, expect: { success: true } }
+      ]
+    }
+
+    const attempt: Record<string, any> = { marker, request, session: null, result: null, raw: null, product_failure: null, inspection_unresolved: [] }
+    attempts.push(attempt)
+
+    try {
+      attempt.preparation = { request: { url }, raw: null, error: null }
+
+      try {
+        attempt.session = await createRealChat(fixture, `${marker} E2E_CALL(browser_navigate)[${JSON.stringify({ url })}]`, 'E2E_CALL_RESULT:', marker)
+        attempt.preparation.raw = await fixture.page.locator('[data-slot="aui_assistant-message-content"]').last().textContent()
+      } catch (error) {
+        attempt.preparation.error = String(error)
+        throw error
+      }
+
+      attempt.session = await createRealChat(fixture, `${marker} Execute this multistep workflow to read 3 cards without mutating them. E2E_CALL(work_execute)[${JSON.stringify(request)}]`, 'E2E_CALL_RESULT:', marker, attempt.session)
+      await expect.poll(async () => {
+        attempt.raw = await fixture.page.locator('[data-slot="aui_assistant-message-content"]').last().textContent()
+        const parsed = parseCallResultJson(attempt.raw)
+
+        if (parsed) {
+          attempt.result = parsed
+
+          return true
+        }
+
+        return false
+      }, { timeout: 60_000 }).toBe(true)
+    } catch (error) {
+      attempt.product_failure = String(error)
+      attempt.raw = await fixture.page.locator('body').textContent().catch(() => null)
+    } finally {
+      attempt.tables = {}
+      let db: DatabaseSync | undefined
+
+      try {
+        db = new DatabaseSync(path.join(fixture.sandbox.hermesHome, 'kanban.db'), { readOnly: true })
+
+        for (const table of ['tasks', 'task_runs', 'work_plans', 'work_items']) {
+          try { attempt.tables[table] = db.prepare(`SELECT * FROM ${table}`).all() }
+          catch (error) { attempt.inspection_unresolved.push(`${table}: ${String(error)}`) }
+        }
+      } catch (error) { attempt.inspection_unresolved.push(String(error)) }
+      finally { db?.close() }
+
+      attempt.artifacts = collectArtifactFiles(artifactRoot, attempt.inspection_unresolved)
+      const tasks = (attempt.tables.tasks || []).filter((row: any) => row.session_id === attempt.session?.id)
+      attempt.canonical_runs = (attempt.tables.task_runs || []).filter((run: any) => tasks.some((task: any) => task.id === run.task_id)).map((run: any) => {
+        const plans = (attempt.tables.work_plans || []).filter((plan: any) => {
+          try {
+            const metadata = typeof plan.metadata === 'string' ? JSON.parse(plan.metadata) : plan.metadata
+
+            return metadata?.canonical_task_id === run.task_id && String(metadata?.canonical_run_id) === String(run.id)
+          } catch { return false }
+        })
+
+        const items = (attempt.tables.work_items || []).filter((item: any) => plans.some((plan: any) => plan.id === item.plan_id))
+        const readbacks = attempt.artifacts.filter((artifact: any) => artifact.value?.schema === 'hermes.browser_card_readback.v1' && artifact.value.task_id === run.task_id && String(artifact.value.run_id) === String(run.id))
+
+        return { run, plans, items, readbacks }
+      })
+    }
+  }
+
+  const observation: Record<string, any> = { viewport: null, cards: null, error: null }
+
+  try {
+    observation.viewport = await nativeViewportSnapshot(fixture.app)
+    const children: any[] = []
+
+    const collect = (value: any): void => {
+      if (!value || typeof value !== 'object') {return}
+
+      if (value.url === url) {children.push(value)}
+
+      for (const child of Object.values(value)) {collect(child)}
+    }
+
+    collect(observation.viewport)
+    const child = children.find(value => typeof (value.webContentsId ?? value.id) === 'number')
+
+    if (!child) {throw new Error('P2: requested native viewport is absent')}
+    observation.cards = await fixture.app.evaluate(({ webContents }, id) => {
+      const contents = webContents.fromId(id)
+
+      if (!contents) {throw new Error('P2: native viewport webContents missing')}
+
+      return contents.executeJavaScript(`Array.from(document.querySelectorAll('article[data-testid="ol-mvp-card"]')).map(card => ({id:card.getAttribute('data-card-id'),list:card.getAttribute('data-list'),title:card.querySelector('h2')?.textContent,description:card.querySelector('p')?.textContent}))`)
+    }, child.webContentsId ?? child.id)
+  } catch (error) { observation.error = String(error) }
+
+  const evidence = { schema: 'hermes.ol_mvp_p2_native_probe.v1', scripted_provider: true, mode: 'SHADOW', attempts, observation, real_llm_calls: null, tokens: null, economics: null, compiler_adoption: 'not_demonstrated' }
+  const evidencePath = test.info().outputPath('ol-mvp-p2-native-chat-work-execute-evidence.json')
+  fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2))
+  await test.info().attach('ol-mvp-p2-native-chat-work-execute-evidence', { path: evidencePath, contentType: 'application/json' })
+  const runIds: string[] = []
+
+  for (const attempt of attempts) {
+    expect(attempt.product_failure).toBeNull()
+    expect(attempt.session?.id).toBeTruthy()
+    expect(attempt.result?.status).toBe('completed')
+    expect(attempt.result?.completed).toBe(3)
+    expect(attempt.result?.total).toBe(3)
+    expect(attempt.result?.needs_reasoning).toBe(0)
+    expect(attempt.canonical_runs).toHaveLength(1)
+    const canonical = attempt.canonical_runs[0]
+    runIds.push(canonical.run.id)
+    expect(canonical.plans.length).toBeGreaterThan(0)
+    expect(canonical.items).toHaveLength(3)
+
+    for (const item of canonical.items) {expect(['completed', 'done']).toContain(item.status)}
+    expect(canonical.readbacks.length).toBeGreaterThan(0)
+
+    for (const artifact of canonical.readbacks) {
+      for (const field of ['operation_id', 'raw_result_ref', 'transition_ref', 'browser_task_id']) {expect(artifact.value[field]).toBeTruthy()}
+
+      for (const field of ['raw_result_ref', 'transition_ref']) {
+        const reference = artifact.value[field]
+        expect(attempt.artifacts.some((candidate: any) =>
+          candidate.path === reference ||
+          candidate.value?.artifact_id === reference ||
+          candidate.value?.id === reference ||
+          candidate.value?.ref === reference ||
+          `artifact://tasks/${candidate.path.replace(/\\/g, '/')}` === reference
+        )).toBe(true)
+      }
+    }
+
+    const output = JSON.stringify(attempt.result)
+
+    for (const card of OL_MVP_READONLY_CARDS) {
+      for (const field of [card.id, card.title, card.list, card.description]) {expect(output).toContain(field)}
+    }
+  }
+
+  expect(new Set(runIds).size).toBe(2)
+  expect(observation.error).toBeNull()
+  expect(observation.cards).toEqual(OL_MVP_READONLY_CARDS)
 })
 
 test('OL-MVP P1: reads three isolated cards through native BrowserTask without mutation', async () => {

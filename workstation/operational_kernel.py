@@ -580,6 +580,7 @@ class OperationalKernel:
         durable_store = exec_context.get('durable_store')
         durable_item_id = exec_context.get('durable_item_id')
         checkpoint_prefix = cap.id + '@' + cap.version
+        filesystem_scope = cap.scope.get('backends', {}).get('filesystem', cap.scope)
 
         def observe_semantics(output=None):
             from workstation.experience_compiler.state_abstraction import abstract_state, filesystem_state
@@ -733,7 +734,6 @@ class OperationalKernel:
                 bound_args = interpolate_variables(step_args, exec_context)
                 if learned and cap.route == 'native_browser' and primitive == 'browser_navigate':
                     navigation_target = bound_args.get('url')
-                filesystem_scope = cap.scope.get('backends', {}).get('filesystem', cap.scope)
                 fs_base = bound_args.get('base_dir') or exec_context.get('base_dir') or filesystem_scope.get('base_dir')
                 if fs_base and 'base_dir' not in bound_args:
                     bound_args['base_dir'] = fs_base

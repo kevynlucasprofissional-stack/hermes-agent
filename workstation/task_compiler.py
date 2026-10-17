@@ -248,6 +248,7 @@ class TaskCompiler:
             self.ora_metrics = ORAMetrics()
         from workstation.control_plane.metrics import ORAMetricsCollector
         self.metrics_collector = ORAMetricsCollector(self.ora_metrics)
+        self.canonical_run_id: str | None = None
 
     def discover(self, request, *, task_id, session_id, dispatch):
         """Preparation only: no frozen plan and no caller-provided effect override."""
@@ -319,6 +320,10 @@ class TaskCompiler:
                     if not claimed or not claimed.current_run_id:
                         raise RuntimeError("canonical_run_claim_lost")
                     self.canonical_run_id = str(claimed.current_run_id)
+            elif pending_task.current_run_id is not None:
+                self.canonical_run_id = str(pending_task.current_run_id)
+            if self.canonical_run_id:
+                _canonical_caller_run.set(self.canonical_run_id)
         if request.get("action") == "route" or request.get("operation_intent"):
             return self._execute_route(request, task_id=task_id, session_id=session_id,
                 dispatch=dispatch, progress=progress, provider_usage=provider_usage,

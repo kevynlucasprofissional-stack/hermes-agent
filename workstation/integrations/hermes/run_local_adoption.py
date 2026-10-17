@@ -155,10 +155,11 @@ def _readback_browser_extract_items(
 
     def _expected_browser_task_id() -> str:
         try:
-            plan = DurableTaskStore.get_plan(str(task_id))
+            store = DurableTaskStore()
+            plan = store.get_plan(str(task_id))
             if plan and isinstance(plan.metadata, dict) and plan.metadata.get("browser_task_id"):
                 return str(plan.metadata["browser_task_id"])
-        except Exception:  # health: allow BLE001, S110 -- task plan lookup failure safely falls back to task_id
+        except Exception:  # health: allow BLE001 S110 -- fallback to task_id when plan metadata unavailable
             pass
         return str(task_id)
 
@@ -240,6 +241,7 @@ def _readback_browser_extract_items(
             projection = prepare_read_shape(original, rows)
             receipt = {
                 **source,
+                "schema": schema,
                 "task_id": task_id, "run_id": str(run_id),
                 "observer": "workstation.browser_live_dom", "source_kind": "browser_live_dom",
                 "trust_class": "trusted_runtime", "independent_readback": True,
@@ -263,10 +265,10 @@ def _readback_browser_extract_items(
             try:
                 from workstation.experience_compiler.corpus import ExperienceCorpus
                 ExperienceCorpus(artifacts).accept_work_item(str(task_id), str(run_id), ref)
-            except Exception:  # health: allow BLE001, S110 -- non-blocking acceptance notification during readback
+            except Exception:  # health: allow BLE001 S110 -- optional corpus acceptance failure falls through safely
                 pass
             return {"ok": True, "evidence_ref": ref}
-        except Exception:  # health: allow BLE001 -- observation or verification failure safely returns uncertified readback
+        except Exception:  # health: allow BLE001 -- deliberate catch-all boundary returns uncertified readback
             # A failed observation or artifact resolution cannot certify a read.
             return {"ok": False, "evidence_ref": None}
 
@@ -294,6 +296,17 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
     """Owner for this agent's canonical TaskRun, or ``None`` when the agent has no bound run."""
     task_id = getattr(agent, "_canonical_work_task_id", None)
     run_id = getattr(agent, "_canonical_work_run_id", None)
+    if task_id and run_id is None:
+        try:
+            from hermes_cli import kanban_db
+            from workstation.kanban import WorkstationKanbanBridge
+            with WorkstationKanbanBridge().get_connection() as conn:
+                task = kanban_db.get_task(conn, str(task_id))
+                if task and task.current_run_id is not None:
+                    run_id = str(task.current_run_id)
+                    agent._canonical_work_run_id = run_id
+        except Exception:  # health: allow BLE001 S110 -- fallback when kanban lookup unavailable
+            pass
     if not task_id or run_id is None:
         return None
     cached = getattr(agent, "_run_adoption_owner", None)
@@ -321,15 +334,24 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
         ensure_bound_run()
         op_id = f"runlocal_{uuid.uuid4().hex[:10]}"
         agent._current_operation_id = op_id
-        with workstation_scoped_execution(agent, str(task_id), None):
-            res = inner(tool, args, str(task_id), op_id)
+        target_task_id = str(task_id)
+        if tool.startswith("browser_"):
+            try:
+                store = DurableTaskStore()
+                plan = store.get_plan(str(task_id))
+                if plan and isinstance(plan.metadata, dict) and plan.metadata.get("browser_task_id"):
+                    target_task_id = str(plan.metadata["browser_task_id"])
+            except Exception:  # health: allow BLE001 S110 -- fallback to canonical task_id
+                pass
+        with workstation_scoped_execution(agent, target_task_id, None):
+            res = inner(tool, args, target_task_id, op_id)
         try:
             raw_data = res if isinstance(res, (dict, list)) else (
                 json.loads(res) if isinstance(res, str) and res.strip().startswith(("{", "[")) else {"raw": res}
             )
             raw_ref = artifacts.store(str(task_id), f"raw_result_{op_id}.json", raw_data,
                                       schema="workstation.raw_tool_result.v1").ref
-        except Exception:  # health: allow BLE001 -- raw result storage failure is non-fatal for dispatch execution
+        except Exception:  # health: allow BLE001 -- deliberate fallback when raw result cannot be serialized
             raw_ref = None
 
         trans_ref = getattr(agent, "_last_progressive_ref", None)
@@ -346,7 +368,7 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
                     outcome="observed",
                     state=res if isinstance(res, dict) else None,
                 )
-            except Exception:  # health: allow BLE001 -- progressive transition capture failure is non-fatal for dispatch execution
+            except Exception:  # health: allow BLE001 -- progressive transition capture failure falls through safely
                 trans_ref = None
 
         _last_op_info["operation_id"] = op_id
@@ -359,10 +381,11 @@ def build_run_adoption_owner(agent: Any, *, system2_counter=None) -> DurableRunA
     def canonical_source_for_readback(bound_args: dict, raw: Any) -> dict:
         expected_bt_id = str(task_id)
         try:
-            plan = DurableTaskStore.get_plan(str(task_id))
+            store = DurableTaskStore()
+            plan = store.get_plan(str(task_id))
             if plan and isinstance(plan.metadata, dict) and plan.metadata.get("browser_task_id"):
                 expected_bt_id = str(plan.metadata["browser_task_id"])
-        except Exception:  # health: allow BLE001, S110 -- plan lookup failure safely falls back to task_id
+        except Exception:  # health: allow BLE001 S110 -- fallback to task_id when plan metadata unavailable
             pass
 
         op_id = getattr(agent, "_current_operation_id", None) or _last_op_info.get("operation_id")
@@ -462,6 +485,79 @@ def workstation_run_local_checkpoint(context: Any) -> AdoptionReport | None:
     return report
 
 
+def _execute_item_readback(agent: Any, completed_item: WorkItem) -> None:
+    artifacts = ArtifactStore()
+    store = DurableTaskStore()
+    try:
+        plan = store.get_plan(completed_item.plan_id)
+        if not plan or not isinstance(plan.metadata, dict):
+            return
+        if getattr(agent, "_canonical_work_task_id", None) is None and plan.metadata.get("canonical_task_id"):
+            agent._canonical_work_task_id = str(plan.metadata["canonical_task_id"])
+        if getattr(agent, "_canonical_work_run_id", None) is None:
+            c_run = plan.metadata.get("canonical_run_id") or completed_item.run_id
+            if c_run is not None:
+                agent._canonical_work_run_id = str(c_run)
+        owner = build_run_adoption_owner(agent)
+        if owner is None:
+            return
+        graph = plan.metadata.get("graph", {})
+        fan_out = graph.get("fan_out", [])
+        if not fan_out:
+            return
+        step = fan_out[0]
+        tool = step.get("tool")
+        if not tool or not owner.can_readback(tool):
+            return
+        args = dict(step.get("args", {}))
+        for k, v in list(args.items()):
+            if isinstance(v, str) and v.startswith("$item."):
+                field = v[len("$item."):]
+                args[k] = completed_item.input_payload.get(field, v)
+        raw_data = None
+        if completed_item.raw_output_ref:
+            try:
+                raw_payload = artifacts.read_json(completed_item.raw_output_ref)
+                if isinstance(raw_payload, dict) and "results" in raw_payload and raw_payload["results"]:
+                    first_res = raw_payload["results"][0]
+                    if isinstance(first_res, dict) and first_res.get("artifact_ref"):
+                        raw_data = artifacts.read_json(first_res["artifact_ref"])
+                else:
+                    raw_data = raw_payload
+            except Exception:  # health: allow BLE001 -- raw output resolution failure falls through safely
+                return
+        if raw_data is None:
+            return
+        if completed_item.operation_id:
+            agent._current_operation_id = completed_item.operation_id
+        if completed_item.raw_output_ref:
+            agent._last_raw_result_ref = completed_item.raw_output_ref
+        rb_result = owner.readback(tool, args, raw_data)
+        if rb_result and rb_result.get("ok") and rb_result.get("evidence_ref"):
+            evidence_ref = rb_result["evidence_ref"]
+            store.record_evidence(completed_item.id, evidence_ref)
+            store.complete_item(completed_item.id)
+            from workstation.experience_compiler.compilability_monitor import notify_online_compilability
+            notify_online_compilability(
+                ref=evidence_ref,
+                task_id=str(getattr(agent, "_canonical_work_task_id", completed_item.task_id)),
+                run_id=str(getattr(agent, "_canonical_work_run_id", "")),
+                operation_id=completed_item.operation_id or f"op_{completed_item.id}",
+                primitive=tool,
+                route="native_browser",
+                outcome="verified_success",
+                event_kind="verified_transition",
+                operation_family=tool,
+                target_family="native_browser",
+                evidence_refs=(evidence_ref,),
+                owner=owner,
+            )
+    except Exception:  # health: allow BLE001 -- item readback failure falls through safely
+        logger.warning("Independent readback during safe item boundary failed closed", exc_info=True)
+    finally:
+        store.close()
+
+
 def create_safe_item_boundary_callback(
     agent: Any, context: Any = None, drain_timeout: float = 0.5
 ) -> Callable[[WorkItem], None]:
@@ -471,6 +567,7 @@ def create_safe_item_boundary_callback(
             return
         token = _in_adoption_checkpoint.set(True)
         try:
+            _execute_item_readback(agent, completed_item)
             # Drain briefly to allow the async learning worker to finish candidate mining/validation if pending
             from workstation.experience_compiler.compilability_monitor import peek_compilability_monitor
             monitor = peek_compilability_monitor()
