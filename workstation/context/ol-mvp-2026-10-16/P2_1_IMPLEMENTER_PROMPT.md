@@ -17,6 +17,12 @@ git ls-files --others --exclude-standard
 ```
 Ler `AGENTS.md` e claims ativos antes de editar. Encontrar a cópia de `apps/desktop/e2e/workstation-headless-load.spec.ts` com teste `OL-MVP P2`, último `ol-mvp-p2-native-chat-work-execute-evidence-*.json` em `apps/desktop/test-results`, alterações em `scoped_execution.py`, `task_compiler.py`, `run_local_adoption.py`, `corpus.py`, `progressive.py`, `tool_observer.py` e docs. **Preservar e commitar somente seu escopo em branch/worktree isolada.** Não reset, clean, stash pop, força de checkout/push, reverter CW-047 ou copiar código P1C sintético.
 
+**Script read-only já pronto:** `workstation/context/ol-mvp-2026-10-16/patches/P2_1_SAFE_PREFLIGHT.ps1` executa somente `git status/log/worktree/diff/ls-files`, descobre o último JSON E2E e exibe só nomes de chaves (não DOM). Execução:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Github\hermes-agent\workstation\context\ol-mvp-2026-10-16\patches\P2_1_SAFE_PREFLIGHT.ps1" -RepoRoot "C:\Github\hermes-agent"
+```
+O script foi criado nesta branch documental, **não executado no Windows remoto**. Não confundir com qualificação de resultado.
+
 Ler SOMENTE:
 - `workstation/context/ol-mvp-2026-10-16/P2_1_NATIVE_ADOPTION_PLAN.md`
 - `workstation/context/ol-mvp-2026-10-16/P2_1_PATCH_MAP.md`
