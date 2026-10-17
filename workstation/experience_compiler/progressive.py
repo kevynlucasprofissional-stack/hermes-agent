@@ -13,10 +13,11 @@ logger = logging.getLogger(__name__)
 def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, route, outcome,
                         state=None, evidence_refs=(), verification=None,
                         operation_family="", target_family="", effect_class="unknown", scope=None,
-                        state_before=None, state_before_ref=None):
+                        state_before=None, state_before_ref=None, raw_result_ref=None):
     if not task_id or not run_id or not operation_id:
         return None
     verified_post_resources = set()
+    verified_card_projection = None
     if outcome == TransitionOutcome.VERIFIED_SUCCESS.value:
         # An observation with a caller-supplied "VERIFIED" flag is not enough.
         # Only a persisted, operation-bound owner readback may enter the corpus
@@ -49,6 +50,13 @@ def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, 
             elif schema == "hermes.browser_local_readback.v1":
                 if body.get("read_after_write") is not True or body.get("recovery_state") != "live":
                     return None
+            elif schema == "hermes.browser_card_readback.v1":
+                if (body.get("status") != "VERIFIED"
+                        or body.get("independent_readback") is not True
+                        or body.get("trust_class") != "trusted_runtime"
+                        or not isinstance(body.get("projection"), dict)):
+                    return None
+                verified_card_projection = body["projection"]
             elif schema == "hermes.canonical_verification.v1":
                 result = body.get("result") or {}
                 if (result.get("status") != "VERIFIED"
@@ -114,7 +122,7 @@ def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, 
             return None
         if before.semantic_predicates != abstract_state(route, state_before).semantic_predicates:
             return None
-    after = abstract_state(route, state or {})
+    after = abstract_state(route, state or verified_card_projection or {})
     # Unknown or unproven pre-state must never generate inferred causal effects.
     delta = StateDelta.between(before, after) if before is not None else StateDelta()
     sample = TransitionSample(operation=Operation(
@@ -126,7 +134,8 @@ def capture_progressive(artifacts, *, task_id, run_id, operation_id, primitive, 
         state_after=after, delta=delta,
         outcome=TransitionOutcome(outcome), provenance=Provenance(task_id=task_id, run_id=str(run_id),
             operation_id=operation_id, runtime=route, source="progressive_owner", trust_class="trusted_runtime"),
-        verification=verification or Verification(evidence_refs=list(evidence_refs)))
+        verification=verification or Verification(evidence_refs=list(evidence_refs)),
+        raw_result_ref=raw_result_ref)
     try:
         return ExperienceCorpus(artifacts).capture(sample)
     except (OSError, ValueError):

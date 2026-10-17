@@ -126,7 +126,11 @@ def infer_action_model(successes, failures=()):
         delta = StateDelta.between(trace[0].state_before, trace[-1].state_after)
         changed = {**delta.added, **{k: v[1] for k, v in delta.changed.items()}}
         verified = trace[-1].verification.verified_predicates
-        effects.append({k: v for k, v in changed.items() if k in verified and verified[k] == v})
+        eff = {k: v for k, v in changed.items() if k in verified and verified[k] == v}
+        for k, v in verified.items():
+            if k.startswith("read.") and trace[-1].state_after.semantic_predicates.get(k) == v:
+                eff[k] = v
+        effects.append(eff)
     unresolved = sum(not any(k in t[0].state_before.semantic_predicates
         and t[0].state_before.semantic_predicates[k] != v for k, v in pre.items()) for t in failures)
     return ActionModel(pre, _intersection(effects), bool(failures) and unresolved == 0, unresolved)

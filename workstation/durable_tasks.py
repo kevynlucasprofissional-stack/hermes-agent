@@ -9,7 +9,7 @@ and context compaction.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from enum import Enum
 import json
 import logging
@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
-def outstanding_dispatch_checkpoints(checkpoints: Dict[str, Any]) -> List[str]:
+def outstanding_dispatch_checkpoints(checkpoints: dict[str, Any]) -> list[str]:
     """Steps of one work item that crossed a mutable I/O boundary without a proved result.
 
     This is the durable definition of "an effect may exist and nobody has proved
@@ -84,13 +84,13 @@ class WorkItem:
     item_index: int
     status: WorkItemStatus = WorkItemStatus.PENDING
     attempts: int = 0
-    input_payload: Dict[str, Any] = field(default_factory=dict)
+    input_payload: dict[str, Any] = field(default_factory=dict)
     raw_output_ref: Optional[str] = None
     normalized_output_ref: Optional[str] = None
-    validation_result: Dict[str, Any] = field(default_factory=dict)
-    evidence_refs: List[Dict[str, Any]] = field(default_factory=list)
-    checkpoints: Dict[str, str] = field(default_factory=dict)
-    retry_state: Dict[str, Any] = field(default_factory=dict)
+    validation_result: dict[str, Any] = field(default_factory=dict)
+    evidence_refs: list[dict[str, Any]] = field(default_factory=list)
+    checkpoints: dict[str, str] = field(default_factory=dict)
+    retry_state: dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
     last_error: Optional[str] = None
     created_at: str = field(default_factory=_utc_now)
@@ -118,13 +118,13 @@ class WorkItem:
                 f"WorkItem {self.id} cannot be marked completed: output has not been validated."
             )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["status"] = self.status.value
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WorkItem":
+    def from_dict(cls, data: dict[str, Any]) -> WorkItem:
         raw_status = data.get("status", WorkItemStatus.PENDING.value)
         try:
             status = WorkItemStatus(raw_status)
@@ -181,18 +181,18 @@ class WorkPlan:
     total_items: int = 0
     checkpoint_frequency: int = 1
     max_retries: int = 3
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=_utc_now)
     updated_at: str = field(default_factory=_utc_now)
     completed_at: Optional[str] = None
     run_id: Optional[str] = None
     execution_key: Optional[str] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WorkPlan":
+    def from_dict(cls, data: dict[str, Any]) -> WorkPlan:
         meta = data.get("metadata")
         if isinstance(meta, str):
             try:
@@ -326,7 +326,7 @@ class DurableTaskStore:
                     pass
                 self._conn = None
 
-    def __enter__(self) -> "DurableTaskStore":
+    def __enter__(self) -> DurableTaskStore:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -336,14 +336,14 @@ class DurableTaskStore:
         self,
         task_id: str,
         title: str,
-        items: List[Dict[str, Any]],
+        items: list[dict[str, Any]],
         *,
         session_id: Optional[str] = None,
         run_id: Optional[str] = None,
         execution_key: Optional[str] = None,
         checkpoint_frequency: int = 1,
         max_retries: int = 3,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> WorkPlan:
         plan_id = f"plan_{uuid4().hex[:12]}"
         now = _utc_now()
@@ -431,6 +431,16 @@ class DurableTaskStore:
             )
             row = cur.fetchone()
             if not row:
+                try:
+                    cur = conn.execute(
+                        "SELECT * FROM work_plans WHERE json_extract(metadata, '$.canonical_task_id') = ? "
+                        "ORDER BY created_at DESC LIMIT 1",
+                        (plan_id_or_task_id,),
+                    )
+                    row = cur.fetchone()
+                except sqlite3.OperationalError:
+                    pass
+            if not row:
                 return None
             col_names = [d[0] for d in cur.description]
             return WorkPlan.from_dict(dict(zip(col_names, row)))
@@ -440,7 +450,7 @@ class DurableTaskStore:
         plan_id_or_task_id: str,
         *,
         status: Optional[WorkItemStatus] = None,
-    ) -> List[WorkItem]:
+    ) -> list[WorkItem]:
         with self.get_connection() as conn:
             if status is not None:
                 cur = conn.execute(
@@ -462,9 +472,13 @@ class DurableTaskStore:
                 )
             rows = cur.fetchall()
             if not rows:
+                plan = self.get_plan(plan_id_or_task_id)
+                if plan and plan.id != plan_id_or_task_id and plan.task_id != plan_id_or_task_id:
+                    return self.get_work_items(plan.id, status=status)
                 return []
             col_names = [d[0] for d in cur.description]
             return [WorkItem.from_dict(dict(zip(col_names, row))) for row in rows]
+
 
     def get_item(self, item_id: str) -> Optional[WorkItem]:
         with self.get_connection() as conn:
@@ -481,7 +495,7 @@ class DurableTaskStore:
         step: str,
         status_val: str = "ok",
         *,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
     ) -> WorkItem:
         now = _utc_now()
         with self._lock, self.get_connection() as conn:
@@ -517,7 +531,6 @@ class DurableTaskStore:
         return item
 
     def mark_item_captured(self, item_id: str, raw_output_ref: str) -> WorkItem:
-        now = _utc_now()
         with self._lock, self.get_connection() as conn:
             cur = conn.execute("SELECT checkpoints FROM work_items WHERE id = ?", (item_id,))
             row = cur.fetchone()
@@ -569,7 +582,7 @@ class DurableTaskStore:
         assert item is not None
         return item
 
-    def mark_item_validated(self, item_id: str, validation_result: Dict[str, Any]) -> WorkItem:
+    def mark_item_validated(self, item_id: str, validation_result: dict[str, Any]) -> WorkItem:
         valid = validation_result.get("valid", False)
         status = WorkItemStatus.VALIDATED.value if valid else WorkItemStatus.BLOCKED.value
         if not valid and validation_result.get("waiting_for_human") is True:
@@ -736,7 +749,7 @@ class DurableTaskStore:
         assert updated is not None
         return updated
 
-    def resume_plan(self, task_id: str) -> List[WorkItem]:
+    def resume_plan(self, task_id: str) -> list[WorkItem]:
         """Return all items that are not yet COMPLETED for the active plan.
 
         If a process died while an item was RUNNING, it is safely rehydrated
@@ -761,13 +774,13 @@ class DurableTaskStore:
             col_names = [d[0] for d in cur.description]
             return [WorkItem.from_dict(dict(zip(col_names, row))) for row in rows]
 
-    def get_progress_summary(self, task_id: str) -> Dict[str, Any]:
+    def get_progress_summary(self, task_id: str) -> dict[str, Any]:
         plan = self.get_plan(task_id)
         if not plan:
             return {"task_id": task_id, "found": False}
 
         items = self.get_work_items(plan.id)
-        counts: Dict[str, int] = {}
+        counts: dict[str, int] = {}
         for item in items:
             counts[item.status.value] = counts.get(item.status.value, 0) + 1
 
@@ -825,7 +838,7 @@ class DurableTaskStore:
         parts[-1] = parts[-1] + "]"
         return " ".join(parts)
 
-    def get_delta_state(self, task_id: str, last_completed_count: int = 0) -> Dict[str, Any]:
+    def get_delta_state(self, task_id: str, last_completed_count: int = 0) -> dict[str, Any]:
         """Compute delta progress to avoid transmitting full state snapshots repeatedly."""
         summary = self.get_progress_summary(task_id)
         current_completed = summary.get("completed", 0)
@@ -946,7 +959,7 @@ class DurableTaskStore:
             conn.execute("UPDATE work_items SET evidence_refs=? WHERE id=?",
                          (json.dumps([{"artifact_ref": ref}]), item_id))
 
-    def outstanding_uncertain_mutations(self, plan_id: str) -> List[Dict[str, Any]]:
+    def outstanding_uncertain_mutations(self, plan_id: str) -> list[dict[str, Any]]:
         """Mutations of a plan that were dispatched and never proved or resolved.
 
         The caller decides what uncertainty means (reconcile, hand off, refuse);
@@ -960,7 +973,7 @@ class DurableTaskStore:
                 outstanding.append({**identity, "item_id": item.id, "step": step, "status": "uncertain"})
         return outstanding
 
-    def mutation_records(self, task_id: str) -> List[Dict[str, Any]]:
+    def mutation_records(self, task_id: str) -> list[dict[str, Any]]:
         records = []
         for item in self.get_work_items(task_id):
             by_identity = {}
@@ -973,7 +986,7 @@ class DurableTaskStore:
             records.extend(by_identity.values())
         return records
 
-    def operational_ledger(self, task_id: str) -> Dict[str, Any]:
+    def operational_ledger(self, task_id: str) -> dict[str, Any]:
         """Rebuild operational truth from the canonical DB, never from reasoning."""
         plan = self.get_plan(task_id)
         if plan is None:

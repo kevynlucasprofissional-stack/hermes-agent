@@ -21,6 +21,7 @@ import {
   setupMockBackend,
   waitForAppReady
 } from './fixtures'
+import { OL_MVP_READONLY_CARDS, OL_MVP_READONLY_PATH, OL_MVP_READONLY_TITLE, renderOlMvpReadOnlyCards } from './ol-mvp-p1-readonly-cards'
 import { expect, test } from './test'
 
 interface ControllerFile {
@@ -139,6 +140,13 @@ let uncertainNativeEffectCount = 0
 
 async function startDeterministicPageServer(): Promise<void> {
   pageServer = http.createServer((request, response) => {
+    if (request.url === OL_MVP_READONLY_PATH) {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+      response.end(renderOlMvpReadOnlyCards())
+
+      return
+    }
+
     if (request.url === '/p0-native-effect-state') {
       response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
       response.end(JSON.stringify({ applied: uncertainNativeEffectCount }))
@@ -283,7 +291,7 @@ async function browserAction(taskId: string, sessionId: string, url: string): Pr
 async function nativeViewportSnapshot(app: MockBackendFixture['app']): Promise<NativeViewportSnapshot | null> {
   return app.evaluate(({ BrowserWindow }): NativeViewportSnapshot | null => {
     const allWindows = BrowserWindow.getAllWindows()
-    const window = allWindows.find(w => !w.isDestroyed() && w.contentView.children.length > 0) || allWindows[0]
+    const window = allWindows.find((w: { isDestroyed(): boolean; contentView: { children: unknown[] } }) => !w.isDestroyed() && w.contentView.children.length > 0) || allWindows[0]
 
     if (!window || window.isDestroyed()) {
       return null
@@ -437,18 +445,59 @@ function expectViewportWithinContent(snapshot: NativeViewportSnapshot | null): v
 }
 
 test.beforeAll(async () => {
-  await startDeterministicPageServer()
-  fixture = await setupMockBackend({ headless: true })
-  await waitForAppReady(fixture, 120_000, false)
+  // P1/OL-MVP: the readiness wait below takes up to 120s. Playwright's
+  // default 90s hook limit previously killed the diagnostic prematurely.
+  // This is a bounded test-only limit; it does NOT change production boot.
+  test.setTimeout(160_000)
+  let phase = 'start'
 
-  const controlPath = path.join(fixture.sandbox.root, 'workstation', 'Runtime', 'browser-control.json')
+  try {
+    phase = 'fixture-http'
+    await startDeterministicPageServer()
+    phase = 'mock-backend-and-electron'
+    fixture = await setupMockBackend({ headless: true })
+    phase = 'renderer-and-backend-ready'
+    await waitForAppReady(fixture, 120_000, false)
 
-  await expect.poll(() => fs.existsSync(controlPath), { timeout: 30_000 }).toBe(true)
-  controller = await readControllerFile(controlPath)
+    phase = 'native-controller-file'
+    const controlPath = path.join(fixture.sandbox.root, 'workstation', 'Runtime', 'browser-control.json')
+    await expect.poll(() => fs.existsSync(controlPath), { timeout: 25_000 }).toBe(true)
+    controller = await readControllerFile(controlPath)
 
-  expect(controller.runtime).toBe('electron-chromium')
-  const health = await controllerRequest('/health')
-  expect(health.runtime).toBe('electron-chromium')
+    phase = 'native-controller-health'
+    expect(controller.runtime).toBe('electron-chromium')
+    const health = await controllerRequest('/health')
+    expect(health.runtime).toBe('electron-chromium')
+  } catch (error) {
+    // Only test-created mock data. No credentials, user session or DOM dump.
+    // Keep the actual stack; readiness failures are NOT compiler failures.
+    const status = fixture
+      ? await fixture.page.locator('body').innerText({ timeout: 2_000 })
+          .then(text => {
+        if (/Reconnecting to Hermes/i.test(text)) {
+          return 'reconnecting'
+        }
+
+        if (/Waking up/i.test(text)) {
+          return 'waking-up'
+        }
+
+        if (/Preparing/i.test(text)) {
+          return 'preparing'
+        }
+
+            return 'other-renderer-state'
+          })
+          .catch(() => 'renderer-inaccessible')
+      : 'electron-not-launched'
+
+    console.error('[P1/OL-MVP] Electron native smoke blocked', {
+      phase,
+      status,
+      reason: error instanceof Error ? error.message : String(error)
+    })
+    throw error
+  }
 })
 
 test.afterAll(async () => {
@@ -473,6 +522,154 @@ test.afterAll(async () => {
     pageServer.close(() => resolve())
   })
   pageServer = null
+})
+
+test('OL-MVP P1: reads three isolated cards through native BrowserTask without mutation', async () => {
+  // Gate P1.0: real Chromium/HTTP live DOM, still NOT a compiler-adoption proof.
+  if (!fixture || !controller) {
+    throw new Error('P1: native controller not initialized')
+  }
+
+  const taskId = 'ol-mvp-p1-readonly-task'
+  const sessionId = 'ol-mvp-p1-readonly-session'
+  const url = `${pageBaseUrl}${OL_MVP_READONLY_PATH}`
+  const navigation = await browserAction(taskId, sessionId, url)
+  expect(navigation.success).toBe(true)
+  expect(navigation.result?.url).toBe(url)
+  expect(navigation.result?.title).toBe(OL_MVP_READONLY_TITLE)
+
+  interface ExtractedCard {
+    text: string
+    tag: string
+    attributes: Record<string, string | null>
+  }
+  interface NativeExtraction {
+    count: number
+    items: ExtractedCard[]
+    runtime: string
+    url: string
+    title: string
+  }
+
+  const extractionArguments = {
+    mode: 'inspect',
+    selector: 'article[data-testid="ol-mvp-card"]',
+    limit: 3,
+    attributes: ['data-card-id', 'data-list'],
+    output_artifact: false,
+  }
+
+  const extraction = await controllerRequest('/v1/action', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_extract_items',
+      arguments: extractionArguments,
+      task_id: taskId,
+      session_id: sessionId,
+    }),
+  })
+
+  expect(extraction.success).toBe(true)
+  const extracted = extraction.result as NativeExtraction | undefined
+  expect(extracted?.runtime).toBe('electron-chromium')
+  expect(extracted?.url).toBe(url)
+  expect(extracted?.title).toBe(OL_MVP_READONLY_TITLE)
+  expect(extracted?.count).toBe(3)
+  expect(Array.isArray(extracted?.items)).toBe(true)
+  const extractedItems = extracted?.items ?? []
+  expect(extractedItems).toHaveLength(3)
+
+  for (const card of OL_MVP_READONLY_CARDS) {
+    const item = extractedItems.find((candidate) => candidate.attributes['data-card-id'] === card.id)
+    expect(item, `Native extraction missing card ${card.id}`).toBeDefined()
+    expect(item?.attributes['data-list']).toBe(card.list)
+    expect(item?.text).toContain(card.title)
+    expect(item?.text).toContain(card.description)
+  }
+
+  const snapshot = await controllerRequest('/v1/action', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      action: 'browser_snapshot',
+      arguments: { full: true },
+      task_id: taskId,
+      session_id: sessionId
+    })
+  })
+
+  expect(snapshot.success).toBe(true)
+  expect(snapshot.result?.url).toBe(url)
+  // Fail explicitly if the controller only supplies URL/title and does NOT
+  // expose live card text; the implementer must then use an authorized typed
+  // DOM-read action, never an opaque browser_console macro.
+  const observed = JSON.stringify(snapshot.result ?? {})
+
+  for (const card of OL_MVP_READONLY_CARDS) {
+    expect(observed, `Native snapshot missing live DOM text for ${card.id}`).toContain(card.title)
+    expect(observed, `Native snapshot missing live DOM description for ${card.id}`).toContain(card.description)
+  }
+
+  const nativeState = await nativeViewportSnapshot(fixture.app)
+
+  if (!nativeState) {
+    throw new Error('P1: native viewport state unavailable')
+  }
+
+  const matchingChildren = nativeState.children.filter((candidate) => candidate.url === url)
+  expect(matchingChildren).toHaveLength(1)
+  const child = matchingChildren[0]
+
+  if (!child) {
+    throw new Error('P1: native fixture webContents unavailable')
+  }
+
+  expect(child.url).toBe(url)
+  const webContentsId = child.webContentsId
+
+  if (webContentsId === null) {
+    throw new Error('P1: native Browser webContents id unavailable')
+  }
+
+  const liveCards = await fixture.app.evaluate(({ webContents }, id) => {
+    const contents = webContents.fromId(id)
+
+    if (!contents) {
+      throw new Error('P1: native viewport webContents missing')
+    }
+
+    return contents.executeJavaScript(`Array.from(document.querySelectorAll('article[data-testid="ol-mvp-card"]')).map(card => ({
+      id: card.getAttribute('data-card-id'),
+      list: card.getAttribute('data-list'),
+      title: card.querySelector('h2')?.textContent,
+      description: card.querySelector('p')?.textContent,
+    }))`)
+  }, webContentsId)
+
+  expect(liveCards).toEqual(OL_MVP_READONLY_CARDS)
+
+  await test.info().attach('ol-mvp-p1-native-readonly-evidence', {
+    body: Buffer.from(JSON.stringify({
+      native: true,
+      live_dom: true,
+      verified_card_count: 3,
+      verified_fields: ['id', 'list', 'title', 'description'],
+      operation: { action: 'browser_extract_items', arguments: extractionArguments },
+      browser_task: { task_id: taskId, session_id: sessionId },
+      extraction: extracted,
+      independent_dom_readback: liveCards,
+      snapshot_verified: true,
+      real_llm_calls: null,
+      real_llm_tokens: null,
+      compiled_calls: null,
+      learning_cost_usd: null,
+      gross_savings_usd: null,
+      net_savings_usd: null,
+      compiler_adoption: 'not_demonstrated',
+    }, null, 2)),
+    contentType: 'application/json',
+  })
 })
 
 test('keeps four native Browser tasks aligned across controller and IPC while headless', async () => {

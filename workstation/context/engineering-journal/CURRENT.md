@@ -1,5 +1,4 @@
 # CURRENT — Workstation Engineering Journal
-
 ## 2026-10-17 — HLM-MVP: Human Demonstration Observer + Proactive Learning Question Engine (VERIFIED M0–M2, M3 EM HOLD)
 **Branch de implementação**: `feat/hermes-learning-mode-mvp-20261017` criada a partir de `docs/learning-mode-question-engine-mvp-20261017` (HEAD base `ca145f39`).
 **Objetivo cumprido**: Implementação funcional do MVP do Hermes Learning Mode (Decisão **D-047** e fases S0–S7 do handoff executável), integrando observação de gestos humanos autorizados, vídeo da aba, controle de intensidade ao vivo, Question Engine contextual com formulação de hipóteses/perguntas úteis, captura de correções humanas (`needs_reinterpretation`) e compilação de candidatas operacionais inertes para o Experience Compiler.
@@ -80,50 +79,6 @@
   - PhotoCraft: inicialização em `127.0.0.1:8765`, importação de PNG via Rust Wasm drag-and-drop, edição via canvas com dirty check no título (`*valid_sample.png — PhotoCraft`), exportação.
   - EffectCraft: inicialização em `127.0.0.1:8766`, abertura de demo (`comp: 502`), exportação de frame PNG 1280x720 para disco (`effectcraft_exported_frame.png`, 3.687.468 bytes).
   - Reutilização verificada: segundo comando reaproveita instância e aba ativas sem reload.
-1. **Electron Learning Session Recorder (`apps/desktop/electron/workstation-learning-session.ts`)**:
-   - `LearningSessionRecorder` com ciclo de vida atômico (`start`, `stop`, `discard`, `setIntensity`, `recordGesture`, `answerQuestion`).
-   - Escrita crash-resilient síncrona append+flush em `%LOCALAPPDATA%/HermesWorkstation/learning_sessions/<session_id>/` para `events.jsonl`, `questions.jsonl` e `learning_session.json`.
-   - Monitoramento de navegação com pausa automática preventiva (`status="paused"`) ao detectar mudança para origem fora do allowlist ou telas de autenticação (`login`, `signin`, `oauth`, `auth`).
-   - Avaliação contínua de gestos via Question Engine, respeitando gestos contínuos (drag), cooldowns dinâmicos e capacidade máxima de fila.
-2. **Normalizador e Sanitizador de Gestos Seguros (`apps/desktop/electron/workstation-learning-events.ts`)**:
-   - `normalizeHumanGesture` refatorado em helpers desacoplados (`isValidRawGesture`, `isEditableTarget`, `extractShortcut`, `extractNormalizedPosition`, `extractTarget`) com complexidade ciclomática <= 20.
-   - Redação estrita de senhas, campos editáveis (`input`, `textarea`), cookies e tokens. Captura de atalhos restrita a teclas modificadas (Ctrl/Meta/Alt).
-3. **Runtime & IPC Integration (`apps/desktop/electron/workstation-browser-runtime.ts` & `workstation-browser-ipc.ts`)**:
-   - Métodos públicos no runtime Electron: `startLearning`, `stopLearning`, `discardLearning`, `setLearningIntensity`, `getLearningStatus`, `answerLearningQuestion`, `getLearningQuestions`, `recordLearningGesture`, `injectLearningObserver`.
-   - Handlers IPC tipados sob o canal `hermes:workstation-browser:learning:*` com validação de janelas e origens.
-   - Preload tipado em `apps/desktop/electron/preload.ts` e contratos em `apps/desktop/src/app/browser/types.ts`.
-4. **Interface de Usuário Compartilhada (`apps/desktop/src/app/browser/learning-controls.tsx`)**:
-   - Componente reutilizável com botão de alternância **Aprender / Parar Aprender**, badge de status (`Aprendendo` / `Pausado`), contadores de eventos e perguntas.
-   - Seletor de intensidade em tempo real (`Discreto` | `Equilibrado` | `Intensivo`, padrão inicial `Intensivo`) acionável durante a gravação sem reinício ou perda de dados.
-   - Cards de perguntas proativas com exibição de hipótese, incerteza, botões de ação (**Confirmar**, **Corrigir** com input inline, **Adiar**, **Dispensar**) e aviso de pausa de segurança.
-   - Integrado no **Browser Hub** (`apps/desktop/src/app/browser/index.tsx`) com adoção automática de aba avulsa via `adoptTab` antes do início do aprendizado.
-   - Integrado no **Painel Browser do Chat** (`apps/desktop/src/app/chat/right-rail/workstation-browser-pane.tsx`), permitindo controle e respostas diretas no fluxo da conversa.
-5. **Fronteira com Experience Compiler (`workstation/skill_learning.py`)**:
-   - `CandidateLesson` estendida com `source="execution_anomaly" | "human_demonstration"`, `learning_session_id` e `question_context`.
-   - Método `record_human_demonstration_candidate` em `ExperienceLessonCompiler`. Candidatas de demonstração humana permanecem estritamente inertes (`status="candidate"`), sem jamais receber atribuição de `VERIFIED_SUCCESS` ou autopromoção ao registry sem qualificação em tempo de execução.
-
-### 2. Matriz de Aceitação (Critérios A–J)
-- **A (OFF -> nenhum evento, vídeo, snapshot ou arquivo sensível)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
-- **B (Aprender do Hub com tab avulsa -> adoptTab -> mesma WebContentsView e aba)**: **PASS** (comprovado em `workstation-learning-vertical-slice.test.ts` e `hwh-adopt-session.test.tsx`).
-- **C (Intensivo->Discreto->Equilibrado ao vivo -> mesmo learning_session_id e vídeo contínuo)**: **PASS** (comprovado em `workstation-learning-session.test.ts` e `learning-controls.test.tsx`).
-- **D (Clique DOM seguro, atalho modificado, gesto Canvas -> timecode e sanitização)**: **PASS** (comprovado em `workstation-learning-events.test.ts`).
-- **E (Navegação off-origin/auth -> pausa antes de novo frame/evento)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
-- **F (1 pergunta contextual, confirmação, correção com needs_reinterpretation, dedup e drag guard)**: **PASS** (comprovado em `workstation-learning-session.test.ts` e `learning-controls.test.tsx`).
-- **G (Vídeo local e events.jsonl append+flush com timecode monotônico)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
-- **H (human_demonstration produz CandidateLesson inerte sem VERIFIED_SUCCESS ou auto-promoção)**: **PASS** (comprovado em `test_human_demonstration_boundary.py`).
-- **I (Concorrência, crash de renderer e isolamento de owners)**: **PASS** (comprovado em `workstation-learning-session.test.ts`).
-- **J (Replay supervisionado M3)**: **HOLD** (mantido formalmente em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável; nenhuma falsa autonomia declarada).
-
-### 3. Resultados dos Testes de Verificação
-- **Vitest Suites**: 19/19 testes PASS (4 arquivos de teste novos/reutilizados: `workstation-learning-events.test.ts`, `workstation-learning-session.test.ts`, `workstation-learning-vertical-slice.test.ts`, `learning-controls.test.tsx`).
-- **Vitest Regressões de UI**: 8/8 testes PASS (`workstation-browser-pane.test.tsx` e `hwh-adopt-session.test.tsx`).
-- **Python Boundary Tests**: 2/2 testes PASS (`workstation/tests/test_human_demonstration_boundary.py`).
-- **Typecheck**: `tsc -p tsconfig.electron.json` exit 0, `tsc -p tsconfig.json` exit 0 (0 erros).
-- **Code Health Ratchet**: `python scripts/check --only health` 0 blocking findings, 0 advisory findings em 17 arquivos.
-
-### 4. Próximos Passos
-- Submissão de PR draft da branch `feat/hermes-learning-mode-mvp-20261017` para a branch de preparação `docs/learning-mode-question-engine-mvp-20261017`.
-- Monitoramento de dogfood e avaliação empírica de M3 (replay supervisionado) quando disponível ambiente para TaskRun auditável.
 
 ## 2026-10-17 — D-047 HLM-MVP / Question Engine / LIVE intensity (DOCS + POLICY INERTE, NÃO PRODUTO)
 **Baseline remota**: main `fd57e40fe8c46d4d302cd9652c18715896822f12`, PR #97 open head `081062c3` e #98 open head `51f7c002`; #96 draft head `6c5963b4`. Inspecionados Electron `workstation-browser-runtime.ts` (`wireEntry`, `takeControl`, `screenshotForEntry`), `workstation-browser-ipc.ts`, `browser/index.tsx` (`BrowserControlBar`, `useAdoptTabToSession`), pane chat, `ExperienceCompiler`, telemetry/lease e `skill_learning.py`. **Decisões novas**: captura humana local e opt-in com vídeo/evento/timecode, vínculo de mesma aba + sessão, botão Aprender em ambos painéis, intensidade `discreto|equilibrado|intensivo` ajustada sem reinício (default intensivo), hipóteses com dedupe/cooldown e respostas associadas a eventos; candidatas humanas inertes sem promoção; futuro replay owner/verifier. **Entregas remotas desta branch**: spec D-047, patch map, prompt implementador e dois módulos TS de política/normalização **não conectados** mais testes declarativos. **Não executado nesta rodada**: build Electron, vídeo, captura real, inferência multimodal, compilação humana, replay ou testes de branch. **Próximo passo:** executar [handoff HLM-MVP](../../learning-mode/LEARNING_MODE_MVP_IMPLEMENTER_PROMPT.md) em branch isolada, obter um vídeo demonstrável + evento sincronizado + pergunta causal com correção, antes de afirmar conclusão.
@@ -166,6 +121,86 @@
   - Duas execuções consecutivas de warm start verificadas: zero reinstalações, zero chamadas de rede.
   - Triage de segurança do npm audit: 31–39 findings (incluindo 2 críticos: `shell-quote` via dev tool `concurrently`, `sprintf-js` via build tool `@electron/get`) registrados como frente separada sem uso de `npm audit fix --force` ou rebaixamento de dependências.
 - **Arquivos modificados no runtime:** `workstation/scripts/oneclick_dependency_gate.ps1`, `workstation/install.ps1`, `workstation/scripts/oneclick_bootstrap.ps1`. Decisão: D-046. Issue: KI-044.
+
+## 2026-10-17 — P2.0 E2E CHAIN PASS segundo implementador; P2.1 primeiro reuse real
+
+**Novo relatório recebido:** `scoped_execution.py` corrigiu falta de `capture_raw_result` + associação BrowserTask/task/run; `task_compiler.py` propagou `canonical_run_id`; `run_local_adoption.py` trocou `mark_item_validated` por `complete_item` para não rebaixar WorkItem. `corpus.py`, `progressive.py`, `tool_observer.py` tiveram anotações health. E2E Electron chat/Gateway `--grep "OL-MVP P2"`: **1/1 PASS 52,8s**; 2 TaskRuns distintas, 6 WorkItems `completed`, readback independente `hermes.browser_card_readback.v1` com refs canônicas. Testes Python in-flight 8/8, Compiler 40/40, durable 7/7, health 0. **Todos resultados do relatório, não reexecutados no GitHub remoto.**
+
+**Limite crítico:** relatório não contém `candidate_ref`, `qualified_offer_ref`, `run_local_reuse` nem certificado Router de cross-run demonstrando execução compilada de item posterior; portanto P2.1 compiled adoption **NOT_PROVED**, cross-run capability recovery **NOT_PROVED**, provider usage/cost **null**. Esse resultado não justifica refazer Browser nem retornar a P1C.
+
+**Inspeção independente do código PR #96 `6c5963b4`:** `CapabilityRouter.route` já busca capacidades promovidas por famílias e avalia contrato/Policy, `TaskCompiler._execute_route` já despacha via certificado, `operational_resolution` já é pré-LLM. Próximo passo 80/20 é depurar ligação sample→candidate→qualificação→RunLocalAdopter, depois catalog/Router em nova Run. Não criar novo Router/fingerprint sintético e não forçar DIRECT.
+
+**Limitação repositório:** Desktop Commander DESKTOP-3NA47UH offline na inspeção 17/10; patches E2E/P2.0 podem existir só localmente e precisam de commit/push cuidadoso, sem perder changes concorrentes. Branch documental P2.1 empilhada em #96, sem edits runtime nem merge main. Stage A `PASS_WITH_AUTORIZATION` foi reportado no contexto anterior, mas execução DIRETA continua condicionada aos gates canônicos.
+
+**Handoff:** [P2_1_IMPLEMENTER_PROMPT.md](../ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md) · [Mapa](../ol-mvp-2026-10-16/P2_1_PATCH_MAP.md).
+
+
+
+## 2026-10-17 — P2 preflight: resultado P1C reportado, não reconciliado no GitHub
+
+- Relatório anexo da IA: P1C `5/5`, ExperienceCompiler `40/40`, inflight `7/7`, Ruff e health PASS, alegando `TaskCompiler.compile_and_execute`, `PromotionGate`, `P1C_RESULT_20261016.json` com `GO P2`. **Não houve reexecução desses testes nesta revisão**.
+- Fonte remota verificada: PR #95 HEAD ainda `2b9f7162507cf5db0fe32a7c77fb28f121d1e8f3`, sem `workstation/tests/test_P1C_strict_read_acceptance.py` e sem `workstation/context/ol-mvp-2026-10-16/evidence/P1C_RESULT_20261016.json`. Máquina Desktop Commander offline (última atividade há ~9h). Não foi possível obter diff local; mudanças possivelmente não commitadas.
+- O JSON colado como recibo usa IDs genéricos `real` e referências para teste P1C/histórico P1.0, não `artifact://tasks/...` da execução. Tampouco há novo teste Electron/Gateway identificado nos comandos do log; distinguir código Python validado de P1C de produto nativo comprovado.
+- Nova branch de DOCUMENTAÇÃO P2, empilhada sobre PR #95, sem alterar runtime/main. Novo `P2_80_20_DECISION_AND_PLAN.md`, `P2_PATCH_MAP.md`, `P2_IMPLEMENTER_PROMPT.md` e journal `OL_MVP_P2_2026-10-17.md`. `patches/p2_receipt_gate.py` + 5 testes unitários PASS em Python contêiner; valida somente esquema e evidências estruturais (não autentica owner/ArtifacStore/qualificação).
+- Decisão: **GO P2-preflight** para recuperar trabalho local, 1 fluxo real E2E, seleção determinística existente e telemetria real. **HOLD** de afirmações P1C produção PASS, adoção compilada real, Stage A/DIRECT global, economia em dinheiro e merge main. Nunca usar wrapper de testes/flags autoatribuídas como prova de execução.
+
+
+
+## 2026-10-16 — OL-MVP P1C: teste integrado nativo é o único próximo investimento (planejado, não executado)
+
+- **Recebido:** log do implementador e decisões OL-MVP reanexadas; PR #94 atualizado em `27b6376535dcfb92025fd4d468411feb0d7d3a34`, com implementação P1B read-only. Relatório: 30 casos focais pelas seis suítes, 53 segurança, pre-commit/ruff e push; **não foram reexecutados nesta revisão**, pois desktop do usuário está offline.
+- **Corrigida classificação do teste:** `test_ol_mvp_p1b_cards_workitems.py` possui três WorkItems persistidos e candidata minerada, porém **todos os itens saem de `worker` com `self.dispatch` sintético**. O teste não percorre chat/Gateway nativo nem faz adoção por `RunLocalAdopter`; docstring foi corrigida na branch P1C para não sobredeclarar prova.
+- **Riscos reais em HEAD P1B:** `canonical_source_for_readback` pode sintetizar op_id/ref/transition com falta de estado canônico e reaproveitar refs `_last_*`; `accept_work_item` permite fallback para último sample ou nova amostra sintética. São pontos de verificação causal prioritários antes de medir sucesso real. Sem fragilizar DIRECT, lease ou autorização.
+- **Patch/deliverable desta revisão:** branch P1C stacked no PR #94 com `P1C_NATIVE_DOGFOOD_PLAN.md`, `P1C_EXACT_PATCH_MAP.md`, `P1C_IMPLEMENTER_PROMPT.md`, template de recibo e validador estático `patches/P1C_evidence_gate.py` + seis testes. Testes locais no contêiner com implementação equivalente: 6/6 PASS, py_compile PASS; código remoto precisa ser executado no ambiente do projeto para se qualificar. O validador NÃO autentica refs nem autoriza runtime.
+- **Fase real:** P1.0 PASS Electron; P1B implementação/testes PASS **segundo relatório**; P1C gateway/TaskRun real NOT_RUN; compilado em Electron NOT_PROVED; reutilização entre TaskRuns NOT_PROVED; LLM real/custo `null`; Stage A/DIRECT/H-079 HOLD salvo autorização humana correspondente. Sem merge main.
+- **Próxima IA:** executar somente [prompt P1C](../ol-mvp-2026-10-16/P1C_IMPLEMENTER_PROMPT.md). Depois de uma prova real, avançar P2; sem hardening lateral/novos motores.
+
+
+
+## 2026-10-16 — OL-MVP P1B: saída read-only no Compiler (PREPARADO / Stage A HOLD)
+
+- Evidência recebida e inspecionada no GitHub PR #93 HEAD `6e1443079e`: recibo `workstation/context/ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json`. PASS Electron nativo BrowserTask/Chromium, 3 cartões, extração tipada e leitura independente `id/list/title/description`, E2E 1/1 PASS 21,8s. Aviso de build dirty; **nenhuma TaskRun canônica**.
+- Diagnóstico código efetivo: `state_abstraction.py` não representa saída, `corpus.accept_run` só aceita no fechamento global e `browser_navigate` para native readback, `segmentation` exige delta, `infer_action_model`/`compiler` recusam efeito vazio, owner `run_local_adoption.py` não suporta nem verifica `browser_extract_items`. Uma leitura sem mudança de DOM pode ser sucesso, mas requer receipt do RESULTADO produzido, não fabricar state mutation.
+- Proposta em nova branch de docs/patch isolado: `patches/P1B_read_output_contract.py` (parâmetros e output schema de cartões, compara resultado tipado com readback separado, sem dados privados no modelo) e `P1B_test_read_output_contract.py`. **5/5 unittest PASS** em scratch local no Windows; não são E2E nem autorização para marcar VERIFIED.
+- Próxima implementação 80/20: 3 WorkItems verdadeiros por TaskRun → owner readback independente → `verified_success` em amostra canônica por item → projeção semântica de resultado → `ExperienceCompiler` → oferta validada → `RunLocalAdopter` no próximo item → outra TaskRun. **Stage A pendente: não aplicar patch em runtime por esta revisão**, não forçar DIRECT, sem merge main. Monitor/telemetria continuam independentes da concessão de autoridade.
+- Documentação: [plano P1B](../ol-mvp-2026-10-16/P1B_OUTPUT_BRIDGE_PLAN.md), [patch exato](../ol-mvp-2026-10-16/P1B_PATCH_INSTALL.md), [prompt](../ol-mvp-2026-10-16/P1B_IMPLEMENTER_PROMPT.md).
+- Estado: **P1.0 PASS / P1.1 HOLD / P1.2 NOT_DEMONSTRATED / E2E P1B NOT_RUN / custo real NULL**. Proposta não equivale a qualificação do produto.
+
+
+
+## 2026-10-16 — Resultado P1 native dogfood
+
+**P1.0 PASS:** `npm run build` passou (Vite reportou 40,74 s); o E2E focal passou 1/1 em 21,8 s e o `tsc` focal passou. Extração tipada, snapshot e readback DOM independente via Electron `webContents` verificaram ID, lista, título e descrição de três cartões da fixture loopback. [Recibo observado e proveniência](../ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
+
+**P1.1/P1.2 não demonstrados:** nenhum TaskRun real iniciou; métricas TaskRun, uso/custo, falhas e fallbacks são null/desconhecidos. Os três cartões são contagem separada da fixture (`native_verified_items=3`). O seam é projeção output-only ausente em `TransitionSample`/abstração → inferência de efeitos por delta → segmento verificado → factory run-local, embora o contrato e a classificação read-only já existam (`operational_capabilities.py:112-124`, `run_adoption.py:128-132`; exclusão em `integrations/hermes/run_local_adoption.py:31-35`). O owner canônico `kanban.py:473-479` aceita a run no fechamento, não cada item; falta essa aceitação por item para adoção in-run. Stage A segue pendente/não qualificado; runtime em HOLD até esse gate. Não reiniciar P0 nem ampliar hardening.
+
+
+## 2026-10-16 — OL-MVP P1, pacote de dogfood nativo pronto para implementação (P1 E2E NÃO QUALIFICADO)
+
+**Material base:** P0 local integrado em PR draft #92; relatório anterior 91 testes aprovados (7 específicos rechecados). P0 benchmark instrumentado: 3/5 adaptativos e 2/5 reutilizados; não há comprovação de 40% de economia monetária. Cross-TaskRun: promoção manual no setup. Subsequente teste Electron headless falhou antes de `browser_navigate`: `beforeAll` timeout 90000ms enquanto `waitForAppReady(...120000)` aguardava UI `Waking up/Reconnecting`, stack em `tests-js/scripts/desktop-chat-smoke.ts::waitForChatReady`; causa de backend não identificada. Evidências locais: `apps/desktop/test-results/workstation-headless-load--595fa-ller-and-IPC-while-headless/{error-context.md,trace.zip}` (16/10).
+
+**Intervenção P1 nesta branch:** `apps/desktop/e2e/workstation-headless-load.spec.ts` adiciona limite de hook 160 s (restrito ao teste), log da etapa do startup, rota HTTP determinística; `apps/desktop/e2e/ol-mvp-p1-readonly-cards.ts` implementa HTML de três cartões e teste Chromium nativo, somente leitura, com exigência de snapshot dos títulos. Documentação operacional: `P1_PATCH_MAP.md`, `P1_EVIDENCE_GATE.md`, `P1_IMPLEMENTER_PROMPT.md`, `P1_NATIVE_BROWSER_80_20.md`.
+
+**Não alegar:** Electron E2E green; DOM nativo de cartões comprovado; compilação browser in-flight real; economia em USD; promoção autônoma global. O teste deve ser rodado após rebuild de `apps/desktop/dist`; o caminho feliz ainda pode falhar devido a mock backend desconectado.
+
+**Critério de continuidade 80/20:** smoke único e diagnóstico, leitura de 3 cards em DOM vivo, adoção compilada sob owner real na mesma TaskRun, reuso numa segunda Run, custo/provider real ou null. Não abrir nova infraestrutura de aprendizagem nem enfraquecer lease/SHADOW/DIRECT. Não sobrescrever arquivos não commitados do usuário ou alterar main.
+
+[Handoff detalhado](../ol-mvp-2026-10-16/P1_IMPLEMENTER_PROMPT.md) · [evidence gate](../ol-mvp-2026-10-16/P1_EVIDENCE_GATE.md).
+
+
+
+## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
+
+**Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
+
+**Descoberta dirigida em main (16/10):** workstation/experience_compiler/compilability_monitor.py já produz offers qualificados, workstation/run_adoption.py já possui RunLocalAdopter, e operational_resolution.py já chama o checkpoint na fronteira PRÉ-raciocínio. O DurableBatchRunner mantém um snapshot work_items para iterar; o P0 é acrescentar boundary seguro ENTRE itens e refetch do estado durável, sem um segundo executor, sem provocar duplicação. SHADOW é padrão e DIRECT exige qualificação autêntica. É proposta de correção e NÃO evidência de E2E aprovado.
+
+**Decisões de evolução:** memória operacional universal hierárquica e compilação seletiva; telemetria independente; capacidade compartilhada com versionamento e propagação otimista, rollback contextual; seleção determinística/BM25/embeddings/LAYA/LLM com Router+Policy; SkillImprovementRun, CapabilityImprovementRun, SourceResearchRun e SelectionImprovementRun em infraestrutura comum. Código-fonte somente investigação/patch experimental isolado sem autorização para implementação; orçamento global absoluto é exclusivo do usuário.
+
+**Ordem 80/20:** baseline e segurança (Gate 0) → patch de callback entre itens e reconciliacao no DurableBatchRunner (P0) → ligação ao owner runtime e teste real item1→item2 (P0) → Trello leitura/Electron + reuso nova TaskRun (P1) → métricas líquidas e evolução (P2) → quatro especialidades, fila econômica e seleção multimétodo (P3). Os patches old explicit_seed.py/test_explicit_seed.py não devem ser instalados.
+
+**Handoff e código-patch:** [plano](../ol-mvp-2026-10-16/IMPLEMENTATION_PLAN.md) · [decisões](../ol-mvp-2026-10-16/DECISIONS.md) · [patch preciso](../ol-mvp-2026-10-16/PATCH_MAP.md) · [prompt](../ol-mvp-2026-10-16/IMPLEMENTER_PROMPT.md). Fonte prioritária: 56 sessões, 10 snapshots HTML e 40 docs do dogfood auditados em 16/10, com limites explicitados; produto real ainda não requalificado.
+
 ## 2026-10-13 — HWH-001 user dogfood corrective round
 
 Reference: `workstation/context/workstation-hub-mvp/DOGFOOD_REPAIR_20261013.md`. CSS do Creative estava desconectado e primeiro uso exigia projeto JSON. A aba agora abre projeto vazio, oferece preview temporário de assets e fecha sem destruir o componente. `Levar para sessão` não fabrica IDs quando Gateway falha e separa `runtime session_id` (BrowserTask/agent tools) do `stored_session_id` (chat/preview). Vitest 84/84 PASS, E2E Electron 1/1 PASS, ESLint 0 issues, build PASS; os testes não demonstram a jornada real de criação Gateway pelo botão seguida de ação do modelo sobre a mesma DOM, nem persistência de media; manter evidência parcial. Alterações de usuário em `workstation/dogfood/` preservadas. H-079 permanece PASS_WITH_AUTHORIZATION exclusivamente nesta branch.

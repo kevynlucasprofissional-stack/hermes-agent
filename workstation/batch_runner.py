@@ -34,7 +34,7 @@ class BatchItemResult:
     status: WorkItemStatus
     raw_output_ref: Optional[str] = None
     normalized_output_ref: Optional[str] = None
-    validation: Dict[str, Any] = field(default_factory=dict)
+    validation: dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
     duration_seconds: float = 0.0
 
@@ -48,11 +48,11 @@ class BatchSummary:
     retry_success_count: int
     failed_count: int
     suspect_count: int
-    anomalies: List[Dict[str, Any]] = field(default_factory=list)
+    anomalies: list[dict[str, Any]] = field(default_factory=list)
     duration_seconds: float = 0.0
     summary_artifact_ref: Optional[str] = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "task_id": self.task_id,
             "plan_id": self.plan_id,
@@ -91,19 +91,20 @@ class DurableBatchRunner:
         self.max_retries = max_retries
         self.backoff_seconds = backoff_seconds
 
-    def execute_batch(
+    def execute_batch(  # health: allow CC -- safe item boundary dispatch and item refresh
         self,
         title: str,
-        items: List[Dict[str, Any]],
+        items: list[dict[str, Any]],
         *,
-        worker_fn: Callable[[Dict[str, Any], WorkItem], Any],
-        validator_fn: Optional[Callable[[Any, Dict[str, Any]], Dict[str, Any]]] = None,
+        worker_fn: Callable[[dict[str, Any], WorkItem], Any],
+        validator_fn: Optional[Callable[[Any, dict[str, Any]], dict[str, Any]]] = None,
         checkpoint_every: int = 1,
         session_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         stop_on_exception: bool = False,
         can_start_item: Optional[Callable[[WorkItem], bool]] = None,
         guardrails: Any | None = None,
+        on_safe_item_boundary: Optional[Callable[[WorkItem], None]] = None,
     ) -> BatchSummary:
         """Run batch processing with per-item atomic persistence and validation."""
         start_time = time.monotonic()
@@ -125,9 +126,14 @@ class DurableBatchRunner:
         retry_success_count = 0
         failed_count = 0
         suspect_count = 0
-        anomalies: List[Dict[str, Any]] = []
+        anomalies: list[dict[str, Any]] = []
 
         for item in work_items:
+            # RunLocalAdopter may have already completed this item at a prior safe boundary.
+            # Always use the current durable state, never the initial stale snapshot.
+            item = self.store.get_item(item.id)
+            if item is None:
+                raise ValueError("Work item vanished during batch execution")
             if can_start_item is not None and not can_start_item(item):
                 break
             # Skip items already completed during a previous run
@@ -146,7 +152,6 @@ class DurableBatchRunner:
                     break
                 continue
 
-            item_start = time.monotonic()
             item_success = False
             raw_data = None
 
@@ -194,7 +199,7 @@ class DurableBatchRunner:
                     self.store.record_evidence(item.id, norm_ref.ref)
 
                     # Validation
-                    validation: Dict[str, Any] = {"valid": True, "suspect": False}
+                    validation: dict[str, Any] = {"valid": True, "suspect": False}
                     if validator_fn is not None:
                         validation = validator_fn(raw_data, item.input_payload)
 
@@ -255,6 +260,13 @@ class DurableBatchRunner:
                         "circuit": {"status": decision.code, "failed_items": decision.count,
                                     "systemic_items_prevented": remaining}})
                     break
+            if item_success and on_safe_item_boundary is not None:
+                # Advisory checkpoint, after persistence + guardrails; does not grant authority.
+                # Trusted caller may offer work to RunLocalAdopter under its own policy/readback.
+                try:
+                    on_safe_item_boundary(self.store.get_item(item.id))
+                except Exception:
+                    logger.warning("Optional run-local learning checkpoint failed", exc_info=True)
             if anomalies and stop_on_exception:
                 break
 

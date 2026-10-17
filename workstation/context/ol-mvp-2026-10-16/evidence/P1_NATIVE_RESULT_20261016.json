@@ -1,0 +1,187 @@
+{
+  "schema": "hermes.ol_mvp.p1_native_result.v1",
+  "recorded_at_utc": "2026-10-16",
+  "classification": "P1.0 native Electron/Chromium local-fixture evidence; not a real-user TaskRun or compiler adoption receipt",
+  "source": {
+    "repository": "C:/Github/hermes-agent",
+    "branch": "docs/ol-mvp-p1-native-dogfood-20261016",
+    "head": "77dae16323ce1f0a912ab4167ebfbc8a8c7a8ff7",
+    "working_tree_dirty": true,
+    "dirty_test_spec": "apps/desktop/e2e/workstation-headless-load.spec.ts",
+    "dirty_test_spec_sha256": "bed0173923068a9f3e7de9a4b93813871ae984194ff827e911213cbfb6b6d4c7",
+    "trace_zip": "apps/desktop/test-results/workstation-headless-load--d9798-rowserTask-without-mutation/trace.zip",
+    "trace_zip_sha256": "95163d3ffc7a50d829f007543fc4325fd6d773363fd59261b9984226eaa0cbba",
+    "trace_attachment": "resources/ab604343695fe239d9088db6e7683417e3c56123",
+    "trace_attachment_sha1": "ab604343695fe239d9088db6e7683417e3c56123"
+  },
+  "commands": [
+    {
+      "command": "npm run build",
+      "working_directory": "apps/desktop",
+      "exit_code": 0,
+      "elapsed_seconds": null,
+      "timing_note": "Vite reported built in 40.74 s; total process elapsed was not captured.",
+      "result": "PASS",
+      "log": ".ol-mvp-p1-build-20261016.log",
+      "qualification_note": "Build stamp warned that the working tree was dirty and packaged code could differ from HEAD."
+    },
+    {
+      "command": "node ..\\..\\node_modules\\@playwright\\test\\cli.js test --config=playwright.config.ts workstation-headless-load.spec.ts --grep \"OL-MVP P1\" --reporter=line",
+      "working_directory": "apps/desktop",
+      "exit_code": 0,
+      "elapsed_seconds": 22.9,
+      "result": "PASS; 1 test passed after formatter-only edits",
+      "log": ".ol-mvp-p1-astra-e2e-final-v2-20261016.log",
+      "report_artifact": "apps/desktop/test-results/workstation-headless-load--d9798-rowserTask-without-mutation/trace.zip",
+      "reported_test_duration_seconds": 21.8
+    },
+    {
+      "command": "..\\..\\node_modules\\.bin\\tsc.cmd -p tsconfig.e2e.json --noEmit",
+      "working_directory": "apps/desktop",
+      "exit_code": 0,
+      "elapsed_seconds": 1.299,
+      "result": "PASS; focused E2E TypeScript check after formatter-only edits",
+      "log": ".ol-mvp-p1-tsc-final-v2-20261016.log"
+    }
+  ],
+  "observed_receipt": {
+    "native": true,
+    "live_dom": true,
+    "verified_card_count": 3,
+    "verified_fields": [
+      "id",
+      "list",
+      "title",
+      "description"
+    ],
+    "operation": {
+      "action": "browser_extract_items",
+      "arguments": {
+        "mode": "inspect",
+        "selector": "article[data-testid=\"ol-mvp-card\"]",
+        "limit": 3,
+        "attributes": [
+          "data-card-id",
+          "data-list"
+        ],
+        "output_artifact": false
+      }
+    },
+    "browser_task": {
+      "task_id": "ol-mvp-p1-readonly-task",
+      "session_id": "ol-mvp-p1-readonly-session"
+    },
+    "extraction": {
+      "success": true,
+      "cached": false,
+      "runtime": "electron-chromium",
+      "task_id": "ol-mvp-p1-readonly-task",
+      "tab_id": "e4b0b2db-29fb-44f9-9b18-a73363cba496",
+      "url": "http://127.0.0.1:56305/ol-mvp-p1-readonly",
+      "title": "OL-MVP P1 read-only cards",
+      "count": 3,
+      "present": true,
+      "selector_used": "article[data-testid=\"ol-mvp-card\"]",
+      "items": [
+        {
+          "text": "\n      Planejar pauta semanalConferir temas e fontes\n    ",
+          "tag": "ARTICLE",
+          "attributes": {
+            "data-card-id": "ol-card-a",
+            "data-list": "A fazer"
+          }
+        },
+        {
+          "text": "\n      Revisar legendaVerificar texto e CTA\n    ",
+          "tag": "ARTICLE",
+          "attributes": {
+            "data-card-id": "ol-card-b",
+            "data-list": "Em andamento"
+          }
+        },
+        {
+          "text": "\n      Publicar carrosselConfirmar arte final\n    ",
+          "tag": "ARTICLE",
+          "attributes": {
+            "data-card-id": "ol-card-c",
+            "data-list": "Revisao"
+          }
+        }
+      ]
+    },
+    "independent_dom_readback": [
+      {
+        "id": "ol-card-a",
+        "list": "A fazer",
+        "title": "Planejar pauta semanal",
+        "description": "Conferir temas e fontes"
+      },
+      {
+        "id": "ol-card-b",
+        "list": "Em andamento",
+        "title": "Revisar legenda",
+        "description": "Verificar texto e CTA"
+      },
+      {
+        "id": "ol-card-c",
+        "list": "Revisao",
+        "title": "Publicar carrossel",
+        "description": "Confirmar arte final"
+      }
+    ],
+    "snapshot_verified": true,
+    "real_llm_calls": null,
+    "real_llm_tokens": null,
+    "compiled_calls": null,
+    "learning_cost_usd": null,
+    "gross_savings_usd": null,
+    "net_savings_usd": null,
+    "compiler_adoption": "not_demonstrated"
+  },
+  "metrics": {
+    "task_run_id": null,
+    "real_llm_calls": null,
+    "real_llm_tokens": null,
+    "compiled_calls": null,
+    "learning_cost_usd": null,
+    "gross_savings_usd": null,
+    "net_savings_usd": null,
+    "compiler_adoption": "not_demonstrated",
+    "p1_1_same_taskrun_reuse": "not_demonstrated",
+    "p1_2_other_taskrun_recovery": "not_demonstrated",
+    "items_total": null,
+    "items_adaptive": null,
+    "items_compiled": null,
+    "verified_items": null,
+    "native_verified_items": 3,
+    "learning_resource_cost_usd": null,
+    "validation_resource_cost_usd": null,
+    "failures": null,
+    "fallbacks": null
+  },
+  "scope_and_limits": [
+    "The BrowserTask used a deterministic loopback fixture with three static read-only cards; fixture task_id and session_id are synthetic identifiers, not canonical TaskRun identity.",
+    "The typed browser_extract_items response observed three cards and their IDs/list attributes; card title and description were checked in extracted text.",
+    "A separate native Electron webContents DOM readback observed ID, list, title, and description for all three fixture cards. The attachment contains these observed rows.",
+    "The test also reports snapshot_verified=true after its separate snapshot assertions. The attached receipt does not include the raw snapshot payload.",
+    "This proves the P1.0 native read path only. It does not prove a real TaskRun, candidate promotion, same-TaskRun compiled reuse, cross-TaskRun recovery, LLM usage, or cost/savings.",
+    "TaskRun-scoped item/adaptive/compiled/verified counts and resource/failure/fallback metrics are null or unknown because no real TaskRun was started; native_verified_items=3 is solely the separate local-fixture oracle count and is not included in those TaskRun metrics.",
+    "Final P1 rerun after formatter-only edits passed 1/1 in 21.8 s; latest trace and attached native receipt replace the prior run as the current evidence reference. The prior trace is preserved separately as an untracked local scratch artifact."
+  ],
+  "compiler_pipeline_observation": {
+    "capability_contract": "OperationalCapability already permits read_only effect and output_schema (workstation/operational_capabilities.py:112-124); read-only extraction is recognized by RunLocalAdopter effect classification (workstation/run_adoption.py:128-132).",
+    "observed_gap": "The output-only browser_extract_items result does not have a distinct semantic projection in TransitionSample/state abstraction. Current inference derives effects from semantic state delta and verified predicates; segment formation requires a verified semantic delta and VERIFIED_SUCCESS; the compiler rejects an empty inferred effects map. The run-local adoption factory allowlist excludes browser_extract_items.",
+    "references": [
+      "workstation/experience_compiler/models.py:168-183",
+      "workstation/experience_compiler/state_abstraction.py:28-48,61-82",
+      "workstation/experience_compiler/generalization.py:122-132",
+      "workstation/experience_compiler/segmentation.py:55-66",
+      "workstation/experience_compiler/compiler.py:70-93",
+      "workstation/operational_capabilities.py:112-124",
+      "workstation/experience_compiler/promotion.py:105-127",
+      "workstation/run_adoption.py:128-132",
+      "integrations/hermes/run_local_adoption.py:31-35"
+    ],
+    "interpretation": "This is a specific output-projection pipeline seam, not a claim that the compiler or capability contract lacks read_only support."
+  }
+}

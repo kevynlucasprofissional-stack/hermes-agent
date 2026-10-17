@@ -123,6 +123,117 @@ class ExperienceCorpus:
                             "target_family": revised.operation.target_family})
         return ref
 
+    def accept_work_item(self, task_id, run_id, evidence_ref, journal=None):
+        """Project accepted verified WorkItem readback during execution.
+
+        Accepts verified readback evidence (e.g. hermes.browser_card_readback.v1)
+        for a single WorkItem in an active TaskRun without falsifying verified_completed
+        for the whole run.
+        """
+        from .models import TransitionOutcome, Verification, StateDelta, Operation, Provenance
+        from .state_abstraction import abstract_state
+        from workstation.execution_policy import EvidenceStrength
+        from copy import deepcopy
+
+        if not task_id or not run_id or not evidence_ref:
+            return None
+        if not isinstance(evidence_ref, str) or not evidence_ref.startswith("artifact://tasks/"):
+            return None
+        try:
+            resolved = self.artifacts.resolve_structured(evidence_ref)
+        except (OSError, ValueError, KeyError):
+            return None
+        body = resolved.get("content")
+        schema = resolved.get("schema")
+        if (not isinstance(body, dict)
+                or body.get("task_id") != task_id
+                or str(body.get("run_id")) != str(run_id)
+                or body.get("status") != "VERIFIED"
+                or body.get("trust_class") != "trusted_runtime"
+                or body.get("independent_readback") is not True):
+            return None
+
+        candidates = self.query(task_id=task_id, run_id=str(run_id))
+        op_id = body.get("operation_id")
+        matching = [c for c in candidates if c.provenance.operation_id == op_id] if op_id else []
+        target_sample = matching[-1] if matching else (candidates[-1] if candidates else None)
+        if target_sample is None:
+            trans_ref = body.get("transition_ref")
+            if trans_ref:
+                try:
+                    target_sample = TransitionSample.from_dict(self.artifacts.read_json(trans_ref))
+                    target_sample.provenance.sample_ref = trans_ref
+                except Exception:
+                    pass
+            if target_sample is None:
+                target_sample = TransitionSample(
+                    operation=Operation(
+                        primitive="browser_extract_items",
+                        canonical_route="native_browser",
+                        operation_family="browser_extract_items",
+                        target_family="native_browser",
+                        effect_class="read_only",
+                    ),
+                    provenance=Provenance(
+                        task_id=task_id,
+                        run_id=str(run_id),
+                        operation_id=op_id,
+                        runtime="electron-chromium",
+                        source="progressive_owner",
+                        trust_class="trusted_runtime",
+                    ),
+                    raw_result_ref=body.get("raw_result_ref"),
+                )
+
+        revised = deepcopy(target_sample)
+        if schema == "hermes.browser_card_readback.v1":
+            projection = body.get("projection") or {}
+            revised.state_after = abstract_state("native_browser", projection, evidence_ref)
+            revised.delta = StateDelta.between(revised.state_before, revised.state_after)
+            verified_predicates = dict(revised.state_after.semantic_predicates)
+            revised.verification = Verification(
+                EvidenceStrength.SEMANTIC_PERSISTED_READBACK,
+                "browser_card_readback",
+                verified_predicates,
+                [evidence_ref],
+                status="VERIFIED",
+                observer=body.get("observer", "workstation.browser_live_dom"),
+                source_kind=body.get("source_kind", "browser_live_dom"),
+                trust_class="trusted_runtime",
+                observed_at=body.get("observed_at", ""),
+            )
+        else:
+            return None
+
+        revised.outcome = TransitionOutcome.VERIFIED_SUCCESS
+        if body.get("raw_result_ref"):
+            revised.raw_result_ref = body["raw_result_ref"]
+        ref = self.capture(revised)
+        if journal is not None:
+            try:
+                journal.record(
+                    __import__('workstation.contracts', fromlist=['ExecutionEventKind']).ExecutionEventKind.ACTION,
+                    'accepted work item transition projected; run remains in-flight',
+                    metadata={'transition_ref': ref, 'run_id': str(run_id), 'evidence_ref': evidence_ref,
+                              'operation_id': revised.provenance.operation_id},
+                )
+            except Exception:
+                pass
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(
+            TelemetryEventType.EXPERIENCE_ACCEPTED,
+            source_owner="workstation.experience_corpus",
+            task_id=task_id, run_id=str(run_id),
+            operation_id=revised.provenance.operation_id,
+            route=revised.operation.canonical_route, status="VERIFIED",
+            evidence_refs=(ref,),
+            dedupe_key=f"experience:{task_id}:{run_id}:{revised.provenance.operation_id}",
+            payload={"operation_family": revised.operation.operation_family,
+                     "target_family": revised.operation.target_family,
+                     "item_level": True},
+        )
+        return ref
+
     def query(self, **dimensions):
         include_history = dimensions.pop('include_history', False)
         observations = {}

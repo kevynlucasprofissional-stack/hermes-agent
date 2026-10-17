@@ -26,8 +26,95 @@ Submodules Git adicionados em `external-engines/photocraft` (commit `5f65579e`) 
 - P0: reproduzido com sucesso no PowerShell 5.1 (`uv pip check` com stderr informativo emitindo `Checked 77 packages...` sob `$ErrorActionPreference=Stop` gerava falso negativo). Corrigido com isolamento de preferência de erro e leitura de `$global:LASTEXITCODE`.
 - P1: implementado gate de dependências desacoplado (`CheckPython/CheckNode` e `RecordPython/RecordNode`); `workstation/install.ps1` com `-SkipPythonDependencies` e `-SkipNodeDependencies`; `workstation/scripts/oneclick_bootstrap.ps1` orquestrando reparo e registro seletivos sem reinstalar domínios saudáveis.
 - Hardening e Concorrência: serialização de reparos via `oneclick-install.lock` com double-checked locking; migração criptográfica de stamp legado sob comprovação de saúde de ambos os domínios; caminhos absolutos para `require.resolve` no workspace desktop.
-- Aceite e Testes: matriz de 11 casos de teste automatizados em PowerShell 5.1 nativo aprovada (11/11 PASS); Strict Doctor passou; warm start offline duas vezes consecutivas comprovado sem reinstalações ou chamadas de rede.
 - Segurança: 31–39 vulnerabilidades do npm audit identificadas e auditadas separadamente (2 críticas em dev-tools); pacotes preservados sem `npm audit fix --force` ou quebra de pins. Arquivos do runtime aplicados e prontos para promoção. Decisão: D-046. Issue: KI-044.
+
+## 2026-10-17 — OL-MVP P2.1: primeira adoção COMPILADA no Hermes real, sem duplicar Router
+
+**Novo marco comprovado no relatório (não revalidado remotamente):** E2E Electron `--grep "OL-MVP P2"` 1/1 PASS 52,8s, 2 TaskRuns, 2 planos, 6 WorkItems `COMPLETED` (3/3 em cada), readback `hermes.browser_card_readback.v1` com `raw_result_ref/transition_ref/operation_id/browser_task_id`. Correções locais em `scoped_execution.py` (`capture_raw_result` e BrowserTask), `task_compiler.py` (run_id), `run_local_adoption.py` (COMPLETED), `corpus.py/progressive.py/tool_observer.py` (health). Python 8/8 in-flight, 40/40 compiler, 7/7 durable, health 0 reportados. **P2.0 EXECUÇÃO REAL ACEITA para avançar 80/20.**
+
+**Prova que FALTA:** nenhuma evidência apresentada de item realmente executado por `RunLocalAdopter` após oferta DIRECT qualificada, de candidato/versão recuperado em segunda Run pelo `CapabilityRouter` ou de redução real de chamadas ao provedor. 2 TaskRuns adaptativas não equivalem a reuso aprendido. Custo/tokens do provider scripted mock = `null`. Stage A tem autorização de DESENVOLVIMENTO `PASS_WITH_AUTORIZATION` no relatório anterior, mas DIRECT/global promotion permanecem sob gates.
+
+**P2.1 agora:** (1) localizar/publicar patch P2.0 local e evidence sem sobrescrever claims; (2) auditar accepted sample/candidate por operação; (3) obter 1 `RunLocalAdopter.run_checkpoint` com receipt verificado, quando autorizado, ou motivo real SHADOW; (4) recuperar capacidade numa nova TaskRun com `CapabilityRouter.route` JÁ EXISTENTE; (5) medir motivo de abstenção, latência e chamadas reais quando disponíveis. **O Router já possui indexação por `operation_family/target_family/family_id`, fallback promovidas e System-1 opcional**; não criar nova seleção por fingerprint na intent sem provar necessidade.
+
+**Somente depois:** P2.2 telemetria/economia líquida; P3 melhorias recuperador BM25/embeddings/LAYA somente quando false negatives medidos justificarem; quatro ImprovementRuns/memória hierárquica/ orçamento adaptativo mais adiante. Não reabrir boot, n8n ou segundo executor.
+
+Handoff: [Plano P2.1](context/ol-mvp-2026-10-16/P2_1_NATIVE_ADOPTION_PLAN.md) · [Mapa exato](context/ol-mvp-2026-10-16/P2_1_PATCH_MAP.md) · [Prompt IA](context/ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md). Nova branch DOCUMENTAL empilhada sobre #96, sem alteração runtime/main.
+
+
+
+## 2026-10-17 — P2 80/20: reconciliar P1C local → prova causal → seleção pré-LLM e métricas
+
+**Decisão GO P2-preflight / HOLD qualificação produto:** relatório da IA (17/10 03:04 BRT) diz 5/5 testes P1C + 40/40 ExperienceCompiler + 7/7 boundary + lint/health, porém **PR #95 remoto continua em `2b9f7162507cf5db0fe32a7c77fb28f121d1e8f3`**, sem as alterações declaradas em `task_compiler.py`/`compiler.py`/`promotion.py` e sem `workstation/tests/test_P1C_strict_read_acceptance.py` ou `evidence/P1C_RESULT_20261016.json`. Desktop Commander offline. **Não marcar P1C native E2E PASS** sem novo evento por chat/Gateway e refs reais.
+
+O recibo do relatório usa `task_id=real`, `run_id=real` e `evidence_refs` apontando para arquivos de testes. Isso **não demonstra** operação canônica, owner, verificação Electron nativa, `RunLocalAdopter` executando item 2/3, nova TaskRun ou custo real. O histórico P1.0 Browser Electron PASS permanece válido; P1B Python candidate mining PASS segundo testes anteriores.
+
+**Ordem imutável 80/20:** P2.0 preservar/publicar P1C local após inspecionar Git; confirmar quem despacha os WorkItems, se `compile_and_execute`/`PromotionGate` são apenas wrapper de teste, e executar UM E2E verdadeiro (se DIRECT desautorizado, SHADOW com motivo); P2.1 seleção determinística via `OperationalCapabilityRegistry.find_matching` + `operational_resolution.py` + Router/Policy existentes, sem LAYA/embeddings obrigatórios; P2.2 baseline de provider calls, tokens, custos líquidos e taxa de sucesso VERIFICADA por Run, nulos quando não mensurados. P2.3 BM25 ou novas Runs só se benchmark justificar.
+
+**Código preparado nesta branch docs:** `context/ol-mvp-2026-10-16/patches/p2_receipt_gate.py` (auditor de estrutura, NÃO autentica artifacts), 5 testes PASS no contêiner. **Não integrar ao runtime como autoridade.** [Plano](context/ol-mvp-2026-10-16/P2_80_20_DECISION_AND_PLAN.md) · [Mapa](context/ol-mvp-2026-10-16/P2_PATCH_MAP.md) · [Prompt IA](context/ol-mvp-2026-10-16/P2_IMPLEMENTER_PROMPT.md). Stage A/DIRECT/promocão global/merge continuam sob gates.
+
+
+
+## 2026-10-16 — OL-MVP P1C: provar reutilização NATIVA em TaskRun real (prioridade 80/20)
+
+**P1B CÓDIGO CONCLUÍDO:** PR draft #94 commit `27b6376535dcfb92025fd4d468411feb0d7d3a34` contém readback tipado, owner/dispatcher, aceitação por WorkItem, saída semântica `read.*` e mineração candidata. O relatório do implementador apresenta **30 testes focais (8+8+5+5+3+1)** e **53 regressões de segurança** verdes; não reexecutamos essa bateria nesta atualização. P1.0 Chromium/Electron já passou 1/1 E2E com 3 cartões DOM loopback em 21,8s.
+
+**P1B ≠ P1C:** `test_ol_mvp_p1b_cards_workitems.py` usa dispatcher Python sintético e `worker()` executa **todos** os três cartões; candidate minerado `DISCOVERED` não significa `RunLocalAdopter` executando item 2/3. Nenhum E2E integrado `desktop_chat/work_execute → TaskRun → RunLocalAdopter → segunda TaskRun` ou redução real de tokens foi apresentado. Stage A continua PENDENTE; exceção autoriza apenas desenvolvimento isolado. Portanto, implementação P1B aprovada para avançar, mas **produto/DIRECT/promocão em HOLD**.
+
+**P1C = o próximo experimento, sem hardening geral:** gateway/chat real + 3 WorkItems nativos separados → amostra/recibo vinculados por operation_id exato → candidata e offer legítima → reuse receipt de `RunLocalAdopter` em item seguinte, quando a qualificação real permitir → nova TaskRun com parâmetros diferentes; uso do provedor real ou `null`. Primeiro inspecionar riscos focais em `canonical_source_for_readback` e `ExperienceCorpus.accept_work_item` (fallback para last sample/fabricação de amostra); exigir fail-closed e comprovante por operação real.
+
+**Gates P1C:** GO P2 ao comprovar caminho real; GO P2 SOMENTE SHADOW/observabilidade caso o único bloqueio seja autorização externa de Stage A; HOLD técnico quando ainda faltar TaskRun nativa ou prova causal. P2 futura: memória leve e seleção contrato/exato/BM25→LAYA opcional/LLM, quatro ImprovementRuns com infraestrutura comum e orçamento com teto exclusivo do usuário. Sem segunda plataforma de automação.
+
+**Handoff:** [plano P1C](context/ol-mvp-2026-10-16/P1C_NATIVE_DOGFOOD_PLAN.md) · [mapa](context/ol-mvp-2026-10-16/P1C_EXACT_PATCH_MAP.md) · [prompt implementador](context/ol-mvp-2026-10-16/P1C_IMPLEMENTER_PROMPT.md) · [recibo/template](context/ol-mvp-2026-10-16/P1C_NATIVE_RECEIPT_TEMPLATE.json). Codigo de auditoria `patches/P1C_evidence_gate.py` é estrutura-only, NÃO valida ArtifactStore nem altera runtime; testes Python de protótipo locais 6/6 PASS, aguarda qualificação no HEAD da branch.
+
+
+
+## 2026-10-16 — OL-MVP P1B: VERIFICAR RESULTADO DE LEITURA → COMPILAR (PRIORIDADE REAL, 80/20)
+
+**P1.0 APROVADO:** relatório factual no `evidence/P1_NATIVE_RESULT_20261016.json` (commit `6e1443079e` do PR #93): Electron/Chromium nativo, extração tipada e readback DOM independente de 3 cartões, E2E **1/1 PASS 21,8s**. Trata-se de UMA ferramenta lendo 3 cards numa fixture loopback, não de 3 WorkItems em TaskRun canônica. Build dirty warning; sem release. Chamadas LLM/tokens/custo desconhecidos.
+
+**P1.1 HOLD focal:** saída `browser_extract_items` não projeta resultado semântico aceito no `TransitionSample`; inferência e segmentação exigem delta, que uma leitura não produz; `ExperienceCorpus.accept_run` fecha no término da Run e seu readback especial só aceita navegação; `RunLocalAdopter` não admite `browser_extract_items` em `_SUPPORTED/_READBACK`. **Não voltar a boot, navegador ou hardening geral.** Resolver uma única vertical read-only com owner e evidência independente; primeiro 3 WorkItems separados, depois output schema aceito, candidate, run-local, outra TaskRun.
+
+**P1B código proposto, NÃO runtime:** `context/ol-mvp-2026-10-16/patches/P1B_read_output_contract.py` + 5 testes unittest isolados PASS; aplica somente após autorização Stage A. Não importa no runtime, não conclui compilação. [Plano](context/ol-mvp-2026-10-16/P1B_OUTPUT_BRIDGE_PLAN.md) · [Patch/mapa](context/ol-mvp-2026-10-16/P1B_PATCH_INSTALL.md) · [Prompt IA](context/ol-mvp-2026-10-16/P1B_IMPLEMENTER_PROMPT.md).
+
+**Foco:** conclusão da tarefa é soberana; evidência independentemente vinculada a owner/TaskRun; candidate não implica promoção nem DIRECT; sem efeitos mutantes no piloto. **GO** para P2 memória/seleção apenas após prova honesta de pelo menos uma adoção em TaskRun real ou única dependência externa de autorização isolada com restante comprovado; enquanto faltar ponte, HOLD. O modelo arquitetural de 4 ImprovementRuns, orçamento global do usuário, telemetria separada, versão global otimista e seleção determinístico→BM25/embeddings→LAYA→LLM permanece aprovado, mas fora deste PR.
+
+
+
+## 2026-10-16 — Evidência OL-MVP: P1.0 PASS; P1.1/P1.2 HOLD
+
+**P1.0 PASS:** build desktop passou (Vite: 40,74 s), E2E focal Electron passou 1/1 em 21,8 s e checagem TypeScript focal passou. O teste verificou três cartões loopback com `browser_extract_items`, snapshot e readback DOM independente via `webContents` de teste. Recibo e provenance: [P1_NATIVE_RESULT_20261016.json](context/ol-mvp-2026-10-16/evidence/P1_NATIVE_RESULT_20261016.json).
+
+**P1.1/P1.2 NÃO DEMONSTRADOS:** nenhum TaskRun canônico real iniciou. Contagens e métricas de TaskRun/adaptação/compilação/verificação, uso/custo LLM, falhas e fallbacks permanecem null/desconhecidos; `native_verified_items=3` é apenas a fixture e não é métrica de TaskRun.
+
+**Bloqueio preciso:** a capability aceita `read_only`/`output_schema` (`workstation/operational_capabilities.py:112-124`) e a tabela de `run_adoption.py:128-132` reconhece extração read-only. O caminho de projeção output-only não atravessa ainda `TransitionSample` (`experience_compiler/models.py:168-183`), estado abstrato (`state_abstraction.py:11-48`), inferência de efeito por delta (`generalization.py:122-132`), segmentação (`segmentation.py:55-66`) e compilação, que rejeita efeito vazio (`compiler.py:89-93`); factory run-local também exclui `browser_extract_items` (`integrations/hermes/run_local_adoption.py:31-35`). O `kanban` só chama `accept_run(journal, outcome)` na conclusão (`workstation/kanban.py:473-479`), não aceita uma amostra por item para adoção dentro da mesma run. Stage A permanece pendente/não qualificado ([estado](context/CURRENT_STATE.md)); não alterar runtime antes do gate. Próximo passo: após Stage A, tratar somente esse seam; sem reiniciar P0/hardening e sem concluir ausência de provider.
+
+
+## 2026-10-16 — PRIORIDADE ATUAL: OL-MVP P1, DOM vivo + adoção na mesma TaskRun (80/20)
+
+**Estado real:** P0 implementado na branch do PR draft #92, **91/91 PASS segundo relatório implementador**; 7 testes focais repetidos em checkout isolado PASS. O circuito Python usou 3 itens adaptativos e 2 compilados (40% de *contador simulado*, não economia real). Reutilização na segunda TaskRun dependeu de promoção/receipts construídos no setup do teste, não da promoção autônoma comprovada.
+
+**P1.0 — primeiro bloqueio:** teste Electron `workstation-headless-load.spec.ts` falhou **antes das ações de Browser**, em `beforeAll` aos 90s enquanto `waitForAppReady` solicitava 120s. UI em `Waking up … / Reconnecting to Hermes…`; causa-raiz do boot/backend ainda NÃO determinada. P1 patch alinha limites somente de teste, acrescenta diagnóstico por etapa e cria página HTTP local com três cartões e teste de `browser_navigate/browser_snapshot`; patch entregue, E2E **ainda não qualificado**.
+
+**Execução imediata em ordem:** (1) `npm run build` e smoke P1 único no Electron; corrigir apenas causa comprovada da conexão/boot; (2) três cartões no DOM vivo do Chromium, leitura somente com evidência independente; (3) aprender e adotar capacidade na mesma TaskRun pelo owners EXISTENTES; (4) persistir e consultar numa TaskRun nova; (5) medir provider usage real e custo de aprendizagem. Meta 80/20: UM cenário correto de ponta a ponta, sem perseguir 95%/50% no piloto e sem hardening lateral.
+
+**Arquitetura preservada:** eventos tipados no runtime, telemetria independente, memória operacional hierárquica/compilação seletiva, seleção multimétodo determinístico → BM25/embeddings opcionais → LAYA → System-2 sob Router+Policy; quatro ImprovementRuns futuramente no mesmo executor/scheduler. SourceResearchRun investiga e testa em sandbox, NÃO altera código operacional sem aprovação. Orçamento financeiro global só pelo usuário. Nenhuma atualização GLOBAL amplifica autoridade.
+
+**Entregas P1:** [patch/seams](context/ol-mvp-2026-10-16/P1_PATCH_MAP.md), [gates](context/ol-mvp-2026-10-16/P1_EVIDENCE_GATE.md), [prompt plug-and-play](context/ol-mvp-2026-10-16/P1_IMPLEMENTER_PROMPT.md), [plano P1](context/ol-mvp-2026-10-16/P1_NATIVE_BROWSER_80_20.md). Código já preparado em `apps/desktop/e2e/{workstation-headless-load.spec.ts,ol-mvp-p1-readonly-cards.ts}`; P0 técnico permanece no [PR #92](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/92). Não alterar main nem informações privadas do dogfood.
+
+
+
+## 2026-10-16 — OL-MVP V2: compilação durante a TaskRun (PLANEJADO / NÃO QUALIFICADO)
+
+**Decisão estratégica:** observar todas as tarefas e compilar seletivamente, usando verificação independente e adoção do procedimento recém-aprendido ainda na MESMA TaskRun. O item 1 pode alimentar candidato; próximo item elegível é executado pelo RunLocalAdopter sem reconstrução via LLM, com gates de lease, precondições, verificação e preservação de alterações humanas. Persistência entre TaskRuns e redução de custo líquido vêm em seguida, não antes.
+
+**Descoberta dirigida em main (16/10):** workstation/experience_compiler/compilability_monitor.py já produz offers qualificados, workstation/run_adoption.py já possui RunLocalAdopter, e operational_resolution.py já chama o checkpoint na fronteira PRÉ-raciocínio. O DurableBatchRunner mantém um snapshot work_items para iterar; o P0 é acrescentar boundary seguro ENTRE itens e refetch do estado durável, sem um segundo executor, sem provocar duplicação. SHADOW é padrão e DIRECT exige qualificação autêntica. É proposta de correção e NÃO evidência de E2E aprovado.
+
+**Decisões de evolução:** memória operacional universal hierárquica e compilação seletiva; telemetria independente; capacidade compartilhada com versionamento e propagação otimista, rollback contextual; seleção determinística/BM25/embeddings/LAYA/LLM com Router+Policy; SkillImprovementRun, CapabilityImprovementRun, SourceResearchRun e SelectionImprovementRun em infraestrutura comum. Código-fonte somente investigação/patch experimental isolado sem autorização para implementação; orçamento global absoluto é exclusivo do usuário.
+
+**Ordem 80/20:** baseline e segurança (Gate 0) → patch de callback entre itens e reconciliacao no DurableBatchRunner (P0) → ligação ao owner runtime e teste real item1→item2 (P0) → Trello leitura/Electron + reuso nova TaskRun (P1) → métricas líquidas e evolução (P2) → quatro especialidades, fila econômica e seleção multimétodo (P3). Os patches old explicit_seed.py/test_explicit_seed.py não devem ser instalados.
+
+**Handoff e código-patch:** [plano](context/ol-mvp-2026-10-16/IMPLEMENTATION_PLAN.md) · [decisões](context/ol-mvp-2026-10-16/DECISIONS.md) · [patch preciso](context/ol-mvp-2026-10-16/PATCH_MAP.md) · [prompt](context/ol-mvp-2026-10-16/IMPLEMENTER_PROMPT.md). Fonte prioritária: 56 sessões, 10 snapshots HTML e 40 docs do dogfood auditados em 16/10, com limites explicitados; produto real ainda não requalificado.
+
 ## 2026-10-13 — HWH-001 shared-branch MVP (ACTIVE)
 
 A fase 0 estabelece UMA branch (`feat/hermes-workstation-mvp-20261013`), um checkout (`C:\Github\hermes-agent`), leases cooperativos de arquivos, um integrador Git e checkpoint recursivo, evitando quatro agentes abrirem worktrees/branches por ajuste. Ver [protocolo](context/AGENT_COLLABORATION_PROTOCOL.md), [board](context/workstation-hub-mvp/TEAM_BOARD.md) e [3 etapas de implementação](context/workstation-hub-mvp/IMPLEMENTATION_STAGES.md). Produto ainda NÃO qualificado: (1) Agent abre Creative interno sem search; (2) Browser→Workstation + aba Creative React; (3) aba web manual→nova sessão real via mesma WebContentsView e lease humano. Plano 20/80: Fase 1 HWH01+02, Fase 2 HWH03, Fase 3 native E2E/CI/PR; sem merge automático ou bypass H-079.

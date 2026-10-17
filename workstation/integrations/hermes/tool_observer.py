@@ -54,11 +54,30 @@ def workstation_raw_post_tool_observer(
             op_id = getattr(agent, "_current_operation_id", None) or call_id
             c_route = canonical_route_for_tool(tool_name)
             outcome = "failed" if failed else "observed" if tool_effect(tool_name) in READ_EFFECTS else "uncertain"
-            ref = capture_progressive(ArtifactStore(), task_id=t_id,
+            artifacts = ArtifactStore()
+            from workstation.recipes import sanitize
+            raw_data = raw_result if isinstance(raw_result, (dict, list)) else (
+                json.loads(raw_result) if isinstance(raw_result, str) and raw_result.strip().startswith(("{", "[")) else {"raw": raw_result}
+            )
+            try:
+                raw_ref = artifacts.store(
+                    t_id or "experience",
+                    f"raw_result_{op_id}.json",
+                    sanitize(raw_data),
+                    schema="workstation.raw_tool_result.v1",
+                ).ref
+            except Exception:
+                raw_ref = None
+            agent._last_raw_result_ref = raw_ref
+            agent._current_operation_id = op_id
+            ref = capture_progressive(artifacts, task_id=t_id,
                 run_id=r_id,
                 operation_id=op_id,
                 primitive=tool_name, route=c_route,
-                outcome=outcome)
+                outcome=outcome,
+                raw_result_ref=raw_ref,
+                state=raw_data if isinstance(raw_data, dict) else None)
+            agent._last_progressive_ref = ref
             if ref:
                 try:
                     from workstation.experience_compiler.compilability_monitor import notify_online_compilability
