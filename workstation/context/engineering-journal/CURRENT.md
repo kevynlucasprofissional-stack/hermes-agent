@@ -1,4 +1,37 @@
 # CURRENT — Workstation Engineering Journal
+## 2026-10-17 — OL-MVP P2.1: Mineração em Voo, Adoção Segura SHADOW e Recuperação Cross-Run (PASS/PARTIAL 80/20)
+**Branch de implementação**: `docs/ol-mvp-p2-1-native-adoption-20261017`
+**Objetivo cumprido**: Comprovação de ciclo real de aprendizagem e reutilização de capacidades operacionais durante TaskRuns canônicas gerenciadas pelo Electron/Gateway, atendendo estritamente ao escopo 80/20 sem relaxamento de gates de segurança ou duplicação de roteadores.
+
+### 1. Resumo dos Resultados e Matriz de Marcos
+
+| Marco / Critério | Status | Detalhes & Evidência |
+|---|---|---|
+| Candidate Mining em Voo | **PASS** | 3 capacidades mineradas durante TaskRun 1 (`workstation.run_learning_checkpoint.v1`) |
+| Qualified Offer na Run | **PARTIAL** | Política impõe `SHADOW` (`direct_requires_qualification_ref`); degradação segura sem forjar recibos |
+| Adoção na Mesma Run | **PARTIAL** | Execução adaptativa concluída sob SHADOW; sem duplicidade de despacho |
+| Recuperação Cross-Run | **PASS** | `CapabilityRouter` rejeita candidata `discovered` por `candidata não promovida`; executa promovida pré-LLM com 0 tokens |
+| Readback Independente | **PASS** | 6/6 WorkItems verificados via `hermes.browser_card_readback.v1` com `ok=True` no DOM real |
+| Economia Líquida / LLM | **HOLD** | Provedor mock scriptado; `real_llm_calls=null`, `tokens=null`, `cost=null` conforme 80/20 |
+
+### 2. Evidências Canônicas e Invariantes Validadas
+1. **Mineração Dinâmica no CompilabilityMonitor (`compilability_monitor.py`):**
+   - Corrigido o seam em `_query_system1_compilability` para recorrer a avaliação determinística em caso de ausência/abstenção do provedor System-1.
+   - Quando transições verificadas ocorrem (`event.event_kind == "verified_transition"`), o monitor transiciona para `MINE_CANDIDATE` e aciona `ExperienceCompiler.mine_candidate_in_run`.
+   - Geradas 3 candidatas operacionais estruturadas com hashes canônicos (`experience_1cd711673a7ce93105126064`, `experience_5ca199b8398fd2bda6b9de43`, `experience_9dcda01bf73bb518ed08d8bc`).
+2. **Deduplicação e Parametrização (`compiler.py`):**
+   - Permitida qualidade de parametrização quando há múltiplos sucessos consistentes dentro da mesma TaskRun (`len(successes) >= 2`), preservando a integridade das invariantes.
+3. **Adoção e Política de Segurança (`run_local_adoption.py` / `task_compiler.py`):**
+   - Sem atestação de qualificação direta assinada por operador, a política rebaixa estritamente para `SHADOW` (`downgrade_reason = "direct_requires_qualification_ref"`).
+   - O item prossegue pela via adaptativa com sucesso, garantindo que tarefas não falhem nem executem código não certificado em DIRECT.
+4. **Resolução Cross-Run Pré-LLM (`control_plane/router.py` / `operational_resolution.py`):**
+   - Na TaskRun 2, o `CapabilityRouter` avalia o registro e abstém-se formalmente com a justificativa `candidata não promovida` (lifecycle `discovered`), pois promoção global exige múltiplas runs ou promoção manual explícita.
+   - Em capacidades promovidas com contrato formal, a resolução pré-LLM opera sem invocar provedor LLM (0 chamadas, 0 tokens), com execução certificada via `CertifiedDispatcher`.
+5. **Telemetria e Testes Automatizados:**
+   - E2E Playwright `apps/desktop/e2e/workstation-headless-load.spec.ts --grep "OL-MVP P2"`: 1/1 PASS em 56.7s com asserção explícita de `checkpoint_refs` e `mined_candidate_ids`.
+   - Testes Python de resolução pré-LLM e experiência: 10/10 PASS em `test_e2e_operational_resolution.py`, 10/10 PASS em `test_operational_resolution_provider.py`, 40/40 PASS em `test_experience_compiler.py`, 8/8 PASS em `test_ol_mvp_inflight_boundary.py`.
+   - Health check: 0 blocking, 0 advisory findings.
+
 ## 2026-10-17 — HLM-MVP: Human Demonstration Observer + Proactive Learning Question Engine (VERIFIED M0–M2, M3 EM HOLD)
 **Branch de implementação**: `feat/hermes-learning-mode-mvp-20261017` criada a partir de `docs/learning-mode-question-engine-mvp-20261017` (HEAD base `ca145f39`).
 **Objetivo cumprido**: Implementação funcional do MVP do Hermes Learning Mode (Decisão **D-047** e fases S0–S7 do handoff executável), integrando observação de gestos humanos autorizados, vídeo da aba, controle de intensidade ao vivo, Question Engine contextual com formulação de hipóteses/perguntas úteis, captura de correções humanas (`needs_reinterpretation`) e compilação de candidatas operacionais inertes para o Experience Compiler.

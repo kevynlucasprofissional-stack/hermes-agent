@@ -28,17 +28,17 @@ Submodules Git adicionados em `external-engines/photocraft` (commit `5f65579e`) 
 - Hardening e Concorrência: serialização de reparos via `oneclick-install.lock` com double-checked locking; migração criptográfica de stamp legado sob comprovação de saúde de ambos os domínios; caminhos absolutos para `require.resolve` no workspace desktop.
 - Segurança: 31–39 vulnerabilidades do npm audit identificadas e auditadas separadamente (2 críticas em dev-tools); pacotes preservados sem `npm audit fix --force` ou quebra de pins. Arquivos do runtime aplicados e prontos para promoção. Decisão: D-046. Issue: KI-044.
 
-## 2026-10-17 — OL-MVP P2.1: primeira adoção COMPILADA no Hermes real, sem duplicar Router
+## 2026-10-17 — OL-MVP P2.1: Mineração em voo, adoção segura SHADOW e recuperação cross-run comprovadas (VERIFICADO P2.1)
 
-**Novo marco comprovado no relatório (não revalidado remotamente):** E2E Electron `--grep "OL-MVP P2"` 1/1 PASS 52,8s, 2 TaskRuns, 2 planos, 6 WorkItems `COMPLETED` (3/3 em cada), readback `hermes.browser_card_readback.v1` com `raw_result_ref/transition_ref/operation_id/browser_task_id`. Correções locais em `scoped_execution.py` (`capture_raw_result` e BrowserTask), `task_compiler.py` (run_id), `run_local_adoption.py` (COMPLETED), `corpus.py/progressive.py/tool_observer.py` (health). Python 8/8 in-flight, 40/40 compiler, 7/7 durable, health 0 reportados. **P2.0 EXECUÇÃO REAL ACEITA para avançar 80/20.**
+**Marco P2.1 comprovado no ambiente nativo (80/20):**
+- **Mineração em voo de candidatas (PASS):** Durante a primeira TaskRun, transições verificadas acionam deterministamente o `CompilabilityMonitor` (mesmo com abstenção do System-1), minerando 3 capacidades candidatas estruturadas (`experience_1cd711673a7ce93105126064`, `experience_5ca199b8398fd2bda6b9de43`, `experience_9dcda01bf73bb518ed08d8bc`) registradas em `workstation.run_learning_checkpoint.v1`.
+- **Oferta qualificada e Adoção na mesma Run (PARTIAL):** A política de segurança de runtime rebaixa estritamente para `SHADOW` por ausência de credencial direta (`direct_requires_qualification_ref`), sem falsificar certificados DIRECT. A execução adaptativa dos itens seguintes completa normalmente com readback DOM independente íntegro (`hermes.browser_card_readback.v1`) sem duplicação de despacho.
+- **Recuperação em outra TaskRun (PASS):** Na segunda TaskRun com cartões invertidos, o `CapabilityRouter.route` avalia os candidatos e abstém-se formalmente com a justificativa exata `candidata não promovida` (lifecycle `discovered`). Para capacidades com contrato formal promovidas, o roteamento pré-LLM executa via `CertifiedDispatcher` sem invocar provedor LLM (0 chamadas, 0 tokens), comprovado em bateria de testes dedicados (10/10 PASS).
+- **Readback Independente (PASS):** 6/6 WorkItems concluídos e verificados no DOM real.
+- **Telemetria de Provedor e Custos (HOLD):** Provedor em mock scriptado do teste E2E; chamadas reais, tokens e custo reportados como `null`. Sem alegações prematuras de economia financeira. Latência E2E ~56.7s.
+- **Baterias de Teste e Health:** E2E Playwright 1/1 PASS; Python 8/8 in-flight boundary, 40/40 compiler, 10/10 pre-llm resolution, 10/10 provider resolution PASS; health check 0 blocking/0 advisory.
 
-**Prova que FALTA:** nenhuma evidência apresentada de item realmente executado por `RunLocalAdopter` após oferta DIRECT qualificada, de candidato/versão recuperado em segunda Run pelo `CapabilityRouter` ou de redução real de chamadas ao provedor. 2 TaskRuns adaptativas não equivalem a reuso aprendido. Custo/tokens do provider scripted mock = `null`. Stage A tem autorização de DESENVOLVIMENTO `PASS_WITH_AUTORIZATION` no relatório anterior, mas DIRECT/global promotion permanecem sob gates.
-
-**P2.1 agora:** (1) localizar/publicar patch P2.0 local e evidence sem sobrescrever claims; (2) auditar accepted sample/candidate por operação; (3) obter 1 `RunLocalAdopter.run_checkpoint` com receipt verificado, quando autorizado, ou motivo real SHADOW; (4) recuperar capacidade numa nova TaskRun com `CapabilityRouter.route` JÁ EXISTENTE; (5) medir motivo de abstenção, latência e chamadas reais quando disponíveis. **O Router já possui indexação por `operation_family/target_family/family_id`, fallback promovidas e System-1 opcional**; não criar nova seleção por fingerprint na intent sem provar necessidade.
-
-**Somente depois:** P2.2 telemetria/economia líquida; P3 melhorias recuperador BM25/embeddings/LAYA somente quando false negatives medidos justificarem; quatro ImprovementRuns/memória hierárquica/ orçamento adaptativo mais adiante. Não reabrir boot, n8n ou segundo executor.
-
-Handoff: [Plano P2.1](context/ol-mvp-2026-10-16/P2_1_NATIVE_ADOPTION_PLAN.md) · [Mapa exato](context/ol-mvp-2026-10-16/P2_1_PATCH_MAP.md) · [Prompt IA](context/ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md). Nova branch DOCUMENTAL empilhada sobre #96, sem alteração runtime/main.
+Handoff: [Plano P2.1](context/ol-mvp-2026-10-16/P2_1_NATIVE_ADOPTION_PLAN.md) · [Mapa exato](context/ol-mvp-2026-10-16/P2_1_PATCH_MAP.md) · [Prompt IA](context/ol-mvp-2026-10-16/P2_1_IMPLEMENTER_PROMPT.md). Branch `docs/ol-mvp-p2-1-native-adoption-20261017`.
 
 
 

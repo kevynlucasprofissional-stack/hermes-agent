@@ -593,11 +593,29 @@ function collectArtifactFiles(root: string, unresolved: string[]): Array<{ path:
   return artifacts
 }
 
+function extractP2LearningEvidence(attempts: Array<Record<string, any>>): {
+  learningCheckpoints: any[]
+  candidateCapabilities: any[]
+  compilerAdoption: string
+} {
+  const learningCheckpoints = attempts.flatMap(a => (a.artifacts || []).filter((art: any) => art.value?.schema === 'workstation.run_learning_checkpoint.v1'))
+  const candidateCapabilities = attempts.flatMap(a => (a.artifacts || []).filter((art: any) => typeof art.path === 'string' && art.path.includes('operational_capabilities') && !art.path.endsWith('.meta.json')))
+  const compilerAdoption = candidateCapabilities.length > 0 ? 'candidates_compiled_shadow' : 'not_demonstrated'
+
+  return { learningCheckpoints, candidateCapabilities, compilerAdoption }
+}
+
 test('OL-MVP P2: two real chat work_execute batches require canonical owner evidence', async () => {
   test.setTimeout(240_000)
+
+  if (!fixture) {
+    throw new Error('Fixture not initialized')
+  }
+
+  const activeFixture = fixture
   const url = `${pageBaseUrl}${OL_MVP_READONLY_PATH}`
   const attempts: Array<Record<string, any>> = []
-  const artifactRoot = path.join(fixture.sandbox.hermesHome, 'workstation', 'artifacts')
+  const artifactRoot = path.join(activeFixture.sandbox.hermesHome, 'workstation', 'artifacts')
 
   for (const [index, cards] of [OL_MVP_READONLY_CARDS, [...OL_MVP_READONLY_CARDS].reverse()].entries()) {
     const marker = `OLP2-${Date.now()}-${index}`
@@ -617,16 +635,16 @@ test('OL-MVP P2: two real chat work_execute batches require canonical owner evid
       attempt.preparation = { request: { url }, raw: null, error: null }
 
       try {
-        attempt.session = await createRealChat(fixture, `${marker} E2E_CALL(browser_navigate)[${JSON.stringify({ url })}]`, 'E2E_CALL_RESULT:', marker)
-        attempt.preparation.raw = await fixture.page.locator('[data-slot="aui_assistant-message-content"]').last().textContent()
+        attempt.session = await createRealChat(activeFixture, `${marker} E2E_CALL(browser_navigate)[${JSON.stringify({ url })}]`, 'E2E_CALL_RESULT:', marker)
+        attempt.preparation.raw = await activeFixture.page.locator('[data-slot="aui_assistant-message-content"]').last().textContent()
       } catch (error) {
         attempt.preparation.error = String(error)
         throw error
       }
 
-      attempt.session = await createRealChat(fixture, `${marker} Execute this multistep workflow to read 3 cards without mutating them. E2E_CALL(work_execute)[${JSON.stringify(request)}]`, 'E2E_CALL_RESULT:', marker, attempt.session)
+      attempt.session = await createRealChat(activeFixture, `${marker} Execute this multistep workflow to read 3 cards without mutating them. E2E_CALL(work_execute)[${JSON.stringify(request)}]`, 'E2E_CALL_RESULT:', marker, attempt.session)
       await expect.poll(async () => {
-        attempt.raw = await fixture.page.locator('[data-slot="aui_assistant-message-content"]').last().textContent()
+        attempt.raw = await activeFixture.page.locator('[data-slot="aui_assistant-message-content"]').last().textContent()
         const parsed = parseCallResultJson(attempt.raw)
 
         if (parsed) {
@@ -639,13 +657,13 @@ test('OL-MVP P2: two real chat work_execute batches require canonical owner evid
       }, { timeout: 60_000 }).toBe(true)
     } catch (error) {
       attempt.product_failure = String(error)
-      attempt.raw = await fixture.page.locator('body').textContent().catch(() => null)
+      attempt.raw = await activeFixture.page.locator('body').textContent().catch(() => null)
     } finally {
       attempt.tables = {}
       let db: DatabaseSync | undefined
 
       try {
-        db = new DatabaseSync(path.join(fixture.sandbox.hermesHome, 'kanban.db'), { readOnly: true })
+        db = new DatabaseSync(path.join(activeFixture.sandbox.hermesHome, 'kanban.db'), { readOnly: true })
 
         for (const table of ['tasks', 'task_runs', 'work_plans', 'work_items']) {
           try { attempt.tables[table] = db.prepare(`SELECT * FROM ${table}`).all() }
@@ -676,7 +694,7 @@ test('OL-MVP P2: two real chat work_execute batches require canonical owner evid
   const observation: Record<string, any> = { viewport: null, cards: null, error: null }
 
   try {
-    observation.viewport = await nativeViewportSnapshot(fixture.app)
+    observation.viewport = await nativeViewportSnapshot(activeFixture.app)
     const children: any[] = []
 
     const collect = (value: any): void => {
@@ -691,7 +709,7 @@ test('OL-MVP P2: two real chat work_execute batches require canonical owner evid
     const child = children.find(value => typeof (value.webContentsId ?? value.id) === 'number')
 
     if (!child) {throw new Error('P2: requested native viewport is absent')}
-    observation.cards = await fixture.app.evaluate(({ webContents }, id) => {
+    observation.cards = await activeFixture.app.evaluate(({ webContents }, id) => {
       const contents = webContents.fromId(id)
 
       if (!contents) {throw new Error('P2: native viewport webContents missing')}
@@ -700,10 +718,13 @@ test('OL-MVP P2: two real chat work_execute batches require canonical owner evid
     }, child.webContentsId ?? child.id)
   } catch (error) { observation.error = String(error) }
 
-  const evidence = { schema: 'hermes.ol_mvp_p2_native_probe.v1', scripted_provider: true, mode: 'SHADOW', attempts, observation, real_llm_calls: null, tokens: null, economics: null, compiler_adoption: 'not_demonstrated' }
+  const { learningCheckpoints, candidateCapabilities, compilerAdoption } = extractP2LearningEvidence(attempts)
+  const evidence = { schema: 'hermes.ol_mvp_p2_native_probe.v1', scripted_provider: true, mode: 'SHADOW', compiler_adoption: compilerAdoption, learning_checkpoints: learningCheckpoints.map(c => c.value), candidate_capabilities: candidateCapabilities.map(c => ({ id: c.value?.id, version: c.value?.version, lifecycle: c.value?.lifecycle, family_id: c.value?.family_id })), attempts, observation, real_llm_calls: null, tokens: null, economics: null }
   const evidencePath = test.info().outputPath('ol-mvp-p2-native-chat-work-execute-evidence.json')
   fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2))
   await test.info().attach('ol-mvp-p2-native-chat-work-execute-evidence', { path: evidencePath, contentType: 'application/json' })
+  expect(candidateCapabilities.length).toBeGreaterThan(0)
+  expect(learningCheckpoints.length).toBeGreaterThan(0)
   const runIds: string[] = []
 
   for (const attempt of attempts) {
