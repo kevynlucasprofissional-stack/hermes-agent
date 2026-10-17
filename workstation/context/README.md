@@ -1,5 +1,9 @@
 # Hermes Workstation — Coding-Agent Context
 
+## CW-047 — ponto de entrada operacional (2026-10-17)
+Para preparar a abertura por comando de PhotoCraft/EffectCraft no Browser nativo, após H-079 e a ordem canônica de contexto, seguir [handoff objetivo](../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md). Helpers Python já versionados, **não conectados nem testados em Electron**. Baixo acoplamento D-046 continua premissa, sem autorização para novo browser/UI/kernel ou integração 3D profunda.
+
+
 ## Prioridade estratégica D-046 — baixo acoplamento primeiro (2026-10-17)
 **Leitura antes de propor qualquer nova integração criativa ou incorporação de aplicativo:** [decisão D-046 e critérios](CREATIVE_LOW_COUPLING_FIRST_2026-10-17.md). Primeiro usar os painéis/Browser nativo já existentes, entregar trabalho real e tentar automação atual. Adaptadores ou código absorvido exigem necessidade comprovada; baixo acoplamento pode ser o estado final. Planos profundos D-043/CWN são backlog condicionado, não execução automática. Preservar todos os owners e gates de segurança; status **DECISÃO, NÃO IMPLEMENTAÇÃO**.
 

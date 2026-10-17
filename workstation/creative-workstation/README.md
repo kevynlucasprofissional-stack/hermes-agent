@@ -1,5 +1,9 @@
 # Hermes Creative Workstation
 
+## CW-047 implementação dirigida (2026-10-17)
+Novo [handoff plug-and-play](CW047_IMPLEMENTER_HANDOFF_2026-10-17.md) com owners, código auxiliar pronto no repositório, submodules com SHA pinado, política loopback e ordem de testes. **A inclusão dos helpers NÃO significa que o comando abra os editores:** ainda não estão integrados ao despacho do agente nem foi feito E2E Windows. Manter PhotoCraft primeiro e EffectCraft depois. Tratar Remotion e Three.js como backlog demonstrativo; D-046 prevalece.
+
+
 ## CW-047 — próxima frente de trabalho: fontes independentes + abertura de editores no Browser (2026-10-17; PLANO)
 **Não construir outro painel.** Candidatos PhotoCraft e EffectCraft em submodules Git pinados (somente depois de confirmar os forks), com builds web existentes, lifecycle localhost/ProcessRegistry e comando humano `abra ...` na infraestrutura de navegação atual. Remotion/Three.js como dependências versionadas quando algum fluxo exigir. Backlog: cena/camada de Three.js vinculada ao EffectCraft no espírito Cinema 4D/After Effects, apenas após prova. Nenhuma destas instalações ou mudanças de runtime ocorreu nesta atualização documental. [Plano, requisitos e gates](LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md).
 

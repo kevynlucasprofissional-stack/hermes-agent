@@ -1,4 +1,8 @@
 # CW-047 — Motores externos versionados + abertura sob demanda no Browser nativo
+
+## Próximo passo executável (2026-10-17)
+O [prompt implementador CW-047](CW047_IMPLEMENTER_HANDOFF_2026-10-17.md) inclui fontes oficiais, sequência por fase, arquivos/símbolos exatos, integração de aliases e URL gerenciada, requisitos de segurança, testes e registro de evidências. Já existem helpers isolados no repositório, porém **nenhuma ligação ao runtime/servidor e nenhum submodule** foi completado nesta fase.
+
 **Data:** 2026-10-17
 **Status:** PLANO SOLICITADO / documentação; importação dos repositórios, servidor localhost e comando de abertura AINDA NÃO IMPLEMENTADOS NESTA ALTERAÇÃO.
 **Precedência:** D-046 (baixo acoplamento primeiro); D-043 continua hipótese condicionada; H-079 upstream-first e gates de segurança/qualificação continuam válidos.

@@ -1,5 +1,9 @@
 # Workstation roadmap
 
+## 2026-10-17 — CW-047 IMPLEMENTER HANDOFF e kit Python (PREPARADO, NÃO CONECTADO)
+Disponível o prompt executável [CW-047](creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md) e três arquivos de apoio (creative_web_app_spec.py, creative_web_static_server.py, test_creative_web_app_spec.py) para facilitar a integração sem generalização prematura. **Estado real:** módulos auxiliares versionados, mas **sem importação de PhotoCraft/EffectCraft por submodules, sem servidor lançado pela aplicação, sem comando roteado e sem qualificação Windows**. Primeiro gates H-079, depois submodules pinados, um vertical real PhotoCraft e expansão EffectCraft. Remotion/Three.js continuam fora da P0. O ganho só será considerado real com trabalho exportado no Hermes.
+
+
 ## 2026-10-17 — CW-047: submodules rastreáveis e abertura de editores locais por comando (PLANO; NÃO IMPLEMENTADO)
 **Primeira entrega operacional:** confirmar URLs exatas dos forks PhotoCraft/EffectCraft → adicionar como submodules pinados e independentes, sem sincronização silenciosa → preparar builds web opt-in com servidor loopback somente sob demanda → usar Browser nativo atual → rotear `abra o PhotoCraft` e `abra o EffectCraft` pela mesma autoridade de navegação/ProcessRegistry já existente → validar Windows Electron + edição e exportação real. **Não construir novo painel/browser.** Remotion e Three.js inicialmente dependências versionadas, não monorepos embutidos. **Não afirmar código ou comandos implementados.** [Plano CW-047](creative-workstation/LOW_COUPLING_IMPORT_AND_LAUNCH_PLAN_2026-10-17.md).
 
