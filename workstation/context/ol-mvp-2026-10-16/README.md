@@ -1,5 +1,13 @@
 # OL-MVP — Índice de execução (2026-10-16)
 
+## PRIORIDADE ATUAL — 17/10/2026: P2-PREFLIGHT com reconciliação P1C
+
+Iniciar por [P2_IMPLEMENTER_PROMPT.md](P2_IMPLEMENTER_PROMPT.md), depois [P2_PATCH_MAP.md](P2_PATCH_MAP.md) e [P2_80_20_DECISION_AND_PLAN.md](P2_80_20_DECISION_AND_PLAN.md). O relatório P1C alegou 5+40+7 testes PASS e GO P2, mas essas mudanças não estão no HEAD remoto PR #95, e o recibo `task_id=real/run_id=real` tem refs de arquivos de teste. Reconciliar código local (sem `git reset/clean/stash`), QUALIFICAR UMA TaskRun nativa por Gateway/owner, medir provider real quando disponível, depois usar seleção determinística pré-LLM no router existente. Sem LAYA/embeddings/4 ImprovementRuns agora.
+
+Auditor auxiliar estrutural: `patches/p2_receipt_gate.py` + `test_p2_receipt_gate.py` (5 testes locais PASS). **Não transforma recibo manual em prova do runtime.** `P1C` progresso reportado, não confirmado em produto. Stage A/DIRECT/merge main HOLD.
+
+
+
 ## PRIORIDADE VIGENTE — P1C: uma TaskRun REAL usando capacidade compilada
 
 O PR #94 `27b6376535dc` concluiu em código o P1B (aceitação/verificação de leitura; 30 testes focais + 53 regressões reportados). **NÃO comprovou o `RunLocalAdopter` executando 2/3 cartões**: o teste de três WorkItems utiliza `worker` com dispatcher sintético para TODOS os itens. P1C deve validar a rota completa `desktop chat/Gateway → TaskCompiler → 3 WorkItems → ExperienceCompiler → RunLocalAdopter → outra TaskRun` e os artefatos do owner. Stage A/qualificação DIRECT em HOLD.
