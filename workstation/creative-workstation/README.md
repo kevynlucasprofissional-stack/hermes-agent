@@ -1,5 +1,8 @@
 # Hermes Creative Workstation
 
+## CW-048A — FilmCraft adicionado como Git Submodule independente (2026-10-17)
+Incorporado o editor de vídeo não-linear FilmCraft (`external-engines/filmcraft`, commit `f03e21556d8e3a7155b91892d958debd5255d7af`, release `v0.8.0`, Apache-2.0) como terceiro motor criativo independente via Git submodule versionado e sincronizável, sob a diretriz D-046. Nesta etapa CW-048A, o repositório é importado estritamente como submodule (gitlink sem cópia de código comum). A distribuição oficial WebAssembly pré-compilada `filmcraft-web-0.8.0.zip` está documentada para futura hospedagem loopback e abertura no Browser nativo.
+
 ## CW-047 implementado e verificado (2026-10-17)
 Implementação operacional concluída na branch `feat/cw-047-photocraft-effectcraft-20261017`. Os comandos "Abra o PhotoCraft" e "Abra o EffectCraft" iniciam e reutilizam instâncias locais (PhotoCraft v0.9.0 e EffectCraft v0.10.0) servidas em `127.0.0.1` e abertas no Browser nativo do Hermes com validação independente de URL, conformidade com lease humano e isolamento de processo por `ProcessRegistry`. Verificação E2E em Chromium real comprovou importação, edição e exportação de artefatos reais. Submodules Git adicionados em `external-engines/photocraft` e `external-engines/effectcraft`. Consulte o [handoff final](CW047_IMPLEMENTER_HANDOFF_2026-10-17.md).
 

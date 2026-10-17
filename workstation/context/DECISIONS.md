@@ -1,5 +1,9 @@
 # Architectural Decisions
 
+## CW-048A — Adição de FilmCraft como submodule Git independente (2026-10-17)
+**Status: IMPORTADO COMO SUBMODULE GIT; NÃO INTEGRADO OPERACIONALMENTE.**
+Incorporação do FilmCraft (editor de vídeo não-linear open-source em Rust puro, licença Apache-2.0) como terceiro motor criativo independente em `external-engines/filmcraft`, pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`). Segue a diretriz D-046: versionado, sincronizável e reversível sem acoplamento de código ao repositório Hermes. Preparado para futura hospedagem WebAssembly (`filmcraft-web-0.8.0.zip`) no navegador nativo sob demanda.
+
 ## CW-047 — Implementação operacional: submodules externos pinados, servidor local gerenciado e abertura no Browser nativo (2026-10-17)
 **Status: IMPLEMENTADO E TESTADO NO AMBIENTE LOCAL / OPERAÇÃO REAL VERIFICADA.**
 Submodules importados e pinados:

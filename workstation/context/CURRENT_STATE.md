@@ -1,5 +1,11 @@
 # Current State
 
+## 2026-10-17 — CW-048A: FilmCraft importado como submodule Git (SUBMODULE IMPORT ONLY)
+- Terceiro motor criativo independente (editor de vídeo não-linear em Rust puro) adicionado em `external-engines/filmcraft` via submodule Git pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, Apache-2.0).
+- Submodules PhotoCraft e EffectCraft preservados intactos.
+- Não classificado como operacionalmente integrado: sem comandos pre-LLM, servidores loopback ou tarefas Kanban nesta etapa.
+- Referenciada distribuição WebAssembly `filmcraft-web-0.8.0.zip` para viabilidade futura em navegador nativo sob padrão loopback seguro (127.0.0.1).
+
 ## 2026-10-17 — CW-047: PhotoCraft e EffectCraft operacionais no Browser nativo (VERIFICADO)
 - **Implementação concluída sob D-046**: Abertura e reutilização local de PhotoCraft (v0.9.0) e EffectCraft (v0.10.0) a partir de comandos determinísticos ("Abra o PhotoCraft", "Abra o EffectCraft") sem criação de Kanban tasks ou chamadas a LLM.
 - **Isolamento e Segurança**:

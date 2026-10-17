@@ -17,6 +17,17 @@
   - Lifecycle: Served via loopback-only (127.0.0.1) static server with HMAC nonce readiness verification, COOP/COEP isolation; opened via native Browser without downloading or rebuilding at runtime.
   - Operational Status: VERIFIED in Chromium — loads egui/wgpu backend, OPFS storage, opens demo composition (`comp: 502`), renders timeline/effects, and exports 1280x720 frame to 3.68 MB PNG.
 
+- **FilmCraft** (`external-engines/filmcraft`):
+  - Repository: `https://github.com/storytold/filmcraft.git`
+  - Submodule SHA: `f03e21556d8e3a7155b91892d958debd5255d7af` (tag `v0.8.0`)
+  - License: Apache-2.0 (SPDX: `Apache-2.0`)
+  - Prebuilt Web Dist Reference: Official GitHub Release `v0.8.0` (`filmcraft-web-0.8.0.zip`, 13.326.588 bytes)
+  - Lifecycle: Terceiro motor criativo independente (editor de vídeo não-linear open-source escrito em Rust puro). Importado como Git submodule versionado, sincronizável e reversível sem cópia de arquivos comuns para a árvore do Hermes. Viabilidade de hospedar sua versão WebAssembly (`filmcraft-web`) no navegador nativo sob demanda via servidor local seguro loopback (127.0.0.1).
+  - Operational Status: SUBMODULE IMPORT ONLY (CW-048A) — Não integrado operacionalmente ao runtime de comandos/Kanban nesta etapa.
+  - Sincronização e Rollback:
+    - Sincronização: `git -C external-engines/filmcraft fetch origin tag <tag>` seguido de `git -C external-engines/filmcraft checkout <sha>` e `git add external-engines/filmcraft`.
+    - Rollback: `git -C external-engines/filmcraft checkout f03e21556d8e3a7155b91892d958debd5255d7af` e `git add external-engines/filmcraft` para retornar ao commit verificado.
+
 ## 2026-10-12 — Browser C2C follow-up reuse
 Commits `1c46a508d3`, `3793c46a15`, `b9addc487a`: KEEP/EXTEND native BrowserSessionState, TaskRun/BrowserTask authority, existing ExecutionJournal and CertifiedDispatcher verification contracts. Adapt Playwright-style ambiguous input handling without shipping Playwright or creating another browser owner. Local ACK never promotes to external VERIFIED. [Checkpoint](research/playwright-code-to-code-2026-10-12/10-IMPLEMENTATION-CONTINUITY.md).
 

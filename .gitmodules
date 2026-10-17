@@ -4,3 +4,6 @@
 [submodule "external-engines/effectcraft"]
 	path = external-engines/effectcraft
 	url = https://github.com/storytold/effectcraft.git
+[submodule "external-engines/filmcraft"]
+	path = external-engines/filmcraft
+	url = https://github.com/storytold/filmcraft.git

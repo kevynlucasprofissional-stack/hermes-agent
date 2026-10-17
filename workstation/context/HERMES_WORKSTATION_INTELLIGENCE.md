@@ -1,5 +1,15 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-17 — CW-048A: FilmCraft importado como terceiro motor criativo independente (SUBMODULE IMPORT ONLY)
+Conforme a diretriz D-046 (baixo acoplamento primeiro) e o objetivo único da tarefa CW-048A:
+1. **Estrutura Git Submodule**: `external-engines/filmcraft` adicionado apontando para o repositório original `https://github.com/storytold/filmcraft.git` e pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, licença Apache-2.0). Nenhuma entrada existente de PhotoCraft ou EffectCraft foi sobrescrita no `.gitmodules`.
+2. **Sem invasão do core**: O código-fonte do FilmCraft não foi copiado como arquivos comuns do Hermes; o diretório permanece estritamente um gitlink de submodule (modo 160000).
+3. **Perspectiva de execução**: Documentada a referência da distribuição oficial WebAssembly pré-compilada `filmcraft-web-0.8.0.zip` (13.3 MB) para futura execução web loopback no navegador nativo do Hermes sob o mesmo padrão de segurança e isolamento de processo (127.0.0.1, nonce criptográfico e COOP/COEP).
+4. **Instruções de ciclo de vida**:
+   - Sincronização: `git -C external-engines/filmcraft fetch origin tag <tag>` -> `git -C external-engines/filmcraft checkout <sha>` -> `git add external-engines/filmcraft`.
+   - Rollback: `git -C external-engines/filmcraft checkout f03e21556d8e3a7155b91892d958debd5255d7af` -> `git add external-engines/filmcraft`.
+5. **Estado operacional**: Estritamente não integrado operacionalmente ao runtime nesta etapa (sem comandos pre-LLM, sem servidores loopback e sem automação de browser).
+
 ## 2026-10-17 — CW-047: Operação de PhotoCraft e EffectCraft no Browser nativo (VERIFICADO)
 A implementação do fluxo CW-047 sob a diretriz D-046 foi concluída com sucesso:
 1. **Reconhecimento determinístico e prevenção de duplo despacho**: Comandos exatos ("Abra o PhotoCraft", "Abra o EffectCraft") são reconhecidos via `workstation.creative_web_app_spec.recognize_open_creative_app` e processados no fast-path pre-LLM em `workstation/prefabs/integration.py` (`maybe_resolve_navigation`) como `admission_kind="point_action"` (`requires_task=False`), prevenindo criação de Kanban tasks ou loops redundantes no System-2.

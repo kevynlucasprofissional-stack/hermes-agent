@@ -1,5 +1,21 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-17 — CW-048A: FilmCraft como submodule Git independente (IMPORTADO)
+- **Branch**: `feat/cw-048a-filmcraft-submodule` encadeada a partir de `feat/cw-047-photocraft-effectcraft-20261017` (`081062c383936b7dba69d3f9c18d0b297eb69c36`).
+- **Objetivo**: Incorporar FilmCraft como terceiro motor criativo independente (edição de vídeo não-linear em Rust puro) via Git submodule versionado, sincronizável e reversível.
+- **Submodule Git**:
+  - Caminho: `external-engines/filmcraft`
+  - Repositório original: `https://github.com/storytold/filmcraft.git`
+  - Commit pinado: `f03e21556d8e3a7155b91892d958debd5255d7af` (tag `v0.8.0`)
+  - Licença verificada: Apache License 2.0 (`Apache-2.0`)
+  - `.gitmodules`: Atualizado preservando PhotoCraft e EffectCraft.
+- **Distribuição Web de Referência**:
+  - `filmcraft-web-0.8.0.zip` (13.326.588 bytes) disponibilizada no release oficial `v0.8.0` para viabilidade de futura execução WebAssembly no navegador nativo.
+- **Sincronização e Rollback**:
+  - Sincronizar: `git -C external-engines/filmcraft fetch origin tag <tag>` -> `git -C external-engines/filmcraft checkout <sha>` -> `git add external-engines/filmcraft`.
+  - Rollback: `git -C external-engines/filmcraft checkout f03e21556d8e3a7155b91892d958debd5255d7af` -> `git add external-engines/filmcraft`.
+- **Status Operacional**: Submodule importado somente; sem comandos, servidores, browser automation ou integrações profundas nesta etapa.
+
 ## 2026-10-17 — CW-047: PhotoCraft e EffectCraft no Browser nativo do Hermes (IMPLEMENTADO E QUALIFICADO)
 - **Branch**: `feat/cw-047-photocraft-effectcraft-20261017` criada a partir de `main` (`fd57e40fe8`).
 - **Claim de coordenação**: Registrado claim exclusivo em `creative-agent` para `agent-cw047`.
