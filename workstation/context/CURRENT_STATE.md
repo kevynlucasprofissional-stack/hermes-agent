@@ -1,5 +1,10 @@
 # Current State
 
+## 2026-10-18 — Browser D-049 after comparative audit [PLAN / NOT_IMPLEMENTED / NOT_RELEASE_QUALIFIED]
+Fonte: revisão de código `main@f436e949` e quatro repositórios de referência, **sem novos testes nativos**. Contratos reutilizáveis: `workstation-browser-snapshot[-diff].ts`, `workstation-browser-extract-cache.ts`, `workstation-browser-batch.ts`, `tools/browser_workstation.py`, `workstation/replay.py`, `workstation/browser_readiness.py`, `workstation/browser_transaction.py`. `schema` de extração atual é projeção de propriedades, não validator completo; `PortableTrace` não equivale a replay visual. Falha de CI workflow #39154888493 no exato `f436e949`; motivo não diagnosticado. PR #85 merged em 13/10, mas BAV04 continua fixture-only sem liberação de release.
+**Próxima sequência:** P0 provas de efeito externo, path boundary e Learning lease; P1 context views/redaction/schema; P1 reacquire semantic anchor pré-efeito; P2 causal run diff e captura de falha opt-in. LLM diagnosis, WebMCP e full UI Graph HOLD. [Decisão D-049](DECISIONS.md) / [plano](BROWSER_REFINEMENT_2026-10-18.md).
+
+
 ## 2026-10-17 — HLM-MVP product truth ERRATA (main `2e5b042`)
 O HLM existe no código atual da main (UI + `LearningSessionRecorder` + intensidade live + sanitização parcial + método Python de CandidateLesson), mas **o verdadeiro MVP não está qualificado**: vídeo grava preto sintético 1s; perguntas são templates por 1 gesto sem LLM contextual; ingestão via console não autentica tab/owner; timestamps não relativos; candidata não disparada produtivamente. Tratar M0–M2 como **PARTIAL / NOT E2E QUALIFIED**, M3 HOLD. [Auditoria](LEARNING_MODE_AUDIT_2026-10-17.md); [corretiva](../learning-mode/HLM_MVP_CORRECTIVE_IMPLEMENTER_PROMPT.md). Este registro corrige a afirmação histórica abaixo sem apagar seus commits/testes.
 
