@@ -311,12 +311,16 @@ def execute_spy(monkeypatch):
 
 
 def _bind_agent(agent, task_id: str, body: str = MULTISTEP_PROMPT):
+    corr_id = f"corr-{SESSION_ID}-{task_id}"
+    agent.session_id = SESSION_ID
     agent._canonical_work_task_id = task_id
     # Explicitly bind the existing trusted run: an unbound session may no
     # longer borrow a Kanban TaskRun merely by matching task body text.
     agent._canonical_work_run_id = _run_id_of(task_id)
+    agent._canonical_work_turn_id = corr_id
     agent._message_envelope = MessageEnvelope(
-        MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, body
+        MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, SESSION_ID, body,
+        correlation_id=corr_id,
     )
     agent._conversation_root_id = lambda: SESSION_ID
     agent._tool_guardrails = _make_guardrails()

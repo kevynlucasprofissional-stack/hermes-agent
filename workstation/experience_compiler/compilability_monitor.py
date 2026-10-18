@@ -768,8 +768,26 @@ class OnlineCompilabilityMonitor:
 
         if res is None or res.fallback_recommended or res.is_abstained():
             self._bump("decisions_abstain")
-            return {"stage": CompilabilityStage.KEEP_COLLECTING.value, "confidence": 0.0,
-                    "provider": getattr(res, "provider", "none"), "abstained": True, "fallback": True}
+            if verified >= 1 and (event.event_kind == "verified_transition" or verified >= 2):
+                stage = (
+                    CompilabilityStage.POSSIBLE_RUN_LOCAL_REUSE.value
+                    if window.mined_candidate_ids
+                    else CompilabilityStage.MINE_CANDIDATE.value
+                )
+                return {
+                    "stage": stage,
+                    "confidence": 0.0,
+                    "provider": getattr(res, "provider", "none"),
+                    "abstained": True,
+                    "fallback": True,
+                }
+            return {
+                "stage": CompilabilityStage.KEEP_COLLECTING.value,
+                "confidence": 0.0,
+                "provider": getattr(res, "provider", "none"),
+                "abstained": True,
+                "fallback": True,
+            }
 
         answers = res.answers or res.decisions or {}
         stage = answers.get("compilability_stage", CompilabilityStage.KEEP_COLLECTING.value)

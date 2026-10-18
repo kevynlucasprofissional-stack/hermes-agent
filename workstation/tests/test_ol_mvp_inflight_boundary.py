@@ -170,6 +170,58 @@ def test_safe_boundary_callback_wired_through_scoped_execution():
     assert _safe_item_boundary.get() is None
 
 
+def test_workstation_durable_dispatch_native_schema_tool_branch(monkeypatch):
+    """Ensure native workstation schema tools dispatch authoritatively and capture raw results without import or runtime error."""
+    from types import SimpleNamespace
+    from workstation.integrations.hermes.scoped_execution import workstation_durable_dispatch
+    import workstation.integrations.hermes.browser_controller as bc
+    import workstation.task_compiler as tc
+
+    agent = SimpleNamespace(
+        _interrupt_requested=False,
+        _tool_guardrail_halt_decision=None,
+        valid_tool_names=set(),
+        session_id="session_test",
+        _canonical_work_run_id="run_test",
+    )
+    dispatcher = workstation_durable_dispatch(agent)
+
+    raw_dispatched = {"called": False}
+
+    def fake_dispatch(name, args, **kwargs):
+        raw_dispatched["called"] = True
+        raw_dispatched["name"] = name
+        raw_dispatched["operation_id"] = kwargs.get("operation_id")
+        return {"items": [{"id": "card-1", "title": "Test"}]}
+
+    monkeypatch.setattr(bc, "dispatch_workstation_browser_authoritative", fake_dispatch)
+
+    import workstation.integrations.hermes.scoped_execution as se
+    captured = []
+    orig_capture = se.capture_raw_result
+
+    def track_capture(call_id, res):
+        captured.append((call_id, res))
+        return orig_capture(call_id, res)
+
+    monkeypatch.setattr(se, "capture_raw_result", track_capture)
+
+    res = dispatcher(
+        name="browser_extract_items",
+        args={"selector": ".card"},
+        task_id="task_123",
+        call_id="call_abc",
+    )
+
+    assert raw_dispatched["called"] is True
+    assert raw_dispatched["name"] == "browser_extract_items"
+    assert raw_dispatched["operation_id"] == "call_abc"
+    assert len(captured) == 1
+    assert captured[0][0] == "call_abc"
+    assert captured[0][1] == {"items": [{"id": "card-1", "title": "Test"}]}
+    assert res == {"items": [{"id": "card-1", "title": "Test"}]}
+
+
 def test_inflight_learning_item1_to_item2_real_circuit(tmp_path, monkeypatch):
     """Real circuit: adaptive items teach -> monitor mines & validates offer -> in-flight adopter completes next items."""
     from workstation.tests.test_online_compilability_safety import (

@@ -380,8 +380,11 @@ class OperationalCapabilityRegistry:
                     continue
                 if route and entry.get("route") != route:
                     continue
-                body = self.artifacts.read_json(entry["ref"])
-                results.append(OperationalCapability.from_dict(body))
+                try:
+                    body = self.artifacts.read_json(entry["ref"])
+                    results.append(OperationalCapability.from_dict(body))
+                except Exception:  # health: allow BLE001 -- missing artifact entry safely skipped in list_capabilities
+                    continue
             return results
 
     def record_validation(self, capability_id: str, evidence: dict[str, Any], *, auto_promote_threshold: int = 2) -> OperationalCapability:

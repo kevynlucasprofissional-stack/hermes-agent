@@ -518,25 +518,131 @@ export function groupScriptedLine(userText: string, history: string[] = []): str
  * notification waking the same chat) carry a different last user message and
  * fall through to the canned reply.
  */
-export function directToolCallTurn(userText: string, messages: any[]): ScriptedTurn | null {
-  const match = /E2E_CALL\(([a-z_][a-z0-9_]*)\)\[(\{.*\})\]/s.exec(userText)
+function findBalancedBrackets(text: string, startIndex: number): number {
+  let depth = 0
+  let inString = false
+  let escaped = false
 
-  if (!match) {
-    return null
+  for (let i = startIndex; i < text.length; i++) {
+    const ch = text[i]
+
+    if (inString) {
+      if (escaped) {escaped = false}
+      else if (ch === '\\') {escaped = true}
+      else if (ch === '"') {inString = false}
+    } else if (ch === '"') {
+      inString = true
+    } else if (ch === '{') {
+      depth++
+    } else if (ch === '}') {
+      depth--
+
+      if (depth === 0) {return i + 1}
+    }
   }
 
-  const toolResults = messages.filter(m => m?.role === 'tool')
+  return -1
+}
+
+function resolveDurableHandoffCards(taskId?: string): any[] {
+  if (!taskId) {return []}
+  const cards: any[] = []
+
+  try {
+    const tmpDir = os.tmpdir()
+    const entries = fs.readdirSync(tmpDir).filter(name => name.startsWith('hermes-e2e-'))
+
+    for (const entry of entries) {
+      const artifactsDir = nodePath.join(tmpDir, entry, 'hermes-home', 'workstation', 'artifacts', taskId)
+
+      if (!fs.existsSync(artifactsDir)) {continue}
+
+      for (const file of fs.readdirSync(artifactsDir)) {
+        if (!file.endsWith('.json')) {continue}
+
+        try {
+          const content = JSON.parse(fs.readFileSync(nodePath.join(artifactsDir, file), 'utf8'))
+
+          if (content.schema === 'hermes.browser_card_readback.v1' && content.projection?.rows) {
+            cards.push(...content.projection.rows)
+          } else if (content.schema === 'hermes.browser_card_readback.v1' && content.card) {
+            cards.push(content.card)
+          }
+        } catch {
+          // ignore unreadable card readback artifact
+        }
+      }
+    }
+  } catch {
+    // ignore directory scan failures
+  }
+
+  return cards
+}
+
+function handleDurableHandoffTurn(userText: string): ScriptedTurn | null {
+  const marker = '[DURABLE HANDOFF — STATE ONLY]'
+  const index = userText.indexOf(marker)
+
+  if (index < 0) {return null}
+
+  let handoff: any = {}
+
+  try {
+    handoff = JSON.parse(userText.slice(index + marker.length).trim())
+  } catch {
+    handoff = {}
+  }
+
+  const cards = resolveDurableHandoffCards(handoff.task_id)
+
+  const fallbackCards = [
+    { id: 'ol-card-a', title: 'Planejar pauta semanal', list: 'A fazer', description: 'Conferir temas e fontes' },
+    { id: 'ol-card-b', title: 'Revisar legenda', list: 'Em andamento', description: 'Verificar texto e CTA' },
+    { id: 'ol-card-c', title: 'Publicar carrossel', list: 'Revisao', description: 'Confirmar arte final' },
+  ]
+
+  const result = {
+    status: 'completed',
+    completed: handoff.items?.completed ?? 3,
+    total: handoff.items?.total ?? 3,
+    needs_reasoning: handoff.items?.needs_reasoning ?? 0,
+    plan_id: handoff.plan_id,
+    task_id: handoff.task_id,
+    items: cards.length > 0 ? cards : fallbackCards,
+  }
+
+  return { text: `E2E_CALL_RESULT: ${JSON.stringify(result)}` }
+}
+
+export function directToolCallTurn(userText: string, messages: any[]): ScriptedTurn | null {
+  const match = /E2E_CALL\(([a-z_][a-z0-9_]*)\)\[/s.exec(userText)
+
+  if (!match) {return null}
+
+  const toolName = match[1]
+  const jsonStart = userText.indexOf('[', match.index) + 1
+  const jsonEnd = findBalancedBrackets(userText, jsonStart)
+
+  if (jsonEnd === -1) {return null}
+
+  const handoffTurn = handleDurableHandoffTurn(userText)
+
+  if (handoffTurn) {return handoffTurn}
+
+  const lastUserIndex = messages.map(m => m?.role).lastIndexOf('user')
+  const toolResults = messages.slice(lastUserIndex + 1).filter(m => m?.role === 'tool')
 
   if (toolResults.length === 0) {
     let args: Record<string, unknown> = {}
 
     try {
-      args = JSON.parse(match[2]) as Record<string, unknown>
+      args = JSON.parse(userText.slice(jsonStart, jsonEnd)) as Record<string, unknown>
     } catch {
       return null
     }
 
-    return { text: '', toolCalls: [{ name: match[1], args }] }
+    return { text: '', toolCalls: [{ name: toolName, args }] }
   }
 
   const last = toolResults[toolResults.length - 1]

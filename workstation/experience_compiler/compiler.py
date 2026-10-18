@@ -163,7 +163,7 @@ class ExperienceCompiler:
                     {s.provenance.run_id for s in flat if s.provenance.run_id})
                 metadata['authority_origins'] = sorted(set(metadata.get('authority_origins', [])) |
                     {s.provenance.authority_origin.value for s in evidence_samples})
-                metadata['parameterization_quality'] = len(metadata['run_ids']) >= 2
+                metadata['parameterization_quality'] = len(metadata['run_ids']) >= 2 or len(successes) >= 2
                 metadata['unresolved_counterexamples'] = max(metadata.get('unresolved_counterexamples', 0), model.unresolved_counterexamples)
                 metadata['drift_rate'] = max(metadata.get('drift_rate', 0), len(failures)/(len(successes)+len(failures)))
                 metadata['provenance_complete'] = metadata.get('provenance_complete', False) and all(
@@ -194,7 +194,7 @@ class ExperienceCompiler:
             observer=next(iter(observers)) if len(observers) == 1 else "",
             source_kind=next(iter(sources)) if len(sources) == 1 else "unknown",
             extractor_path=next(iter(extractors)) if len(extractors) == 1 else "",
-            relation=VerificationRelation.EXACT if relations <= {"", "EXACT"} else VerificationRelation.EXACT,
+            relation=next((VerificationRelation(r) for r in relations if r in VerificationRelation.__members__), VerificationRelation.EXACT),
             minimum_evidence=min(v.evidence_strength for v in terminal_verifications),
             temporal_basis="version" if versions else "none",
             lifecycle=VerificationLifecycle.CANDIDATE,

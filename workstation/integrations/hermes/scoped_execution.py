@@ -43,7 +43,35 @@ def workstation_durable_dispatch(agent: Any):
                     or getattr(agent, "session_id", "")
                     or ""
                 )
-                run_id = getattr(agent, "_canonical_work_run_id", None)
+                from workstation.task_compiler import _canonical_caller_run
+                run_id = getattr(agent, "_canonical_work_run_id", None) or _canonical_caller_run.get()
+                canonical_task_id = getattr(agent, "_canonical_work_task_id", None)
+                if canonical_task_id and not run_id:
+                    try:
+                        from hermes_cli import kanban_db
+                        from workstation.kanban import WorkstationKanbanBridge
+                        with WorkstationKanbanBridge().get_connection() as conn:
+                            ktask = kanban_db.get_task(conn, str(canonical_task_id))
+                            if ktask and ktask.current_run_id is not None:
+                                run_id = str(ktask.current_run_id)
+                                agent._canonical_work_run_id = run_id
+                    except Exception:  # health: allow BLE001 S110 -- fallback when kanban lookup unavailable
+                        pass
+                browser_task_id = task_id
+                if str(task_id).startswith("work_"):
+                    try:
+                        from workstation.durable_tasks import DurableTaskStore
+                        store = DurableTaskStore()
+                        plan = store.get_plan(str(task_id))
+                        if plan and isinstance(plan.metadata, dict):
+                            if not canonical_task_id and plan.metadata.get("canonical_task_id"):
+                                canonical_task_id = str(plan.metadata["canonical_task_id"])
+                            if not run_id and (plan.metadata.get("canonical_run_id") or plan.run_id):
+                                run_id = str(plan.metadata.get("canonical_run_id") or plan.run_id)
+                            if plan.metadata.get("browser_task_id"):
+                                browser_task_id = str(plan.metadata["browser_task_id"])
+                    except Exception:  # health: allow BLE001 S110 -- fallback when durable task metadata unavailable
+                        pass
                 ctx = {"agent": agent, "dispatched": True}
                 workstation_pre_dispatch_hook(name, args, call_id, ctx)
                 start_t = time.monotonic()
@@ -51,9 +79,10 @@ def workstation_durable_dispatch(agent: Any):
                     res = dispatch_workstation_browser_authoritative(
                         name,
                         args,
-                        task_id=task_id,
+                        task_id=browser_task_id,
                         session_id=session_id,
                         run_id=str(run_id) if run_id is not None else None,
+                        kanban_card_id=str(canonical_task_id) if canonical_task_id else None,
                         operation_id=call_id,
                     )
                 finally:
