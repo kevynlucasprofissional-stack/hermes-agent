@@ -1,5 +1,15 @@
 # Workstation roadmap
 
+## 2026-10-18 — D-049: Browser Observation & Verified Automation 80/20 (DECISÃO DOCUMENTADA; RUNTIME NÃO ALTERADO)
+**Objetivo:** melhorar qualidade de contexto, resolução de alvos e diagnóstico no Browser nativo **sem** criar BrowserRuntime, event bus, DB, controller ou executor paralelos. Referências: [auditoria e plano](context/BROWSER_REFINEMENT_2026-10-18.md) e [handoff implementador](context/BROWSER_REFINEMENT_IMPLEMENTER_PROMPT_2026-10-18.md).
+**P0 — qualificação e correções verificáveis (gate):** preservar BrowserTask/TaskRun/lease, reproduzir efeitos incertos, readback externo, falha de CI exact-head, validação de caminhos em browser_bridge.py, e teste de Learning em aba não ativa; nenhuma alegação de produção a partir de fixtures.
+**P1-A — percepção econômica:** expandir sanitização existente nas fronteiras de retorno e artefato; views opt-in `summary|action_map|focus|content` projetadas do mesmo inventário @eN, sem alterar formato default nem ocultar elementos em tarefa interativa; JSON Schema opcional com validação real (não apenas filtragem de chaves).
+**P1-B — ação resiliente:** reaquisição **pré-efeito** somente para stale-ref com semantic anchor único, documento/owner/lease revalidados e zero retry de mutação incerta; reaproveitar `browser_batch_actions`, readiness, receipt e resolver existentes.
+**P2 — forense incremental:** `PortableTrace` + ExecutionJournal + ArtifactStore: comparação determinística de TaskRuns por operation_id/fase e screenshots de falha somente opt-in, sem outra SQLite ou envio automático de PII.
+**HOLD:** grafo Lattice completo, WebMCP produtivo, novo roteador LLM, SSE/SDK paralelo, callback batch de JS livre, BrowserOS AGPL incorporado, four-lane parity, autopromoção de skills/experiências; números de economia não são prova do Hermes.
+**Release/80-20:** no máximo duas sessões P1 focalizadas após P0, medir tokens reais, user_to_verified_ms, p95, verificações externas, conflitos e 0 re-dispatch em efeito incerto. Ensaio de regressão em snapshot default, desktop Windows, lease humano e escrita Trello concorrente. Status **PLAN / NOT RELEASE QUALIFIED**.
+
+
 ## 2026-10-17 — D-048: Dogfood real e recuperação 80/20 (PLANEJADO; BLOQUEIOS NÃO RESOLVIDOS)
 **Ordem executável (6 sessões):** P01 Browser WebContentsView preto em pesquisa/toasts (P0) → P02 vídeo real e screenshots LearningSession (P0) → P03 perguntas Aprender e eventos operacionais no chat (P1) → P04 Question Engine contextual e CandidateLesson a partir de sessão (P1) → P05 briefing criativo e controle PhotoCraft (P1) → P06 compilação e reutilização espontânea com readback entre TaskRuns (P1/P2). Gates independentes; sem novas integrações ou motores.
 **Correção de status histórico:** os enunciados acima "M0–M2 implementados" registram cumprimento de testes contratuais, **não** comprovação em dogfood real. O runtime `startVideoRecording` usa FFmpeg `lavfi color=black -t 1`; não há gravação visual real. `record_human_demonstration_candidate` foi encontrado apenas na implementação/testes, não conectado ao fim da sessão. Todos os seis problemas e a comprovação P06 permanecem **ABERTOS**.
