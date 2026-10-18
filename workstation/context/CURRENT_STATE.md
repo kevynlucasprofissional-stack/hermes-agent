@@ -7,7 +7,14 @@
 - **M3:** Replay supervisionado mantido em **HOLD** por falta de runner/readback auditado com browser real.
 - **Testes:** 19 Vitest (4 arquivos) PASS, 2 Python (skill learning boundary) PASS, Typecheck Electron + UI PASS (exit 0), Health check 0 blocking findings. Matriz A–I PASS, J em HOLD.
 
-## 2026-10-17 — CW-048A/B: FilmCraft importado como submodule Git e roteado no runtime (VERIFICADO)
+## 2026-10-17 — CW-048B: Consolidação PhotoCraft e EffectCraft e ativação FilmCraft (VERIFICADO)
+- **Ativação Criativa Consolidada (D-046)**: PhotoCraft, EffectCraft e FilmCraft integrados sob baixo acoplamento com comandos naturais determinísticos ("Abra o PhotoCraft", "Abra o EffectCraft", "Abra o FilmCraft" / "Open FilmCraft"), processados no fast-path pre-LLM sem acionamento desnecessário do Kanban.
+- **Prevenção de Reload Destrutivo**: Na reutilização de instâncias, o serviço checa o snapshot do navegador antes de emitir nova navegação. Se o editor solicitado já estiver na aba ativa, a navegação é suprimida para preservar o canvas e modificações não salvas.
+- **Processos e Segurança**: Servidores locais mantidos em loopback estrito (`127.0.0.1`) com portas dedicadas (8765, 8766, 8767), adoção no `ProcessRegistry` com `persist_on_release = True`, nonces HMAC criptográficos e estrito respeito a human lease (`409 USER_CONTROL_ACTIVE`).
+- **Instalação e Integridade**: Script seguro `workstation/scripts/install_creative_engine.py` com proteção contra ZipSlip e verificação de SHA-256. `external-engines` isolado em `check_no_tmp_literals.py`.
+- **Testes & Ratchet**: 35 testes unitários e de contratos 100% aprovados, code health clean (0 blocking, 0 advisory).
+
+## 2026-10-17 — CW-048A: FilmCraft importado como submodule Git (SUBMODULE IMPORT ONLY)
 - Terceiro motor criativo independente (editor de vídeo não-linear em Rust puro) adicionado em `external-engines/filmcraft` via submodule Git pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, Apache-2.0).
 - Submodules PhotoCraft e EffectCraft preservados intactos.
 - Roteamento e persistência de sessão ativados via `workstation/creative_web_service.py` e Fast Path em `workstation/prefabs/integration.py`.
