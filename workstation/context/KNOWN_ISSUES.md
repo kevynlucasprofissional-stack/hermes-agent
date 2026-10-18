@@ -1,5 +1,16 @@
 # Workstation Known Issues
 
+## 2026-10-17 — DOGFOOD-01…08 (ATIVOS; D-048)
+- **DOGFOOD-01 P0:** navegador preto em pesquisa; suspeita de navegação/viewport/host, ainda sem causa confirmada. `workstation-browser-runtime.ts`, Hub/chat, Electron; requer repro + recuperação sem perda de sessão.
+- **DOGFOOD-02 P0:** navegador preto após notificações/overlays; `native-view-occlusion.ts` remove/reanexa a view por `setVisible`. Verificar corrida de MutationObserver, ownership e reattach. Não marcar corrigido por cobertura de mocks.
+- **DOGFOOD-03 P0:** gravação de vídeo do modo Aprender é sintética (`lavfi color=black -t 1`), apesar de status `stopped`; screenshot callback não persistiu snapshots na demonstração observada. Corrigir captura **real** com consentimento e validação.
+- **DOGFOOD-04 P1:** perguntas proativas invadem editor PhotoCraft; `learning-controls.tsx` renderiza card dentro de seu host; mover renderização para o chat, manter controls no browser.
+- **DOGFOOD-05 P1:** Question Engine pergunta genericamente coordenadas de Canvas, sem contexto visual/causal.
+- **DOGFOOD-06 P1:** botão stop LearningSession não demonstrou chamada de produção a `record_human_demonstration_candidate`; M2 só fronteira/teste isolado.
+- **DOGFOOD-07 P1:** falta pergunta essencial de formato no briefing de convite; operação PhotoCraft depende de passos e scripts ad hoc.
+- **DOGFOOD-08 P1:** pouca observabilidade no transcript de identificação/compilação/reuso; `SUGGEST_COMPILE` ainda não fecha uma rota validada.
+**Nota de reconciliação HLM-KI-01…05:** estados anteriores "MITIGADO/IMPLEMENTADO" descrevem mecanismos e testes declarados, não evidência E2E da sessão real. Nenhum item é encerrado por esta atualização documental. [Reproduções e gates](HERMES_WORK_DOGFOOD_RECOVERY_PLAN_2026-10-17.md).
+
 ## HLM-KI-06…10 — Falhas confirmadas por revisão estática do código da main (2026-10-17)
 - **HLM-KI-06 [P0]: vídeo FAKE:** `LearningSessionRecorder.startVideoRecording` usa FFmpeg `color=black` 1s, não Browser; gates G/M0 errados. Teste de sessão desliga vídeo. **OPEN**.
 - **HLM-KI-07 [P0 SECURITY]: ingestão `console.debug(__HERMES_GESTURE__)` forjável, sem vínculo suficiente de tab/webContents/documentEpoch/origin/owner nos handlers; risco de spoofing e mistura de abas. **OPEN**.
