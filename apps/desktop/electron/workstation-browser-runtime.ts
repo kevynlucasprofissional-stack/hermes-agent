@@ -47,6 +47,7 @@ import {
   type ExtractScope,
   normalizeExtractedItem
 } from './workstation-browser-extract-cache'
+import { validateExtractedItems } from './workstation-browser-extract-cache'
 import { registerWorkstationBrowserIpc } from './workstation-browser-ipc'
 import {
   buildWorkstationResourceSnapshot,
@@ -70,6 +71,7 @@ import {
   type SnapshotFrame,
   type SnapshotUpdate
 } from './workstation-browser-snapshot-diff'
+import { renderSnapshotView } from './workstation-browser-snapshot-views'
 import {
   type BrowserHumanControlLease,
   type BrowserOwnerReceipt,
@@ -2195,8 +2197,16 @@ export class WorkstationBrowserRuntime {
       allowlistedOrigin = ''
     }
 
-    // Ensure human control lease is taken so background agent doesn't act concurrently
-    this.takeControl(entry.ownerTaskId ?? undefined, sessionId ?? undefined)
+    // B0.2: Learning must bind to the *requested* tab's owner, never fall back to
+    // the active tab via resolveControlTaskId. If the target tab has no ownerTaskId,
+    // refuse fail-closed rather than silently leasing authority over a different tab.
+    if (!entry.ownerTaskId) {
+      throw new Error(
+        'browser_learning_owner_required: target tab has no ownerTaskId; cannot start learning'
+      )
+    }
+
+    this.takeControl(entry.ownerTaskId, sessionId ?? undefined)
 
     const recorder = this.getLearningRecorder()
 
@@ -2941,6 +2951,15 @@ export class WorkstationBrowserRuntime {
           delta: Boolean(args.delta),
           baselineRevision: typeof args.baseline_revision === 'number' ? args.baseline_revision : undefined,
           baselineText: typeof args.baseline_text === 'string' ? args.baseline_text : undefined
+        }, {
+          // B1.1: opt-in view projection. When omitted, snapshotForEntry returns
+          // the canonical formatInventory output unchanged.
+          view: typeof args.view === 'string' && ['summary', 'action_map', 'focus', 'content'].includes(args.view)
+            ? args.view as 'summary' | 'action_map' | 'focus' | 'content'
+            : undefined,
+          focusRef: typeof args.focus_ref === 'string' ? args.focus_ref : undefined,
+          focusNeighbors: typeof args.focus_neighbors === 'number' ? args.focus_neighbors : undefined,
+          maxChars: typeof args.max_chars === 'number' ? args.max_chars : undefined
         })
       case 'browser_click': {
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
@@ -3699,7 +3718,8 @@ export class WorkstationBrowserRuntime {
   private async snapshotForEntry(
     entry: BrowserEntry,
     full: boolean,
-    diffOpts?: { baselineRevision?: number; baselineText?: string; delta?: boolean }
+    diffOpts?: { baselineRevision?: number; baselineText?: string; delta?: boolean },
+    viewOpts?: { view?: 'summary' | 'action_map' | 'focus' | 'content'; focusRef?: string; focusNeighbors?: number; maxChars?: number }
   ): Promise<Record<string, unknown>> {
     const wc = entry.view.webContents
 
@@ -3839,6 +3859,28 @@ export class WorkstationBrowserRuntime {
 
     const formattedSnapshot = formatInventory(inv, full)
 
+    // B1.1: Opt-in view projection. The canonical formattedSnapshot is always
+    // computed first so delta/replay frames remain byte-compatible. When a
+    // caller requests a specific view, we project from the same inventory and
+    // substitute only the returned text; the stored frame keeps the full form.
+    let returnedText = formattedSnapshot
+    let returnedTruncated = inv.truncated
+    let snapshotView: string | undefined
+    let snapshotViewFocusMissing: boolean | undefined
+
+    if (viewOpts?.view) {
+      const projected = renderSnapshotView(inv, viewOpts.view, {
+        maxChars: viewOpts.maxChars,
+        focusRef: viewOpts.focusRef,
+        focusNeighbors: viewOpts.focusNeighbors
+      })
+
+      returnedText = projected.text
+      returnedTruncated = projected.truncated || inv.truncated
+      snapshotView = projected.view
+      snapshotViewFocusMissing = projected.focusMissing
+    }
+
     const currentFrame: SnapshotFrame = {
       taskId: entry.ownerTaskId ?? 'unbound',
       tabId: entry.id,
@@ -3929,11 +3971,16 @@ export class WorkstationBrowserRuntime {
       tab_id: entry.id,
       url: inv.url,
       title: inv.title,
-      snapshot: formattedSnapshot,
+      // B1.1: when a view is requested, `snapshot` carries the projected text
+      // and `snapshot_view` identifies which projection was applied. The
+      // canonical formattedSnapshot is still used for delta/replay frames.
+      snapshot: returnedText,
       snapshot_delta: snapshotDelta,
+      snapshot_view: snapshotView,
+      snapshot_view_focus_missing: snapshotViewFocusMissing,
       revision: entry.mutationRevision,
       elements: inv.elements,
-      truncated: inv.truncated,
+      truncated: returnedTruncated,
       total_text_chars: inv.totalTextChars,
       element_count: inv.elements.length,
       wall_detected: Boolean(inv.wallDetected),
@@ -4613,6 +4660,12 @@ export class WorkstationBrowserRuntime {
       .map(item => normalizeExtractedItem(item as Record<string, unknown>, schema))
       .filter((item): item is NonNullable<typeof item> => item !== null)
 
+    // B1.3: Validate extracted items against the requested schema.
+    // Schema validation is separate from sanitization: an extraction can
+    // succeed (items captured and sanitized) while failing schema conformance.
+    // Callers must check schema_valid independently of success.
+    const schemaValidation = validateExtractedItems(normalizedItems, schema)
+
     const finalResult = {
       success: true,
       cached: false,
@@ -4623,7 +4676,10 @@ export class WorkstationBrowserRuntime {
       title: wc.getTitle(),
       ...result,
       items: normalizedItems,
-      count: normalizedItems.length
+      count: normalizedItems.length,
+      schema_valid: schemaValidation.valid,
+      schema_errors: schemaValidation.errors.length > 0 ? schemaValidation.errors : undefined,
+      schema_unsupported_keywords: schemaValidation.unsupportedKeywords
     }
 
     if (scope && finalResult.success) {
