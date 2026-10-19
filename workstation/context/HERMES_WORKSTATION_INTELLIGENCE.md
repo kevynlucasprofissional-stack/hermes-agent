@@ -1,5 +1,9 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-10-19 — Inteligência de recuperação Browser nativo e controle WhatsApp [DECISÃO / PLANO]
+Experience Compiler NÃO corrige estado de autoridade: BrowserTask/TaskRun/lease + admission fence são código determinístico. Aprendizagem/skill só atuam depois de leitura, extração e commit verificáveis. Um erro comprovadamente pré-efeito precisa terminal durável NOT_DISPATCHED, mantendo replay idempotente; qualquer erro após scroll/foco/input/timeout sem prova mantém reconciliação. Uma skill WhatsApp futura coordena adaptador read-only e memória, mas não controla diretamente outro Chrome/browser_exec durante TaskRun nativa. Inventário exige cobertura da lista virtualizada antes de abrir chats; SQLite operacional privado separado da autoridade canônica de TaskRun, com proveniência. **NÃO IMPLEMENTADO.** [Contrato WBR](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
 ## 2026-10-19 — D-049 inteligência revisada [PLANO]
 A capacidade não está entregue até percorrer agente/tool schema -> Electron -> projeção Workstation -> artifact/WorkItem -> retorno model-facing. Lacunas G0 views untracked, G1 schema_valid desconectado da validade durável, G2 observação compacta não exposta no browser_snapshot e retorno potencialmente duplicado. Evitar duplicar controller, executor batch, cache, snapshot-diff ou journal; não prometer economias hipotéticas do PDF. Contrato: efeito externo só com readback independente; incerteza jamais causa retry de mutação. [Handoff](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
 

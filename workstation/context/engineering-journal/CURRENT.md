@@ -1,5 +1,9 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-19 — WBR-20261019: quatro auditorias do dogfood WhatsApp consolidadas [DOCS ONLY]
+Evidência de teste-3-20261019: tab “Não lidas 55” antes da abertura, depois 54/53/52; relatório 17 conversas / 190 mensagens sem prova de cobertura; browser_click @e22 -> stale_or_unknown_ref -> pending op_browser_click_3a895fd7e6a4 bloqueia mutações apesar de browser_snapshot responder. Código da branch remota examinado em 19/10 ainda omite stale_or_unknown_ref no normalizador, persiste admission antes de resolver point e não oferece terminal pré-efeito; toolsets permitem seleção explícita browser_exec após falha. Não inferir commit/binário incidente por relatos incompatíveis. Decisão de segurança: rejeitar patches sugeridos que deletam admission por texto do erro; preservar histórico e criar CAS+fsync do terminal NOT_DISPATCHED com evidência tipada. Nenhum patch runtime, testes, E2E ou WhatsApp ao vivo foi realizado nesta atualização documental. [Registro técnico](../WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
 ## 2026-10-19 — D-049 auditoria local adversarial incorporada [DOCS-ONLY]
 Branch remota inicial fd80408; auditoria local encontrou snapshot-views.ts importado no HEAD mas untracked, bridge/Learning parcialmente corrigidos e 7 PASS/1 SKIP Python, 11 PASS views, 9 PASS schema, 1 PASS Learning. G1 schema_valid pode desaparecer no WorkPlan e valid_count; G2 tool schema browser_snapshot expõe apenas full, apesar de Electron aceitar views. Não foi executada CI exact-head nem E2E externo agora. Novo handoff [D049 19/10](../D049_BROWSER_EXECUTION_80_20_2026-10-19.md); sequência G0/G1/G2, IV condicional. Nunca reset/clean local sujo.
 
