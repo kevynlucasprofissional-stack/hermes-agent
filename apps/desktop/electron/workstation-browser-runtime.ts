@@ -351,7 +351,7 @@ export function normalizeWorkstationControllerError(error: unknown, resourceRef?
     }
   }
 
-  if (token === 'ref_required' || token === 'element_unavailable' || token === 'browser_tab_destroyed') {
+  if (token === 'ref_required' || token === 'element_unavailable' || token === 'browser_tab_destroyed' || token === 'stale_or_unknown_ref') {
     return { ...base, error_code: 'STALE_REF', retryable: true, state_changed: true, recommended_action: 'RESNAPSHOT' }
   }
 
@@ -3051,6 +3051,10 @@ export class WorkstationBrowserRuntime {
 
       case 'browser_extract_items':
         return this.extractItemsForEntry(entry, args)
+
+      case 'browser_inventory_unread':
+        return this.inventoryUnreadForEntry(entry, args)
+
       case 'browser_scroll': {
         await this.scrollEntry(entry, String(args.direction ?? 'down'))
         await delay(140)
@@ -3974,12 +3978,15 @@ export class WorkstationBrowserRuntime {
       // B1.1: when a view is requested, `snapshot` carries the projected text
       // and `snapshot_view` identifies which projection was applied. The
       // canonical formattedSnapshot is still used for delta/replay frames.
+      // Opt-in views are already compact projections; omit the redundant
+      // element list so the model does not pay tokens for data the view text
+      // already expresses. Legacy callers (no view) keep the full inventory.
       snapshot: returnedText,
       snapshot_delta: snapshotDelta,
       snapshot_view: snapshotView,
       snapshot_view_focus_missing: snapshotViewFocusMissing,
       revision: entry.mutationRevision,
-      elements: inv.elements,
+      ...(snapshotView ? {} : { elements: inv.elements }),
       truncated: returnedTruncated,
       total_text_chars: inv.totalTextChars,
       element_count: inv.elements.length,
@@ -4691,6 +4698,203 @@ export class WorkstationBrowserRuntime {
     }
 
     return finalResult
+  }
+
+  /**
+   * P1A — Inventário incremental de conversas não lidas em listas virtualizadas.
+   *
+   * Percorre o contêiner de rolagem (#pane-side) do WhatsApp Web sem abrir
+   * conversas, coletando apenas linhas montadas a cada janela de viewport.
+   * Deduplica por título + último trecho visível (nunca inventa chatId).
+   * Detecta alterações concorrentes via contador global de não lidas e
+   * retorna complete/partial/unstable conforme cobertura verificada.
+   */
+  private async inventoryUnreadForEntry(
+    entry: BrowserEntry,
+    args: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const wc = entry.view.webContents
+    const maxScrollAttempts = Math.min(Math.max(Number(args.maxScrollAttempts) || 120, 10), 500)
+    const scrollPauseMs = Math.min(Math.max(Number(args.scrollPauseMs) || 350, 100), 2000)
+    const stableRoundsRequired = Math.min(Math.max(Number(args.stableRoundsRequired) || 3, 1), 10)
+
+    const script = `(async function () {
+      const MAX_ATTEMPTS = ${maxScrollAttempts};
+      const PAUSE_MS = ${scrollPauseMs};
+      const STABLE_ROUNDS = ${stableRoundsRequired};
+
+      function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+      function getGlobalUnreadCount() {
+        // Contador global no header "Conversas" — aria-label ou texto direto
+        const headerBtn = document.querySelector('[data-navbar-item-selected="true"] [role="status"] span');
+        if (!headerBtn) return null;
+        const text = (headerBtn.textContent || '').trim();
+        const n = parseInt(text, 10);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      function findScrollContainer() {
+        // #pane-side é o contêiner canônico; fallback por role/overflow
+        let el = document.getElementById('pane-side');
+        if (el && el.scrollHeight > el.clientHeight) return el;
+        // Fallback: primeiro ancestral com overflow auto/scroll e altura suficiente
+        const candidates = document.querySelectorAll('[style*="overflow"], [class*="pane"]');
+        for (const c of candidates) {
+          if (c.scrollHeight > c.clientHeight + 10) return c;
+        }
+        return el || document.querySelector('#pane-side') || document.documentElement;
+      }
+
+      function extractVisibleRows() {
+        const rows = document.querySelectorAll('[role="row"][data-testid^="list-item-"]');
+        const items = [];
+        for (const row of rows) {
+          const testid = row.getAttribute('data-testid') || '';
+          const titleEl = row.querySelector('[data-testid="cell-frame-title"]');
+          const unreadEl = row.querySelector('[data-testid="icon-unread-count"]');
+          const timeEl = row.querySelector('[data-testid="cell-frame-primary-detail"] span');
+          const lastMsgEl = row.querySelector('[data-testid="last-msg-status"]');
+
+          const title = (titleEl?.querySelector('[dir="auto"]')?.textContent || '').trim();
+          const unreadText = (unreadEl?.textContent || '').trim();
+          const unreadCount = parseInt(unreadText, 10);
+          const time = (timeEl?.textContent || '').trim();
+          const lastMsg = (lastMsgEl?.textContent || '').trim().slice(0, 80);
+
+          // Identidade dedup: título + recorte da última mensagem (não inventamos ID)
+          const identityKey = title + '||' + lastMsg.slice(0, 40);
+
+          if (title) {
+            items.push({
+              testid,
+              title,
+              unread_count: Number.isFinite(unreadCount) ? unreadCount : 0,
+              has_unread_badge: !!unreadEl,
+              time,
+              last_message_preview: lastMsg,
+              identity_key: identityKey,
+              transform_y: (row.style.transform || '').match(/translateY\\(([^)]+)\\)/)?.[1] || '0px',
+              provenance: 'viewport_extract'
+            });
+          }
+        }
+        return items;
+      }
+
+      const container = findScrollContainer();
+      if (!container) {
+        return { success: false, error_code: 'CONTAINER_NOT_FOUND', message: 'Could not locate scroll container (#pane-side)' };
+      }
+
+      const initialUnread = getGlobalUnreadCount();
+      const seen = new Map(); // identityKey -> item
+      let scrollAttempts = 0;
+      let stableRounds = 0;
+      let lastSeenCount = 0;
+      let reachedBottom = false;
+      let concurrentChangeDetected = false;
+
+      // Scroll to top first
+      container.scrollTop = 0;
+      await sleep(PAUSE_MS * 2);
+
+      while (scrollAttempts < MAX_ATTEMPTS) {
+        const currentUnread = getGlobalUnreadCount();
+        if (initialUnread !== null && currentUnread !== null && currentUnread !== initialUnread) {
+          concurrentChangeDetected = true;
+        }
+
+        const visibleItems = extractVisibleRows();
+        let newInRound = 0;
+        for (const item of visibleItems) {
+          if (!seen.has(item.identity_key)) {
+            seen.set(item.identity_key, item);
+            newInRound++;
+          }
+        }
+
+        if (newInRound === 0 && visibleItems.length > 0) {
+          stableRounds++;
+        } else {
+          stableRounds = 0;
+        }
+
+        // Check if we reached the bottom
+        const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 5;
+        if (atBottom) {
+          reachedBottom = true;
+          // One final extraction after reaching bottom
+          await sleep(PAUSE_MS);
+          const finalItems = extractVisibleRows();
+          for (const item of finalItems) {
+            if (!seen.has(item.identity_key)) {
+              seen.set(item.identity_key, item);
+            }
+          }
+          break;
+        }
+
+        if (stableRounds >= STABLE_ROUNDS) {
+          // Stable but not at bottom — likely all items collected
+          reachedBottom = true;
+          break;
+        }
+
+        // Scroll by ~70% of viewport height for overlap coverage
+        const scrollAmount = Math.floor(container.clientHeight * 0.7);
+        container.scrollBy({ top: scrollAmount, behavior: 'instant' });
+        scrollAttempts++;
+        await sleep(PAUSE_MS);
+      }
+
+      const items = Array.from(seen.values());
+      const finalUnread = getGlobalUnreadCount();
+      const unreadConversations = items.filter(i => i.has_unread_badge || i.unread_count > 0);
+
+      let status = 'partial';
+      if (reachedBottom && !concurrentChangeDetected) {
+        status = 'complete';
+      } else if (concurrentChangeDetected) {
+        status = 'unstable';
+      }
+
+      return {
+        success: true,
+        status,
+        initial_unread_count: initialUnread,
+        final_unread_count: finalUnread,
+        total_conversations_collected: items.length,
+        unread_conversations_count: unreadConversations.length,
+        scroll_attempts: scrollAttempts,
+        reached_bottom: reachedBottom,
+        concurrent_change_detected: concurrentChangeDetected,
+        stable_rounds_at_end: stableRounds,
+        items: items,
+        provenance: 'browser_inventory_unread_p1a'
+      };
+    })()`
+
+    try {
+      const result = (await wc.executeJavaScript(script, true)) as Record<string, unknown>
+      return {
+        success: true,
+        runtime: 'electron-chromium',
+        task_id: entry.ownerTaskId,
+        tab_id: entry.id,
+        url: wc.getURL(),
+        ...result
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error_code: 'INVENTORY_SCRIPT_FAILED',
+        message: String(error),
+        runtime: 'electron-chromium',
+        task_id: entry.ownerTaskId,
+        tab_id: entry.id
+      }
+    }
   }
 
   private async screenshotForEntry(entry: BrowserEntry): Promise<Record<string, unknown>> {
