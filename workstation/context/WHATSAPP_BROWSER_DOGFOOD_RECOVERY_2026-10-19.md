@@ -105,6 +105,50 @@ Status: IMPLEMENTED + UNIT_TESTED (commit 13a6597116, branch feat/d049-browser-8
 
 Escopo não coberto nesta etapa: schema-level removal de `browser_exec` para sessões desktop vinculadas (atualmente o bloqueio é em runtime no handler); persistência de afinidade após compactação de contexto depende do binding canônico já existente em `_canonical_browser_task_binding`; testes cross-session e de recuperação pós-restart pendentes para qualificação P2.
 
+### P1A — inventário incremental de conversas não lidas em listas virtualizadas
+Status: IMPLEMENTED + UNIT_TESTED (commits babc4365a9 + 5509da7af9, branch feat/d049-browser-80-20-impl-20261018).
+
+**O que foi implementado:**
+- Ação `browser_inventory_unread` no runtime Electron (`apps/desktop/electron/workstation-browser-runtime.ts`): método `inventoryUnreadForEntry` percorre o contêiner `#pane-side` do WhatsApp Web com scroll por 70% do viewport, deduplicação por `title + last_message_preview` (nunca inventa chatId), detecção de alterações concorrentes via contador global de não lidas e retorno estruturado com status `complete`, `partial` ou `unstable`.
+- Schema JSON registrado em `tools/browser_tool.py` (`BROWSER_TOOL_SCHEMAS`), entrada em `_BROWSER_TOOL_TABLE` e handler Python `browser_inventory_unread()` que delega ao Workstation Browser via `routed_browser_handler`.
+- Efeito classificado como `DISCOVERY` em `tools/effects.py` (read-only, nunca MUTATION).
+- Registrado em `_WORKSTATION_SCHEMA_TOOLS` (`tools/browser_workstation.py`), `WORKSTATION_BROWSER_CAPABILITIES` (`workstation/integrations/hermes/browser_controller.py`) e projeção compacta JSON no controller (sem WorkPlan durável, pois itens de inventário não são work items acionáveis).
+- Mock sintético de 55 conversas virtualizadas adicionado ao `FakeWebContents.executeJavaScript` no teste de resiliência TypeScript.
+
+**Testes verdes:**
+- TypeScript: `browser_inventory_unread collects virtualized unread conversations without opening chats` em `apps/desktop/electron/workstation-browser-runtime-resilience.test.ts` — valida sucesso, status complete, 55 conversas coletadas, reached_bottom=true, concurrent_change_detected=false, provenance `browser_inventory_unread_p1a`, deduplication key presente e não vazia.
+- Python (4 testes em `tests/tui_gateway/test_workstation_browser_schema_capability.py`):
+  - `test_browser_inventory_unread_is_registered_in_workstation_capabilities` — capability listada.
+  - `test_browser_inventory_unread_has_discovery_effect` — efeito DISCOVERY confirmado.
+  - `test_browser_inventory_unread_projection_returns_compact_json` — projeção compacta válida.
+  - `test_browser_inventory_unread_appears_in_desktop_schema_surface` — ferramenta visível na superfície Desktop.
+
+**Contrato de saída:**
+```json
+{
+  "success": true,
+  "status": "complete|partial|unstable",
+  "initial_unread_count": 55,
+  "final_unread_count": 55,
+  "total_conversations_collected": 55,
+  "unread_conversations_count": 55,
+  "scroll_attempts": 12,
+  "reached_bottom": true,
+  "concurrent_change_detected": false,
+  "stable_rounds_at_end": 3,
+  "items": [{ "testid", "title", "unread_count", "has_unread_badge", "time", "last_message_preview", "identity_key", "transform_y", "provenance": "viewport_extract" }],
+  "provenance": "browser_inventory_unread_p1a"
+}
+```
+
+**Escopo não coberto / pendente para P2:**
+- Teste E2E contra WhatsApp Web real (requer sessão autenticada e autorização explícita).
+- Validação de cobertura >= contagem inicial quando estável e sem novas mensagens.
+- Reruns idempotentes com mesmo scanRunId.
+- Detecção de homônimos com colisão de identity_key (atualmente dedup por título+preview pode fundir conversas distintas com mesmo nome e última mensagem idêntica).
+- Persistência do resultado de inventário no SQLite local ACIRV Notebook (P1B).
+- Integração com Experience Compiler após infraestrutura confiável.
+
 ## Orientação aos implementadores
 
 Em cada prompt: atualizar HEAD remoto primeiro, ler ESTE arquivo + código dono e testes citados (não ler centenas de documentos), escrever teste RED, patch mínimo, teste GREEN, typecheck/build focado e diff --check; não fazer merge de main, força, limpeza de worktrees ou commit de arquivos não relacionados. Revisar criticamente snippets, adaptar se houver solução melhor preservando invariantes. Publicar somente commits de autoria, registrar antes/depois SHA e comandos/resultados reais e atualizar journal/known issues/roadmap/intelligence com status distinto PLAN, IMPLEMENTED, UNIT_TESTED, CI_QUALIFIED, EXTERNAL_E2E. Divergência ou worktree suja não são autorização para sobrescrever.
