@@ -5927,6 +5927,10 @@ A new real local adoption regression exposed a remaining lifetime gap: revoking 
 GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
 Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.
 
+### D-049 G1 Problem 2 — schema_status propagation (2026-10-19, commit 9e6d5dc0b8)
+
+Implemented and verified end-to-end schema verdict propagation in `browser_projection.py`: explicit `schema_status` (not_requested | valid | invalid | unknown) computed from owner's `schema_valid` and caller's schema request. When schema was requested and verdict is not valid, items are captured/persisted for investigation but never marked completed or conforming. Semantic validation uses the schema's own `required` fields when `schema_status=valid` instead of hardcoding `title`. Summary output includes `schema_status` and bounded `schema_errors`. All 8 extract/controller tests pass; typecheck and lint clean. **NOTE:** Remote branch received concurrent docs commits (cbfdbca9c5..77744cbc90) that reverted these changes in `browser_projection.py` and `test_browser_extract_items.py`; merge required before push to preserve both the G1 fix and the WhatsApp incident documentation.
+
 ## D-049 Browser Observation 80/20 — B1.2 Value-Level Secret Redaction & B1.3 Schema Validation (2026-10-19)
 
 Implemented and verified two foundational extract-cache hardening layers for the Browser Observation 80/20 refinement:
