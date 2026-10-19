@@ -3261,7 +3261,7 @@ export class WorkstationBrowserRuntime {
               throw workstationControllerFault('STALE_REF', 'batch_document_changed')
             }
           },
-          perform: async (step, _context, _index) => {
+          perform: async (step, context, _index) => {
             const before = await readback('ref' in step ? step.ref : null)
 
             switch (step.kind) {

@@ -19337,6 +19337,9 @@ if (!isPrimaryInstance) {
       // deep-link delivery focuses a live window after its renderer is ready.
       focusExisting: !url
     })
+    setTimeout(() => {
+      rememberLog(`[second-instance] after restore: exists=${Boolean(mainWindow && !mainWindow.isDestroyed())} visible=${Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible())}`)
+    }, 250).unref()
   })
 }
 

@@ -97,7 +97,7 @@ describe('B1.1 snapshot views', () => {
       // View text carries refs; the redundant structured list is intentionally
       // absent from the projected payload.
       expect(viewResult.text).toContain('@e1')
-      expect((viewResult as Record<string, unknown>).elements).toBeUndefined()
+      expect('elements' in viewResult).toBe(false)
     })
   })
 

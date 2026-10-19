@@ -575,3 +575,44 @@ test('BROW-N1: explicit replay of an acknowledged batch operation cannot repeat 
   assert.equal(replay.reason, 'prior_batch_effect_requires_reconciliation')
   await runtime.destroy()
 })
+
+test('B1.1: runtime snapshot omits elements only for an opt-in compact view', async () => {
+  runtimeHome()
+
+  const runtime = new WorkstationBrowserRuntime()
+
+  const dispatch = (runtime as any).executeControlRequest.bind(runtime) as (
+    request: Record<string, unknown>
+  ) => Promise<Record<string, any>>
+
+  await dispatch({
+    action: 'browser_navigate',
+    task_id: 'task-snapshot-projection',
+    arguments: { url: 'https://example.com' }
+  })
+
+  const compact = await dispatch({
+    action: 'browser_snapshot',
+    task_id: 'task-snapshot-projection',
+    arguments: { view: 'action_map' }
+  })
+
+  assert.equal(compact.success, true)
+  assert.equal(compact.snapshot_view, 'action_map')
+  assert.match(String(compact.snapshot), /@e1/)
+  assert.equal('elements' in compact, false)
+  assert.equal(compact.element_count, 1)
+
+  const legacy = await dispatch({
+    action: 'browser_snapshot',
+    task_id: 'task-snapshot-projection',
+    arguments: {}
+  })
+
+  assert.equal(legacy.success, true)
+  assert.equal(legacy.snapshot_view, undefined)
+  assert.ok(Array.isArray(legacy.elements))
+  assert.equal(legacy.elements.length, 1)
+
+  await runtime.destroy()
+})
