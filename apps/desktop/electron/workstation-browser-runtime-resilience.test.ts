@@ -104,6 +104,33 @@ const electron = vi.hoisted(() => {
         }
       }
 
+      if (source.includes('browser_inventory_unread') || source.includes('INVENTORY_SCRIPT') || source.includes('getGlobalUnreadCount')) {
+        return {
+          success: true,
+          status: 'complete',
+          initial_unread_count: 55,
+          final_unread_count: 55,
+          total_conversations_collected: 55,
+          unread_conversations_count: 55,
+          scroll_attempts: 12,
+          reached_bottom: true,
+          concurrent_change_detected: false,
+          stable_rounds_at_end: 3,
+          items: Array.from({ length: 55 }, (_, i) => ({
+            testid: `list-item-${i}`,
+            title: `Chat ${i + 1}`,
+            unread_count: 1,
+            has_unread_badge: true,
+            time: '10:00',
+            last_message_preview: 'Mensagem sintética',
+            identity_key: `Chat ${i + 1}||Mensagem sintética`,
+            transform_y: `${i * 76}px`,
+            provenance: 'viewport_extract'
+          })),
+          provenance: 'browser_inventory_unread_p1a'
+        }
+      }
+
       return {}
     }
 
@@ -669,6 +696,42 @@ test('browser_extract_items extracts structured cards via controller request', a
   assert.equal(extracted.count, 1)
   assert.equal(extracted.selector_used, 'article')
   assert.equal((extracted.items as Array<Record<string, unknown>>)[0].title, 'Item 1')
+  await runtime.destroy()
+})
+
+test('browser_inventory_unread collects virtualized unread conversations without opening chats', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const taskId = 'task-inventory-unread-test'
+
+  await executeControlRequest(runtime, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    arguments: { url: 'https://web.whatsapp.com/' }
+  })
+
+  const inventory = await executeControlRequest(runtime, {
+    action: 'browser_inventory_unread',
+    task_id: taskId,
+    arguments: { maxScrollAttempts: 120, scrollPauseMs: 350, stableRoundsRequired: 3 }
+  })
+
+  assert.equal(inventory.success, true)
+  assert.equal(inventory.status, 'complete')
+  assert.equal(inventory.initial_unread_count, 55)
+  assert.equal(inventory.final_unread_count, 55)
+  assert.equal(inventory.total_conversations_collected, 55)
+  assert.equal(inventory.unread_conversations_count, 55)
+  assert.equal(inventory.reached_bottom, true)
+  assert.equal(inventory.concurrent_change_detected, false)
+  assert.equal(inventory.provenance, 'browser_inventory_unread_p1a')
+  const items = inventory.items as Array<Record<string, unknown>>
+  assert.equal(items.length, 55)
+  assert.equal(items[0].title, 'Chat 1')
+  assert.equal(items[0].has_unread_badge, true)
+  assert.equal(items[0].provenance, 'viewport_extract')
+  // Deduplication key must be present and non-empty
+  assert.ok(typeof items[0].identity_key === 'string' && items[0].identity_key.length > 0)
   await runtime.destroy()
 })
 

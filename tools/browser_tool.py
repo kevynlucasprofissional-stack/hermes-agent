@@ -744,6 +744,37 @@ BROWSER_TOOL_SCHEMAS = [
             "required": ["steps"]
         }
     },
+    {
+        "name": "browser_inventory_unread",
+        "description": (
+            "P1A — Incremental, read-only inventory of unread conversations in virtualized lists "
+            "(e.g. WhatsApp Web #pane-side). Scrolls the container with overlap, deduplicates by "
+            "visible title + last message preview (never invents chat IDs), detects concurrent "
+            "changes via the global unread counter, and returns complete/partial/unstable status. "
+            "Does NOT open chats, mark as read, or send messages. Requires browser_navigate first."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "max_scroll_attempts": {
+                    "type": "integer",
+                    "description": "Maximum scroll iterations (default 120, max 500).",
+                    "default": 120
+                },
+                "scroll_pause_ms": {
+                    "type": "integer",
+                    "description": "Milliseconds to wait after each scroll for DOM render (default 350, max 2000).",
+                    "default": 350
+                },
+                "stable_rounds_required": {
+                    "type": "integer",
+                    "description": "Consecutive rounds with zero new items before declaring stable (default 3, max 10).",
+                    "default": 3
+                }
+            },
+            "required": []
+        }
+    },
 ]
 
 from tools import browser_tool_snapshot as _snapshot
@@ -1135,6 +1166,34 @@ def browser_batch_actions(steps: list[dict], task_id: Optional[str] = None, **kw
         "browser_batch_actions",
         {"steps": steps},
         fallback=lambda: _dumps(_err("browser_batch_actions requires Workstation Browser runtime")),
+        task_id=task_id,
+        session_id=kwargs.get("session_id"),
+        run_id=kwargs.get("run_id"),
+    )
+
+
+def browser_inventory_unread(max_scroll_attempts: int = 120, scroll_pause_ms: int = 350,
+                             stable_rounds_required: int = 3, task_id: Optional[str] = None,
+                             **kwargs) -> str:
+    """P1A — Incremental read-only inventory of unread conversations in virtualized lists.
+
+    Scrolls the WhatsApp Web #pane-side container with overlap, deduplicates by
+    visible title + last message preview, detects concurrent changes via the global
+    unread counter, and returns complete/partial/unstable status. Never opens chats,
+    marks as read, or sends messages. Requires browser_navigate first.
+    """
+    effective_task_id = _last_session_key(task_id or "default")
+    blocked = _blocked_private_page_action(effective_task_id, "inventory unread conversations")
+    if blocked is not None:
+        return blocked
+    return routed_browser_handler(
+        "browser_inventory_unread",
+        {
+            "maxScrollAttempts": max_scroll_attempts,
+            "scrollPauseMs": scroll_pause_ms,
+            "stableRoundsRequired": stable_rounds_required,
+        },
+        fallback=lambda: _dumps(_err("browser_inventory_unread requires Workstation Browser runtime")),
         task_id=task_id,
         session_id=kwargs.get("session_id"),
         run_id=kwargs.get("run_id")
@@ -1613,6 +1672,7 @@ _BROWSER_TOOL_TABLE = (
     ("browser_console", "🖥️", _install.check_browser_requirements, {"clear": False, "expression": None}),
     ("browser_read_http", "🌐", None, {"url": "", "method": "GET", "headers": None}),
     ("browser_batch_actions", "⚡", None, {"steps": []}),
+    ("browser_inventory_unread", "📋", None, {"max_scroll_attempts": 120, "scroll_pause_ms": 350, "stable_rounds_required": 3}),
 )
 
 
