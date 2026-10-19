@@ -89,6 +89,22 @@ Nunca publicar mensagens, HTML, números, tokens, contatos reais nem banco na br
 
 **Prompt 5 / P2 — integração e qualificação**. Validar TaskRun longa, crash/restart, reincidência de stale, cobertura >= número inicial quando estável e sem novas mensagens, reruns idempotentes, nenhum switch de navegador, zero mensagens enviadas, sem read antes da conclusão do inventário. Registrar QUALIFIED somente se testes realmente rodarem. Não dar 'DONE' por teste unit isolado.
 
+## Status de implementação por etapa
+
+### P0A — admission terminal pré-efeito + STALE_REF
+Status: IMPLEMENTED (commit 40c1a35548). Gate de admissão persiste NOT_DISPATCHED antes de qualquer efeito; stale_or_unknown_ref normalizado como STALE_REF com resnapshot obrigatório na mesma aba. Teste unitário verde em `tests/tools/test_browser_workstation.py`.
+
+### P0B — afinidade TaskRun↔backend e bloqueio de browser_exec
+Status: IMPLEMENTED + UNIT_TESTED (commit 13a6597116, branch feat/d049-browser-80-20-impl-20261018).
+- O handler `browser_exec` em `tools/browser_use_cli.py` verifica `workstation_route_is_bound(task_id, session_id)` na entrada; quando a sessão está vinculada ao Workstation Browser nativo, retorna `RECONCILIATION_REQUIRED` antes de qualquer verificação de ambiente ou spawn de subprocesso.
+- A assinatura de `browser_exec` aceita agora `session_id` como kwarg opcional para permitir o gating no ponto de dispatch via registry handler.
+- Teste `test_browser_exec_blocked_when_workstation_bound` em `tests/tools/test_browser_use_cli.py` exercita o caminho via registry com binding mockado e valida a serialização `{"error": "RECONCILIATION_REQUIRED: ..."}`.
+- 22 falhas pré-existentes no arquivo de teste foram confirmadas via `git stash` + baseline run; nenhuma regressão introduzida por este commit.
+- typecheck (`py_compile`) e `git diff --check` passaram sem erros.
+- Push realizado para `origin/feat/d049-browser-80-20-impl-20261018`.
+
+Escopo não coberto nesta etapa: schema-level removal de `browser_exec` para sessões desktop vinculadas (atualmente o bloqueio é em runtime no handler); persistência de afinidade após compactação de contexto depende do binding canônico já existente em `_canonical_browser_task_binding`; testes cross-session e de recuperação pós-restart pendentes para qualificação P2.
+
 ## Orientação aos implementadores
 
 Em cada prompt: atualizar HEAD remoto primeiro, ler ESTE arquivo + código dono e testes citados (não ler centenas de documentos), escrever teste RED, patch mínimo, teste GREEN, typecheck/build focado e diff --check; não fazer merge de main, força, limpeza de worktrees ou commit de arquivos não relacionados. Revisar criticamente snippets, adaptar se houver solução melhor preservando invariantes. Publicar somente commits de autoria, registrar antes/depois SHA e comandos/resultados reais e atualizar journal/known issues/roadmap/intelligence com status distinto PLAN, IMPLEMENTED, UNIT_TESTED, CI_QUALIFIED, EXTERNAL_E2E. Divergência ou worktree suja não são autorização para sobrescrever.
