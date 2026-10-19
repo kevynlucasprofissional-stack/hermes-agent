@@ -236,6 +236,37 @@ class TestToolSurfaceSwap:
         names = {t["function"]["name"] for t in defs}
         assert "browser_exec" in names
 
+    def test_browser_exec_blocked_when_workstation_bound(self, monkeypatch):
+        """P0B: a task bound to the native Workstation Browser must never be
+        rerouted to browser_exec (external Chrome/CDP). The handler must fail
+        closed with RECONCILIATION_REQUIRED instead of spawning a second
+        browser authority."""
+        from tools import browser_workstation
+
+        monkeypatch.setattr(browser_workstation, "workstation_route_is_bound",
+                            lambda task_id=None, session_id=None: True)
+        monkeypatch.setattr(browser_workstation, "workstation_browser_enabled", lambda: True)
+
+        # Invoke through the registry handler so the dispatch-time gate is exercised
+        # (browser_exec's direct signature lacks session_id; the handler receives it via **kw).
+        from tools.registry import registry
+        entry = registry.get_entry("browser_exec")
+        result = entry.handler(
+            {"code": "print('escape')"},
+            task_id="bound-task",
+            session_id="bound-session",
+        )
+
+        assert isinstance(result, str)
+        parsed = json.loads(result)
+        # tool_error serializes as {"error": "..."} without success/error_code fields;
+        # accept that shape alongside the structured contract.
+        error_text = str(parsed.get("error_code") or parsed.get("error") or parsed.get("message") or "")
+        assert "RECONCILIATION_REQUIRED" in error_text
+        assert "workstation" in error_text.lower() or "native browser" in error_text.lower()
+        if "success" in parsed:
+            assert parsed["success"] is False
+
 
 class TestVaultSupervisorAttach:
     def test_exec_attaches_supervisor_to_the_browser_it_drives(self, tmp_path, monkeypatch, _fake_supervisor_registry):
