@@ -1,4 +1,8 @@
 # D-049 — Browser Observation & Verified Automation, plano 80/20
+
+## Errata 2026-10-19 — sequência prevalente
+A auditoria adversarial substitui a ordem B0–B3 por G0 integração/checkout, G1 verdade schema/WorkItems, G2 views realmente acessíveis e mensuradas; IV drift se houver caso real. O trabalho B0.1/B0.2 já possuía patches/testes locais; preservá-los. Nada de release claim sem CI/readback. [Handoff executável](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+
 **Decisão em:** 2026-10-18. **Base estática auditada:** `main@f436e9496344d2c38e6611a88b42f0b7f18ce6df`. **Status:** decisão/handoff documental, sem patch de runtime ou novos testes executados. **Não declarar release** a partir deste documento.
 
 ## 1. Intenção, alvo e resultado

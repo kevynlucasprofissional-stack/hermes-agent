@@ -1,5 +1,9 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-19 — D-049 auditoria local adversarial incorporada [DOCS-ONLY]
+Branch remota inicial fd80408; auditoria local encontrou snapshot-views.ts importado no HEAD mas untracked, bridge/Learning parcialmente corrigidos e 7 PASS/1 SKIP Python, 11 PASS views, 9 PASS schema, 1 PASS Learning. G1 schema_valid pode desaparecer no WorkPlan e valid_count; G2 tool schema browser_snapshot expõe apenas full, apesar de Electron aceitar views. Não foi executada CI exact-head nem E2E externo agora. Novo handoff [D049 19/10](../D049_BROWSER_EXECUTION_80_20_2026-10-19.md); sequência G0/G1/G2, IV condicional. Nunca reset/clean local sujo.
+
+
 ## 2026-10-18 — D-049 Browser ecosystem audit → handoff 80/20 [DOCS-ONLY / ZERO RUNTIME PATCH]
 **Fonte:** quatro análises de BrowserTrace, abundantbeing Hermes Browser Extension, Lattice e Stagehand; segunda auditoria BrowserOS/controller; leitura GitHub `main@f436e949` em 2026-10-18. **Correções factuais:** `browser_batch_actions`, `BoundedExtractCache`, `diffSnapshot/applySnapshotDelta`, `PortableTrace/ReplayEngine`, sanitizer `_force_redact`, limites de snapshot e `browser_extract_items(schema)` parcial já existem. A Extension v0.3 tem controle; `companion-plugin/policy.py` read-only não descreve a extensão inteira. Stagehand `extract` faz parse do schema no SDK; Hermes filtra propriedades mas não comprova validação integral.
 **Achados específicos para reproduzir:** `browser_bridge._validate_safe_destination` compara caminhos por prefixo e `browser_save_json` usa destino original após validar; `startLearning(tabId)` pode tomar lease de aba ativa quando aba explicitamente solicitada não tem ownerTaskId; batch click local não prova persistência remota; `PortableTrace` não vincula por padrão screenshots às etapas de falha. São hipóteses/coberturas identificadas em revisão estática, não exploits nem E2E aprovados.

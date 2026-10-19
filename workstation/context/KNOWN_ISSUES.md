@@ -1,5 +1,9 @@
 # Workstation Known Issues
 
+## 2026-10-19 — D-049 issues 80/20 pós-auditoria
+G0 import runtime referencia módulo snapshot-views.ts ausente do HEAD antigo; G1 schema_valid=false ou ausente pode coexistir com valid_count positivo e WorkItem completed; schema inválido com items=[] exige teste RED; G2 tool schema browser_snapshot não expõe view/focus e payload pode duplicar elements; B0 bridge/Learning localmente parcialmente corrigidos sem release qualification. Reconferir HEAD e status antes da ação. [Handoff](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+
+
 ## BROW-REF-20261018 — Browser percepção/autoridade/forense [OPEN — D-049 / DOCS ONLY]
 - **Segurança de diretório:** `workstation/browser_bridge.py::_validate_safe_destination` utiliza prefixo de string e `browser_save_json` valida um Path mas grava o Path original; reproduzir com caminho-irmão prefixado/symlinks e corrigir sem relaxar `allowed_roots`. Não classificar exploit comprovado sem execução real.
 - **Learning lease:** `startLearning(tabId)` chama `takeControl(ownerTaskId)`; com aba escolhida sem owner e aba ativa diferente pode haver lease no escopo errado; adicionar RED/GREEN Electron com aba não ativa.

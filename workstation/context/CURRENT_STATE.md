@@ -1,5 +1,9 @@
 # Current State
 
+## 2026-10-19 — D-049 estado de handoff (revalidar antes de editar)
+Remote feat/d049-browser-80-20-impl-20261018 estava em fd80408 antes deste commit; arquivo snapshot-views e seu teste untracked no host auditado, embora runtime já importe view. B0 bridge/Learning patches locais com testes focados, não CI. G1 schema_valid ainda sem integração durável; G2 view não oferecida ao agente. Status desta mudança DOCS ONLY / release HOLD. [Plano atualizado](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+
+
 ## 2026-10-18 — Browser D-049 after comparative audit [PLAN / NOT_IMPLEMENTED / NOT_RELEASE_QUALIFIED]
 Fonte: revisão de código `main@f436e949` e quatro repositórios de referência, **sem novos testes nativos**. Contratos reutilizáveis: `workstation-browser-snapshot[-diff].ts`, `workstation-browser-extract-cache.ts`, `workstation-browser-batch.ts`, `tools/browser_workstation.py`, `workstation/replay.py`, `workstation/browser_readiness.py`, `workstation/browser_transaction.py`. `schema` de extração atual é projeção de propriedades, não validator completo; `PortableTrace` não equivale a replay visual. Falha de CI workflow #39154888493 no exato `f436e949`; motivo não diagnosticado. PR #85 merged em 13/10, mas BAV04 continua fixture-only sem liberação de release.
 **Próxima sequência:** P0 provas de efeito externo, path boundary e Learning lease; P1 context views/redaction/schema; P1 reacquire semantic anchor pré-efeito; P2 causal run diff e captura de falha opt-in. LLM diagnosis, WebMCP e full UI Graph HOLD. [Decisão D-049](DECISIONS.md) / [plano](BROWSER_REFINEMENT_2026-10-18.md).

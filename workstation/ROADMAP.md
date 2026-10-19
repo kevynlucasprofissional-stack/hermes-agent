@@ -1,5 +1,9 @@
 # Workstation roadmap
 
+## 2026-10-19 — D-049 replanejamento 80/20 (DOCS-ONLY / NÃO RELEASE)
+Ordem executável corrigida após a auditoria adversarial: G0 checkout limpo e sincronização segura de arquivos locais untracked, B0.1/B0.2; G1 propagação fiel de schema_valid do Electron até WorkItems/valid_count; G2 views snapshot expostas à tool e economia model-facing medida; IV DOM drift SOMENTE por evidência. Antigo plano B0–B3 não deve ser reexecutado integralmente. Nenhuma CI ou E2E externo qualificado nesta atualização. [Handoff completo](context/D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+
+
 ## 2026-10-18 — D-049: Browser Observation & Verified Automation 80/20 (DECISÃO DOCUMENTADA; RUNTIME NÃO ALTERADO)
 **Objetivo:** melhorar qualidade de contexto, resolução de alvos e diagnóstico no Browser nativo **sem** criar BrowserRuntime, event bus, DB, controller ou executor paralelos. Referências: [auditoria e plano](context/BROWSER_REFINEMENT_2026-10-18.md) e [handoff implementador](context/BROWSER_REFINEMENT_IMPLEMENTER_PROMPT_2026-10-18.md).
 **P0 — qualificação e correções verificáveis (gate):** preservar BrowserTask/TaskRun/lease, reproduzir efeitos incertos, readback externo, falha de CI exact-head, validação de caminhos em browser_bridge.py, e teste de Learning em aba não ativa; nenhuma alegação de produção a partir de fixtures.

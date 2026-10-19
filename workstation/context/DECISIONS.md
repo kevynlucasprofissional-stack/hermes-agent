@@ -1,5 +1,9 @@
 # Architectural Decisions
 
+## 2026-10-19 — D-049/R1 decisão de sequência
+Três sessões G0 integridade/sync, G1 veracidade schema no domínio, G2 views ao agente com medição; quarta sessão DOM drift somente por benchmark. Prioridade é custo/risco por tarefa externamente verificada, não quantidade de features. B0 patches já existem localmente, não reescrever. Sem reset/clean/stash automático, WebMCP, event bus, router, grafo Lattice ou backend paralelo. H-079/H-081/H-082 e BAV04 HOLD. [Guia de implementação](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+
+
 ## D-049 — Browser 80/20: uma cadeia de observação, execução e evidência (2026-10-18)
 **STATUS: DECIDIDO COMO DIREÇÃO; APENAS DOCUMENTAÇÃO NESTA ETAPA.** Aumentar eficiência do Browser nativo sem substituir `WebContentsView`, `BrowserTaskLifecycle`, `BrowserRuntimeSupervisor`, `BrowserTransaction`, `browser_batch_actions`, `BoundedExtractCache`, `diffSnapshot`, `PortableTrace`, `ExecutionJournal`, `ArtifactStore`, `TaskCompiler`, System-1/LAYA ou `ExperienceCompiler`. O fluxo canônico é **observar com escopo → validar/redigir → resolver alvo único → admitir efeito → agir uma vez → readback externo → registrar receipt → diagnosticar/reutilizar**. Nenhum módulo de observação pode conceder autoridade.
 **Achados de base auditada `main@f436e949`:** já há batch (até 20 etapas), snapshot compacto/full (8k/24k chars; 120/400 elementos), delta textual conservador conectado ao runtime, cache por fingerprint/DOM-revision (TTL 4 s), erro estruturado, sanitização Python e parcial no Electron, replay side-effect-free e telemetria local opt-in. Gap efetivo: views semânticas orientadas à tarefa, extração tipada **validada**, localizador revalidado antes de efeito, cobertura de redaction nas fronteiras, regressão por run e evidência visual correlacionada à falha. `schema.properties` no extract atual filtra chaves, **não** valida o schema.
