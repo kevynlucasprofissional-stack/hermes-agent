@@ -325,6 +325,25 @@ export function validateExtractedItems(
     return { valid: true, errors: [] }
   }
 
+  // Preflight: detect unsupported keywords at the root level before iterating
+  // items. Without this, an empty items array would silently accept a schema
+  // that uses $ref, allOf, etc., because the per-item loop never executes.
+  const rootUnsupported: string[] = []
+
+  for (const key of Object.keys(schema)) {
+    if (!SUPPORTED_SCHEMA_KEYWORDS.has(key)) {
+      rootUnsupported.push(key)
+    }
+  }
+
+  if (rootUnsupported.length > 0) {
+    return {
+      valid: false,
+      errors: [`$: unsupported schema keywords: ${rootUnsupported.join(', ')}`],
+      unsupportedKeywords: rootUnsupported
+    }
+  }
+
   const allErrors: string[] = []
   let hasUnsupported = false
   const unsupportedKw: string[] = []

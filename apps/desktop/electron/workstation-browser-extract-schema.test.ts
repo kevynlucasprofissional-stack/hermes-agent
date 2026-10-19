@@ -130,4 +130,45 @@ describe('B1.3 schema validation for extracted items', () => {
     expect(result.errors.some(e => e.startsWith('$[1]') && e.includes('missing required'))).toBe(true)
     expect(result.errors.some(e => e.startsWith('$[2]') && e.includes('expected type "string"'))).toBe(true)
   })
+
+  it('rejects unsupported schema keywords even when items array is empty', () => {
+    const schema = {
+      type: 'object',
+      $ref: '#/definitions/Foo',
+      properties: { name: { type: 'string' } }
+    }
+
+    const result = validateExtractedItems([], schema)
+    expect(result.valid).toBe(false)
+    expect(result.unsupportedKeywords).toContain('$ref')
+  })
+
+  it('rejects allOf/anyOf/oneOf/patternProperties on empty items', () => {
+    const schema = {
+      type: 'object',
+      allOf: [{ required: ['x'] }],
+      anyOf: [{ required: ['y'] }],
+      oneOf: [{ required: ['z'] }],
+      patternProperties: { '^x': { type: 'string' } }
+    }
+
+    const result = validateExtractedItems([], schema)
+    expect(result.valid).toBe(false)
+    expect(result.unsupportedKeywords).toEqual(
+      expect.arrayContaining(['allOf', 'anyOf', 'oneOf', 'patternProperties'])
+    )
+  })
+
+  it('returns valid for empty items with a supported-only schema', () => {
+    const schema = {
+      type: 'object',
+      required: ['id'],
+      properties: { id: { type: 'string' } }
+    }
+
+    const result = validateExtractedItems([], schema)
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+    expect(result.unsupportedKeywords).toBeUndefined()
+  })
 })
