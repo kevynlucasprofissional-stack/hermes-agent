@@ -1,5 +1,13 @@
 # Workstation Known Issues
 
+## WBR-20261019 — Incidente real WhatsApp Web [OPEN; análise consolidada, sem correção qualificada]
+- **P0 blocker:** pointScript retorna stale_or_unknown_ref antes de input; o normalizador não mapeia token para STALE_REF; admission persistida antes de clickRef fica sem terminal, e pendingBrowserMutation retorna prior_operation_requires_reconciliation repetidamente. Snapshot funciona, mas não desfaz admission. Solução segura exige terminal NOT_DISPATCHED evidenciado e durável, NÃO deleção cega/ACK falso.
+- **P0 session routing:** após falha nativa, agente escolheu explicitamente browser_exec/Chrome paralelo; impedir perda de afinidade com browser nativo, inclusive após compactação, sem confundir com fallback automático do router.
+- **P1 WhatsApp coverage:** inicial 55 conversas não lidas; inventário declarado 17/190 sem prova de varredura completa; abrir conversas altera read state e invalida baseline. HTMLs de 10/10 são fixtures, não estado de 19/10.
+- **P1 data integrity:** SQLite local mostrou schema/DB confundidos, ON CONFLICT/locks/IDs sem proveniência; não apagar dados similares como “duplicados” sem evidência.
+- **Prova ausente:** Electron build SHA, store exata da admission bloqueadora, CDP input trace, selector ao vivo, E2E. [Plano corretivo](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
 ## 2026-10-19 — D-049 issues 80/20 pós-auditoria
 G0 import runtime referencia módulo snapshot-views.ts ausente do HEAD antigo; G1 schema_valid=false ou ausente pode coexistir com valid_count positivo e WorkItem completed; schema inválido com items=[] exige teste RED; G2 tool schema browser_snapshot não expõe view/focus e payload pode duplicar elements; B0 bridge/Learning localmente parcialmente corrigidos sem release qualification. Reconferir HEAD e status antes da ação. [Handoff](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
 
