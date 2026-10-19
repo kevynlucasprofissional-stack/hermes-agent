@@ -1,5 +1,9 @@
 # Workstation roadmap
 
+## 2026-10-19 — WBR-20261019: WhatsApp dogfood, BrowserTask stale/admission [PLANO DOCUMENTAL]
+Prioridade P0A: rejeição pré-efeito tipada + terminal durável NOT_DISPATCHED (sem deletar admission/forjar ACK); P0B: afinidade Browser nativo/fail-closed + recuperação; P1A: inventário completo das conversas não lidas SEM abrir chats; P1B: SQLite local com proveniência; P2: integração e qualificação. Sessão iniciou com badge de 55 conversas, relatou 17 sem cobertura; stale_or_unknown_ref deixou admission pendente e várias mutações bloqueadas. Planos D-049 G0/G1/G2 coexistem: revalidar HEAD e não desfazer entregas. **NÃO IMPLEMENTADO / NÃO QUALIFICADO.** [Decisões e prompts](context/WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
 ## 2026-10-19 — D-049 replanejamento 80/20 (DOCS-ONLY / NÃO RELEASE)
 Ordem executável corrigida após a auditoria adversarial: G0 checkout limpo e sincronização segura de arquivos locais untracked, B0.1/B0.2; G1 propagação fiel de schema_valid do Electron até WorkItems/valid_count; G2 views snapshot expostas à tool e economia model-facing medida; IV DOM drift SOMENTE por evidência. Antigo plano B0–B3 não deve ser reexecutado integralmente. Nenhuma CI ou E2E externo qualificado nesta atualização. [Handoff completo](context/D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
 
