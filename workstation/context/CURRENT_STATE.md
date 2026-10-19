@@ -1,7 +1,11 @@
 # Current State
 
+## 2026-10-19 — P2 integrated validation: stale→NOT_DISPATCHED→recovery PASS
+Teste P2 integrado passou: cenário completo de stale ref → terminal NOT_DISPATCHED durável → recuperação com novo operationId na mesma aba → replay idempotente retorna terminal persistido. Integração P0A no runtime (`browser_click`, `browser_type`, substeps de `browser_batch_actions`) + lógica de replay NOT_DISPATCHED em `executeControlRequest` + stub preciso no harness (match exato na ref serializada). Suíte completa: 132 testes passaram (resiliência + admissão P0A + extract cache), typecheck limpo. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real (requer autorização) e persistência SQLite P1B. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
 ## 2026-10-19 — WBR-20261019: incident response / estado documental
-Consolidação de quatro auditorias do dogfood WhatsApp 19/10. Nenhum runtime corrigido, storage migrado, skill criada, teste executado ou automação WhatsApp efetuada por esta alteração. Teste real: badge 55 não lidas, relatório 17 sem cobertura, ref stale + admission sem terminal e fence persistente; migração explícita ao browser_exec. Plano de cinco prompts com proteção de D-049 existente, ref local somente após fetch/ff seguro, proposta de terminal NOT_DISPATCHED em vez de apagar admissão. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+Consolidação de quatro auditorias do dogfood WhatsApp 19/10. Teste real: badge 55 não lidas, relatório 17 sem cobertura, ref stale + admission sem terminal e fence persistente; migração explícita ao browser_exec. Plano de cinco prompts com proteção de D-049 existente, ref local somente após fetch/ff seguro, proposta de terminal NOT_DISPATCHED em vez de apagar admissão. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
 
 
 ## 2026-10-19 — D-049 estado de handoff (revalidar antes de editar)

@@ -1,7 +1,7 @@
 # Workstation roadmap
 
-## 2026-10-19 — WBR-20261019: WhatsApp dogfood, BrowserTask stale/admission [PLANO DOCUMENTAL]
-Prioridade P0A: rejeição pré-efeito tipada + terminal durável NOT_DISPATCHED (sem deletar admission/forjar ACK); P0B: afinidade Browser nativo/fail-closed + recuperação; P1A: inventário completo das conversas não lidas SEM abrir chats; P1B: SQLite local com proveniência; P2: integração e qualificação. Sessão iniciou com badge de 55 conversas, relatou 17 sem cobertura; stale_or_unknown_ref deixou admission pendente e várias mutações bloqueadas. Planos D-049 G0/G1/G2 coexistem: revalidar HEAD e não desfazer entregas. **NÃO IMPLEMENTADO / NÃO QUALIFICADO.** [Decisões e prompts](context/WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+## 2026-10-19 — WBR-20261019: WhatsApp dogfood, BrowserTask stale/admission [P0A/P0B/P1A/P2 UNIT_TESTED]
+Prioridade P0A: rejeição pré-efeito tipada + terminal durável NOT_DISPATCHED integrado no runtime (`browser_click`, `browser_type`, `browser_batch_actions`) + replay idempotente; P0B: afinidade Browser nativo/fail-closed (`browser_exec` bloqueado quando vinculado); P1A: inventário incremental de conversas não lidas SEM abrir chats; P1B: SQLite local com proveniência (PENDENTE); P2: validação integrada com cenário sintético stale→NOT_DISPATCHED→recovery→replay. 132 testes unitários passaram (resiliência + admissão P0A + extract cache); typecheck limpo. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real (requer autorização) e persistência SQLite P1B. Planos D-049 G0/G1/G2 coexistem: revalidar HEAD e não desfazer entregas. [Decisões e prompts](context/WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
 
 
 ## 2026-10-19 — D-049 replanejamento 80/20 (DOCS-ONLY / NÃO RELEASE)

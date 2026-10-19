@@ -81,7 +81,21 @@ const electron = vi.hoisted(() => {
     }
 
     async executeJavaScript(source: string): Promise<unknown> {
+      // Simulate pre-effect stale ref rejection: pointScript returns
+      // { success: false, error: 'stale_or_unknown_ref' } when the resolved
+      // element is missing or disconnected BEFORE scroll/focus/dispatch.
+      // The runtime's resolvePoint throws this as an Error, which the
+      // browser_click/browser_type handler catches and records as a
+      // NOT_DISPATCHED terminal via recordPreEffectTerminal.
       if (source.includes('byRef.get')) {
+        // Match the exact ref argument serialized by pointScript:
+        // state.byRef.get("@eStale") — only reject when the ref value itself
+        // contains "Stale" or "stale", not when the script source mentions
+        // the word in comments or other contexts.
+        const refMatch = source.match(/byRef\.get\("([^"]+)"\)/)
+        if (refMatch && /[Ss]tale/.test(refMatch[1])) {
+          return { success: false, error: 'stale_or_unknown_ref' }
+        }
         return { success: true, x: 50, y: 50 }
       }
 
@@ -819,6 +833,77 @@ test('idempotent duplicate mutation replay with same operation_id returns previo
   assert.equal(replayType.idempotent_replay, true)
   assert.equal(replayType.operation_id, operationId)
   assert.deepEqual(replayType.receipt, firstType.receipt)
+
+  await runtime.destroy()
+})
+
+// P2-INTEGRATED: stale ref → NOT_DISPATCHED terminal → recovery with new operationId on same tab
+test('P2: pre-effect stale rejection records NOT_DISPATCHED and unblocks subsequent mutation on same tab', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const taskId = 'task-p2-integrated'
+
+  // Step 1: navigate to establish a bound tab
+  await executeControlRequest(runtime, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    operation_id: 'op-p2-nav',
+    arguments: { url: 'https://example.test/app' }
+  })
+
+  // Step 2: simulate a stale ref click that fails BEFORE any page effect.
+  // The fake WebContents.executeJavaScript returns stale_or_unknown_ref for
+  // refs containing "stale" (see pointScript stub in the harness).
+  // executeControlRequest throws the raw Error; the HTTP handler would
+  // normalize it, but here we catch directly and verify the terminal was
+  // recorded before the exception propagated.
+  let staleClickError: Error | null = null
+  try {
+    await executeControlRequest(runtime, {
+      action: 'browser_click',
+      task_id: taskId,
+      operation_id: 'op-p2-stale-click',
+      arguments: { ref: '@eStale' }
+    })
+  } catch (error) {
+    staleClickError = error instanceof Error ? error : new Error(String(error))
+  }
+
+  assert.ok(staleClickError, 'stale click must throw before any page effect')
+  assert.equal(staleClickError.message, 'stale_or_unknown_ref')
+
+  // Step 3: verify the admission has a durable NOT_DISPATCHED terminal
+  const persisted = JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')) as {
+    operationAdmissions?: Record<string, { terminal?: { kind: string; reason: string } }>
+  }
+  const staleAdmission = persisted.operationAdmissions?.['op-p2-stale-click']
+  assert.ok(staleAdmission?.terminal, 'admission must have a terminal after pre-effect failure')
+  assert.equal(staleAdmission.terminal.kind, 'NOT_DISPATCHED')
+  assert.equal(staleAdmission.terminal.reason, 'STALE_OR_UNKNOWN_REF')
+
+  // Step 4: a NEW operation with a different operationId must be admitted
+  // (the fence is released by the NOT_DISPATCHED terminal)
+  const recoveryClick = await executeControlRequest(runtime, {
+    action: 'browser_click',
+    task_id: taskId,
+    operation_id: 'op-p2-recovery-click',
+    arguments: { ref: '@e1' }
+  })
+
+  assert.equal(recoveryClick.success, true, 'recovery click on same tab must succeed after NOT_DISPATCHED terminal')
+  assert.equal(recoveryClick.semantic_effect, 'click')
+
+  // Step 5: replaying the SAME stale operationId must return the persisted terminal, not re-execute
+  const replayStale = await executeControlRequest(runtime, {
+    action: 'browser_click',
+    task_id: taskId,
+    operation_id: 'op-p2-stale-click',
+    arguments: { ref: '@eStale' }
+  })
+
+  assert.equal(replayStale.status, 'not_dispatched')
+  assert.equal(replayStale.reason, 'prior_operation_terminal_not_dispatched')
+  assert.equal(replayStale.idempotent_replay, true)
 
   await runtime.destroy()
 })

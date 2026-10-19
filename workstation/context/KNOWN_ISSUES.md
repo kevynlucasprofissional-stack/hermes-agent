@@ -1,7 +1,10 @@
 # Workstation Known Issues
 
-## WBR-20261019 — Incidente real WhatsApp Web [OPEN; análise consolidada, sem correção qualificada]
-- **P0 blocker:** pointScript retorna stale_or_unknown_ref antes de input; o normalizador não mapeia token para STALE_REF; admission persistida antes de clickRef fica sem terminal, e pendingBrowserMutation retorna prior_operation_requires_reconciliation repetidamente. Snapshot funciona, mas não desfaz admission. Solução segura exige terminal NOT_DISPATCHED evidenciado e durável, NÃO deleção cega/ACK falso.
+## WBR-20261019 — Incidente real WhatsApp Web [P0A UNIT_TESTED; P0B UNIT_TESTED; P1A UNIT_TESTED; P2 UNIT_TESTED]
+- **P0A pre-effect terminal:** `recordPreEffectTerminal` integrado no runtime (`browser_click`, `browser_type`, substeps de `browser_batch_actions`). Erros pré-efeito (`stale_or_unknown_ref`, `ref_required`, `ambiguous_anchor`) gravam terminal `NOT_DISPATCHED` durável antes de relançar exceção normalizada, liberando fence de admission para operações subsequentes. Replay idempotente retorna terminal persistido. 132 testes passaram (resiliência + admissão P0A + extract cache); typecheck limpo. Status: **UNIT_TESTED**.
+- **P0B affinity gate:** `browser_exec` bloqueado quando sessão está vinculada ao Browser nativo Workstation. Teste `test_browser_exec_blocked_when_workstation_bound` passou. Status: **UNIT_TESTED**.
+- **P1A inventory:** inventário incremental de conversas não lidas implementado com scroll de viewport local, sem abrir chats. 4 testes Python + testes TypeScript passaram. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real (requer autorização).
+- **P2 integrated validation:** cenário completo stale→NOT_DISPATCHED→recovery→replay idempotente passou em teste sintético. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real e persistência SQLite P1B.
 - **P0 session routing:** após falha nativa, agente escolheu explicitamente browser_exec/Chrome paralelo; impedir perda de afinidade com browser nativo, inclusive após compactação, sem confundir com fallback automático do router.
 - **P1 WhatsApp coverage:** inicial 55 conversas não lidas; inventário declarado 17/190 sem prova de varredura completa; abrir conversas altera read state e invalida baseline. HTMLs de 10/10 são fixtures, não estado de 19/10.
 - **P1 data integrity:** SQLite local mostrou schema/DB confundidos, ON CONFLICT/locks/IDs sem proveniência; não apagar dados similares como “duplicados” sem evidência.

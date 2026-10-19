@@ -2644,6 +2644,20 @@ export class WorkstationBrowserRuntime {
       const previousAdmission = admittedState?.operationAdmissions?.[operationId]
 
       if (previousAdmission) {
+        // A durable NOT_DISPATCHED terminal proves the operation never reached
+        // the page. Replay returns the terminal directly instead of treating it
+        // as uncertain — there is no effect to reconcile.
+        if (previousAdmission.terminal && previousAdmission.terminal.kind === 'NOT_DISPATCHED') {
+          return {
+            status: 'not_dispatched',
+            reason: 'prior_operation_terminal_not_dispatched',
+            terminal: previousAdmission.terminal,
+            operation_id: operationId,
+            idempotent_replay: true,
+            ...(callKey ? { call_key: callKey } : {})
+          }
+        }
+
         admissionStore.admitBrowserMutation({
           operationId, action, taskId,
           sessionId: sessionHost ?? 'unbound',
@@ -2963,7 +2977,27 @@ export class WorkstationBrowserRuntime {
         })
       case 'browser_click': {
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
-        const clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
+        let clickResult: { target?: ElementTargetMetadata }
+        try {
+          clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+            try {
+              this.sessionStatePersistence().recordPreEffectTerminal({
+                operationId: controllerOperationId,
+                reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                  : message === 'ref_required' ? 'REF_REQUIRED'
+                  : 'AMBIGUOUS_ANCHOR',
+                evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+              })
+            } catch {
+              // Terminal recording is best-effort; the original error still propagates
+              // and the admission fence remains until reconciliation.
+            }
+          }
+          throw error
+        }
         await delay(220)
 
         const opId = controllerOperationId
@@ -3006,7 +3040,27 @@ export class WorkstationBrowserRuntime {
         const append = Boolean(args.append)
         const mode = (args.mode === 'plain_text_paste' ? 'plain_text_paste' : 'insert_text') as 'insert_text' | 'plain_text_paste'
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
-        const typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append, mode, anchor })
+        let typeResult: { target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }
+        try {
+          typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append, mode, anchor })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+            try {
+              this.sessionStatePersistence().recordPreEffectTerminal({
+                operationId: controllerOperationId,
+                reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                  : message === 'ref_required' ? 'REF_REQUIRED'
+                  : 'AMBIGUOUS_ANCHOR',
+                evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+              })
+            } catch {
+              // Terminal recording is best-effort; the original error still propagates
+              // and the admission fence remains until reconciliation.
+            }
+          }
+          throw error
+        }
         await delay(160)
 
         const opId = controllerOperationId
@@ -3212,7 +3266,26 @@ export class WorkstationBrowserRuntime {
 
             switch (step.kind) {
               case 'click': {
-                const res = await this.clickRef(entry, step.ref, step.anchor)
+                let res: { target?: ElementTargetMetadata }
+                try {
+                  res = await this.clickRef(entry, step.ref, step.anchor)
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error)
+                  if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+                    try {
+                      this.sessionStatePersistence().recordPreEffectTerminal({
+                        operationId: `${context.operationId}:${_index}`,
+                        reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                          : message === 'ref_required' ? 'REF_REQUIRED'
+                          : 'AMBIGUOUS_ANCHOR',
+                        evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+                      })
+                    } catch {
+                      // Terminal recording is best-effort; the batch executor handles propagation.
+                    }
+                  }
+                  throw error
+                }
                 await delay(120)
 
                 return { before, result: res }
@@ -3220,12 +3293,30 @@ export class WorkstationBrowserRuntime {
 
               case 'type': {
                 const clear = step.clear !== undefined ? Boolean(step.clear) : !step.append
-
-                const res = await this.typeRef(entry, step.ref, step.text, {
-                  clear,
-                  append: Boolean(step.append),
-                  anchor: step.anchor
-                })
+                let res: { target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }
+                try {
+                  res = await this.typeRef(entry, step.ref, step.text, {
+                    clear,
+                    append: Boolean(step.append),
+                    anchor: step.anchor
+                  })
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error)
+                  if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+                    try {
+                      this.sessionStatePersistence().recordPreEffectTerminal({
+                        operationId: `${context.operationId}:${_index}`,
+                        reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                          : message === 'ref_required' ? 'REF_REQUIRED'
+                          : 'AMBIGUOUS_ANCHOR',
+                        evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+                      })
+                    } catch {
+                      // Terminal recording is best-effort; the batch executor handles propagation.
+                    }
+                  }
+                  throw error
+                }
 
                 await delay(120)
 
