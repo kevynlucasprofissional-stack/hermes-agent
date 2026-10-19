@@ -1,5 +1,8 @@
 # Architectural Decisions
 
+## WBR-20261019 — decisão de recuperação conservadora (plano)
+A tarefa vinculada ao Browser nativo não pode migrar de navegador durante recuperação. Rejeição comprovadamente anterior a qualquer efeito pode encerrar admission com terminal durável NOT_DISPATCHED (CAS, lock e fsync), preservando registro e idempotência; operação incerta permanece bloqueada e exige reconciliação, sem exclusão silenciosa ou ACK artificial. Inventário de conversas precisa demonstrar cobertura antes de abrir chats; persistência operacional privada não altera One Hermes State. Sequência de cinco prompts e critérios de aceite: [contrato](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md) e [prompts](WHATSAPP_BROWSER_IMPLEMENTATION_PROMPTS_2026-10-19.md). Status: DECIDIDO, NÃO IMPLEMENTADO.
+
 ## 2026-10-19 — D-049/R1 decisão de sequência
 Três sessões G0 integridade/sync, G1 veracidade schema no domínio, G2 views ao agente com medição; quarta sessão DOM drift somente por benchmark. Prioridade é custo/risco por tarefa externamente verificada, não quantidade de features. B0 patches já existem localmente, não reescrever. Sem reset/clean/stash automático, WebMCP, event bus, router, grafo Lattice ou backend paralelo. H-079/H-081/H-082 e BAV04 HOLD. [Guia de implementação](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
 
