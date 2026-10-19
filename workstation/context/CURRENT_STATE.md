@@ -1,5 +1,9 @@
 # Current State
 
+## 2026-10-19 — WBR-20261019: incident response / estado documental
+Consolidação de quatro auditorias do dogfood WhatsApp 19/10. Nenhum runtime corrigido, storage migrado, skill criada, teste executado ou automação WhatsApp efetuada por esta alteração. Teste real: badge 55 não lidas, relatório 17 sem cobertura, ref stale + admission sem terminal e fence persistente; migração explícita ao browser_exec. Plano de cinco prompts com proteção de D-049 existente, ref local somente após fetch/ff seguro, proposta de terminal NOT_DISPATCHED em vez de apagar admissão. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
 ## 2026-10-19 — D-049 estado de handoff (revalidar antes de editar)
 Remote feat/d049-browser-80-20-impl-20261018 estava em fd80408 antes deste commit; arquivo snapshot-views e seu teste untracked no host auditado, embora runtime já importe view. B0 bridge/Learning patches locais com testes focados, não CI. G1 schema_valid ainda sem integração durável; G2 view não oferecida ao agente. Status desta mudança DOCS ONLY / release HOLD. [Plano atualizado](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
 
