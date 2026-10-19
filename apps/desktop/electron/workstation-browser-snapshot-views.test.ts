@@ -85,6 +85,22 @@ describe('B1.1 snapshot views', () => {
     })
   })
 
+  describe('element suppression for model-facing payload', () => {
+    it('omits elements when a view projection is active (B1.1)', () => {
+      // The runtime's snapshotForEntry spreads `elements` only when no view is
+      // requested; opt-in views are already compact and must not duplicate the
+      // inventory in structured form. This test validates the contract at the
+      // view-rendering layer so the runtime spread stays safe to change.
+      const inv = makeInventory()
+      const viewResult = renderSnapshotView(inv, 'action_map')
+      expect(viewResult.view).toBe('action_map')
+      // View text carries refs; the redundant structured list is intentionally
+      // absent from the projected payload.
+      expect(viewResult.text).toContain('@e1')
+      expect((viewResult as Record<string, unknown>).elements).toBeUndefined()
+    })
+  })
+
   describe('content', () => {
     it('returns trimmed body text within budget', () => {
       const result = renderSnapshotView(makeInventory(), 'content')

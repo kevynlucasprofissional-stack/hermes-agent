@@ -493,7 +493,7 @@ BROWSER_TOOL_SCHEMAS = [
     },
     {
         "name": "browser_snapshot",
-        "description": "Get a text-based snapshot of the current page's accessibility tree. Returns interactive elements with ref IDs (like @e1, @e2) for browser_click and browser_type. full=false (default): compact view with interactive elements. full=true: complete page content. Snapshots over 15000 chars are truncated or LLM-summarized; when that happens the complete snapshot is saved to a file and the output includes its path so you can page through the rest with read_file. Requires browser_navigate first. Note: browser_navigate already returns a compact snapshot — use this to refresh after interactions that change the page, or with full=true for complete content.",
+        "description": "Get a text-based snapshot of the current page's accessibility tree. Returns interactive elements with ref IDs (like @e1, @e2) for browser_click and browser_type. full=false (default): compact view with interactive elements. full=true: complete page content. Snapshots over 15000 chars are truncated or LLM-summarized; when that happens the complete snapshot is saved to a file and the output includes its path so you can page through the rest with read_file. Requires browser_navigate first. Note: browser_navigate already returns a compact snapshot — use this to refresh after interactions that change the page, or with full=true for complete content. Optional view parameter selects a compact projection (summary, action_map, focus, content) to reduce token usage; omit for legacy full inventory.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -501,6 +501,27 @@ BROWSER_TOOL_SCHEMAS = [
                     "type": "boolean",
                     "description": "If true, returns complete page content. If false (default), returns compact view with interactive elements only.",
                     "default": False
+                },
+                "view": {
+                    "type": "string",
+                    "enum": ["summary", "action_map", "focus", "content"],
+                    "description": "Optional compact projection. summary: host/title/counts. action_map: interactive refs only. focus: neighbors around focus_ref. content: readable text. Omit for legacy inventory."
+                },
+                "focus_ref": {
+                    "type": "string",
+                    "description": "Current @eN ref of the same tab; required when view=focus."
+                },
+                "focus_neighbors": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": "Sibling elements to include around focus_ref (default 3)."
+                },
+                "max_chars": {
+                    "type": "integer",
+                    "minimum": 200,
+                    "maximum": 12000,
+                    "description": "Character budget for the selected view."
                 }
             },
             "required": []
@@ -928,13 +949,43 @@ def _add_navigate_warnings(response: dict[str, Any], title: str, first_nav_sessi
 
 
 def browser_snapshot(
-    full: bool = False, task_id: Optional[str] = None, user_task: Optional[str] = None
+    full: bool = False,
+    task_id: Optional[str] = None,
+    user_task: Optional[str] = None,
+    view: Optional[str] = None,
+    focus_ref: Optional[str] = None,
+    focus_neighbors: Optional[int] = None,
+    max_chars: Optional[int] = None,
 ) -> str:
     """Text snapshot of the page's accessibility tree (compact unless ``full``).
-    ``user_task`` is deprecated and unused (oversized snapshots always truncate-and-store)."""
+    ``user_task`` is deprecated and unused (oversized snapshots always truncate-and-store).
+    Optional ``view`` selects a compact projection (summary/action_map/focus/content);
+    when set, the payload omits the redundant element list."""
     if _is_camofox_mode():
         return _camofox("camofox_snapshot", full, task_id)
     effective_task_id = _last_session_key(task_id or "default")
+    # Opt-in view projections require structured arguments that the legacy CLI
+    # cannot carry; route them through the workstation controller so the Electron
+    # runtime receives the view opts verbatim. Legacy callers without a view still
+    # use the proven CLI path.
+    if view is not None:
+        from tools.browser_workstation import _dispatch as _workstation_dispatch
+        try:
+            ws_args: dict[str, Any] = {"full": full}
+            if view:
+                ws_args["view"] = view
+            if focus_ref is not None:
+                ws_args["focus_ref"] = focus_ref
+            if focus_neighbors is not None:
+                ws_args["focus_neighbors"] = focus_neighbors
+            if max_chars is not None:
+                ws_args["max_chars"] = max_chars
+            return _workstation_dispatch(
+                "browser_snapshot", ws_args,
+                task_id=effective_task_id, model_facing=True,
+            )
+        except Exception as exc:
+            logger.debug("workstation view projection failed (%s); falling back to legacy snapshot", exc)
     result = _session._run_browser_command(effective_task_id, "snapshot", [] if full else ["-c"])
     if not result.get("success"):
         return _failed_response(result, "Failed to get snapshot")
@@ -1551,7 +1602,7 @@ def browser_read_http(
 # use the per-action gate; get_images/console/vision keep the plain requirement checks.
 _BROWSER_TOOL_TABLE = (
     ("browser_navigate", "🌐", None, {"url": ""}),
-    ("browser_snapshot", "📸", None, {"full": False}, ("user_task",)),
+    ("browser_snapshot", "📸", None, {"full": False}, ("user_task", "view", "focus_ref", "focus_neighbors", "max_chars")),
     ("browser_click", "👆", None, {"ref": ""}),
     ("browser_type", "⌨️", None, {"ref": "", "text": "", "clear": True, "append": False, "mode": "insert_text", "semantic_anchor": None, "text_ref": None, "artifact_ref": None}),
     ("browser_scroll", "📜", None, {"direction": "down"}),

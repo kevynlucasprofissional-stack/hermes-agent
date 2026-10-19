@@ -152,6 +152,7 @@ _WORKSTATION_SCHEMA_TOOLS = frozenset({
     "browser_vision",
     "browser_console",
     "browser_extract_items",
+    "browser_inventory_unread",
     "browser_batch_actions",
     # Extension management is a Desktop-session capability: the agent can
     # request it explicitly, but non-Desktop sessions never carry these
@@ -972,6 +973,11 @@ def project_model_browser_payload(result: Any) -> Any:
     cannot express (``tag`` when it differs from ``role``, ``testid``, ``name``)
     survive, under ``element_index``.
 
+    When an opt-in ``view`` projection is active (summary/action_map/focus/content),
+    the Electron runtime already returns a compact, budget-aware rendering that
+    does not include the full element list. In that case we preserve the view
+    payload verbatim and skip the legacy element deduplication path.
+
     The model-facing contract stays ``snapshot`` + ``element_count``, matching the
     legacy lane (``tools/browser_tool.py``: ``_snapshot_fields``).
 
@@ -980,6 +986,9 @@ def project_model_browser_payload(result: Any) -> Any:
     dropped silently.
     """
     if not isinstance(result, dict):
+        return result
+    # Opt-in view projections are already compact; never re-deduplicate them.
+    if result.get("view"):
         return result
     elements = result.get("elements")
     snapshot = result.get("snapshot")
