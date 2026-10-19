@@ -11,7 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Optional
 
 from workstation.artifacts import ArtifactRef, ArtifactStore
 
@@ -23,12 +23,19 @@ class BridgeSecurityError(PermissionError):
 
 
 def _validate_safe_destination(dest_path: Path, allowed_roots: Optional[list[Path]] = None) -> Path:
+    """Validate that dest_path resolves inside one of the allowed roots.
+
+    Uses ``Path.is_relative_to`` (Python 3.9+) instead of textual prefix matching
+    to prevent sibling-directory escapes such as ``/workspace-ok2`` passing a check
+    against ``/workspace-ok``. The resolved path is returned so callers can write
+    to the validated location rather than re-resolving from an untrusted input.
+    """
     resolved = dest_path.resolve()
     if allowed_roots:
-        allowed = [root.resolve() for root in allowed_roots]
-        if not any(str(resolved).startswith(str(root)) for root in allowed):
+        roots = [Path(root).resolve() for root in allowed_roots]
+        if not any(resolved == root or resolved.is_relative_to(root) for root in roots):
             raise BridgeSecurityError(
-                f"Destination {resolved} is outside allowed workspaces: {[str(r) for r in allowed]}"
+                f"Destination {resolved} is outside allowed workspaces: {[str(r) for r in roots]}"
             )
     return resolved
 
@@ -36,10 +43,10 @@ def _validate_safe_destination(dest_path: Path, allowed_roots: Optional[list[Pat
 def browser_save_json(
     evaluate_fn: Callable[[str], Any],
     expression: str,
-    destination_path: Union[str, Path],
+    destination_path: str | Path,
     *,
     allowed_roots: Optional[list[Path]] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Evaluate JS expression and save the resulting JSON directly to destination_path."""
     wrap_script = f"""
     (() => {{
@@ -52,7 +59,7 @@ def browser_save_json(
     }})()
     """
     raw = evaluate_fn(wrap_script)
-    parsed: Dict[str, Any] = {}
+    parsed: dict[str, Any] = {}
     if isinstance(raw, str):
         try:
             parsed = json.loads(raw)
@@ -68,8 +75,9 @@ def browser_save_json(
         raise RuntimeError(f"Browser evaluation failed: {error_msg}")
 
     data = parsed.get("data")
-    dest = Path(destination_path)
-    _validate_safe_destination(dest, allowed_roots)
+    # Use the validated/resolved path for writing to prevent TOCTOU issues
+    # where the original destination_path could differ from what was checked.
+    dest = _validate_safe_destination(Path(destination_path), allowed_roots)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
