@@ -47,6 +47,7 @@ import {
   type ExtractScope,
   normalizeExtractedItem
 } from './workstation-browser-extract-cache'
+import { validateExtractedItems } from './workstation-browser-extract-cache'
 import { registerWorkstationBrowserIpc } from './workstation-browser-ipc'
 import {
   buildWorkstationResourceSnapshot,
@@ -70,6 +71,7 @@ import {
   type SnapshotFrame,
   type SnapshotUpdate
 } from './workstation-browser-snapshot-diff'
+import { renderSnapshotView } from './workstation-browser-snapshot-views'
 import {
   type BrowserHumanControlLease,
   type BrowserOwnerReceipt,
@@ -349,7 +351,7 @@ export function normalizeWorkstationControllerError(error: unknown, resourceRef?
     }
   }
 
-  if (token === 'ref_required' || token === 'element_unavailable' || token === 'browser_tab_destroyed') {
+  if (token === 'ref_required' || token === 'element_unavailable' || token === 'browser_tab_destroyed' || token === 'stale_or_unknown_ref') {
     return { ...base, error_code: 'STALE_REF', retryable: true, state_changed: true, recommended_action: 'RESNAPSHOT' }
   }
 
@@ -2195,8 +2197,16 @@ export class WorkstationBrowserRuntime {
       allowlistedOrigin = ''
     }
 
-    // Ensure human control lease is taken so background agent doesn't act concurrently
-    this.takeControl(entry.ownerTaskId ?? undefined, sessionId ?? undefined)
+    // B0.2: Learning must bind to the *requested* tab's owner, never fall back to
+    // the active tab via resolveControlTaskId. If the target tab has no ownerTaskId,
+    // refuse fail-closed rather than silently leasing authority over a different tab.
+    if (!entry.ownerTaskId) {
+      throw new Error(
+        'browser_learning_owner_required: target tab has no ownerTaskId; cannot start learning'
+      )
+    }
+
+    this.takeControl(entry.ownerTaskId, sessionId ?? undefined)
 
     const recorder = this.getLearningRecorder()
 
@@ -2634,6 +2644,20 @@ export class WorkstationBrowserRuntime {
       const previousAdmission = admittedState?.operationAdmissions?.[operationId]
 
       if (previousAdmission) {
+        // A durable NOT_DISPATCHED terminal proves the operation never reached
+        // the page. Replay returns the terminal directly instead of treating it
+        // as uncertain — there is no effect to reconcile.
+        if (previousAdmission.terminal && previousAdmission.terminal.kind === 'NOT_DISPATCHED') {
+          return {
+            status: 'not_dispatched',
+            reason: 'prior_operation_terminal_not_dispatched',
+            terminal: previousAdmission.terminal,
+            operation_id: operationId,
+            idempotent_replay: true,
+            ...(callKey ? { call_key: callKey } : {})
+          }
+        }
+
         admissionStore.admitBrowserMutation({
           operationId, action, taskId,
           sessionId: sessionHost ?? 'unbound',
@@ -2941,10 +2965,39 @@ export class WorkstationBrowserRuntime {
           delta: Boolean(args.delta),
           baselineRevision: typeof args.baseline_revision === 'number' ? args.baseline_revision : undefined,
           baselineText: typeof args.baseline_text === 'string' ? args.baseline_text : undefined
+        }, {
+          // B1.1: opt-in view projection. When omitted, snapshotForEntry returns
+          // the canonical formatInventory output unchanged.
+          view: typeof args.view === 'string' && ['summary', 'action_map', 'focus', 'content'].includes(args.view)
+            ? args.view as 'summary' | 'action_map' | 'focus' | 'content'
+            : undefined,
+          focusRef: typeof args.focus_ref === 'string' ? args.focus_ref : undefined,
+          focusNeighbors: typeof args.focus_neighbors === 'number' ? args.focus_neighbors : undefined,
+          maxChars: typeof args.max_chars === 'number' ? args.max_chars : undefined
         })
       case 'browser_click': {
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
-        const clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
+        let clickResult: { target?: ElementTargetMetadata }
+        try {
+          clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+            try {
+              this.sessionStatePersistence().recordPreEffectTerminal({
+                operationId: controllerOperationId,
+                reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                  : message === 'ref_required' ? 'REF_REQUIRED'
+                  : 'AMBIGUOUS_ANCHOR',
+                evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+              })
+            } catch {
+              // Terminal recording is best-effort; the original error still propagates
+              // and the admission fence remains until reconciliation.
+            }
+          }
+          throw error
+        }
         await delay(220)
 
         const opId = controllerOperationId
@@ -2987,7 +3040,27 @@ export class WorkstationBrowserRuntime {
         const append = Boolean(args.append)
         const mode = (args.mode === 'plain_text_paste' ? 'plain_text_paste' : 'insert_text') as 'insert_text' | 'plain_text_paste'
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
-        const typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append, mode, anchor })
+        let typeResult: { target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }
+        try {
+          typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append, mode, anchor })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+            try {
+              this.sessionStatePersistence().recordPreEffectTerminal({
+                operationId: controllerOperationId,
+                reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                  : message === 'ref_required' ? 'REF_REQUIRED'
+                  : 'AMBIGUOUS_ANCHOR',
+                evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+              })
+            } catch {
+              // Terminal recording is best-effort; the original error still propagates
+              // and the admission fence remains until reconciliation.
+            }
+          }
+          throw error
+        }
         await delay(160)
 
         const opId = controllerOperationId
@@ -3032,6 +3105,10 @@ export class WorkstationBrowserRuntime {
 
       case 'browser_extract_items':
         return this.extractItemsForEntry(entry, args)
+
+      case 'browser_inventory_unread':
+        return this.inventoryUnreadForEntry(entry, args)
+
       case 'browser_scroll': {
         await this.scrollEntry(entry, String(args.direction ?? 'down'))
         await delay(140)
@@ -3184,12 +3261,31 @@ export class WorkstationBrowserRuntime {
               throw workstationControllerFault('STALE_REF', 'batch_document_changed')
             }
           },
-          perform: async (step, _context, _index) => {
+          perform: async (step, context, _index) => {
             const before = await readback('ref' in step ? step.ref : null)
 
             switch (step.kind) {
               case 'click': {
-                const res = await this.clickRef(entry, step.ref, step.anchor)
+                let res: { target?: ElementTargetMetadata }
+                try {
+                  res = await this.clickRef(entry, step.ref, step.anchor)
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error)
+                  if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+                    try {
+                      this.sessionStatePersistence().recordPreEffectTerminal({
+                        operationId: `${context.operationId}:${_index}`,
+                        reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                          : message === 'ref_required' ? 'REF_REQUIRED'
+                          : 'AMBIGUOUS_ANCHOR',
+                        evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+                      })
+                    } catch {
+                      // Terminal recording is best-effort; the batch executor handles propagation.
+                    }
+                  }
+                  throw error
+                }
                 await delay(120)
 
                 return { before, result: res }
@@ -3197,12 +3293,30 @@ export class WorkstationBrowserRuntime {
 
               case 'type': {
                 const clear = step.clear !== undefined ? Boolean(step.clear) : !step.append
-
-                const res = await this.typeRef(entry, step.ref, step.text, {
-                  clear,
-                  append: Boolean(step.append),
-                  anchor: step.anchor
-                })
+                let res: { target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }
+                try {
+                  res = await this.typeRef(entry, step.ref, step.text, {
+                    clear,
+                    append: Boolean(step.append),
+                    anchor: step.anchor
+                  })
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error)
+                  if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
+                    try {
+                      this.sessionStatePersistence().recordPreEffectTerminal({
+                        operationId: `${context.operationId}:${_index}`,
+                        reason: message === 'stale_or_unknown_ref' ? 'STALE_OR_UNKNOWN_REF'
+                          : message === 'ref_required' ? 'REF_REQUIRED'
+                          : 'AMBIGUOUS_ANCHOR',
+                        evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+                      })
+                    } catch {
+                      // Terminal recording is best-effort; the batch executor handles propagation.
+                    }
+                  }
+                  throw error
+                }
 
                 await delay(120)
 
@@ -3699,7 +3813,8 @@ export class WorkstationBrowserRuntime {
   private async snapshotForEntry(
     entry: BrowserEntry,
     full: boolean,
-    diffOpts?: { baselineRevision?: number; baselineText?: string; delta?: boolean }
+    diffOpts?: { baselineRevision?: number; baselineText?: string; delta?: boolean },
+    viewOpts?: { view?: 'summary' | 'action_map' | 'focus' | 'content'; focusRef?: string; focusNeighbors?: number; maxChars?: number }
   ): Promise<Record<string, unknown>> {
     const wc = entry.view.webContents
 
@@ -3839,6 +3954,28 @@ export class WorkstationBrowserRuntime {
 
     const formattedSnapshot = formatInventory(inv, full)
 
+    // B1.1: Opt-in view projection. The canonical formattedSnapshot is always
+    // computed first so delta/replay frames remain byte-compatible. When a
+    // caller requests a specific view, we project from the same inventory and
+    // substitute only the returned text; the stored frame keeps the full form.
+    let returnedText = formattedSnapshot
+    let returnedTruncated = inv.truncated
+    let snapshotView: string | undefined
+    let snapshotViewFocusMissing: boolean | undefined
+
+    if (viewOpts?.view) {
+      const projected = renderSnapshotView(inv, viewOpts.view, {
+        maxChars: viewOpts.maxChars,
+        focusRef: viewOpts.focusRef,
+        focusNeighbors: viewOpts.focusNeighbors
+      })
+
+      returnedText = projected.text
+      returnedTruncated = projected.truncated || inv.truncated
+      snapshotView = projected.view
+      snapshotViewFocusMissing = projected.focusMissing
+    }
+
     const currentFrame: SnapshotFrame = {
       taskId: entry.ownerTaskId ?? 'unbound',
       tabId: entry.id,
@@ -3929,11 +4066,19 @@ export class WorkstationBrowserRuntime {
       tab_id: entry.id,
       url: inv.url,
       title: inv.title,
-      snapshot: formattedSnapshot,
+      // B1.1: when a view is requested, `snapshot` carries the projected text
+      // and `snapshot_view` identifies which projection was applied. The
+      // canonical formattedSnapshot is still used for delta/replay frames.
+      // Opt-in views are already compact projections; omit the redundant
+      // element list so the model does not pay tokens for data the view text
+      // already expresses. Legacy callers (no view) keep the full inventory.
+      snapshot: returnedText,
       snapshot_delta: snapshotDelta,
+      snapshot_view: snapshotView,
+      snapshot_view_focus_missing: snapshotViewFocusMissing,
       revision: entry.mutationRevision,
-      elements: inv.elements,
-      truncated: inv.truncated,
+      ...(snapshotView ? {} : { elements: inv.elements }),
+      truncated: returnedTruncated,
       total_text_chars: inv.totalTextChars,
       element_count: inv.elements.length,
       wall_detected: Boolean(inv.wallDetected),
@@ -4613,6 +4758,12 @@ export class WorkstationBrowserRuntime {
       .map(item => normalizeExtractedItem(item as Record<string, unknown>, schema))
       .filter((item): item is NonNullable<typeof item> => item !== null)
 
+    // B1.3: Validate extracted items against the requested schema.
+    // Schema validation is separate from sanitization: an extraction can
+    // succeed (items captured and sanitized) while failing schema conformance.
+    // Callers must check schema_valid independently of success.
+    const schemaValidation = validateExtractedItems(normalizedItems, schema)
+
     const finalResult = {
       success: true,
       cached: false,
@@ -4623,7 +4774,10 @@ export class WorkstationBrowserRuntime {
       title: wc.getTitle(),
       ...result,
       items: normalizedItems,
-      count: normalizedItems.length
+      count: normalizedItems.length,
+      schema_valid: schemaValidation.valid,
+      schema_errors: schemaValidation.errors.length > 0 ? schemaValidation.errors : undefined,
+      schema_unsupported_keywords: schemaValidation.unsupportedKeywords
     }
 
     if (scope && finalResult.success) {
@@ -4635,6 +4789,203 @@ export class WorkstationBrowserRuntime {
     }
 
     return finalResult
+  }
+
+  /**
+   * P1A — Inventário incremental de conversas não lidas em listas virtualizadas.
+   *
+   * Percorre o contêiner de rolagem (#pane-side) do WhatsApp Web sem abrir
+   * conversas, coletando apenas linhas montadas a cada janela de viewport.
+   * Deduplica por título + último trecho visível (nunca inventa chatId).
+   * Detecta alterações concorrentes via contador global de não lidas e
+   * retorna complete/partial/unstable conforme cobertura verificada.
+   */
+  private async inventoryUnreadForEntry(
+    entry: BrowserEntry,
+    args: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const wc = entry.view.webContents
+    const maxScrollAttempts = Math.min(Math.max(Number(args.maxScrollAttempts) || 120, 10), 500)
+    const scrollPauseMs = Math.min(Math.max(Number(args.scrollPauseMs) || 350, 100), 2000)
+    const stableRoundsRequired = Math.min(Math.max(Number(args.stableRoundsRequired) || 3, 1), 10)
+
+    const script = `(async function () {
+      const MAX_ATTEMPTS = ${maxScrollAttempts};
+      const PAUSE_MS = ${scrollPauseMs};
+      const STABLE_ROUNDS = ${stableRoundsRequired};
+
+      function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+      function getGlobalUnreadCount() {
+        // Contador global no header "Conversas" — aria-label ou texto direto
+        const headerBtn = document.querySelector('[data-navbar-item-selected="true"] [role="status"] span');
+        if (!headerBtn) return null;
+        const text = (headerBtn.textContent || '').trim();
+        const n = parseInt(text, 10);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      function findScrollContainer() {
+        // #pane-side é o contêiner canônico; fallback por role/overflow
+        let el = document.getElementById('pane-side');
+        if (el && el.scrollHeight > el.clientHeight) return el;
+        // Fallback: primeiro ancestral com overflow auto/scroll e altura suficiente
+        const candidates = document.querySelectorAll('[style*="overflow"], [class*="pane"]');
+        for (const c of candidates) {
+          if (c.scrollHeight > c.clientHeight + 10) return c;
+        }
+        return el || document.querySelector('#pane-side') || document.documentElement;
+      }
+
+      function extractVisibleRows() {
+        const rows = document.querySelectorAll('[role="row"][data-testid^="list-item-"]');
+        const items = [];
+        for (const row of rows) {
+          const testid = row.getAttribute('data-testid') || '';
+          const titleEl = row.querySelector('[data-testid="cell-frame-title"]');
+          const unreadEl = row.querySelector('[data-testid="icon-unread-count"]');
+          const timeEl = row.querySelector('[data-testid="cell-frame-primary-detail"] span');
+          const lastMsgEl = row.querySelector('[data-testid="last-msg-status"]');
+
+          const title = (titleEl?.querySelector('[dir="auto"]')?.textContent || '').trim();
+          const unreadText = (unreadEl?.textContent || '').trim();
+          const unreadCount = parseInt(unreadText, 10);
+          const time = (timeEl?.textContent || '').trim();
+          const lastMsg = (lastMsgEl?.textContent || '').trim().slice(0, 80);
+
+          // Identidade dedup: título + recorte da última mensagem (não inventamos ID)
+          const identityKey = title + '||' + lastMsg.slice(0, 40);
+
+          if (title) {
+            items.push({
+              testid,
+              title,
+              unread_count: Number.isFinite(unreadCount) ? unreadCount : 0,
+              has_unread_badge: !!unreadEl,
+              time,
+              last_message_preview: lastMsg,
+              identity_key: identityKey,
+              transform_y: (row.style.transform || '').match(/translateY\\(([^)]+)\\)/)?.[1] || '0px',
+              provenance: 'viewport_extract'
+            });
+          }
+        }
+        return items;
+      }
+
+      const container = findScrollContainer();
+      if (!container) {
+        return { success: false, error_code: 'CONTAINER_NOT_FOUND', message: 'Could not locate scroll container (#pane-side)' };
+      }
+
+      const initialUnread = getGlobalUnreadCount();
+      const seen = new Map(); // identityKey -> item
+      let scrollAttempts = 0;
+      let stableRounds = 0;
+      let lastSeenCount = 0;
+      let reachedBottom = false;
+      let concurrentChangeDetected = false;
+
+      // Scroll to top first
+      container.scrollTop = 0;
+      await sleep(PAUSE_MS * 2);
+
+      while (scrollAttempts < MAX_ATTEMPTS) {
+        const currentUnread = getGlobalUnreadCount();
+        if (initialUnread !== null && currentUnread !== null && currentUnread !== initialUnread) {
+          concurrentChangeDetected = true;
+        }
+
+        const visibleItems = extractVisibleRows();
+        let newInRound = 0;
+        for (const item of visibleItems) {
+          if (!seen.has(item.identity_key)) {
+            seen.set(item.identity_key, item);
+            newInRound++;
+          }
+        }
+
+        if (newInRound === 0 && visibleItems.length > 0) {
+          stableRounds++;
+        } else {
+          stableRounds = 0;
+        }
+
+        // Check if we reached the bottom
+        const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 5;
+        if (atBottom) {
+          reachedBottom = true;
+          // One final extraction after reaching bottom
+          await sleep(PAUSE_MS);
+          const finalItems = extractVisibleRows();
+          for (const item of finalItems) {
+            if (!seen.has(item.identity_key)) {
+              seen.set(item.identity_key, item);
+            }
+          }
+          break;
+        }
+
+        if (stableRounds >= STABLE_ROUNDS) {
+          // Stable but not at bottom — likely all items collected
+          reachedBottom = true;
+          break;
+        }
+
+        // Scroll by ~70% of viewport height for overlap coverage
+        const scrollAmount = Math.floor(container.clientHeight * 0.7);
+        container.scrollBy({ top: scrollAmount, behavior: 'instant' });
+        scrollAttempts++;
+        await sleep(PAUSE_MS);
+      }
+
+      const items = Array.from(seen.values());
+      const finalUnread = getGlobalUnreadCount();
+      const unreadConversations = items.filter(i => i.has_unread_badge || i.unread_count > 0);
+
+      let status = 'partial';
+      if (reachedBottom && !concurrentChangeDetected) {
+        status = 'complete';
+      } else if (concurrentChangeDetected) {
+        status = 'unstable';
+      }
+
+      return {
+        success: true,
+        status,
+        initial_unread_count: initialUnread,
+        final_unread_count: finalUnread,
+        total_conversations_collected: items.length,
+        unread_conversations_count: unreadConversations.length,
+        scroll_attempts: scrollAttempts,
+        reached_bottom: reachedBottom,
+        concurrent_change_detected: concurrentChangeDetected,
+        stable_rounds_at_end: stableRounds,
+        items: items,
+        provenance: 'browser_inventory_unread_p1a'
+      };
+    })()`
+
+    try {
+      const result = (await wc.executeJavaScript(script, true)) as Record<string, unknown>
+      return {
+        success: true,
+        runtime: 'electron-chromium',
+        task_id: entry.ownerTaskId,
+        tab_id: entry.id,
+        url: wc.getURL(),
+        ...result
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error_code: 'INVENTORY_SCRIPT_FAILED',
+        message: String(error),
+        runtime: 'electron-chromium',
+        task_id: entry.ownerTaskId,
+        tab_id: entry.id
+      }
+    }
   }
 
   private async screenshotForEntry(entry: BrowserEntry): Promise<Record<string, unknown>> {

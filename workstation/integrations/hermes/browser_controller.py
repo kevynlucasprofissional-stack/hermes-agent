@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 WORKSTATION_BROWSER_CAPABILITIES = (
     "browser_console",
     "browser_extract_items",
+    "browser_inventory_unread",
     "browser_batch_actions",
     "browser_get_images",
     "browser_vision",
@@ -337,6 +338,12 @@ class WorkstationBrowserController:
         """
         if action == "browser_extract_items":
             return process_extracted_items_durably(raw_result, args, kw)
+        if action == "browser_inventory_unread":
+            # P1A: inventory results are read-only discovery; return compact JSON
+            # without durable WorkPlan projection (no items to promote).
+            if isinstance(raw_result, str):
+                return raw_result
+            return json.dumps(raw_result, ensure_ascii=False)
         # For other actions, return the raw result unchanged
         if isinstance(raw_result, str):
             return raw_result

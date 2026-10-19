@@ -691,10 +691,27 @@ def stop_harness_daemons() -> None:
 
 
 def browser_exec(code: str, session: str = "", timeout_s: int = _DEFAULT_TIMEOUT_S,
-                 task_id: Optional[str] = None, local: bool = False):
+                 task_id: Optional[str] = None, local: bool = False,
+                 session_id: Optional[str] = None):
     """Run Python code through the browser-use CLI, and return its output"""
     from agent.redact import redact_sensitive_text
     from tools.registry import tool_error, tool_result
+
+    # P0B affinity gate: a task bound to the native Workstation Browser must never
+    # be rerouted to browser_exec (external Chrome/CDP/Browser Use). Fail closed
+    # with RECONCILIATION_REQUIRED so the agent cannot spawn a second browser
+    # authority after a controller error or context compaction.
+    try:
+        from tools.browser_workstation import workstation_browser_enabled, workstation_route_is_bound
+        if workstation_browser_enabled() and workstation_route_is_bound(task_id=task_id, session_id=session_id):
+            return tool_error(
+                "RECONCILIATION_REQUIRED: this task is bound to the Hermes Workstation native browser. "
+                "browser_exec (external Chrome/CDP) is not allowed. Recover via the native browser route "
+                "or request human handoff. Do not spawn a parallel browser."
+            )
+    except Exception:
+        pass  # defensive: if workstation module is unavailable, fall through to normal path
+
     if not code or not code.strip():
         return tool_error("No code provided. Pass Python that uses the pre-imported helpers, e.g. new_tab(\"https://example.com\") then print(page_info()).")
 

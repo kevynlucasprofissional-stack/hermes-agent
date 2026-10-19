@@ -23,7 +23,7 @@ _BUILTINS = {
                      "session_search", "skill_view", "skills_list", "read_terminal",
                      "read_preview", "read_window_below", "browser_read_http"), ToolEffect.PURE_READ),
     **dict.fromkeys(("tool_search", "tool_describe", "web_search", "web_extract",
-                     "browser_extract_items"), ToolEffect.DISCOVERY),
+                     "browser_extract_items", "browser_inventory_unread"), ToolEffect.DISCOVERY),
     "clarify": ToolEffect.INTERACTIVE,
     "delegate_task": ToolEffect.COGNITIVE,
     "vision_analyze": ToolEffect.COGNITIVE,

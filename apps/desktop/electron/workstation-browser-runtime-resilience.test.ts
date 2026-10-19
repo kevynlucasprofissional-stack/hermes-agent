@@ -81,7 +81,21 @@ const electron = vi.hoisted(() => {
     }
 
     async executeJavaScript(source: string): Promise<unknown> {
+      // Simulate pre-effect stale ref rejection: pointScript returns
+      // { success: false, error: 'stale_or_unknown_ref' } when the resolved
+      // element is missing or disconnected BEFORE scroll/focus/dispatch.
+      // The runtime's resolvePoint throws this as an Error, which the
+      // browser_click/browser_type handler catches and records as a
+      // NOT_DISPATCHED terminal via recordPreEffectTerminal.
       if (source.includes('byRef.get')) {
+        // Match the exact ref argument serialized by pointScript:
+        // state.byRef.get("@eStale") — only reject when the ref value itself
+        // contains "Stale" or "stale", not when the script source mentions
+        // the word in comments or other contexts.
+        const refMatch = source.match(/byRef\.get\("([^"]+)"\)/)
+        if (refMatch && /[Ss]tale/.test(refMatch[1])) {
+          return { success: false, error: 'stale_or_unknown_ref' }
+        }
         return { success: true, x: 50, y: 50 }
       }
 
@@ -101,6 +115,33 @@ const electron = vi.hoisted(() => {
           count: 1,
           selector_used: 'article',
           items: [{ index: 1, title: 'Item 1', url: 'https://example.test/1', price: '$10' }]
+        }
+      }
+
+      if (source.includes('browser_inventory_unread') || source.includes('INVENTORY_SCRIPT') || source.includes('getGlobalUnreadCount')) {
+        return {
+          success: true,
+          status: 'complete',
+          initial_unread_count: 55,
+          final_unread_count: 55,
+          total_conversations_collected: 55,
+          unread_conversations_count: 55,
+          scroll_attempts: 12,
+          reached_bottom: true,
+          concurrent_change_detected: false,
+          stable_rounds_at_end: 3,
+          items: Array.from({ length: 55 }, (_, i) => ({
+            testid: `list-item-${i}`,
+            title: `Chat ${i + 1}`,
+            unread_count: 1,
+            has_unread_badge: true,
+            time: '10:00',
+            last_message_preview: 'Mensagem sintética',
+            identity_key: `Chat ${i + 1}||Mensagem sintética`,
+            transform_y: `${i * 76}px`,
+            provenance: 'viewport_extract'
+          })),
+          provenance: 'browser_inventory_unread_p1a'
         }
       }
 
@@ -672,6 +713,42 @@ test('browser_extract_items extracts structured cards via controller request', a
   await runtime.destroy()
 })
 
+test('browser_inventory_unread collects virtualized unread conversations without opening chats', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const taskId = 'task-inventory-unread-test'
+
+  await executeControlRequest(runtime, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    arguments: { url: 'https://web.whatsapp.com/' }
+  })
+
+  const inventory = await executeControlRequest(runtime, {
+    action: 'browser_inventory_unread',
+    task_id: taskId,
+    arguments: { maxScrollAttempts: 120, scrollPauseMs: 350, stableRoundsRequired: 3 }
+  })
+
+  assert.equal(inventory.success, true)
+  assert.equal(inventory.status, 'complete')
+  assert.equal(inventory.initial_unread_count, 55)
+  assert.equal(inventory.final_unread_count, 55)
+  assert.equal(inventory.total_conversations_collected, 55)
+  assert.equal(inventory.unread_conversations_count, 55)
+  assert.equal(inventory.reached_bottom, true)
+  assert.equal(inventory.concurrent_change_detected, false)
+  assert.equal(inventory.provenance, 'browser_inventory_unread_p1a')
+  const items = inventory.items as Array<Record<string, unknown>>
+  assert.equal(items.length, 55)
+  assert.equal(items[0].title, 'Chat 1')
+  assert.equal(items[0].has_unread_badge, true)
+  assert.equal(items[0].provenance, 'viewport_extract')
+  // Deduplication key must be present and non-empty
+  assert.ok(typeof items[0].identity_key === 'string' && items[0].identity_key.length > 0)
+  await runtime.destroy()
+})
+
 test('browser_snapshot detects verification wall and flags human handoff', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()
@@ -756,6 +833,77 @@ test('idempotent duplicate mutation replay with same operation_id returns previo
   assert.equal(replayType.idempotent_replay, true)
   assert.equal(replayType.operation_id, operationId)
   assert.deepEqual(replayType.receipt, firstType.receipt)
+
+  await runtime.destroy()
+})
+
+// P2-INTEGRATED: stale ref → NOT_DISPATCHED terminal → recovery with new operationId on same tab
+test('P2: pre-effect stale rejection records NOT_DISPATCHED and unblocks subsequent mutation on same tab', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const taskId = 'task-p2-integrated'
+
+  // Step 1: navigate to establish a bound tab
+  await executeControlRequest(runtime, {
+    action: 'browser_navigate',
+    task_id: taskId,
+    operation_id: 'op-p2-nav',
+    arguments: { url: 'https://example.test/app' }
+  })
+
+  // Step 2: simulate a stale ref click that fails BEFORE any page effect.
+  // The fake WebContents.executeJavaScript returns stale_or_unknown_ref for
+  // refs containing "stale" (see pointScript stub in the harness).
+  // executeControlRequest throws the raw Error; the HTTP handler would
+  // normalize it, but here we catch directly and verify the terminal was
+  // recorded before the exception propagated.
+  let staleClickError: Error | null = null
+  try {
+    await executeControlRequest(runtime, {
+      action: 'browser_click',
+      task_id: taskId,
+      operation_id: 'op-p2-stale-click',
+      arguments: { ref: '@eStale' }
+    })
+  } catch (error) {
+    staleClickError = error instanceof Error ? error : new Error(String(error))
+  }
+
+  assert.ok(staleClickError, 'stale click must throw before any page effect')
+  assert.equal(staleClickError.message, 'stale_or_unknown_ref')
+
+  // Step 3: verify the admission has a durable NOT_DISPATCHED terminal
+  const persisted = JSON.parse(fs.readFileSync(workstationBrowserSessionStatePath(), 'utf-8')) as {
+    operationAdmissions?: Record<string, { terminal?: { kind: string; reason: string } }>
+  }
+  const staleAdmission = persisted.operationAdmissions?.['op-p2-stale-click']
+  assert.ok(staleAdmission?.terminal, 'admission must have a terminal after pre-effect failure')
+  assert.equal(staleAdmission.terminal.kind, 'NOT_DISPATCHED')
+  assert.equal(staleAdmission.terminal.reason, 'STALE_OR_UNKNOWN_REF')
+
+  // Step 4: a NEW operation with a different operationId must be admitted
+  // (the fence is released by the NOT_DISPATCHED terminal)
+  const recoveryClick = await executeControlRequest(runtime, {
+    action: 'browser_click',
+    task_id: taskId,
+    operation_id: 'op-p2-recovery-click',
+    arguments: { ref: '@e1' }
+  })
+
+  assert.equal(recoveryClick.success, true, 'recovery click on same tab must succeed after NOT_DISPATCHED terminal')
+  assert.equal(recoveryClick.semantic_effect, 'click')
+
+  // Step 5: replaying the SAME stale operationId must return the persisted terminal, not re-execute
+  const replayStale = await executeControlRequest(runtime, {
+    action: 'browser_click',
+    task_id: taskId,
+    operation_id: 'op-p2-stale-click',
+    arguments: { ref: '@eStale' }
+  })
+
+  assert.equal(replayStale.status, 'not_dispatched')
+  assert.equal(replayStale.reason, 'prior_operation_terminal_not_dispatched')
+  assert.equal(replayStale.idempotent_replay, true)
 
   await runtime.destroy()
 })

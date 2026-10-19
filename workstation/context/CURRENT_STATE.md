@@ -1,5 +1,22 @@
 # Current State
 
+## 2026-10-19 — P2 integrated validation: stale→NOT_DISPATCHED→recovery PASS
+Teste P2 integrado passou: cenário completo de stale ref → terminal NOT_DISPATCHED durável → recuperação com novo operationId na mesma aba → replay idempotente retorna terminal persistido. Integração P0A no runtime (`browser_click`, `browser_type`, substeps de `browser_batch_actions`) + lógica de replay NOT_DISPATCHED em `executeControlRequest` + stub preciso no harness (match exato na ref serializada). Suíte completa: 132 testes passaram (resiliência + admissão P0A + extract cache), typecheck limpo. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real (requer autorização) e persistência SQLite P1B. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
+## 2026-10-19 — WBR-20261019: incident response / estado documental
+Consolidação de quatro auditorias do dogfood WhatsApp 19/10. Teste real: badge 55 não lidas, relatório 17 sem cobertura, ref stale + admission sem terminal e fence persistente; migração explícita ao browser_exec. Plano de cinco prompts com proteção de D-049 existente, ref local somente após fetch/ff seguro, proposta de terminal NOT_DISPATCHED em vez de apagar admissão. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
+## 2026-10-19 — D-049 estado de handoff (revalidar antes de editar)
+Remote feat/d049-browser-80-20-impl-20261018 estava em fd80408 antes deste commit; arquivo snapshot-views e seu teste untracked no host auditado, embora runtime já importe view. B0 bridge/Learning patches locais com testes focados, não CI. G1 schema_valid ainda sem integração durável; G2 view não oferecida ao agente. Status desta mudança DOCS ONLY / release HOLD. [Plano atualizado](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+
+
+## 2026-10-18 — Browser D-049 after comparative audit [PLAN / NOT_IMPLEMENTED / NOT_RELEASE_QUALIFIED]
+Fonte: revisão de código `main@f436e949` e quatro repositórios de referência, **sem novos testes nativos**. Contratos reutilizáveis: `workstation-browser-snapshot[-diff].ts`, `workstation-browser-extract-cache.ts`, `workstation-browser-batch.ts`, `tools/browser_workstation.py`, `workstation/replay.py`, `workstation/browser_readiness.py`, `workstation/browser_transaction.py`. `schema` de extração atual é projeção de propriedades, não validator completo; `PortableTrace` não equivale a replay visual. Falha de CI workflow #39154888493 no exato `f436e949`; motivo não diagnosticado. PR #85 merged em 13/10, mas BAV04 continua fixture-only sem liberação de release.
+**Próxima sequência:** P0 provas de efeito externo, path boundary e Learning lease; P1 context views/redaction/schema; P1 reacquire semantic anchor pré-efeito; P2 causal run diff e captura de falha opt-in. LLM diagnosis, WebMCP e full UI Graph HOLD. [Decisão D-049](DECISIONS.md) / [plano](BROWSER_REFINEMENT_2026-10-18.md).
+
+
 ## 2026-10-17 — HLM-MVP product truth ERRATA (main `2e5b042`)
 O HLM existe no código atual da main (UI + `LearningSessionRecorder` + intensidade live + sanitização parcial + método Python de CandidateLesson), mas **o verdadeiro MVP não está qualificado**: vídeo grava preto sintético 1s; perguntas são templates por 1 gesto sem LLM contextual; ingestão via console não autentica tab/owner; timestamps não relativos; candidata não disparada produtivamente. Tratar M0–M2 como **PARTIAL / NOT E2E QUALIFIED**, M3 HOLD. [Auditoria](LEARNING_MODE_AUDIT_2026-10-17.md); [corretiva](../learning-mode/HLM_MVP_CORRECTIVE_IMPLEMENTER_PROMPT.md). Este registro corrige a afirmação histórica abaixo sem apagar seus commits/testes.
 
@@ -1600,3 +1617,27 @@ Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller
 A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
 GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
 Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.
+
+## D-049 Browser Observation 80/20 — B1.2 Value-Level Secret Redaction & B1.3 Schema Validation (2026-10-19)
+
+Implemented and verified two foundational extract-cache hardening layers for the Browser Observation 80/20 refinement:
+
+**B1.2 Value-Level Secret Redaction:**
+- Added value-level secret patterns (`JWT_PATTERN`, `BEARER_VALUE_PATTERN`, `PREFIXED_KEY_PATTERN`, `URL_ENCODED_SECRET_PATTERN`) to `normalizeExtractedItem` in `workstation-browser-extract-cache.ts`, covering JWTs, Bearer tokens, prefixed API keys (sk-, ghp_, xoxb-, AKIA, AIza), and URL-encoded secrets in string values whose key names are benign.
+- Key-name redaction via `SENSITIVE_KEY_PATTERN` continues to short-circuit value-level checks for fields like `password`, `api_key`, `auth_token`.
+- Fixed nested object test expectations to match actual redaction priority: `auth_header` does not match `SENSITIVE_KEY_PATTERN` so value-level bearer redaction applies, preserving the "Bearer" prefix marker while redacting the token value.
+- All 8 extract-cache tests pass (227ms).
+
+**B1.3 Lightweight JSON Schema Subset Validator:**
+- Implemented dependency-free `validateSchemaSubset` and `validateExtractedItems` supporting `type`, `required`, `enum`, and `properties` (recursive to depth 8).
+- Rejects schemas using unsupported keywords (`$ref`, `allOf`, `anyOf`, `patternProperties`, etc.) to prevent silent acceptance of data that was never truly validated.
+- Wired into `extractItemsForEntry` return payload in `workstation-browser-runtime.ts`: `schema_valid`, `schema_errors`, and `schema_unsupported_keywords` fields distinguish capture success from schema conformance.
+- All 9 schema validation tests pass (259ms); full B1.x regression suite passes (73/73 tests across 5 files, 2.25s); typecheck clean (0 errors).
+
+**Files modified:**
+- `apps/desktop/electron/workstation-browser-extract-cache.ts` — added `redactSecretValues`, `validateSchemaSubset`, `validateExtractedItems`, `SchemaValidationResult` interface
+- `apps/desktop/electron/workstation-browser-runtime.ts` — imported and wired `validateExtractedItems` into `extractItemsForEntry` return payload
+- `apps/desktop/electron/workstation-browser-extract-cache.test.ts` — fixed nested auth_header expectation, added SENSITIVE_KEY_PATTERN test
+- `apps/desktop/electron/workstation-browser-extract-schema.test.ts` — new file with 9 schema validation tests
+
+**Status:** IMPLEMENTED & TESTED. Not yet qualified for release pending full D-049 integration verification and CI exact-head gate.

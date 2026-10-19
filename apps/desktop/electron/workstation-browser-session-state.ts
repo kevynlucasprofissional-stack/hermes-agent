@@ -52,6 +52,19 @@ export interface BrowserSessionTab {
   recoveryReason: BrowserSessionTabRecoveryReason
 }
 
+/**
+ * Terminal state for an admission that was proven NOT to have dispatched any
+ * page effect. Only pre-effect resolution failures (stale ref before scroll,
+ * focus or CDP dispatch) may record this. Post-effect failures remain
+ * uncertain and must NOT receive a terminal.
+ */
+export interface AdmissionTerminal {
+  kind: 'NOT_DISPATCHED'
+  reason: 'STALE_OR_UNKNOWN_REF' | 'REF_REQUIRED' | 'AMBIGUOUS_ANCHOR'
+  evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+  recordedAt: string
+}
+
 /** Structural idempotency fence owned by BrowserSessionState, NOT an effect verifier. */
 export interface BrowserMutationAdmission {
   operationId: string
@@ -63,6 +76,8 @@ export interface BrowserMutationAdmission {
   argumentsDigest: string
   /** Local owner receipt persisted. This is NOT externally VERIFIED. */
   acknowledged?: boolean
+  /** Durable terminal for pre-effect rejections. Immutable once written. */
+  terminal?: AdmissionTerminal
 }
 
 const MAX_BROWSER_OPERATION_ADMISSIONS = 4096
@@ -597,10 +612,94 @@ export class BrowserSessionStateFilePersistence {
   ): string | null {
     for (const record of Object.values(state?.operationAdmissions ?? {})) {
       if (record.taskId === taskId && record.sessionId === sessionId &&
-          record.runId === runId && record.acknowledged !== true) {return record.operationId}
+          record.runId === runId && record.acknowledged !== true && !record.terminal) {
+        return record.operationId
+      }
     }
 
     return null
+  }
+
+  /**
+   * Record a durable NOT_DISPATCHED terminal for an admission that was proven
+   * to have failed BEFORE any page effect (scroll, focus, CDP dispatch). This
+   * releases the admission fence for subsequent operations on the same TaskRun
+   * while preserving the original admission as immutable audit history.
+   *
+   * Only pre-effect resolution failures may call this. Post-effect failures
+   * remain uncertain and must NEVER receive a terminal.
+   */
+  recordPreEffectTerminal(params: {
+    operationId: string
+    reason: AdmissionTerminal['reason']
+    evidence: AdmissionTerminal['evidence']
+  }): void {
+    const validReasons = new Set(['STALE_OR_UNKNOWN_REF', 'REF_REQUIRED', 'AMBIGUOUS_ANCHOR'])
+
+    if (!validReasons.has(params.reason)) {
+      throw new Error('invalid_pre_effect_reason')
+    }
+
+    if (params.evidence !== 'TARGET_RESOLUTION_PRE_PAGE_EFFECT') {
+      throw new Error('invalid_pre_effect_evidence')
+    }
+
+    if (this.admissionPersistenceFailed) {
+      throw new Error('browser_admission_persistence_unavailable')
+    }
+
+    this.withExclusiveAdmissionLock(() => {
+      this.loaded = false
+      this.cached = null
+      this.preserveUnsupportedVersion = false
+      const snapshot = this.load()
+
+      if (!snapshot && this.io.existsSync(this.filePath)) {
+        throw new Error('browser_admission_state_unavailable')
+      }
+
+      const current = snapshot ?? emptyBrowserSessionState(this.now)
+      const prior = current.operationAdmissions?.[params.operationId]
+
+      if (!prior) {
+        throw new Error('browser_admission_not_found')
+      }
+
+      if (prior.terminal) {
+        throw new Error('terminal_already_recorded')
+      }
+
+      const terminal: AdmissionTerminal = {
+        kind: 'NOT_DISPATCHED',
+        reason: params.reason,
+        evidence: params.evidence,
+        recordedAt: this.now().toISOString()
+      }
+
+      try {
+        this.save({
+          ...current,
+          savedAt: this.now().toISOString(),
+          operationAdmissions: {
+            ...(current.operationAdmissions ?? {}),
+            [params.operationId]: { ...prior, terminal }
+          }
+        })
+
+        const syncIO = this.io as typeof fs
+
+        if (!syncIO.openSync || !syncIO.fsyncSync || !syncIO.closeSync) {
+          throw new Error('durable_sync_unavailable')
+        }
+
+        const fd = syncIO.openSync(this.filePath, 'r+')
+
+        try { syncIO.fsyncSync(fd) } finally { syncIO.closeSync(fd) }
+      } catch (error) {
+        this.admissionPersistenceFailed = true
+        throw new Error('browser_admission_persistence_unavailable', { cause: error })
+      }
+    })
   }
 
   admitBrowserMutation(identity: BrowserMutationAdmission):

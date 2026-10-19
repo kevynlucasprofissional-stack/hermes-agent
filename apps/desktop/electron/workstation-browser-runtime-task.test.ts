@@ -1508,3 +1508,44 @@ test('HWH-03: adoptTab binds existing manual tab to session, acquires human cont
 
   await runtime.destroy()
 })
+
+// B0.2 — startLearning must bind to the requested tab's owner, never fall back
+// to the active tab via resolveControlTaskId. When the target tab has no
+// ownerTaskId the operation must refuse fail-closed rather than silently
+// leasing authority over a different (active) tab.
+test('B0.2 startLearning refuses when target tab has no ownerTaskId even if active tab is owned', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  runtime.ensure()
+
+  // Create an owned task tab and make it active so resolveControlTaskId would
+  // find it as a fallback. Re-read state after createTask — the snapshot taken
+  // by ensure() does not include the newly created task tab.
+  runtime.createTask({ taskId: 'task-owned-active' })
+  const withOwned = runtime.state()
+  const ownedTab = withOwned.tabs.find(tab => tab.ownerTaskId === 'task-owned-active')
+  assert.ok(ownedTab, 'owned tab created')
+  runtime.activateTab(ownedTab.id)
+
+  // Pick an ordinary tab without any task binding; this is the tab the user
+  // nominally wants to learn from.
+  const unownedTab = withOwned.tabs.find(tab => !tab.ownerTaskId && tab.id !== ownedTab.id)
+  assert.ok(unownedTab, 'unowned tab available')
+
+  // Request learning on the unowned tab. The previous implementation would
+  // resolve the lease against the active owned tab; B0.2 requires refusal.
+  // startLearning is async, so we must await the rejection rather than using
+  // assert.throws (which only catches synchronous exceptions).
+  await assert.rejects(
+    () => runtime.startLearning(unownedTab.id, 'session-b0-2'),
+    /browser_learning_owner_required/i,
+    'startLearning must fail closed when target tab lacks ownerTaskId'
+  )
+
+  // Sanity check: learning still works for the owned tab itself.
+  const learningState = await runtime.startLearning(ownedTab.id, 'session-b0-2')
+  assert.equal(learningState.tabId, ownedTab.id)
+  assert.equal(learningState.status, 'learning')
+
+  await runtime.destroy()
+})

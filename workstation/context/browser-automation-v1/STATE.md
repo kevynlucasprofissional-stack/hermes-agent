@@ -1,4 +1,8 @@
 # BAV State — 2026-10-12
+
+## Errata de estado — 2026-10-18 (não apagar histórico de 12/10)
+Consulta GitHub posterior comprova que [PR #85](https://github.com/kevynlucasprofissional-stack/hermes-agent/pull/85) foi **MERGED** em `main` em **2026-10-13**, merge SHA `7b9392466e854be70777f7f67a3ed581b62404dd`. As frases de 12/10 `DRAFT/unmerged` são um *snapshot histórico do momento*, não o estado atual. O merge incorporou provas/fixtures experimentais e documentação, **não** qualificou Browser Automation V1 em produto. BAV04 testou perda de worker Python na mesma BrowserTask com admissão sintética; crash do processo Electron, remint de TaskRun/lease autenticado, Trello live, CI exact-head e H-079/H-081/H-082 permanecem pendentes. D-049: [novo plano de fechamento](../BROWSER_REFINEMENT_2026-10-18.md).
+
 Repository: C:\Github\hermes-agent; original checkout dirty (~34 modified tracked files), untouched.
 Branch: feat/hermes-browser-automation-v1-20261012
 Worktree: C:\Github\hermes-agent\.worktrees\browser-automation-v1-20261012

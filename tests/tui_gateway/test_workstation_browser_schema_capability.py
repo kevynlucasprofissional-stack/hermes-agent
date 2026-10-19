@@ -115,3 +115,50 @@ def test_desktop_surface_preserves_workstation_browser_tools_when_toolset_omitte
         assert EXTENSION_TOOL not in tools_tui
     finally:
         clear_session_vars(tokens_tui)
+
+
+INVENTORY_TOOL = "browser_inventory_unread"
+
+
+def test_browser_inventory_unread_is_registered_in_workstation_capabilities():
+    """P1A: browser_inventory_unread must be listed in WORKSTATION_BROWSER_CAPABILITIES
+    so the broker exposes it to Desktop sessions."""
+    from workstation.integrations.hermes.browser_controller import WORKSTATION_BROWSER_CAPABILITIES
+    assert INVENTORY_TOOL in WORKSTATION_BROWSER_CAPABILITIES
+
+
+def test_browser_inventory_unread_has_discovery_effect():
+    """P1A: inventory is read-only discovery; it must never be classified as MUTATION."""
+    from tools.effects import ToolEffect, builtin_effect
+    assert builtin_effect(INVENTORY_TOOL) == ToolEffect.DISCOVERY
+
+
+def test_browser_inventory_unread_projection_returns_compact_json():
+    """P1A: the controller projection must return compact JSON without durable WorkPlan
+    promotion (inventory items are not actionable work items)."""
+    import json
+    from workstation.integrations.hermes.browser_controller import WorkstationBrowserController
+    controller = WorkstationBrowserController.__new__(WorkstationBrowserController)
+    sample_result = {
+        "success": True,
+        "status": "complete",
+        "total_conversations_collected": 55,
+        "items": [{"title": "Chat 1", "identity_key": "k1"}],
+    }
+    projected = controller._process_browser_action_result(
+        INVENTORY_TOOL, sample_result, {}, {}
+    )
+    parsed = json.loads(projected)
+    assert parsed["status"] == "complete"
+    assert parsed["total_conversations_collected"] == 55
+    assert len(parsed["items"]) == 1
+
+
+def test_browser_inventory_unread_appears_in_desktop_schema_surface():
+    """P1A: Desktop sessions must see browser_inventory_unread in their tool definitions."""
+    tokens = set_session_vars(platform="desktop", source="desktop", session_id="schema-inventory-desktop")
+    try:
+        tools = _tool_names("desktop", "desktop")
+        assert INVENTORY_TOOL in tools
+    finally:
+        clear_session_vars(tokens)

@@ -1,5 +1,29 @@
 # CURRENT — Workstation Engineering Journal
 
+## 2026-10-19 — D-049 B1.1: views compactas de browser_snapshot expostas ao modelo [IMPLEMENTAÇÃO + TESTES GREEN]
+**Branch:** `feat/d049-browser-80-20-impl-20261018` · **HEAD:** `dfda8d83d3`
+**Implementação concluída:** schema Python de `browser_snapshot` agora expõe `view`, `focus_ref`, `focus_neighbors` e `max_chars`; `_BROWSER_TOOL_TABLE` repassa os parâmetros como `extra_kw`; handler legado rota via `_dispatch` do workstation quando view está ativa; `project_model_browser_payload` preserva payload de view sem deduplicar elementos; runtime Electron suprime `elements` quando `snapshotView` está definido.
+**Testes GREEN:** 10/10 Python (`tests/tools/test_browser_snapshot_views.py`) validando schema, roteamento via `_fallback_call` e projeção; 12/12 Vitest (`workstation-browser-snapshot-views.test.ts`) incluindo supressão de `elements` em view ativa. Fixture `tests/fixtures/prompt_surface/tools/browser_snapshot.json` atualizado.
+**Delta existente avaliado:** `diffSnapshot/applySnapshotDelta` permanece conservador (força FULL em truncamento, mudança de identidade ou baseline incompatível); nenhuma alteração necessária para views, pois a projeção já reduz o texto base antes do diff. Combinação snapshot+delta só ocorre quando delta é válido e confiável.
+**Benchmark concluído (20 ciclos/cenário):** economia média de bytes entregues ao modelo — summary +94.9% (min +86.9%, max +98.9%), action_map +79.1% (min +74.7%, max +82.1%), focus +92.4% (min +80.7%, max +98.4%), content +54.3% (min +52.3%, max +55.9%). Latência p50 < 0.001ms para todas as views vs 0.03–0.26ms legado. Nenhuma regressão detectada; otimização mantida opt-in via parâmetro `view`. Resultados estruturados em `workstation/context/benchmark_snapshot_views_results.json`.
+**Arquivos modificados:** `tools/browser_tool.py`, `tools/browser_workstation.py`, `apps/desktop/electron/workstation-browser-runtime.ts`, `apps/desktop/electron/workstation-browser-snapshot-views.test.ts`, `tests/fixtures/prompt_surface/tools/browser_snapshot.json`, `tests/tools/test_browser_snapshot_views.py`.
+
+## 2026-10-19 — WBR-20261019: quatro auditorias do dogfood WhatsApp consolidadas [DOCS ONLY]
+Evidência de teste-3-20261019: tab “Não lidas 55” antes da abertura, depois 54/53/52; relatório 17 conversas / 190 mensagens sem prova de cobertura; browser_click @e22 -> stale_or_unknown_ref -> pending op_browser_click_3a895fd7e6a4 bloqueia mutações apesar de browser_snapshot responder. Código da branch remota examinado em 19/10 ainda omite stale_or_unknown_ref no normalizador, persiste admission antes de resolver point e não oferece terminal pré-efeito; toolsets permitem seleção explícita browser_exec após falha. Não inferir commit/binário incidente por relatos incompatíveis. Decisão de segurança: rejeitar patches sugeridos que deletam admission por texto do erro; preservar histórico e criar CAS+fsync do terminal NOT_DISPATCHED com evidência tipada. Nenhum patch runtime, testes, E2E ou WhatsApp ao vivo foi realizado nesta atualização documental. [Registro técnico](../WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+
+
+## 2026-10-19 — D-049 auditoria local adversarial incorporada [DOCS-ONLY]
+Branch remota inicial fd80408; auditoria local encontrou snapshot-views.ts importado no HEAD mas untracked, bridge/Learning parcialmente corrigidos e 7 PASS/1 SKIP Python, 11 PASS views, 9 PASS schema, 1 PASS Learning. G1 schema_valid pode desaparecer no WorkPlan e valid_count; G2 tool schema browser_snapshot expõe apenas full, apesar de Electron aceitar views. Não foi executada CI exact-head nem E2E externo agora. Novo handoff [D049 19/10](../D049_BROWSER_EXECUTION_80_20_2026-10-19.md); sequência G0/G1/G2, IV condicional. Nunca reset/clean local sujo.
+
+
+## 2026-10-18 — D-049 Browser ecosystem audit → handoff 80/20 [DOCS-ONLY / ZERO RUNTIME PATCH]
+**Fonte:** quatro análises de BrowserTrace, abundantbeing Hermes Browser Extension, Lattice e Stagehand; segunda auditoria BrowserOS/controller; leitura GitHub `main@f436e949` em 2026-10-18. **Correções factuais:** `browser_batch_actions`, `BoundedExtractCache`, `diffSnapshot/applySnapshotDelta`, `PortableTrace/ReplayEngine`, sanitizer `_force_redact`, limites de snapshot e `browser_extract_items(schema)` parcial já existem. A Extension v0.3 tem controle; `companion-plugin/policy.py` read-only não descreve a extensão inteira. Stagehand `extract` faz parse do schema no SDK; Hermes filtra propriedades mas não comprova validação integral.
+**Achados específicos para reproduzir:** `browser_bridge._validate_safe_destination` compara caminhos por prefixo e `browser_save_json` usa destino original após validar; `startLearning(tabId)` pode tomar lease de aba ativa quando aba explicitamente solicitada não tem ownerTaskId; batch click local não prova persistência remota; `PortableTrace` não vincula por padrão screenshots às etapas de falha. São hipóteses/coberturas identificadas em revisão estática, não exploits nem E2E aprovados.
+**Gates preservados:** H-079/H-081/H-082/exact-head; Browser Automation V1 fixture-only BAV04 não prova crash do Electron ou lease remint real; PR #85 merged em 13/10 e documentação histórica estava defasada; workflow #39154888493 em `f436e949` = failure, motivo desconhecido. Nenhuma métrica de redução de tokens, velocidade ou custos foi medida aqui.
+**Entrega desta etapa:** novos plano D-049 e handoff com contratos, mapeamento dos arquivos, exemplos de código e testes, atualização de roadmap, inteligência, decisões, estado/issue e errata de Browser Automation V1. Nenhum teste Electron/pytest executado nesta atualização documental. Próximo agente deve revalidar HEAD e adaptar critically antes de aplicar o código sugerido.
+[Plano](../BROWSER_REFINEMENT_2026-10-18.md) · [Handoff](../BROWSER_REFINEMENT_IMPLEMENTER_PROMPT_2026-10-18.md).
+
+
 ## 2026-10-17 — Auditoria pós-dogfood + handoff D-048 [DOCS-ONLY, NOT FIXED]
 **Fontes:** sessão real `20261017_150608_11f39d`, notas `workstation/dogfood/17.10.26.md`, demonstração `learn-1792260534434-05158b7f`, leitura do código `main` em 17/10. `workstation-learning-session.ts::startVideoRecording` inclui `lavfi color=c=black:s=1280x720:r=15 -t 1`, logo vídeo da aba **NÃO** foi confirmado; `generateCandidate` usa gesto único; o método Python `record_human_demonstration_candidate` ainda não foi localizado em chamada de produção. `native-view-occlusion.ts` controla o `WebContentsView` em overlays e pode contribuir para apagamento de viewport; causa real não estabelecida.
 **Recomendação:** seis prompts P01–P06 com critérios separados. Esta alteração é apenas documentação, sem teste/alteração de runtime e sem fechar issues. Trabalhos não commitados na working tree local foram mantidos intocados.
@@ -5910,6 +5934,34 @@ Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller
 A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
 GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
 Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.
+
+### D-049 G1 Problem 2 — schema_status propagation (2026-10-19, commit 9e6d5dc0b8)
+
+Implemented and verified end-to-end schema verdict propagation in `browser_projection.py`: explicit `schema_status` (not_requested | valid | invalid | unknown) computed from owner's `schema_valid` and caller's schema request. When schema was requested and verdict is not valid, items are captured/persisted for investigation but never marked completed or conforming. Semantic validation uses the schema's own `required` fields when `schema_status=valid` instead of hardcoding `title`. Summary output includes `schema_status` and bounded `schema_errors`. All 8 extract/controller tests pass; typecheck and lint clean. **NOTE:** Remote branch received concurrent docs commits (cbfdbca9c5..77744cbc90) that reverted these changes in `browser_projection.py` and `test_browser_extract_items.py`; merge required before push to preserve both the G1 fix and the WhatsApp incident documentation.
+
+## D-049 Browser Observation 80/20 — B1.2 Value-Level Secret Redaction & B1.3 Schema Validation (2026-10-19)
+
+Implemented and verified two foundational extract-cache hardening layers for the Browser Observation 80/20 refinement:
+
+**B1.2 Value-Level Secret Redaction:**
+- Added value-level secret patterns (`JWT_PATTERN`, `BEARER_VALUE_PATTERN`, `PREFIXED_KEY_PATTERN`, `URL_ENCODED_SECRET_PATTERN`) to `normalizeExtractedItem` in `workstation-browser-extract-cache.ts`, covering JWTs, Bearer tokens, prefixed API keys (sk-, ghp_, xoxb-, AKIA, AIza), and URL-encoded secrets in string values whose key names are benign.
+- Key-name redaction via `SENSITIVE_KEY_PATTERN` continues to short-circuit value-level checks for fields like `password`, `api_key`, `auth_token`.
+- Fixed nested object test expectations to match actual redaction priority: `auth_header` does not match `SENSITIVE_KEY_PATTERN` so value-level bearer redaction applies, preserving the "Bearer" prefix marker while redacting the token value.
+- All 8 extract-cache tests pass (227ms).
+
+**B1.3 Lightweight JSON Schema Subset Validator:**
+- Implemented dependency-free `validateSchemaSubset` and `validateExtractedItems` supporting `type`, `required`, `enum`, and `properties` (recursive to depth 8).
+- Rejects schemas using unsupported keywords (`$ref`, `allOf`, `anyOf`, `patternProperties`, etc.) to prevent silent acceptance of data that was never truly validated.
+- Wired into `extractItemsForEntry` return payload in `workstation-browser-runtime.ts`: `schema_valid`, `schema_errors`, and `schema_unsupported_keywords` fields distinguish capture success from schema conformance.
+- All 9 schema validation tests pass (259ms); full B1.x regression suite passes (73/73 tests across 5 files, 2.25s); typecheck clean (0 errors).
+
+**Files modified:**
+- `apps/desktop/electron/workstation-browser-extract-cache.ts` — added `redactSecretValues`, `validateSchemaSubset`, `validateExtractedItems`, `SchemaValidationResult` interface
+- `apps/desktop/electron/workstation-browser-runtime.ts` — imported and wired `validateExtractedItems` into `extractItemsForEntry` return payload
+- `apps/desktop/electron/workstation-browser-extract-cache.test.ts` — fixed nested auth_header expectation, added SENSITIVE_KEY_PATTERN test
+- `apps/desktop/electron/workstation-browser-extract-schema.test.ts` — new file with 9 schema validation tests
+
+**Status:** IMPLEMENTED & TESTED. Not yet qualified for release pending full D-049 integration verification and CI exact-head gate.
 
 ## 2026-09-16 — Frozen-main gap closure audit
 

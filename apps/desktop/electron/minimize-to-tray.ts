@@ -260,7 +260,11 @@ export function createMinimizeToTray(options: Options) {
 
     if (closeToTray) {
       win.on('close', event => {
-        if (hide()) {
+        const concealed = hide()
+
+        options.log(`[tray] primary close: concealed=${concealed} enabled=${enabled} available=${status().available} quitting=${quitting}`)
+
+        if (concealed) {
           event.preventDefault()
         }
       })
@@ -308,6 +312,7 @@ export function createMinimizeToTray(options: Options) {
     }
 
     const operation = apply(on)
+    void operation.then(current => options.log(`[tray] startup: enabled=${current.enabled} available=${current.available}`))
     pending = operation.then(
       () => undefined,
       () => undefined
