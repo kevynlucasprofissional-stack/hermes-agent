@@ -77,6 +77,27 @@ def process_extracted_items_durably(raw_result: Any, args: dict, kw: dict) -> st
 
     task_id = str(kw.get("task_id") or "browser_batch")
 
+    # Compute schema_status from the owner's verdict and the caller's request.
+    # This is authoritative for WorkItem completion: if schema was requested and
+    # the owner says invalid (or omitted the verdict), no item may be marked
+    # as conforming to that schema. Semantic validation (title etc.) only
+    # applies when schema was not requested or was confirmed valid.
+    schema_requested = isinstance(args.get("schema"), dict)
+    owner_verdict = data.get("schema_valid")
+    if not schema_requested:
+        schema_status = "not_requested"
+    elif owner_verdict is True:
+        schema_status = "valid"
+    elif owner_verdict is False:
+        schema_status = "invalid"
+    else:
+        schema_status = "unknown"
+
+    schema_errors_raw = data.get("schema_errors")
+    schema_errors: list[str] = []
+    if isinstance(schema_errors_raw, list):
+        schema_errors = [str(e)[:200] for e in schema_errors_raw[:10]]
+
     # 1. Store the complete extracted raw dataset into the ArtifactStore.
     artifact_ref = None
     artifact_path = None
@@ -120,12 +141,43 @@ def process_extracted_items_durably(raw_result: Any, args: dict, kw: dict) -> st
                 metadata={"source": "browser_extract_items", "artifact_ref": artifact_ref},
             )
             work_items = task_store.get_work_items(plan.id)
-            validator = SemanticValidator(required_fields=["title"])
+            # When schema was requested and the owner verdict is not valid,
+            # semantic validation must NOT promote items to completed. The
+            # schema gate is authoritative: title presence alone does not
+            # confer conformance to a user-supplied contract.
+            schema_blocks_completion = schema_requested and schema_status != "valid"
+            if schema_blocks_completion:
+                semantic_required: list[str] = []
+            elif schema_requested and schema_status == "valid":
+                # Use the schema's own required fields as the semantic gate
+                # instead of hardcoding 'title'. A valid schema that does not
+                # require 'title' must not be overridden by legacy defaults.
+                raw_required = args.get("schema", {}).get("required")
+                semantic_required = [str(f) for f in raw_required] if isinstance(raw_required, list) else []
+            else:
+                semantic_required = ["title"]
+            validator = SemanticValidator(required_fields=semantic_required)
             for i, it in enumerate(items):
                 val_res = validator.validate_item(it)
                 item_id = work_items[i].id if i < len(work_items) else None
                 ref_handle = artifact_ref or "artifact://raw"
-                if not val_res.get("valid", True):
+                if schema_blocks_completion:
+                    # Items are captured and persisted for investigation but
+                    # never marked as conforming to the requested schema.
+                    anomalies.append({
+                        "index": i,
+                        "title": (it.get("title") or "")[:40],
+                        "violations": [f"schema_status={schema_status}"],
+                    })
+                    if item_id:
+                        task_store.mark_item_captured(item_id, raw_output_ref=ref_handle)
+                        task_store.mark_item_persisted(item_id, normalized_output_ref=ref_handle)
+                        task_store.fail_item(
+                            item_id,
+                            error=f"schema {schema_status}; items preserved for review",
+                            can_retry=False,
+                        )
+                elif not val_res.get("valid", True):
                     issues = val_res.get("issues", [])
                     anomalies.append({
                         "index": i,
@@ -158,6 +210,8 @@ def process_extracted_items_durably(raw_result: Any, args: dict, kw: dict) -> st
         "anomalies": anomalies[:ANOMALY_SAMPLE_LIMIT] if anomalies else [],
         "durable": artifact_ref is not None,
         "artifact_error": artifact_error,
+        "schema_status": schema_status,
+        "schema_errors": schema_errors if schema_errors else None,
         "note": (
             f"Complete {len(items)} items saved durably to task-scoped ArtifactStore and kanban_db WorkPlan. Prompt context protected."
             if artifact_ref is not None
