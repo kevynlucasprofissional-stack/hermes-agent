@@ -455,3 +455,55 @@ it('preserveLocalSystemNotices does not duplicate a notice the page already carr
   const preserved = preserveLocalSystemNotices(refreshed, [...refreshed, { ...notice, id: 'other' }])
   expect(preserved).toBe(refreshed)
 })
+
+it('preserveLocalSystemNotices preserves non-trailing workstation milestones across refreshes', () => {
+  const milestone: ChatMessage = {
+    id: 'milestone-ms-123',
+    parts: [textPart('workstation:{"stage":"candidate","capabilityId":"test_cap"}')],
+    role: 'system',
+    timestamp: 1500
+  }
+
+  // Locally, milestone occurred between prompt (1000) and reply (2000)
+  const localMessages = [
+    { ...row('s1', 'user', 'prompt'), timestamp: 1000 },
+    milestone,
+    { ...row('s2', 'assistant', 'reply'), timestamp: 2000 }
+  ]
+
+  // Server refresh only contains the stored turns
+  const refreshed = [
+    { ...row('s1', 'user', 'prompt'), timestamp: 1000 },
+    { ...row('s2', 'assistant', 'reply'), timestamp: 2000 }
+  ]
+
+  const preserved = preserveLocalSystemNotices(refreshed, localMessages)
+  expect(preserved).toHaveLength(3)
+  expect(preserved[1].id).toBe('milestone-ms-123')
+  expect(chatMessageText(preserved[1])).toContain('candidate')
+})
+
+it('preserveLocalSystemNotices preserves learning questions across refreshes', () => {
+  const question: ChatMessage = {
+    id: 'learning-question-q-456',
+    parts: [textPart('learning-question:{"id":"q-456","proposedQuestion":"Dúvida de teste?"}')],
+    role: 'system',
+    timestamp: 1200
+  }
+
+  const localMessages = [
+    { ...row('s1', 'user', 'prompt'), timestamp: 1000 },
+    question,
+    { ...row('s2', 'assistant', 'reply'), timestamp: 2000 }
+  ]
+
+  const refreshed = [
+    { ...row('s1', 'user', 'prompt'), timestamp: 1000 },
+    { ...row('s2', 'assistant', 'reply'), timestamp: 2000 }
+  ]
+
+  const preserved = preserveLocalSystemNotices(refreshed, localMessages)
+  expect(preserved).toHaveLength(3)
+  expect(preserved[1].id).toBe('learning-question-q-456')
+})
+

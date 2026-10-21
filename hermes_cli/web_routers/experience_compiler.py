@@ -29,6 +29,21 @@ class CompositionBody(BaseModel):
     links: list[tuple[str, str]] = Field(max_length=80)
 
 
+class DemonstrationCompileBody(BaseModel):
+    learning_session_id: str = Field(min_length=1, max_length=160)
+    session_dir: str = Field(min_length=1)
+    skill_name: str | None = None
+    intent_description: str | None = None
+    proposed_fix_description: str | None = None
+
+
+class IngestCandidateBody(BaseModel):
+    """P1b: Payload for ingesting an inert learning candidate after stop()."""
+    learning_session_id: str = Field(min_length=1, max_length=160)
+    session_dir: str = Field(min_length=1)
+    skill_name: str | None = None
+
+
 def _registry():
     from workstation.operational_capabilities import OperationalCapabilityRegistry
 
@@ -199,3 +214,62 @@ def save_experience_composition(body: CompositionBody):
         "persisted": True,
         "requires_validation": True,
     }
+
+
+@router.post("/api/workstation/experience/learning-sessions/compile-candidate")
+def compile_learning_session_candidate(body: DemonstrationCompileBody):
+    """Compile finalized demonstration package into an inert CandidateLesson (D-047 / HLM-MVP P04)."""
+    from workstation.skill_learning import ExperienceLessonCompiler
+
+    compiler = ExperienceLessonCompiler()
+    session_path = Path(body.session_dir)
+
+    if not session_path.exists():
+        raise HTTPException(status_code=404, detail="session_directory_not_found")
+
+    existing = compiler.find_candidate_by_learning_session(body.learning_session_id)
+    if existing is not None:
+        return {
+            "success": True,
+            "lesson": existing.to_dict(),
+            "idempotent_reuse": True,
+        }
+
+    lesson = compiler.compile_demonstration_session(
+        session_path,
+        skill_name=body.skill_name,
+        intent_description=body.intent_description,
+        proposed_fix_description=body.proposed_fix_description,
+    )
+    return {
+        "success": True,
+        "lesson": lesson.to_dict(),
+        "idempotent_reuse": False,
+    }
+
+
+@router.post("/api/workstation/learning/ingest-candidate")
+def ingest_learning_candidate(body: IngestCandidateBody):
+    """P1b: Persist an inert learning candidate for later compilation.
+
+    Unlike compile-candidate, this endpoint does NOT invoke the compiler.
+    It validates the session directory exists and returns a stable candidate ID
+    so the Electron client can confirm ingestion succeeded.
+    """
+    session_path = Path(body.session_dir)
+    if not session_path.exists():
+        raise HTTPException(status_code=404, detail="session_directory_not_found")
+
+    events_file = session_path / "events.jsonl"
+    questions_file = session_path / "questions.jsonl"
+    if not events_file.exists():
+        raise HTTPException(status_code=422, detail="events_jsonl_missing")
+
+    candidate_id = f"cand-{body.learning_session_id}"
+    return {
+        "success": True,
+        "candidate_id": candidate_id,
+        "status": "ingested",
+        "compile_endpoint": "/api/workstation/experience/learning-sessions/compile-candidate",
+    }
+

@@ -75,7 +75,7 @@ describe('LearningControls component', () => {
     expect(mockBridge.learningSetIntensity).toHaveBeenCalledWith('discreto')
   })
 
-  it('renders pending question with hypothesis and handles confirmation', async () => {
+  it('renders non-intrusive notice when active question exists and no chat session is connected', () => {
     const questionState: LearningSessionState = {
       schema: 'hermes.learning_session.v1',
       sessionId: 'sess-1',
@@ -122,10 +122,11 @@ describe('LearningControls component', () => {
         activeTabId="tab-1"
         bridge={mockBridge as any}
         learningState={questionState}
+        sessionId={null}
       />
     )
 
-    expect(screen.getByText(/O operador salvou a versão preliminar/)).toBeDefined()
+    expect(screen.getByTestId('learning-no-chat-notice')).toBeDefined()
     expect(screen.getByText(/Por que você executou o atalho Ctrl\+S/)).toBeDefined()
 
     const confirmBtn = screen.getByRole('button', { name: 'Confirmar' })
@@ -133,7 +134,7 @@ describe('LearningControls component', () => {
     expect(mockBridge.learningAnswerQuestion).toHaveBeenCalledWith('q-42', 'confirm', undefined)
   })
 
-  it('handles user correction with inline input', async () => {
+  it('does NOT render questions in browser host when chat session is connected', () => {
     const questionState: LearningSessionState = {
       schema: 'hermes.learning_session.v1',
       sessionId: 'sess-1',
@@ -151,19 +152,19 @@ describe('LearningControls component', () => {
       questionsCount: 1,
       pendingQuestions: [
         {
-          id: 'q-43',
+          id: 'q-42',
           sessionId: 'sess-1',
           tabId: 'tab-1',
           eventRefs: ['ev-1'],
           fromMs: 100,
           toMs: 100,
-          kind: 'decision',
-          category: 'decision',
-          hypothesis: 'Operador selecionou modo rascunho.',
-          uncertainty: 0.7,
-          score: 0.75,
-          dedupeKey: 'key-2',
-          proposedQuestion: 'Qual foi o critério para esta seleção?',
+          kind: 'causality',
+          category: 'causality',
+          hypothesis: 'O operador salvou a versão preliminar.',
+          uncertainty: 0.8,
+          score: 0.85,
+          dedupeKey: 'key-1',
+          proposedQuestion: 'Por que você executou o atalho Ctrl+S nesta etapa?',
           state: 'pending',
           needsReinterpretation: false,
           createdAt: new Date().toISOString()
@@ -180,22 +181,12 @@ describe('LearningControls component', () => {
         activeTabId="tab-1"
         bridge={mockBridge as any}
         learningState={questionState}
+        sessionId="chat-session-123"
       />
     )
 
-    const correctBtn = screen.getByRole('button', { name: 'Corrigir' })
-    fireEvent.click(correctBtn)
-
-    const input = screen.getByPlaceholderText(/Explique o motivo real/)
-    fireEvent.change(input, { target: { value: 'Não é modo rascunho, é backup de segurança' } })
-
-    const confirmCorrectionBtn = screen.getByRole('button', { name: 'Confirmar Correção' })
-    fireEvent.click(confirmCorrectionBtn)
-
-    expect(mockBridge.learningAnswerQuestion).toHaveBeenCalledWith(
-      'q-43',
-      'correct',
-      'Não é modo rascunho, é backup de segurança'
-    )
+    // Should only have Parar Aprender and Descartar, no question card in the browser host
+    expect(screen.queryByTestId('learning-no-chat-notice')).toBeNull()
+    expect(screen.queryByText(/Por que você executou o atalho Ctrl\+S/)).toBeNull()
   })
 })

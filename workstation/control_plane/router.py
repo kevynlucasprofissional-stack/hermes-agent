@@ -11,7 +11,10 @@ from dataclasses import asdict, dataclass, field
 from enum import Enum
 import hashlib
 import json
+import logging
 from typing import Any, Callable, Sequence
+
+logger = logging.getLogger(__name__)
 
 from workstation.contracts import AcceptanceContract, utc_now
 from workstation.control_plane.contract import CapabilityFormalContract
@@ -559,21 +562,15 @@ class CapabilityRouter:
                 effect_containment=True,
                 invariant_preservation=True,
                 authority_satisfied=True,
-                policy_satisfied=True,
-                approval_satisfied=True,
+                policy_satisfied=True, approval_satisfied=True,
                 verifier_available=verifier_available,
                 evidence_strength_sufficient=evidence_strength_sufficient,
                 state_fresh=state_fresh,
                 capability_healthy=(cap.drift_state == "healthy" and cap.lifecycle == CapabilityLifecycle.PROMOTED),
-                no_outstanding_uncertainty=True,
-                deterministic_closure=True,
-                intent_hash=intent_h,
-                semantic_state_hash=state_h,
-                capability_id=cap.id,
-                capability_version=cap.version,
-                router_policy_version="1.0.0",
-                run_id=run_id,
-                operation_id=operation_id,
+                no_outstanding_uncertainty=True, deterministic_closure=True,
+                intent_hash=intent_h, semantic_state_hash=state_h,
+                capability_id=cap.id, capability_version=cap.version,
+                router_policy_version="1.0.0", run_id=run_id, operation_id=operation_id,
             )
 
             if ranking_receipt_ref:
@@ -582,10 +579,13 @@ class CapabilityRouter:
                     "routing_certificate_" + cert.certificate_hash() + ".json", cert.to_dict(), schema="workstation.routing_certificate.v1").ref
                 link_decision_receipt(ranking_receipt_ref, self.registry.artifacts,
                     task_id=runtime_state.get("task_id"), run_id=run_id, operation_id=operation_id, certificate_ref=cert_ref)
+            from workstation.milestones import record_router_rejection, record_router_selection
+            record_router_selection(cap, cert, runtime_state, run_id)
             return ExecutableDecision(capability=cap, certificate=cert, system1_receipt_ref=ranking_receipt_ref)
 
         # 4. If any candidate had an authority shortfall, yield to human
         if authority_shortfalls:
+            record_router_rejection(authority_shortfalls, runtime_state, run_id)
             return HumanDecision(
                 reason="authority_required_missing",
                 scope=authority_shortfalls[0][1],

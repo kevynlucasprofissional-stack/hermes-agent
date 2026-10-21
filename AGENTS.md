@@ -4,6 +4,9 @@
 
 When agents work together on the active Hermes Workstation MVP, use ONLY the shared branch `feat/hermes-workstation-mvp-20261013` in checkout `C:\Github\hermes-agent`. **No independent branches/worktrees for routine sub-tasks; no concurrent Git index writes.** Before editing, read [the coordination protocol](workstation/context/AGENT_COLLABORATION_PROTOCOL.md) and [the live integration board](workstation/context/workstation-hub-mvp/TEAM_BOARD.md), then claim exclusive file ownership with `python workstation/scripts/multi_agent_coordination.py claim`. The named integrator alone stages/commits/pushes and maintains canonical context; agents update their local claim/next action and hand off on interruption. Claims are cooperative and local, not a security boundary. The Workstation upstream-first and safety gates remain in force.
 
+### Enforcement automático (hooks PreToolUse / SessionStart)
+Hooks em `.claude/hooks/` bloqueiam escritas em caminhos reclamados por outro agente e alertam quando a sessão não está na branch do ciclo. **Antes de qualquer edição**, rode `python workstation/scripts/multi_agent_coordination.py status` e respeite claims ativos. Sessões novas devem verificar claims e branch antes de escrever. Se o script falhar, os hooks permitem a edição (fail-open). Detalhes: [`CLAUDE.md`](CLAUDE.md) § Multi-Session Collaboration Enforcement.
+
 
 For AI coding assistants and developers working on hermes-agent. This root file is a hub: what
 applies everywhere, then a routing table. Each area's `AGENTS.md` loads automatically when you work

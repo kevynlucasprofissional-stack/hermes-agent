@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LearningControls } from '@/app/browser/learning-controls'
 import { useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
 import { TaskJournalDrawer } from '@/app/browser/task-journal-drawer'
+import { useLearningChatBridge } from '@/app/chat/hooks/use-learning-chat-bridge'
 import type {
   LearningSessionState,
   WorkstationBrowserBounds,
@@ -123,6 +124,15 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
   const sessions = useStore($sessions)
 
   const activeSessionKey = sessionId ?? selectedStoredSessionId ?? activeSessionId ?? null
+
+  // Bridge learning questions and milestones into the chat transcript.
+  // Only active when this pane is bound to a stored session so questions
+  // never leak across unrelated conversations.
+  useLearningChatBridge({
+    bridge,
+    runtimeSessionId: activeSessionKey,
+    storedSessionId: selectedStoredSessionId
+  })
 
   const activeSessionAliases = useMemo(() => {
     if (!activeSessionKey) {

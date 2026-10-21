@@ -485,6 +485,20 @@ def workstation_run_local_checkpoint(context: Any) -> AdoptionReport | None:
     return report
 
 
+def _resolve_readback_raw_data(artifacts: ArtifactStore, raw_output_ref: str | None) -> Any:
+    if not raw_output_ref:
+        return None
+    try:
+        raw_payload = artifacts.read_json(raw_output_ref)
+        if isinstance(raw_payload, dict) and "results" in raw_payload and raw_payload["results"]:
+            first_res = raw_payload["results"][0]
+            if isinstance(first_res, dict) and first_res.get("artifact_ref"):
+                return artifacts.read_json(first_res["artifact_ref"])
+        return raw_payload
+    except Exception:  # health: allow BLE001 -- raw output resolution failure falls through safely
+        return None
+
+
 def _execute_item_readback(agent: Any, completed_item: WorkItem) -> None:
     artifacts = ArtifactStore()
     store = DurableTaskStore()
@@ -514,18 +528,7 @@ def _execute_item_readback(agent: Any, completed_item: WorkItem) -> None:
             if isinstance(v, str) and v.startswith("$item."):
                 field = v[len("$item."):]
                 args[k] = completed_item.input_payload.get(field, v)
-        raw_data = None
-        if completed_item.raw_output_ref:
-            try:
-                raw_payload = artifacts.read_json(completed_item.raw_output_ref)
-                if isinstance(raw_payload, dict) and "results" in raw_payload and raw_payload["results"]:
-                    first_res = raw_payload["results"][0]
-                    if isinstance(first_res, dict) and first_res.get("artifact_ref"):
-                        raw_data = artifacts.read_json(first_res["artifact_ref"])
-                else:
-                    raw_data = raw_payload
-            except Exception:  # health: allow BLE001 -- raw output resolution failure falls through safely
-                return
+        raw_data = _resolve_readback_raw_data(artifacts, completed_item.raw_output_ref)
         if raw_data is None:
             return
         if completed_item.operation_id:
@@ -533,6 +536,8 @@ def _execute_item_readback(agent: Any, completed_item: WorkItem) -> None:
         if completed_item.raw_output_ref:
             agent._last_raw_result_ref = completed_item.raw_output_ref
         rb_result = owner.readback(tool, args, raw_data)
+        from workstation.milestones import record_readback_milestone
+        record_readback_milestone(agent, completed_item, tool, rb_result)
         if rb_result and rb_result.get("ok") and rb_result.get("evidence_ref"):
             evidence_ref = rb_result["evidence_ref"]
             store.record_evidence(completed_item.id, evidence_ref)

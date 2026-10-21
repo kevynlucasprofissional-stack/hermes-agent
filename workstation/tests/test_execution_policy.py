@@ -158,3 +158,53 @@ def test_executed_unverified_does_not_count_as_verified_success():
     for cand in candidates.values():
         assert cand.executed_occurrences >= 1
         assert cand.verified_successes == 0
+
+
+def test_suggest_compile_checkpoint_preserves_evidence_without_forcing(tmp_path):
+    """Etapa A: SUGGEST_COMPILE produces an observable checkpoint but never forces compilation."""
+    from workstation.task_compiler import suggest_compilation_checkpoint
+    from workstation.artifacts import ArtifactStore
+    a = agent()
+    calls = [call('write_file', {'path': 'output.json', 'content': f'x{i}'}) for i in range(3)]
+    # First two calls produce ALLOW_ADAPTIVE and SUGGEST_COMPILE respectively
+    result = suggest_compilation_checkpoint(a, calls[:2], task_id='task_a', run_id='run_1', artifacts=ArtifactStore(root_dir=tmp_path))
+    assert result is not None
+    assert result['decision'] == 'SUGGEST_COMPILE'
+    assert result['suggested_call_count'] == 1
+    assert len(result['checkpoint_refs']) >= 1
+    # Checkpoint artifact exists and contains the candidate summary
+    store = ArtifactStore(root_dir=tmp_path)
+    payload = store.read_json(result['checkpoint_refs'][0])
+    assert payload['schema'] == 'workstation.suggest_compile_checkpoint.v1'
+    assert payload['total_suggested'] == 1
+    assert payload['candidates'][0]['tool'] == 'write_file'
+    # REQUIRE_COMPILE is NOT triggered by only two calls
+    from workstation.execution_policy import CompilationDecision, decisions_for_calls
+    decisions = decisions_for_calls(a, calls[:2])
+    assert CompilationDecision.REQUIRE_COMPILE not in decisions
+
+
+def test_consume_suggest_compile_checkpoint_rejects_opaque_traces(tmp_path):
+    """Etapa B: opaque/JS-only traces are rejected with explicit reason, never silently dropped."""
+    from workstation.task_compiler import consume_suggest_compile_checkpoint, suggest_compilation_checkpoint
+    from workstation.artifacts import ArtifactStore
+    a = agent()
+    calls = [call('write_file', {'path': 'output.json', 'content': f'x{i}'}) for i in range(2)]
+    checkpoint = suggest_compilation_checkpoint(a, calls, task_id='task_b', run_id='run_opaque', artifacts=ArtifactStore(root_dir=tmp_path))
+    assert checkpoint is not None
+    # Simulate opaque-only procedure trace (no semantic steps)
+    a._work_procedure_trace = [
+        {'execution_class': 'opaque_adaptive_execution', 'action': 'console', 'arguments': {}},
+        {'execution_class': 'opaque_adaptive_execution', 'action': 'console', 'arguments': {}},
+    ]
+    receipt = consume_suggest_compile_checkpoint(a, checkpoint, task_id='task_b', run_id='run_opaque', artifacts=ArtifactStore(root_dir=tmp_path))
+    assert receipt['status'] == 'rejected'
+    assert receipt['reason'] == 'opaque_adaptive_traces_only'
+    assert receipt['opaque_trace_count'] == 2
+    assert receipt['semantic_trace_count'] == 0
+    # Rejection evidence persisted
+    store = ArtifactStore(root_dir=tmp_path)
+    if receipt.get('evidence_ref'):
+        rejection = store.read_json(receipt['evidence_ref'])
+        assert rejection['schema'] == 'workstation.suggest_compile_rejection.v1'
+        assert rejection['reason'] == 'opaque_adaptive_traces_only'

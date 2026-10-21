@@ -61,121 +61,106 @@ function LearningIntensityBar({ currentIntensity, disabled, onSelect }: Intensit
   )
 }
 
-interface QuestionCardProps {
+interface NoChatNoticeProps {
   question: LearningQuestionItem
   actionBusy: boolean
-  onAnswer: (action: 'confirm' | 'correct' | 'defer' | 'dismiss', correction?: string) => void
+  onAnswer: (questionId: string, action: 'confirm' | 'defer') => void
 }
 
-function LearningQuestionCard({ question, actionBusy, onAnswer }: QuestionCardProps) {
-  const [isCorrecting, setIsCorrecting] = useState(false)
-  const [correctionText, setCorrectionText] = useState('')
-
+function LearningNoChatNotice({ question, actionBusy, onAnswer }: NoChatNoticeProps) {
   return (
-    <div className="mx-2 p-2.5 rounded-lg bg-sky-950/40 border border-sky-500/40 text-xs flex flex-col gap-2 shadow-sm">
-      <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase bg-sky-500/20 text-sky-300 px-1.5 py-0.5 rounded">
-          <Codicon name="question" size="0.7rem" />
-          {question.kind}
+    <div
+      className="mx-2 px-2 py-1.5 rounded bg-sky-950/30 border border-sky-500/30 text-xs flex items-center justify-between gap-2 text-sky-200"
+      data-testid="learning-no-chat-notice"
+    >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Codicon className="text-sky-400 shrink-0" name="question" size="0.75rem" />
+        <span className="truncate">
+          Dúvida: <strong className="text-sky-100">{question.proposedQuestion}</strong>
         </span>
-        <span className="text-[10px] font-mono text-(--ui-text-tertiary)">
-          Incerteza: {Math.round(question.uncertainty * 100)}%
-        </span>
       </div>
-
-      <div className="text-(--ui-text-secondary) text-[11px] italic">
-        Hipótese: {question.hypothesis}
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          disabled={actionBusy}
+          onClick={() => onAnswer(question.id, 'confirm')}
+          size="xs"
+          variant="default"
+        >
+          Confirmar
+        </Button>
+        <Button
+          disabled={actionBusy}
+          onClick={() => onAnswer(question.id, 'defer')}
+          size="xs"
+          variant="ghost"
+        >
+          Adiar
+        </Button>
       </div>
-
-      <div className="text-(--ui-text-primary) font-medium text-xs">
-        {question.proposedQuestion}
-      </div>
-
-      {isCorrecting ? (
-        <div className="flex flex-col gap-1.5 mt-1">
-          <input
-            autoFocus
-            className="w-full px-2 py-1 rounded bg-(--ui-background) border border-(--ui-stroke-secondary) text-xs text-(--ui-text-primary) placeholder:text-(--ui-text-tertiary)"
-            onChange={e => setCorrectionText(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && correctionText.trim()) {
-                onAnswer('correct', correctionText.trim())
-                setIsCorrecting(false)
-                setCorrectionText('')
-              }
-            }}
-            placeholder="Explique o motivo real ou ajuste correto..."
-            type="text"
-            value={correctionText}
-          />
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              onClick={() => {
-                setIsCorrecting(false)
-                setCorrectionText('')
-              }}
-              size="xs"
-              variant="ghost"
-            >
-              Cancelar
-            </Button>
-            <Button
-              disabled={!correctionText.trim() || actionBusy}
-              onClick={() => {
-                onAnswer('correct', correctionText.trim())
-                setIsCorrecting(false)
-                setCorrectionText('')
-              }}
-              size="xs"
-              variant="default"
-            >
-              Confirmar Correção
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-sky-500/20">
-          <Button
-            disabled={actionBusy}
-            onClick={() => onAnswer('confirm')}
-            size="xs"
-            variant="default"
-          >
-            <Codicon name="check" size="0.7rem" />
-            Confirmar
-          </Button>
-          <Button
-            disabled={actionBusy}
-            onClick={() => {
-              setIsCorrecting(true)
-              setCorrectionText('')
-            }}
-            size="xs"
-            variant="secondary"
-          >
-            <Codicon name="edit" size="0.7rem" />
-            Corrigir
-          </Button>
-          <Button
-            disabled={actionBusy}
-            onClick={() => onAnswer('defer')}
-            size="xs"
-            variant="ghost"
-          >
-            Adiar
-          </Button>
-          <Button
-            className="text-(--ui-text-tertiary) hover:text-(--ui-text-secondary) ml-auto"
-            disabled={actionBusy}
-            onClick={() => onAnswer('dismiss')}
-            size="xs"
-            variant="ghost"
-          >
-            Dispensar
-          </Button>
-        </div>
-      )}
     </div>
+  )
+}
+
+interface ActiveBarProps {
+  isLearning: boolean
+  intensity?: LearningIntensity
+  disabled: boolean
+  eventsCount?: number
+  questionsCount?: number
+  onSetIntensity: (intensity: LearningIntensity) => void
+  onDiscard: () => void
+}
+
+function LearningActiveBar({
+  isLearning,
+  intensity,
+  disabled,
+  eventsCount,
+  questionsCount,
+  onSetIntensity,
+  onDiscard
+}: ActiveBarProps) {
+  return (
+    <>
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+          isLearning
+            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+        )}
+      >
+        <span
+          className={cn(
+            'h-1.5 w-1.5 rounded-full',
+            isLearning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+          )}
+        />
+        {isLearning ? 'Aprendendo' : 'Pausado'}
+      </span>
+
+      <LearningIntensityBar
+        currentIntensity={intensity}
+        disabled={disabled}
+        onSelect={onSetIntensity}
+      />
+
+      <span className="text-[10px] font-mono text-(--ui-text-tertiary) ml-auto">
+        Eventos: {eventsCount ?? 0} · Perguntas: {questionsCount ?? 0}
+      </span>
+
+      <Button
+        aria-label="Descartar Sessão de Aprendizagem"
+        className="text-(--ui-text-tertiary) hover:text-rose-400 ml-1"
+        disabled={disabled}
+        onClick={onDiscard}
+        size="xs"
+        variant="ghost"
+      >
+        <Codicon name="trash" size="0.75rem" />
+        Descartar
+      </Button>
+    </>
   )
 }
 
@@ -247,10 +232,8 @@ export function LearningControls({
     }
   }, [bridge, actionBusy])
 
-  const activeQuestion: LearningQuestionItem | undefined =
-    learningState?.pendingQuestions && learningState.pendingQuestions.length > 0
-      ? learningState.pendingQuestions[0]
-      : undefined
+  const activeQuestion = learningState?.pendingQuestions?.[0]
+  const isToggleDisabled = busy || actionBusy || (!isActive && !activeTabId)
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
@@ -258,7 +241,7 @@ export function LearningControls({
       <div className="flex flex-wrap items-center gap-1.5 px-2 py-1 bg-(--ui-sidebar-surface-background) border-b border-(--ui-stroke-tertiary) text-xs">
         <Button
           aria-label={isActive ? 'Parar Aprender' : 'Aprender'}
-          disabled={busy || actionBusy || (!isActive && !activeTabId)}
+          disabled={isToggleDisabled}
           onClick={handleToggle}
           size="xs"
           variant={isActive ? 'destructive' : 'default'}
@@ -268,47 +251,15 @@ export function LearningControls({
         </Button>
 
         {isActive && (
-          <>
-            <span
-              className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
-                isLearning
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-              )}
-            >
-              <span
-                className={cn(
-                  'h-1.5 w-1.5 rounded-full',
-                  isLearning ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-                )}
-              />
-              {isLearning ? 'Aprendendo' : 'Pausado'}
-            </span>
-
-            {/* Live Intensity Control */}
-            <LearningIntensityBar
-              currentIntensity={learningState?.intensity}
-              disabled={actionBusy}
-              onSelect={optKey => void handleSetIntensity(optKey)}
-            />
-
-            <span className="text-[10px] font-mono text-(--ui-text-tertiary) ml-auto">
-              Eventos: {learningState?.eventsCount ?? 0} · Perguntas: {learningState?.questionsCount ?? 0}
-            </span>
-
-            <Button
-              aria-label="Descartar Sessão de Aprendizagem"
-              className="text-(--ui-text-tertiary) hover:text-rose-400 ml-1"
-              disabled={actionBusy}
-              onClick={handleDiscard}
-              size="xs"
-              variant="ghost"
-            >
-              <Codicon name="trash" size="0.75rem" />
-              Descartar
-            </Button>
-          </>
+          <LearningActiveBar
+            disabled={actionBusy}
+            eventsCount={learningState?.eventsCount}
+            intensity={learningState?.intensity}
+            isLearning={isLearning}
+            onDiscard={handleDiscard}
+            onSetIntensity={optKey => void handleSetIntensity(optKey)}
+            questionsCount={learningState?.questionsCount}
+          />
         )}
       </div>
 
@@ -322,11 +273,11 @@ export function LearningControls({
         </div>
       )}
 
-      {/* Proactive Learning Question Card */}
-      {activeQuestion && (
-        <LearningQuestionCard
+      {/* When no chat session is connected, maintain pending questions non-intrusively without covering canvas */}
+      {!sessionId && activeQuestion && (
+        <LearningNoChatNotice
           actionBusy={actionBusy}
-          onAnswer={(action, correction) => void handleAnswer(activeQuestion.id, action, correction)}
+          onAnswer={(id, action) => void handleAnswer(id, action)}
           question={activeQuestion}
         />
       )}

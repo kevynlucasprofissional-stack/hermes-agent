@@ -144,6 +144,29 @@ def release(repo: Path, agent: str, lane: str) -> dict:
         return {"released": lane, "agent": agent}
 
 
+def check_path(repo: Path, path: str, agent: str | None = None) -> dict:
+    """Check if a path is claimed by another agent. Returns {allowed, owner, lane}."""
+    try:
+        normalized = normalize_path(path)
+    except ValueError:
+        # Invalid path → fail open (allow) but warn
+        return {"allowed": True, "owner": None, "lane": None, "warning": f"Invalid path format: {path!r}"}
+    folder = state_root(repo)
+    if not folder.exists():
+        return {"allowed": True, "owner": None, "lane": None}
+    for active in read_claims(folder):
+        if active.get("status") != "ACTIVE":
+            continue
+        for claimed_path in active.get("paths", []):
+            if overlaps(normalized, claimed_path):
+                owner = active.get("agent")
+                # Allow if the requesting agent owns the claim
+                if agent and owner == agent:
+                    return {"allowed": True, "owner": owner, "lane": active.get("lane")}
+                return {"allowed": False, "owner": owner, "lane": active.get("lane"), "path": claimed_path}
+    return {"allowed": True, "owner": None, "lane": None}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -162,6 +185,9 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--agent", required=True)
     r.add_argument("--lane", required=True)
     sub.add_parser("status", help="Read current local claims")
+    cp = sub.add_parser("check-path", help="Check if a path is claimed (for hooks)")
+    cp.add_argument("path", help="Repo-relative path to check")
+    cp.add_argument("--agent", default=None, help="Requesting agent ID (allowed if owner)")
     args = parser.parse_args(argv)
     try:
         if args.command == "claim":
@@ -170,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
             output = update(args.root, args.agent, args.lane, args.status, args.next)
         elif args.command == "release":
             output = release(args.root, args.agent, args.lane)
+        elif args.command == "check-path":
+            output = check_path(args.root, args.path, args.agent)
         else:
             output = {"claims": read_claims(state_root(args.root))}
         print(json.dumps(output, ensure_ascii=False, indent=2))

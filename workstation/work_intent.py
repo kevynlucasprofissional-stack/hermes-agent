@@ -112,13 +112,28 @@ def work_intent(envelope: MessageEnvelope, structured: dict | None = None) -> Wo
     durable = durable or batch_intent(envelope.content) or is_multistep_request(envelope.content)
     if isinstance(envelope.metadata, dict) and envelope.metadata.get("explicit_force_work") is True:
         durable = True
+    # P05 Creative Preflight: attach clarification metadata when a design task
+    # lacks dimensions. The router/caller dispatches the clarify tool; this
+    # function remains pure and never blocks point commands or dimensioned requests.
+    creative_preflight_payload = None
+    if durable and command is None and envelope.can_create_work:
+        try:
+            from workstation.creative_preflight import build_clarify_payload, check_creative_preflight
+            task_context = (structured or {}).get("task_context") if isinstance(structured, dict) else None
+            preflight_result = check_creative_preflight(envelope.content, task_context=task_context)
+            creative_preflight_payload = build_clarify_payload(preflight_result)
+        except Exception:  # health: allow BLE001 -- preflight failure must never block intent classification
+            creative_preflight_payload = None
     requires_task = bool(envelope.can_create_work and durable)
     admission_kind = "durable_task" if requires_task else "point_action" if command is not None else "conversation"
-    return WorkIntent(kind, requires_task, browser, False, "durable" if durable else "turn",
-                      RiskLevel.MEDIUM if durable else RiskLevel.LOW,
-                      AcceptanceContract(), repeatability_hint=durable,
-                      constraints=(structured or {}).get("constraints", {}),
-                      admission_kind=admission_kind)
+    intent = WorkIntent(kind, requires_task, browser, False, "durable" if durable else "turn",
+                        RiskLevel.MEDIUM if durable else RiskLevel.LOW,
+                        AcceptanceContract(), repeatability_hint=durable,
+                        constraints=(structured or {}).get("constraints", {}),
+                        admission_kind=admission_kind)
+    if creative_preflight_payload is not None:
+        intent.constraints["creative_preflight"] = creative_preflight_payload
+    return intent
 
 
 def prepare_turn_work(agent, content, envelope: MessageEnvelope | None = None) -> WorkIntent:

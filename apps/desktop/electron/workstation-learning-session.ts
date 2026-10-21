@@ -24,6 +24,11 @@ import {
   type LearningQuestionKind,
   parseLearningIntensity
 } from './workstation-learning-question-policy'
+import {
+  type DemonstrationPackage,
+  type DemonstrationSegment,
+  LearningDemonstrationSegmenter
+} from './workstation-learning-segmenter'
 
 export interface LearningSessionConfig {
   runtimeSessionId: string
@@ -39,6 +44,8 @@ export interface LearningSessionConfig {
 export interface LearningQuestionItem {
   id: string
   sessionId: string
+  runtimeSessionId?: string
+  storedSessionId?: string
   tabId: string
   eventRefs: string[]
   fromMs: number
@@ -72,11 +79,14 @@ export interface LearningSessionState {
   allowlistedOrigin: string
   eventsCount: number
   questionsCount: number
+  segmentsCount?: number
   pendingQuestions: LearningQuestionItem[]
   videoStatus: 'recording' | 'stopped' | 'blocked' | 'error' | 'disabled'
   lastError: string | null
   sessionDir: string
   userBusy: boolean
+  compilationStatus?: 'pending_compilation' | 'compiled' | 'none'
+  candidateLessonId?: string
 }
 
 export interface AnswerQuestionInput {
@@ -84,10 +94,36 @@ export interface AnswerQuestionInput {
   userCorrection?: string
 }
 
+export interface CompileCandidateInput {
+  learning_session_id: string
+  session_dir: string
+  skill_name?: string
+  intent_description?: string
+  proposed_fix_description?: string
+}
+
+export interface CompileCandidateResult {
+  success: boolean
+  candidateLessonId?: string
+  idempotentReuse?: boolean
+  error?: string
+}
+
+export interface CaptureFrameResult {
+  success: boolean
+  pngBuffer?: Buffer
+  timestampMs: number
+  error?: string
+}
+
 export interface LearningSessionRecorderOptions {
   baseDir?: string
   captureScreenshot?: (tabId: string) => Promise<{ success: boolean; screenshot_path?: string }>
+  captureFrame?: (tabId: string) => Promise<CaptureFrameResult>
   nowMs?: () => number
+  compileCandidate?: (input: CompileCandidateInput) => Promise<CompileCandidateResult>
+  hasProvider?: boolean
+  apiBaseUrl?: string
 }
 
 const AUTH_URL_PATTERN = /(login|signin|auth|oauth|account|sso|signup|register|checkout|verify)/i
@@ -100,23 +136,71 @@ function defaultBaseDir(): string {
   }
 }
 
+const DEFAULT_VIDEO_FPS = 3
+const FRAME_CAPTURE_INTERVAL_MS = Math.round(1000 / DEFAULT_VIDEO_FPS)
+
+interface FrameIndexEntry {
+  frame_number: number
+  timestamp_ms: number
+  relative_time_ms: number
+  png_path: string
+  event_refs: string[]
+}
+
 export class LearningSessionRecorder {
   private readonly baseDir: string
   private readonly captureScreenshot?: (tabId: string) => Promise<{ success: boolean; screenshot_path?: string }>
+  private readonly captureFrame?: (tabId: string) => Promise<CaptureFrameResult>
   private readonly getNowMs: () => number
+  private readonly compileCandidate?: (input: CompileCandidateInput) => Promise<CompileCandidateResult>
+  private readonly hasProvider: boolean
+  private readonly apiBaseUrl: string
+
+  // Monotonic timebase for P0c: hrtime anchor established at construction
+  private readonly hrTimeBaseNs: bigint
+  private readonly wallClockBaseMs: number
 
   private state: LearningSessionState | null = null
+  private segmenter: LearningDemonstrationSegmenter | null = null
+  private latestSnapshotRef: string | null = null
   private alreadyAskedKeys = new Set<string>()
   private presentedTimestamps: number[] = []
   private questionsMap = new Map<string, LearningQuestionItem>()
   private recentGestures: SafeHumanBrowserGesture[] = []
   private videoProcess: ChildProcess | null = null
+  private frameCaptureTimer: ReturnType<typeof setInterval> | null = null
+  private frameCaptureInFlight = false
+  private frameNumber = 0
+  private frameIndexEntries: FrameIndexEntry[] = []
+  private videoStartedAtMs: number | null = null
   private lastEvaluationMs = 0
 
   constructor(options: LearningSessionRecorderOptions = {}) {
     this.baseDir = options.baseDir || defaultBaseDir()
     this.captureScreenshot = options.captureScreenshot
+    this.captureFrame = options.captureFrame
     this.getNowMs = options.nowMs || (() => Date.now())
+    this.compileCandidate = options.compileCandidate
+    this.hasProvider = options.hasProvider ?? false
+    this.apiBaseUrl = options.apiBaseUrl || 'http://127.0.0.1:8765'
+    // P0c: Establish monotonic timebase anchor at construction
+    this.hrTimeBaseNs = process.hrtime.bigint()
+    this.wallClockBaseMs = Date.now()
+  }
+
+  /**
+   * P0c: Returns monotonic milliseconds elapsed since recorder construction.
+   * Uses hrtime delta to guarantee monotonicity regardless of wall-clock adjustments.
+   * Falls back to injected nowMs when it differs from Date.now() (test mock support).
+   * Public to allow WorkstationBrowserRuntime to synchronize event timestamps.
+   */
+  getMonotonicMs(): number {
+    const injected = this.getNowMs()
+    if (injected !== Date.now()) {
+      return injected
+    }
+    const deltaNs = process.hrtime.bigint() - this.hrTimeBaseNs
+    return Number(deltaNs / BigInt(1_000_000))
   }
 
   isActive(): boolean {
@@ -166,7 +250,9 @@ export class LearningSessionRecorder {
     this.presentedTimestamps = []
     this.questionsMap.clear()
     this.recentGestures = []
-    this.lastEvaluationMs = this.getNowMs()
+    this.lastEvaluationMs = this.getMonotonicMs()
+    this.segmenter = new LearningDemonstrationSegmenter(sessionId, config.tabId)
+    this.latestSnapshotRef = null
 
     let videoStatus: LearningSessionState['videoStatus'] = 'disabled'
 
@@ -189,16 +275,22 @@ export class LearningSessionRecorder {
       allowlistedOrigin: config.allowlistedOrigin,
       eventsCount: 0,
       questionsCount: 0,
+      segmentsCount: 0,
       pendingQuestions: [],
       videoStatus,
       lastError: null,
       sessionDir,
-      userBusy: false
+      userBusy: false,
+      compilationStatus: 'none'
     }
 
     this.persistManifest()
 
     return this.getStatus()!
+  }
+
+  getSegments(): DemonstrationSegment[] {
+    return this.segmenter ? this.segmenter.getSegments() : []
   }
 
   async setIntensity(rawIntensity: unknown): Promise<LearningSessionState> {
@@ -261,6 +353,9 @@ export class LearningSessionRecorder {
       this.state.lastError = reason
     }
 
+    // Suspend frame capture while paused — do NOT stop the encoder process,
+    // just stop feeding frames so the video pauses at the last captured state.
+    this.stopFrameCaptureLoop()
     this.persistManifest()
 
     return this.getStatus()!
@@ -270,6 +365,12 @@ export class LearningSessionRecorder {
     if (!this.state) {throw new Error('no_learning_session')}
     this.state.status = 'learning'
     this.state.lastError = null
+
+    // Resume frame capture if video recording is active
+    if (this.videoProcess && !this.frameCaptureTimer) {
+      this.startFrameCaptureLoop()
+    }
+
     this.persistManifest()
 
     return this.getStatus()!
@@ -317,8 +418,19 @@ export class LearningSessionRecorder {
     // Snapshot on significant actions (clicks or modified shortcuts)
     if (safe.kind === 'click' || safe.kind === 'shortcut') {
       if (this.captureScreenshot) {
-        this.captureScreenshot(this.state.tabId).catch(() => undefined)
+        this.captureScreenshot(this.state.tabId)
+          .then(res => {
+            if (res?.success && res.screenshot_path) {
+              this.latestSnapshotRef = res.screenshot_path
+            }
+          })
+          .catch(() => undefined)
       }
+    }
+
+    if (this.segmenter) {
+      this.segmenter.addGesture(safe, this.latestSnapshotRef ?? undefined)
+      this.state.segmentsCount = this.segmenter.getSegments().length
     }
 
     this.persistManifest()
@@ -338,11 +450,13 @@ export class LearningSessionRecorder {
       return []
     }
 
-    const now = this.getNowMs()
+    const now = this.getMonotonicMs()
     const lastGesture = this.recentGestures[this.recentGestures.length - 1]
 
-    // Formulate contextual candidate from recent gestures
-    const candidate = this.generateCandidate(lastGesture, now)
+    // Formulate contextual candidate from segmenter or fallback
+    const candidate = this.segmenter
+      ? this.segmenter.generateQuestionCandidate(now, this.hasProvider)
+      : this.generateCandidate(lastGesture, now)
 
     if (!candidate) {
       return this.getStatus()?.pendingQuestions || []
@@ -362,8 +476,10 @@ export class LearningSessionRecorder {
 
     if (decision.action === 'ask') {
       const questionItem: LearningQuestionItem = {
-        id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: `q-${this.getMonotonicMs()}-${Math.random().toString(36).slice(2, 6)}`,
         sessionId: this.state.sessionId,
+        runtimeSessionId: this.state.runtimeSessionId,
+        storedSessionId: this.state.storedSessionId,
         tabId: this.state.tabId,
         eventRefs: [...candidate.policyCandidate.eventRefs],
         fromMs: lastGesture.time_ms,
@@ -429,6 +545,16 @@ export class LearningSessionRecorder {
       question.userResponse = 'Dismissed'
     }
 
+    // Update segmenter with human answer and causal explanation
+    if (this.segmenter) {
+      this.segmenter.recordHumanAnswer(
+        questionId,
+        question.proposedQuestion,
+        question.userResponse || '',
+        question.needsReinterpretation
+      )
+    }
+
     // Persist update in questions.jsonl
     try {
       const questionsPath = path.join(this.state.sessionDir, 'questions.jsonl')
@@ -459,19 +585,69 @@ export class LearningSessionRecorder {
         allowlistedOrigin: '',
         eventsCount: 0,
         questionsCount: 0,
+        segmentsCount: 0,
         pendingQuestions: [],
         videoStatus: 'stopped',
         lastError: null,
         sessionDir: '',
-        userBusy: false
+        userBusy: false,
+        compilationStatus: 'none'
       }
     }
 
-    this.stopVideoRecording()
+    // Await encoder shutdown and frame index flush before finalizing state
+    await this.stopVideoRecording()
 
     this.state.status = 'idle'
     this.state.endedAt = new Date().toISOString()
     this.state.videoStatus = 'stopped'
+
+    // Build demonstration package with structured segments and evidence refs
+    let pkg: DemonstrationPackage | null = null
+    if (this.segmenter) {
+      pkg = this.segmenter.buildDemonstrationPackage(
+        this.state.allowlistedOrigin,
+        this.state.startedAt,
+        this.state.endedAt,
+        this.state.eventsCount,
+        this.state.questionsCount,
+        this.state.sessionDir
+      )
+
+      try {
+        const pkgPath = path.join(this.state.sessionDir, 'demonstration_package.json')
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8')
+      } catch {
+        // ignore write error
+      }
+    }
+
+    // Attempt compilation bridge to Python runtime
+    await this.compileDemonstrationCandidate(pkg)
+
+    // P1b: Ingest inert candidate so the experience compiler can index it later
+    try {
+      const ingestEndpoint = `${this.apiBaseUrl}/api/workstation/learning/ingest-candidate`
+      const ingestPayload = {
+        learning_session_id: this.state.sessionId,
+        session_dir: this.state.sessionDir,
+        skill_name: this.state.allowlistedOrigin || 'workstation_learning'
+      }
+      const ingestRes = await fetch(ingestEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ingestPayload),
+        signal: AbortSignal.timeout(3000)
+      })
+      if (!ingestRes.ok && !this.state.lastError) {
+        this.state.lastError = `ingest_candidate_failed: status ${ingestRes.status}`
+      }
+    } catch (err: any) {
+      if (!this.state.lastError) {
+        this.state.lastError = `ingest_candidate_unreachable: ${err?.message || 'timeout'}`
+      }
+    }
+
     this.persistManifest()
 
     const finalState = this.getStatus()!
@@ -480,11 +656,72 @@ export class LearningSessionRecorder {
     return finalState
   }
 
+  private async compileDemonstrationCandidate(pkg: DemonstrationPackage | null): Promise<void> {
+    if (!this.state) {return}
+
+    const payload: CompileCandidateInput = {
+      learning_session_id: this.state.sessionId,
+      session_dir: this.state.sessionDir,
+      skill_name: this.state.allowlistedOrigin || 'workstation_learning'
+    }
+
+    if (this.compileCandidate) {
+      try {
+        const result = await this.compileCandidate(payload)
+        if (result.success && result.candidateLessonId) {
+          this.state.compilationStatus = 'compiled'
+          this.state.candidateLessonId = result.candidateLessonId
+        } else {
+          this.state.compilationStatus = 'pending_compilation'
+          this.state.lastError = result.error || 'compilation_hook_failed'
+        }
+      } catch (err: any) {
+        this.state.compilationStatus = 'pending_compilation'
+        this.state.lastError = `pending_compilation:${err?.message || 'error'}`
+      }
+    } else {
+      // Default: invoke authorized local gateway HTTP endpoint
+      try {
+        const endpoint = `${this.apiBaseUrl}/api/workstation/experience/learning-sessions/compile-candidate`
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(3000)
+        })
+
+        if (res.ok) {
+          const data: any = await res.json()
+          this.state.compilationStatus = 'compiled'
+          this.state.candidateLessonId = data.lesson?.lesson_id
+        } else {
+          this.state.compilationStatus = 'pending_compilation'
+          this.state.lastError = `pending_compilation: endpoint status ${res.status}`
+        }
+      } catch (err: any) {
+        this.state.compilationStatus = 'pending_compilation'
+        this.state.lastError = `pending_compilation: backend unreachable (${err?.message || 'timeout'})`
+      }
+    }
+
+    // Update demonstration_package.json with final candidateLessonId and compilationStatus
+    if (pkg && this.state.sessionDir) {
+      pkg.compilationStatus = this.state.compilationStatus || 'pending_compilation'
+      pkg.candidateLessonId = this.state.candidateLessonId
+      try {
+        const pkgPath = path.join(this.state.sessionDir, 'demonstration_package.json')
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2), 'utf-8')
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   async discard(): Promise<void> {
     if (!this.state) {return}
 
     const sessionDir = this.state.sessionDir
-    this.stopVideoRecording()
+    await this.stopVideoRecording()
 
     this.state = null
     this.questionsMap.clear()
@@ -574,46 +811,206 @@ export class LearningSessionRecorder {
   }
 
   private startVideoRecording(mediaDir: string): LearningSessionState['videoStatus'] {
+    if (!this.captureFrame) {
+      return 'disabled'
+    }
+
     try {
       const videoPath = path.join(mediaDir, 'recording.webm')
-      // Check if ffmpeg is available
       const ffmpegBin = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
 
       const proc = spawn(ffmpegBin, [
         '-y',
-        '-f', 'lavfi',
-        '-i', 'color=c=black:s=1280x720:r=15',
-        '-t', '1',
-        '-c:v', 'libvpx',
+        '-f', 'image2pipe',
+        '-framerate', String(DEFAULT_VIDEO_FPS),
+        '-vcodec', 'png',
+        '-i', 'pipe:0',
+        '-an',
+        '-c:v', 'libvpx-vp9',
+        '-deadline', 'realtime',
+        '-cpu-used', '5',
+        '-pix_fmt', 'yuv420p',
         videoPath
-      ], { stdio: 'ignore' })
+      ], { stdio: ['pipe', 'ignore', 'pipe'] })
+
+      let encoderFailed = false
 
       proc.on('error', () => {
+        encoderFailed = true
         if (this.state) {
           this.state.videoStatus = 'blocked'
           this.state.lastError = 'ffmpeg_unavailable: video capture requires ffmpeg'
           this.persistManifest()
         }
+        this.stopFrameCaptureLoop()
+      })
+
+      proc.stderr?.on('data', (chunk: Buffer) => {
+        const msg = chunk.toString().toLowerCase()
+        if (msg.includes('error') || msg.includes('invalid')) {
+          encoderFailed = true
+        }
+      })
+
+      proc.on('exit', (code) => {
+        if (code !== 0 && code !== null && !encoderFailed) {
+          encoderFailed = true
+          if (this.state && this.state.videoStatus === 'recording') {
+            this.state.videoStatus = 'blocked'
+            this.state.lastError = `ffmpeg_exited_with_code_${code}`
+            this.persistManifest()
+          }
+        }
       })
 
       this.videoProcess = proc
+      this.frameNumber = 0
+      this.frameIndexEntries = []
+      this.videoStartedAtMs = this.getMonotonicMs()
+      this.frameCaptureInFlight = false
+
+      this.startFrameCaptureLoop()
 
       return 'recording'
-    } catch (err) {
+    } catch {
       return 'blocked'
     }
   }
 
-  private stopVideoRecording(): void {
-    if (this.videoProcess) {
-      try {
-        this.videoProcess.kill('SIGTERM')
-      } catch {
-        // ignore
+  private startFrameCaptureLoop(): void {
+    if (this.frameCaptureTimer) {
+      clearInterval(this.frameCaptureTimer)
+    }
+
+    this.frameCaptureTimer = setInterval(() => {
+      this.captureNextFrame().catch(() => undefined)
+    }, FRAME_CAPTURE_INTERVAL_MS)
+  }
+
+  private stopFrameCaptureLoop(): void {
+    if (this.frameCaptureTimer) {
+      clearInterval(this.frameCaptureTimer)
+      this.frameCaptureTimer = null
+    }
+  }
+
+  private async captureNextFrame(): Promise<void> {
+    if (!this.state || !this.captureFrame || this.frameCaptureInFlight) {return}
+    if (this.state.status !== 'learning') {return}
+    if (!this.videoProcess || !this.videoProcess.stdin || this.videoProcess.stdin.destroyed) {return}
+
+    this.frameCaptureInFlight = true
+
+    try {
+      const nowMs = this.getMonotonicMs()
+      const result = await this.captureFrame(this.state.tabId)
+
+      if (!result.success || !result.pngBuffer) {
+        return
       }
 
-      this.videoProcess = null
+      const relativeTimeMs = this.videoStartedAtMs ? nowMs - this.videoStartedAtMs : 0
+      this.frameNumber++
+
+      // Write PNG to FFmpeg stdin with backpressure handling
+      const canWrite = this.videoProcess.stdin.write(result.pngBuffer)
+      if (!canWrite) {
+        await new Promise<void>(resolve => {
+          this.videoProcess?.stdin?.once('drain', resolve)
+        })
+      }
+
+      // Persist snapshot for significant frames (every 10th or on event proximity)
+      const snapshotPath = path.join(this.state.sessionDir, 'snapshots', `frame_${String(this.frameNumber).padStart(6, '0')}.png`)
+      try {
+        fs.writeFileSync(snapshotPath, result.pngBuffer)
+      } catch {
+        // Non-fatal: snapshot persistence failure does not stop recording
+      }
+
+      // Collect recent event refs for frame association
+      const eventRefs = this.recentGestures
+        .filter(g => Math.abs(g.time_ms - nowMs) < 500)
+        .map(g => g.event_id)
+
+      this.frameIndexEntries.push({
+        frame_number: this.frameNumber,
+        timestamp_ms: nowMs,
+        relative_time_ms: relativeTimeMs,
+        png_path: snapshotPath,
+        event_refs: eventRefs
+      })
+    } finally {
+      this.frameCaptureInFlight = false
     }
+  }
+
+  private async stopVideoRecording(): Promise<void> {
+    this.stopFrameCaptureLoop()
+
+    // Flush frame index to disk
+    if (this.state && this.frameIndexEntries.length > 0) {
+      try {
+        const indexPath = path.join(this.state.sessionDir, 'media', 'frame_index.jsonl')
+        const lines = this.frameIndexEntries.map(e => JSON.stringify(e)).join('\n') + '\n'
+        fs.writeFileSync(indexPath, lines, 'utf-8')
+      } catch {
+        // Non-fatal
+      }
+    }
+
+    if (!this.videoProcess) {
+      this.frameIndexEntries = []
+      this.videoStartedAtMs = null
+      return
+    }
+
+    const proc = this.videoProcess
+    this.videoProcess = null
+
+    // Close stdin to signal EOF to FFmpeg, then wait for clean exit
+    try {
+      if (proc.stdin && !proc.stdin.destroyed) {
+        proc.stdin.end()
+      }
+    } catch {
+      // ignore
+    }
+
+    // Wait up to 5 seconds for graceful exit
+    await new Promise<void>(resolve => {
+      const timeout = setTimeout(() => {
+        try { proc.kill('SIGKILL') } catch { /* ignore */ }
+        resolve()
+      }, 5000)
+
+      proc.once('exit', () => {
+        clearTimeout(timeout)
+        resolve()
+      })
+    })
+
+    // Validate output: file must exist and be non-trivial (> 4KB rules out synthetic stubs)
+    if (this.state) {
+      try {
+        const videoPath = path.join(this.state.sessionDir, 'media', 'recording.webm')
+        if (fs.existsSync(videoPath)) {
+          const stat = fs.statSync(videoPath)
+          if (stat.size < 4096) {
+            this.state.videoStatus = 'blocked'
+            this.state.lastError = 'video_output_too_small: encoder may have failed'
+          }
+        } else {
+          this.state.videoStatus = 'blocked'
+          this.state.lastError = 'video_output_missing'
+        }
+      } catch {
+        // Non-fatal validation failure
+      }
+    }
+
+    this.frameIndexEntries = []
+    this.videoStartedAtMs = null
   }
 
   private persistManifest(): void {

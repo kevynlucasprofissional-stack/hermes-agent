@@ -18,7 +18,9 @@ import { clearAllPrompts } from '@/store/prompts'
 import { setTurnStartedAt } from '@/store/session'
 import { clearActiveSessionTodos } from '@/store/todos'
 
-import type { GatewayEventContext } from './types'
+import type { WorkstationMilestone } from '@/app/browser/types'
+
+import type { GatewayEventContext, GatewayEventDeps } from './types'
 
 /** Lifecycle text that announces the session left its selected model for a fallback. */
 export function isFallbackSwitchStatus(kind: string | undefined, text: string): boolean {
@@ -27,6 +29,85 @@ export function isFallbackSwitchStatus(kind: string | undefined, text: string): 
   }
 
   return /model fallback|provider fallback|switched to fallback|switching to fallback/i.test(text)
+}
+
+function handleWorkstationMilestoneEvent(
+  eventType: string,
+  payload: unknown,
+  sessionId: string | null,
+  occurredAt: number,
+  flushQueuedDeltas: GatewayEventDeps['flushQueuedDeltas'],
+  updateSessionState: GatewayEventDeps['updateSessionState']
+): boolean {
+  if ((eventType as string) !== 'workstation.milestone') {
+    return false
+  }
+  const milestone = payload as Partial<WorkstationMilestone> | undefined
+  const targetSessionId = milestone?.sessionId || sessionId
+
+  if (milestone?.stage && targetSessionId) {
+    const eventId = String(milestone.eventId || Date.now())
+    const messageId = `milestone-${eventId}`
+    const json = JSON.stringify(milestone)
+
+    flushQueuedDeltas(targetSessionId)
+    updateSessionState(targetSessionId, state => {
+      if (state.messages.some(m => m.id === messageId)) {
+        return state
+      }
+
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          {
+            id: messageId,
+            role: 'system',
+            parts: [textPart(`workstation:${json}`, occurredAt)],
+            timestamp: occurredAt
+          }
+        ]
+      }
+    })
+  }
+
+  return true
+}
+
+function handleBtwCompleteEvent(
+  eventType: string,
+  payload: unknown,
+  sessionId: string | null,
+  occurredAt: number,
+  flushQueuedDeltas: GatewayEventDeps['flushQueuedDeltas'],
+  updateSessionState: GatewayEventDeps['updateSessionState']
+): boolean {
+  if (eventType !== 'btw.complete') {
+    return false
+  }
+  const text = coerceGatewayText((payload as any)?.text).trim()
+
+  if (text && sessionId) {
+    const taskId = String((payload as any)?.task_id ?? '').trim()
+    const question = coerceGatewayText((payload as any)?.question).trim()
+    const header = `[btw${question ? ` "${question}"` : ''}${taskId ? ` (${taskId})` : ''}]`
+
+    flushQueuedDeltas(sessionId)
+    updateSessionState(sessionId, state => ({
+      ...state,
+      messages: [
+        ...state.messages,
+        {
+          id: `btw-complete-${taskId || Date.now()}`,
+          role: 'system',
+          parts: [textPart(`${header}\n${text}`, occurredAt)],
+          timestamp: occurredAt
+        }
+      ]
+    }))
+  }
+
+  return true
 }
 
 /** status.update / review.summary / notification.show / notification.clear /
@@ -143,32 +224,16 @@ export function handleStatusEvent(ctx: GatewayEventContext): boolean {
     return true
   }
 
-  if (event.type === 'btw.complete') {
-    // prompt.btw answers a side question and emits this on the originating
-    // session. Persistent transcript line, matching the TUI's `[btw "q"]`
-    // — without it Desktop only ever showed the acknowledgement (#99065).
-    const text = coerceGatewayText(payload?.text).trim()
-
-    if (text && sessionId) {
-      const taskId = String(payload?.task_id ?? '').trim()
-      const question = coerceGatewayText(payload?.question).trim()
-      const header = `[btw${question ? ` "${question}"` : ''}${taskId ? ` (${taskId})` : ''}]`
-
-      flushQueuedDeltas(sessionId)
-      updateSessionState(sessionId, state => ({
-        ...state,
-        messages: [
-          ...state.messages,
-          {
-            id: `btw-complete-${taskId || Date.now()}`,
-            role: 'system',
-            parts: [textPart(`${header}\n${text}`, occurredAt)],
-            timestamp: occurredAt
-          }
-        ]
-      }))
-    }
-
+  if (
+    handleBtwCompleteEvent(
+      event.type,
+      payload,
+      sessionId,
+      occurredAt,
+      flushQueuedDeltas,
+      updateSessionState
+    )
+  ) {
     return true
   }
 
@@ -206,6 +271,19 @@ export function handleStatusEvent(ctx: GatewayEventContext): boolean {
       }))
     }
 
+    return true
+  }
+
+  if (
+    handleWorkstationMilestoneEvent(
+      event.type,
+      payload,
+      sessionId,
+      occurredAt,
+      flushQueuedDeltas,
+      updateSessionState
+    )
+  ) {
     return true
   }
 

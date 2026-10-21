@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -99,6 +100,7 @@ def save_moa_turn(
             output_location = "assistant_message_in_session_db"
         record = {
             "ts": time.time(),
+            "ts_iso": datetime.now(timezone.utc).isoformat(),
             "session_id": session_id,
             "preset": preset_name,
             "references": [_slot_trace(acct, label) for label, _text, acct in reference_outputs],

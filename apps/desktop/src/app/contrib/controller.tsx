@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react'
 import { atom, computed } from 'nanostores'
 import type { CSSProperties, ReactElement, PointerEvent as ReactPointerEvent } from 'react'
+import { AiControlBadge } from '@/app/shell/AiControlBadge'
 
 import { SessionDraftTitle } from '@/app/chat/session-draft-title'
 import { SessionStatusDot } from '@/app/chat/session-status-dot'
@@ -835,6 +836,7 @@ export function ContribController() {
           <Butterbar />
           <TermsButterbar />
           {statusbarVisible && <WiredPane part="statusbar" />}
+          <AiControlBadge />
         </div>
       </ContribWiring>
     </SidebarProvider>

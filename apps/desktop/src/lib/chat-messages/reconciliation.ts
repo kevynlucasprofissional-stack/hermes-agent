@@ -547,6 +547,14 @@ export function preserveLocalAssistantErrors(
  * a `rowId` and are left to the page. Idempotent by id and text.
  */
 export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentMessages: ChatMessage[]): ChatMessage[] {
+  const isWorkstationNotice = (message: ChatMessage): boolean => {
+    if (message.role !== 'system' || message.rowId !== undefined) {
+      return false
+    }
+    const text = chatMessageText(message).trim()
+    return text.startsWith('workstation:') || text.startsWith('learning-question:')
+  }
+
   const trailing: ChatMessage[] = []
 
   for (let index = currentMessages.length - 1; index >= 0; index -= 1) {
@@ -561,18 +569,47 @@ export function preserveLocalSystemNotices(nextMessages: ChatMessage[], currentM
     }
   }
 
-  if (!trailing.length) {
+  const nonTrailingWorkstation: ChatMessage[] = []
+  const trailingSet = new Set(trailing.map(m => m.id))
+
+  for (const message of currentMessages) {
+    if (isWorkstationNotice(message) && !trailingSet.has(message.id)) {
+      nonTrailingWorkstation.push(message)
+    }
+  }
+
+  const toPreserve = [...nonTrailingWorkstation, ...trailing]
+
+  if (!toPreserve.length) {
     return nextMessages
   }
 
   const nextIds = new Set(nextMessages.map(message => message.id))
   const nextTexts = new Set(nextMessages.map(message => chatMessageText(message).trim()))
 
-  const unstored = trailing.filter(
+  const unstored = toPreserve.filter(
     message => !nextIds.has(message.id) && !nextTexts.has(chatMessageText(message).trim())
   )
 
-  return unstored.length ? [...nextMessages, ...unstored] : nextMessages
+  if (!unstored.length) {
+    return nextMessages
+  }
+
+  if (nonTrailingWorkstation.length > 0) {
+    const result = [...nextMessages]
+    for (const msg of unstored) {
+      const msgTime = msg.timestamp ?? 0
+      const insertIndex = result.findIndex(m => (m.timestamp ?? 0) > msgTime)
+      if (insertIndex === -1) {
+        result.push(msg)
+      } else {
+        result.splice(insertIndex, 0, msg)
+      }
+    }
+    return result
+  }
+
+  return [...nextMessages, ...unstored]
 }
 
 export function branchGroupForUser(userMessage: ChatMessage): string {

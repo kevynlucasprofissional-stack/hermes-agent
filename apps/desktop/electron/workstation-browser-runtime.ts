@@ -53,6 +53,7 @@ import {
   buildWorkstationResourceSnapshot,
   WORKSTATION_EVENT_SCHEMA_VERSION,
   type WorkstationEventSnapshot,
+  type WorkstationMilestone,
   type WorkstationResourceSnapshot
 } from './workstation-browser-resources'
 import {
@@ -80,6 +81,7 @@ import {
   type BrowserTaskSeed
 } from './workstation-browser-task'
 import { renderCreativeFrame, withCreativeCaptureLayout } from './workstation-creative-frame'
+import { buildLearningObserverScript } from './workstation-learning-dom'
 import {
   type RawHumanBrowserGesture,
   type SafeHumanBrowserGesture
@@ -1856,7 +1858,18 @@ export class WorkstationBrowserRuntime {
         this.removeChildView(entry)
       }
     } else {
-      if (entry && this.ownerWindow && this.bounds && this.attached) {
+      if (entry && this.ownerWindow && this.bounds) {
+        // HWH-P01-FIX: When an overlay is dismissed, setVisible(true) arrives
+        // but this.attached may still be false if detachActiveView ran during
+        // the occlusion window (e.g. Hub↔Chat transfer while overlay was open).
+        // The host's explicit visibility intent authorizes defensive re-attach:
+        // ensureChildView + setBounds restores the WebContentsView without
+        // stealing ownership from another session. Without this guard the view
+        // stays parked and the user sees a black screen until the next manual
+        // attach or resize event fires publishBounds(true).
+        if (!this.attached) {
+          this.attached = true
+        }
         this.ensureChildView(this.ownerWindow, entry.view)
         entry.view.setBounds(this.bounds)
       }
@@ -2167,6 +2180,33 @@ export class WorkstationBrowserRuntime {
           if (!entry) {return { success: false }}
 
           return this.screenshotForEntry(entry) as Promise<{ success: boolean; screenshot_path?: string }>
+        },
+        captureFrame: async (tabId: string) => {
+          const entry = this.entries.get(tabId)
+
+          if (!entry || entry.view.webContents.isDestroyed()) {
+            return { success: false, timestampMs: Date.now(), error: 'tab_unavailable' }
+          }
+
+          try {
+            const image = await entry.view.webContents.capturePage()
+
+            if (!image || image.isEmpty()) {
+              return { success: false, timestampMs: Date.now(), error: 'empty_capture' }
+            }
+
+            return {
+              success: true,
+              pngBuffer: Buffer.from(image.toPNG()),
+              timestampMs: Date.now()
+            }
+          } catch (err) {
+            return {
+              success: false,
+              timestampMs: Date.now(),
+              error: err instanceof Error ? err.message : 'capture_failed'
+            }
+          }
         }
       })
     }
@@ -2208,11 +2248,19 @@ export class WorkstationBrowserRuntime {
 
     this.takeControl(entry.ownerTaskId, sessionId ?? undefined)
 
+    // Resolve the stored session ID from the task's sessionHost when no explicit
+    // sessionId is provided. The renderer passes ownerTaskId (a task ID, not a
+    // session ID) which would otherwise produce a synthetic st-<tabId> that
+    // never matches the chat's selectedStoredSessionId, silently dropping all
+    // learning questions from the transcript.
+    const taskSessionHost = this.taskLifecycle().task(entry.ownerTaskId)?.sessionHost
+    const effectiveStoredSessionId = sessionId || taskSessionHost || `st-${targetTabId}`
+
     const recorder = this.getLearningRecorder()
 
     const state = await recorder.start({
       runtimeSessionId: sessionId || entry.ownerTaskId || `sess-${targetTabId}`,
-      storedSessionId: sessionId || `st-${targetTabId}`,
+      storedSessionId: effectiveStoredSessionId,
       tabId: targetTabId,
       webContentsId: entry.view.webContents.id,
       documentEpoch: entry.documentEpoch,
@@ -2273,9 +2321,34 @@ export class WorkstationBrowserRuntime {
   async recordLearningGesture(gesture: RawHumanBrowserGesture): Promise<SafeHumanBrowserGesture | null> {
     if (!this.learningRecorder || !this.learningRecorder.isActive()) {return null}
     const safe = await this.learningRecorder.recordGesture(gesture)
+    // Re-emit after recordGesture completes (which includes evaluateQuestions)
+    // so pendingQuestions are populated in the emitted state.
     this.emitLearningState()
 
+    if (safe && this.learningRecorder) {
+      const status = this.learningRecorder.getStatus()
+      if (status) {
+        this.emitMilestone({
+          eventId: `ms-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          sessionId: status.storedSessionId || status.runtimeSessionId || status.sessionId,
+          stage: 'observed',
+          occurredAt: new Date().toISOString(),
+          learningSessionId: status.sessionId,
+          evidenceRefs: safe.target ? [`target:${safe.target.accessibleName || safe.target.accessible_name || safe.target.role || 'element'}`] : [],
+          reasonCode: `gesture_${safe.kind}`
+        })
+      }
+    }
+
     return safe
+  }
+
+  emitMilestone(milestone: WorkstationMilestone): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('hermes:workstation-browser:milestone', milestone)
+      }
+    }
   }
 
   private emitLearningState(): void {
@@ -2290,68 +2363,7 @@ export class WorkstationBrowserRuntime {
 
   private injectLearningObserver(entry: BrowserEntry): void {
     const wc = entry.view.webContents
-
-    const script = `(() => {
-      if (window.__hermesLearningActive) return;
-      window.__hermesLearningActive = true;
-      const SENSITIVE = /password|passcode|secret|token|key|credential|authorization|cookie|otp|recovery|private|account|session|api|payment|card|email|address/i;
-      function isSens(el) {
-        if (!el) return false;
-        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) return true;
-        if (el.type === 'password') return true;
-        const name = el.getAttribute('aria-label') || '';
-        return SENSITIVE.test(name);
-      }
-      window.addEventListener('click', (e) => {
-        if (!window.__hermesLearningActive) return;
-        if (isSens(e.target)) return;
-        const role = e.target.getAttribute?.('role') || (e.target.tagName === 'BUTTON' ? 'button' : (e.target.tagName === 'A' ? 'link' : ''));
-        const name = e.target.getAttribute?.('aria-label') || (e.target.tagName === 'BUTTON' ? (e.target.innerText || '').slice(0, 80) : '');
-        console.debug('__HERMES_GESTURE__' + JSON.stringify({
-          kind: 'click',
-          x: e.clientX,
-          y: e.clientY,
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight,
-          role: role || undefined,
-          accessibleName: name || undefined,
-          elementTag: e.target.tagName?.toLowerCase()
-        }));
-      }, true);
-      window.addEventListener('pointerdown', (e) => {
-        if (!window.__hermesLearningActive || isSens(e.target)) return;
-        console.debug('__HERMES_GESTURE__' + JSON.stringify({
-          kind: 'pointerdown',
-          x: e.clientX,
-          y: e.clientY,
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight
-        }));
-      }, true);
-      window.addEventListener('pointerup', (e) => {
-        if (!window.__hermesLearningActive || isSens(e.target)) return;
-        console.debug('__HERMES_GESTURE__' + JSON.stringify({
-          kind: 'pointerup',
-          x: e.clientX,
-          y: e.clientY,
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight
-        }));
-      }, true);
-      window.addEventListener('keydown', (e) => {
-        if (!window.__hermesLearningActive || isSens(e.target)) return;
-        if (!e.ctrlKey && !e.metaKey && !e.altKey) return;
-        console.debug('__HERMES_GESTURE__' + JSON.stringify({
-          kind: 'shortcut',
-          key: e.key,
-          ctrl: e.ctrlKey,
-          meta: e.metaKey,
-          alt: e.altKey,
-          shift: e.shiftKey
-        }));
-      }, true);
-    })();`
-
+    const script = buildLearningObserverScript()
     wc.executeJavaScript(script).catch(() => undefined)
   }
 
@@ -5228,10 +5240,13 @@ export class WorkstationBrowserRuntime {
       if (typeof message === 'string' && message.startsWith('__HERMES_GESTURE__') && this.learningRecorder?.isActive()) {
         try {
           const raw = JSON.parse(message.slice('__HERMES_GESTURE__'.length))
-          raw.eventId = `ev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+          // P0c: Monotonic timebase for event timestamps
+          const hrBase = this.learningRecorder?.getMonotonicMs?.() ?? Date.now()
+          raw.eventId = `ev-${hrBase}-${Math.random().toString(36).slice(2, 7)}`
           raw.tabId = entry.id
           raw.documentEpoch = entry.documentEpoch
-          raw.relativeTimeMs = Date.now()
+          raw.relativeTimeMs = hrBase
+          raw.schema_version = 2
           void this.recordLearningGesture(raw)
         } catch {
           // ignore

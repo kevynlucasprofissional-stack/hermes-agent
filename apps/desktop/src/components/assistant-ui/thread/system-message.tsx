@@ -8,12 +8,17 @@ import { SCAFFOLD_GLYPH_CLASS, SCAFFOLD_LABEL_CLASS, ScaffoldRow } from '@/compo
 import { Codicon } from '@/components/ui/codicon'
 import { LogView } from '@/components/ui/log-view'
 import { ToolIcon } from '@/components/ui/tool-icon'
+import type { LearningQuestionItem, WorkstationMilestone } from '@/app/browser/types'
+import { ChatLearningQuestionCard } from '@/components/assistant-ui/thread/chat-learning-question-card'
+import { ChatWorkstationMilestoneCard } from '@/components/assistant-ui/thread/chat-workstation-milestone-card'
 import { LinkifiedText } from '@/lib/external-link'
 import { cn } from '@/lib/utils'
 
 const SLASH_STATUS_RE = /^slash:(?<command>\/[^\n]+)\n(?<output>[\s\S]*)$/
 const STEER_NOTE_RE = /^steer:(?<text>[\s\S]+)$/
 const REVIEW_NOTE_RE = /^review:(?<label>[^:\n]+):?\s*(?<detail>[\s\S]*)$/
+const LEARNING_QUESTION_RE = /^learning-question:(?<json>[\s\S]+)$/
+const WORKSTATION_MILESTONE_RE = /^workstation:(?<json>[\s\S]+)$/
 
 interface BackgroundResultProps {
   text: string
@@ -160,6 +165,30 @@ export const SystemMessage: FC = () => {
         <MessageTimelineTimestamp className={cn(multiline ? 'mt-0.5 block' : 'ml-1.5')} />
       </MessagePrimitive.Root>
     )
+  }
+
+  const learningQuestionMatch = text.match(LEARNING_QUESTION_RE)
+
+  if (learningQuestionMatch?.groups?.json) {
+    try {
+      const question = JSON.parse(learningQuestionMatch.groups.json) as LearningQuestionItem
+
+      return <ChatLearningQuestionCard question={question} />
+    } catch {
+      // Fall through to plain text if malformed
+    }
+  }
+
+  const milestoneMatch = text.match(WORKSTATION_MILESTONE_RE)
+
+  if (milestoneMatch?.groups?.json) {
+    try {
+      const milestone = JSON.parse(milestoneMatch.groups.json) as WorkstationMilestone
+
+      return <ChatWorkstationMilestoneCard milestone={milestone} />
+    } catch {
+      // Fall through to plain text if malformed
+    }
   }
 
   const multiline = text.includes('\n')

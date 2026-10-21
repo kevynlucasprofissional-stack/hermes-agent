@@ -207,4 +207,41 @@ describe('Native View Occlusion', () => {
 
     expect(setVisible).toHaveBeenCalledWith(false, 'chat')
   })
+
+  // HWH-P01-FIX: When an overlay is dismissed while the host is detached
+  // (e.g. Hub↔Chat transfer during occlusion), setVisible(true) must still
+  // be issued so the runtime can defensively re-attach the WebContentsView.
+  // Without this, the view stays parked and the user sees a black screen
+  // until the next manual resize or navigation.
+  it('restores visibility after overlay dismissal even when host was detached during occlusion', async () => {
+    const setVisible = vi.fn().mockResolvedValue({})
+    const bridge = { setVisible } as unknown as WorkstationBrowserBridge
+
+    const overlay = document.createElement('div')
+    overlay.setAttribute('data-native-view-occluder', 'true')
+    document.body.appendChild(overlay)
+
+    const { renderHook, waitFor } = await import('@testing-library/react')
+
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useNativeViewOcclusion(bridge, 'hub', { enabled }),
+      { initialProps: { enabled: true } }
+    )
+
+    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'hub'))
+    setVisible.mockClear()
+
+    // Simulate detach during occlusion (host lost ownership while overlay was open)
+    rerender({ enabled: false })
+    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'hub'))
+    setVisible.mockClear()
+
+    // Overlay dismissed while detached
+    overlay.remove()
+    await new Promise(resolve => setTimeout(resolve, 10))
+
+    // Host re-enabled (transfer back / reattach) — must restore visibility
+    rerender({ enabled: true })
+    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(true, 'hub'))
+  })
 })

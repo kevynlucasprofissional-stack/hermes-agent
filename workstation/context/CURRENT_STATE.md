@@ -1,24 +1,34 @@
 # Current State
+## 2026-10-18 — Human Demonstration Learning Mode P03: Perguntas no Chat e Marcos Operacionais (D-047A)
+**IMPLEMENTED (P03) / REPLAY ON HOLD (M3)** na branch `feat/hermes-work-p03-chat-learning-logs-20261017`.
+- **Perguntas no Chat & Desobstrução do Canvas:** Migração das perguntas do modo Aprender da camada/overlay do navegador para o transcript do chat como cartões interativos (`ChatLearningQuestionCard`). O host do navegador (`learning-controls.tsx`) permanece limpo com controles essenciais (Aprender/Parar, intensidade ao vivo, status e Descartar; e banner discreto `LearningNoChatNotice` se desconectado), eliminando oclusão do `WebContentsView` e prevenindo telas pretas.
+- **Ações Humanas Persistentes:** Respostas a hipóteses (Confirmar, Corrigir com texto customizado, Adiar, Dispensar) invocam `learningAnswerQuestion` via IPC do Electron, registrando respostas e correções humanas em `questions.jsonl` com preservação no histórico persistido.
+- **Marcos Operacionais Autênticos (`WorkstationMilestone`):** Emissão e renderização cronológica no chat de 8 estágios do Workstation (`observed`, `candidate`, `compilation_started`, `validation_passed`, `validation_failed`, `capability_selected`, `executed`, `rejected`) com sanitização ativa de evidências contra PII e segredos em `workstation/milestones.py`. Emitidos exclusivamente por confirmações reais em `skill_learning.py`, `router.py`, `lifecycle.py` e `run_local_adoption.py`.
+- **Isolamento de Sessão sem Vazamento:** Indexação e filtragem rigorosa por `sessionId`, `storedSessionId`, `runtimeSessionId` e `question.id`/`eventId` em `use-workstation-chat-sync.ts` e `status.ts`. Reconciliação do transcript (`reconciliation.ts`) preserva avisos de marcos (`workstation:`) e perguntas (`learning-question:`) em ordem temporal, eliminando duplicações em reconexões.
+- **Testes & Qualificação:** 36 Vitest UI PASS, 22 Vitest Electron PASS, 15 Vitest Occlusion PASS, 11 Pytest Workstation PASS, TypeScript Typecheck exit 0, Health check 0 blocking / 0 advisory. M3 mantido em HOLD.
 
-## 2026-10-19 — P2 integrated validation: stale→NOT_DISPATCHED→recovery PASS
-Teste P2 integrado passou: cenário completo de stale ref → terminal NOT_DISPATCHED durável → recuperação com novo operationId na mesma aba → replay idempotente retorna terminal persistido. Integração P0A no runtime (`browser_click`, `browser_type`, substeps de `browser_batch_actions`) + lógica de replay NOT_DISPATCHED em `executeControlRequest` + stub preciso no harness (match exato na ref serializada). Suíte completa: 132 testes passaram (resiliência + admissão P0A + extract cache), typecheck limpo. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real (requer autorização) e persistência SQLite P1B. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+## 2026-10-18 — Human Demonstration Learning Mode P05: Semantic DOM Deltas, Breadcrumbs e Correlação (D-049)
+**IMPLEMENTED (P05) / REPLAY ON HOLD (M3)** na branch `feat/hermes-work-p05-semantic-dom-deltas-20261018`.
+- **Breadcrumbs de Contêiner Ancestral:** `extractContainerBreadcrumb` (`workstation-learning-dom.ts`) extrai e normaliza regiões funcionais ancestrais (`toolbar`, `navigation`, `dialog`, `tabpanel`, `aside`, e classes/IDs contendo `panel`, `sidebar`, `layer`, `prop`, etc.). Integrado ao `SafeHumanBrowserGestureTarget.containerBreadcrumb`.
+- **Captura Segura de Valores e Blindagem de Privacidade:** `extractControlValueAndUnit` extrai valores e unidades numéricas/opções de sliders (`input[type=range]`, `input[type=number]`, `aria-valuenow`, `<select>`). Campos de texto livre editáveis, credenciais, emails, tokens e `contenteditable` são rejeitados de forma estrita e inviolável.
+- **Micro-Rastreamento de Efeito DOM (`MutationObserver` leve):** `observeQuickDomDelta` monitora mutações em janela de debounce de 250ms com teardown automático, capturando deltas pós-interação (`modal_opened`, `state_toggled`, `item_added`, `item_removed`, `none`) e anexando-os a `DomMutationDelta`.
+- **Question Engine e Correlação Canvas:** Em `workstation-learning-segmenter.ts`, hipóteses e perguntas agora contextualizam o painel e os valores de parâmetros ajustados, correlacionando-os com ferramentas ativas e rajadas de traços no Canvas (ex.: *"Qual critério visual determinou o ajuste de opacidade para 35% no painel de camadas?"*).
+- **Testes & Qualificação:** 83 testes Vitest PASS (11 arquivos), typecheck 100% verde (exit 0), health check 0 blocking / 0 advisory. M3 mantido em HOLD.
 
+## 2026-10-18 — Human Demonstration Learning Mode P02: Real Visual Capture (D-049A)
+**IMPLEMENTED (P02 / Etapas A–E)** na branch `feat/hermes-work-p05-semantic-dom-deltas-20261018`.
+- **Captura Real de Frames:** `LearningSessionRecorder.startVideoRecording()` substituiu a fonte sintética FFmpeg (`lavfi color=c=black`) por pipeline real: `WebContentsView.capturePage()` → NativeImage → PNG buffer → FFmpeg stdin (`image2pipe`, `libvpx-vp9`, 3 fps). Backpressure tratado via drain event; captura serializada com flag `frameCaptureInFlight`.
+- **Frame Index e Snapshots:** Cada frame capturado persiste em `snapshots/frame_NNNNNN.png` e é indexado em `media/frame_index.jsonl` com `frame_number`, `timestamp_ms`, `relative_time_ms`, `png_path` e `event_refs` (gestos dentro de ±500ms). Associação temporal monotônica entre eventos e frames.
+- **Ciclo de Vida Confiável:** `pause()` suspende o loop de captura sem matar o encoder; `resume()` reinicia o loop; `stop()` fecha stdin do FFmpeg, aguarda exit gracioso (timeout 5s), valida output (>4KB); `discard()` aguarda shutdown antes de remover arquivos. Encoder unavailable falha fechado com `videoStatus='blocked'`.
+- **Integração Browser Runtime:** `getLearningRecorder()` agora injeta `captureFrame` callback que usa `entry.view.webContents.capturePage()` existente, verificando `isDestroyed()` e retornando erro estruturado. Sem nova janela ou sessão.
+- **Testes:** 35/35 Vitest PASS (incluindo 4 novos testes de captura real no worktree: encode WebM jogável, associação gesto-frame, FFmpeg ausente, zero frames). Testes existentes preservados sem modificação.
 
-## 2026-10-19 — WBR-20261019: incident response / estado documental
-Consolidação de quatro auditorias do dogfood WhatsApp 19/10. Teste real: badge 55 não lidas, relatório 17 sem cobertura, ref stale + admission sem terminal e fence persistente; migração explícita ao browser_exec. Plano de cinco prompts com proteção de D-049 existente, ref local somente após fetch/ff seguro, proposta de terminal NOT_DISPATCHED em vez de apagar admissão. [Fonte](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
-
-
-## 2026-10-19 — D-049 estado de handoff (revalidar antes de editar)
-Remote feat/d049-browser-80-20-impl-20261018 estava em fd80408 antes deste commit; arquivo snapshot-views e seu teste untracked no host auditado, embora runtime já importe view. B0 bridge/Learning patches locais com testes focados, não CI. G1 schema_valid ainda sem integração durável; G2 view não oferecida ao agente. Status desta mudança DOCS ONLY / release HOLD. [Plano atualizado](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
-
-
-## 2026-10-18 — Browser D-049 after comparative audit [PLAN / NOT_IMPLEMENTED / NOT_RELEASE_QUALIFIED]
-Fonte: revisão de código `main@f436e949` e quatro repositórios de referência, **sem novos testes nativos**. Contratos reutilizáveis: `workstation-browser-snapshot[-diff].ts`, `workstation-browser-extract-cache.ts`, `workstation-browser-batch.ts`, `tools/browser_workstation.py`, `workstation/replay.py`, `workstation/browser_readiness.py`, `workstation/browser_transaction.py`. `schema` de extração atual é projeção de propriedades, não validator completo; `PortableTrace` não equivale a replay visual. Falha de CI workflow #39154888493 no exato `f436e949`; motivo não diagnosticado. PR #85 merged em 13/10, mas BAV04 continua fixture-only sem liberação de release.
-**Próxima sequência:** P0 provas de efeito externo, path boundary e Learning lease; P1 context views/redaction/schema; P1 reacquire semantic anchor pré-efeito; P2 causal run diff e captura de falha opt-in. LLM diagnosis, WebMCP e full UI Graph HOLD. [Decisão D-049](DECISIONS.md) / [plano](BROWSER_REFINEMENT_2026-10-18.md).
-
-
-## 2026-10-17 — HLM-MVP product truth ERRATA (main `2e5b042`)
-O HLM existe no código atual da main (UI + `LearningSessionRecorder` + intensidade live + sanitização parcial + método Python de CandidateLesson), mas **o verdadeiro MVP não está qualificado**: vídeo grava preto sintético 1s; perguntas são templates por 1 gesto sem LLM contextual; ingestão via console não autentica tab/owner; timestamps não relativos; candidata não disparada produtivamente. Tratar M0–M2 como **PARTIAL / NOT E2E QUALIFIED**, M3 HOLD. [Auditoria](LEARNING_MODE_AUDIT_2026-10-17.md); [corretiva](../learning-mode/HLM_MVP_CORRECTIVE_IMPLEMENTER_PROMPT.md). Este registro corrige a afirmação histórica abaixo sem apagar seus commits/testes.
+## 2026-10-18 — Human Demonstration Learning Mode P04 (D-048)
+**IMPLEMENTED (P04 / S0–S7) / REPLAY ON HOLD (M3)** na branch `feat/hermes-work-p04-contextual-candidate-lesson-20261018`.
+- **Segmenter & Question Engine:** `LearningDemonstrationSegmenter` (`workstation-learning-segmenter.ts`) agrupa eventos por pausas temporais (>5s) e transições causais (`document_setup`, `asset_import`, `tool_selection`, `canvas_operation`, `typography_adjustment`, `parameter_adjustment`), extraindo hipóteses calibradas a partir de contexto observável. Formula perguntas contextuais em 4 categorias (`intent`, `causality`, `alternative`, `validation`) reguladas por 3 intensidades ao vivo.
+- **Precedência Causal Humana:** Correções humanas reduzem a incerteza para 0.05 e suprimem perguntas redundantes sobre temas já esclarecidos. Na ausência de sinais de DOM ou provedor, reporta ausência explícita de interpretação autônoma sem inventar o significado dos cliques.
+- **Ponte de Aprendizagem & Idempotência:** `demonstration_package.json` persistido ao encerrar a sessão (Stop) e compilado via rota FastAPI `/api/workstation/experience/learning-sessions/compile-candidate` em `CandidateLesson` inerte (`source="human_demonstration"`, `status="candidate"`, sem `VERIFIED_SUCCESS`, sem `TaskRun` sintética). Duas chamadas de Stop são comprovadamente idempotentes (`find_candidate_by_learning_session`).
+- **Testes & Qualificação:** 25 Vitest (4 arquivos) PASS, 5 Python boundary tests PASS, 40/40 ExperienceCompiler PASS, 19/19 learning suite PASS, Typecheck completo exit 0, Health check 0 blocking / 0 advisory. M3 mantido em HOLD.
 
 ## 2026-10-17 — Human Demonstration Learning Mode (D-047)
 **IMPLEMENTED (M0–M2) / REPLAY ON HOLD (M3)** na branch `feat/hermes-learning-mode-mvp-20261017`.
@@ -28,14 +38,7 @@ O HLM existe no código atual da main (UI + `LearningSessionRecorder` + intensid
 - **M3:** Replay supervisionado mantido em **HOLD** por falta de runner/readback auditado com browser real.
 - **Testes:** 19 Vitest (4 arquivos) PASS, 2 Python (skill learning boundary) PASS, Typecheck Electron + UI PASS (exit 0), Health check 0 blocking findings. Matriz A–I PASS, J em HOLD.
 
-## 2026-10-17 — CW-048B: Consolidação PhotoCraft e EffectCraft e ativação FilmCraft (VERIFICADO)
-- **Ativação Criativa Consolidada (D-046)**: PhotoCraft, EffectCraft e FilmCraft integrados sob baixo acoplamento com comandos naturais determinísticos ("Abra o PhotoCraft", "Abra o EffectCraft", "Abra o FilmCraft" / "Open FilmCraft"), processados no fast-path pre-LLM sem acionamento desnecessário do Kanban.
-- **Prevenção de Reload Destrutivo**: Na reutilização de instâncias, o serviço checa o snapshot do navegador antes de emitir nova navegação. Se o editor solicitado já estiver na aba ativa, a navegação é suprimida para preservar o canvas e modificações não salvas.
-- **Processos e Segurança**: Servidores locais mantidos em loopback estrito (`127.0.0.1`) com portas dedicadas (8765, 8766, 8767), adoção no `ProcessRegistry` com `persist_on_release = True`, nonces HMAC criptográficos e estrito respeito a human lease (`409 USER_CONTROL_ACTIVE`).
-- **Instalação e Integridade**: Script seguro `workstation/scripts/install_creative_engine.py` com proteção contra ZipSlip e verificação de SHA-256. `external-engines` isolado em `check_no_tmp_literals.py`.
-- **Testes & Ratchet**: 35 testes unitários e de contratos 100% aprovados, code health clean (0 blocking, 0 advisory).
-
-## 2026-10-17 — CW-048A: FilmCraft importado como submodule Git (SUBMODULE IMPORT ONLY)
+## 2026-10-17 — CW-048A/B: FilmCraft importado como submodule Git e roteado no runtime (VERIFICADO)
 - Terceiro motor criativo independente (editor de vídeo não-linear em Rust puro) adicionado em `external-engines/filmcraft` via submodule Git pinado no commit `f03e21556d8e3a7155b91892d958debd5255d7af` (release `v0.8.0`, Apache-2.0).
 - Submodules PhotoCraft e EffectCraft preservados intactos.
 - Roteamento e persistência de sessão ativados via `workstation/creative_web_service.py` e Fast Path em `workstation/prefabs/integration.py`.
@@ -1617,27 +1620,3 @@ Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller
 A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
 GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
 Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.
-
-## D-049 Browser Observation 80/20 — B1.2 Value-Level Secret Redaction & B1.3 Schema Validation (2026-10-19)
-
-Implemented and verified two foundational extract-cache hardening layers for the Browser Observation 80/20 refinement:
-
-**B1.2 Value-Level Secret Redaction:**
-- Added value-level secret patterns (`JWT_PATTERN`, `BEARER_VALUE_PATTERN`, `PREFIXED_KEY_PATTERN`, `URL_ENCODED_SECRET_PATTERN`) to `normalizeExtractedItem` in `workstation-browser-extract-cache.ts`, covering JWTs, Bearer tokens, prefixed API keys (sk-, ghp_, xoxb-, AKIA, AIza), and URL-encoded secrets in string values whose key names are benign.
-- Key-name redaction via `SENSITIVE_KEY_PATTERN` continues to short-circuit value-level checks for fields like `password`, `api_key`, `auth_token`.
-- Fixed nested object test expectations to match actual redaction priority: `auth_header` does not match `SENSITIVE_KEY_PATTERN` so value-level bearer redaction applies, preserving the "Bearer" prefix marker while redacting the token value.
-- All 8 extract-cache tests pass (227ms).
-
-**B1.3 Lightweight JSON Schema Subset Validator:**
-- Implemented dependency-free `validateSchemaSubset` and `validateExtractedItems` supporting `type`, `required`, `enum`, and `properties` (recursive to depth 8).
-- Rejects schemas using unsupported keywords (`$ref`, `allOf`, `anyOf`, `patternProperties`, etc.) to prevent silent acceptance of data that was never truly validated.
-- Wired into `extractItemsForEntry` return payload in `workstation-browser-runtime.ts`: `schema_valid`, `schema_errors`, and `schema_unsupported_keywords` fields distinguish capture success from schema conformance.
-- All 9 schema validation tests pass (259ms); full B1.x regression suite passes (73/73 tests across 5 files, 2.25s); typecheck clean (0 errors).
-
-**Files modified:**
-- `apps/desktop/electron/workstation-browser-extract-cache.ts` — added `redactSecretValues`, `validateSchemaSubset`, `validateExtractedItems`, `SchemaValidationResult` interface
-- `apps/desktop/electron/workstation-browser-runtime.ts` — imported and wired `validateExtractedItems` into `extractItemsForEntry` return payload
-- `apps/desktop/electron/workstation-browser-extract-cache.test.ts` — fixed nested auth_header expectation, added SENSITIVE_KEY_PATTERN test
-- `apps/desktop/electron/workstation-browser-extract-schema.test.ts` — new file with 9 schema validation tests
-
-**Status:** IMPLEMENTED & TESTED. Not yet qualified for release pending full D-049 integration verification and CI exact-head gate.

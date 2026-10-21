@@ -138,6 +138,7 @@ import { useSessionListActions } from '../session/hooks/use-session-list-actions
 import { useSessionStateCache } from '../session/hooks/use-session-state-cache'
 import { useTranscriptPeerSync } from '../session/hooks/use-transcript-peer-sync'
 import { startWorkspaceSession } from '../session/workspace-session-target'
+import { useWorkstationChatSync } from '../browser/use-workstation-chat-sync'
 import { PluginInstallModal } from '../settings/plugin-install-modal'
 import { useOverlayRouting } from '../shell/hooks/use-overlay-routing'
 import { useWindowControlsOverlayWidth } from '../shell/hooks/use-window-controls-overlay-width'
@@ -428,15 +429,14 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
   const { applySavedMainModel, followDefaultModel, refreshCurrentModel, selectModel } = useModelControls({
     cacheOwnerConnectionId: activeConnectionId || undefined,
-    cacheProfile: activeGatewayProfile,
-    queryClient,
-    requestGateway
+    cacheProfile: activeGatewayProfile, queryClient, requestGateway
   })
 
   const openProviderSettings = useCallback(() => navigate(`${SETTINGS_ROUTE}?tab=providers`), [navigate])
 
   useOpenKeybindsListener(navigate)
   useCreditsNoticeDemo()
+  useWorkstationChatSync({ activeSessionId, selectedStoredSessionId, updateSessionState, getRuntimeIdForStoredSession })
 
   // Post-turn rehydrate from stored history (same behavior as DesktopController,
   // including finished-todos restoration).

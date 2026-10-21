@@ -12,6 +12,7 @@ import json
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from agent.compaction_events import publish_attempt
@@ -114,6 +115,7 @@ def _emit_compression_attempt_telemetry(
         payload.setdefault("route", "hermes")
         payload.setdefault("attempt_id", seed["attempt_id"])
         payload.setdefault("session_id", seed["session_id"])
+        payload.setdefault("started_at_iso", datetime.fromtimestamp(started_at, tz=timezone.utc).isoformat())
         payload.update(
             total_duration_ms=int((time.monotonic() - started_at) * 1000), commit_status=commit_status,
             split_status=split_status,

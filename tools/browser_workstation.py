@@ -1108,3 +1108,102 @@ def workstation_routed_browser_handler(
         operation_id=operation_id,
         model_facing=True,
     )
+
+
+def browser_wait_for_ready(
+    *,
+    selector: Optional[str] = None,
+    any_text: Optional[list[str]] = None,
+    all_text: Optional[list[str]] = None,
+    min_elements: int = 0,
+    timeout_seconds: float = 15.0,
+    poll_interval: float = 0.5,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Poll ``browser_snapshot`` until the page satisfies readiness conditions.
+
+    Replacement for ``wait_for_condition(_browser_eval, ...)`` in the Workstation
+    route: the Electron controller does not expose an ``eval`` action over its
+    HTTP loopback transport, so JS-side polling is unavailable here. Snapshot
+    text and element inventory are sufficient proxies for WhatsApp Web readiness
+    (selector presence → text/ref match; auth/QR states → known strings).
+
+    Returns ``{"ready": True, "elapsed_seconds": ..., "element_count": ...}`` on
+    success, or ``{"ready": False, "timeout": True, ...}`` with diagnostic
+    details on failure. Never raises; callers inspect the dict.
+    """
+    import time as _time
+
+    start = _time.monotonic()
+    deadline = start + max(0.5, timeout_seconds)
+    last_result: dict[str, Any] = {"ready": False}
+
+    while _time.monotonic() < deadline:
+        try:
+            raw = _dispatch(
+                "browser_snapshot", {"full": False},
+                task_id=task_id, session_id=session_id, model_facing=False,
+            )
+            snap = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception as exc:
+            last_result = {"ready": False, "error": str(exc)}
+            _time.sleep(poll_interval)
+            continue
+
+        snapshot_text = ""
+        element_count = 0
+        if isinstance(snap, dict):
+            snapshot_text = str(snap.get("snapshot") or "")
+            element_count = int(snap.get("element_count") or 0)
+
+        missing: list[str] = []
+
+        selector_found = True
+        if selector:
+            # Snapshot inventory lines: "- [@eN] role "label" value disabled".
+            # A CSS selector cannot be matched verbatim in text; approximate by
+            # requiring at least one interactive element when a selector is
+            # given. Precise selector matching requires eval (unavailable here);
+            # callers should pair with any_text/all_text for WA-specific probes.
+            if element_count == 0:
+                selector_found = False
+                missing.append(f"selector:{selector} (no elements)")
+
+        all_text_found = True
+        if all_text:
+            lower = snapshot_text.lower()
+            for t in all_text:
+                if t.lower() not in lower:
+                    all_text_found = False
+                    missing.append(f"text:{t}")
+
+        any_text_found = True
+        if any_text:
+            lower = snapshot_text.lower()
+            if not any(t.lower() in lower for t in any_text):
+                any_text_found = False
+                missing.append(f"any_text:{'|'.join(any_text)}")
+
+        elements_ok = element_count >= min_elements
+        if not elements_ok:
+            missing.append(f"min_elements:{min_elements} (got {element_count})")
+
+        ready = selector_found and all_text_found and any_text_found and elements_ok
+        if ready:
+            return {
+                "ready": True,
+                "elapsed_seconds": round(_time.monotonic() - start, 3),
+                "element_count": element_count,
+            }
+
+        last_result = {
+            "ready": False,
+            "missing": missing,
+            "element_count": element_count,
+        }
+        _time.sleep(poll_interval)
+
+    last_result["timeout"] = True
+    last_result["elapsed_seconds"] = round(_time.monotonic() - start, 3)
+    return last_result

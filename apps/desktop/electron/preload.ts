@@ -90,6 +90,12 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
 
       return () => ipcRenderer.removeListener('hermes:workstation-browser:learning:state', listener)
     },
+    onMilestone: callback => {
+      const listener = (_event, milestone) => callback(milestone)
+      ipcRenderer.on('hermes:workstation-browser:milestone', listener)
+
+      return () => ipcRenderer.removeListener('hermes:workstation-browser:milestone', listener)
+    },
     onState: callback => {
       const listener = (_event, state) => callback(state)
       ipcRenderer.on('hermes:workstation-browser:state', listener)

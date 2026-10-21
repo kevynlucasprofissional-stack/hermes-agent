@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
 import json
 import logging
@@ -18,11 +17,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 from uuid import uuid4
 
+from workstation.contracts import utc_now as _utc_now
+
 logger = logging.getLogger(__name__)
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 class BrowserControlMode(str, Enum):

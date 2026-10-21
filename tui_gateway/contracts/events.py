@@ -260,6 +260,23 @@ class ReviewSummaryPayload(Payload):
 event("review.summary", ReviewSummaryPayload, doc="Background review of the last turn finished.")
 
 
+class WorkstationMilestonePayload(Payload):
+    """``workstation.milestones`` operational milestone."""
+
+    eventId: str
+    sessionId: str
+    stage: str
+    occurredAt: str
+    taskRunId: str | None = None
+    learningSessionId: str | None = None
+    capabilityId: str | None = None
+    evidenceRefs: list[str] = Field(default_factory=list)
+    reasonCode: str | None = None
+
+
+event("workstation.milestone", WorkstationMilestonePayload, doc="Hermes Workstation operational milestone.")
+
+
 # ── tools ─────────────────────────────────────────────────────────────────────────────────────
 
 

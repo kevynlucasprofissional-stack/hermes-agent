@@ -1,49 +1,40 @@
 # Workstation Known Issues
 
-## WBR-20261019 — Incidente real WhatsApp Web [P0A UNIT_TESTED; P0B UNIT_TESTED; P1A UNIT_TESTED; P2 UNIT_TESTED]
-- **P0A pre-effect terminal:** `recordPreEffectTerminal` integrado no runtime (`browser_click`, `browser_type`, substeps de `browser_batch_actions`). Erros pré-efeito (`stale_or_unknown_ref`, `ref_required`, `ambiguous_anchor`) gravam terminal `NOT_DISPATCHED` durável antes de relançar exceção normalizada, liberando fence de admission para operações subsequentes. Replay idempotente retorna terminal persistido. 132 testes passaram (resiliência + admissão P0A + extract cache); typecheck limpo. Status: **UNIT_TESTED**.
-- **P0B affinity gate:** `browser_exec` bloqueado quando sessão está vinculada ao Browser nativo Workstation. Teste `test_browser_exec_blocked_when_workstation_bound` passou. Status: **UNIT_TESTED**.
-- **P1A inventory:** inventário incremental de conversas não lidas implementado com scroll de viewport local, sem abrir chats. 4 testes Python + testes TypeScript passaram. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real (requer autorização).
-- **P2 integrated validation:** cenário completo stale→NOT_DISPATCHED→recovery→replay idempotente passou em teste sintético. Status: **UNIT_TESTED**. Pendente: E2E contra WhatsApp real e persistência SQLite P1B.
-- **P0 session routing:** após falha nativa, agente escolheu explicitamente browser_exec/Chrome paralelo; impedir perda de afinidade com browser nativo, inclusive após compactação, sem confundir com fallback automático do router.
-- **P1 WhatsApp coverage:** inicial 55 conversas não lidas; inventário declarado 17/190 sem prova de varredura completa; abrir conversas altera read state e invalida baseline. HTMLs de 10/10 são fixtures, não estado de 19/10.
-- **P1 data integrity:** SQLite local mostrou schema/DB confundidos, ON CONFLICT/locks/IDs sem proveniência; não apagar dados similares como “duplicados” sem evidência.
-- **Prova ausente:** Electron build SHA, store exata da admission bloqueadora, CDP input trace, selector ao vivo, E2E. [Plano corretivo](WHATSAPP_BROWSER_DOGFOOD_RECOVERY_2026-10-19.md).
+### KI-046 — Agente inicia tarefas de design sem parâmetros determinantes [FIXED_UNIT_TESTED]
+- **Detectado:** 2026-10-18, Windows 11. **Estado:** FIXED_UNIT_TESTED (P05 / D-050).
+- **Fingerprint observável:** Usuário solicita "Crie um convite de aniversário" e o agente abre o PhotoCraft ou cria documento com dimensões arbitrárias sem perguntar formato/destino, inviabilizando o trabalho ou exigindo retrabalho.
+- **Correção aplicada:** Módulo `workstation/creative_preflight.py` identifica tarefas de design sem dimensões explícitas e formula exatamente uma pergunta bounded via ferramenta `clarify`. Comandos pontuais ("Abra o PhotoCraft") e pedidos com dimensões ("1080×1440") bypassam o preflight. Respostas persistidas na TaskRun, não em memória permanente.
+- **Testes automatizados:** 30/30 PASS em `workstation/tests/test_creative_preflight.py`, cobrindo bypass de comandos pontuais, detecção de dimensões, perguntas para design tasks, contexto de turnos anteriores e edge cases.
+- **Qualificação nativa pendente:** Dogfood completo (solicitar convite → pergunta → responder → abrir PhotoCraft → criar → editar → salvar → fechar documento) ainda não executado nesta sessão. Decisão final GO/HOLD depende dessa evidência.
+- **Arquivos modificados:** `workstation/creative_preflight.py`, `workstation/tests/test_creative_preflight.py`.
 
+### KI-047 — Controle do Canvas do PhotoCraft dependente de scripts improvisados [DOCUMENTED]
+- **Detectado:** 2026-10-18, Windows 11. **Estado:** DOCUMENTED (P05 / D-050).
+- **Fingerprint observável:** Orientações antigas confundiam fechar documento, fechar aba e encerrar servidor; agentes improvisavam scripts Python ou JavaScript livre para operar o Canvas, criando capacidades fantasma e violando a política de baixo acoplamento (D-046).
+- **Mitigação:** Hierarquia canônica documentada em `workstation/context/PHOTOCRAFT_OPERATIONAL_HIERARCHY_2026-10-18.md`: (1) fast path, (2) operações tipadas do Browser, (3) controles DOM acessíveis, (4) observação visual sobre Canvas quando não houver semântica DOM, (5) scripts auxiliares somente como fallback justificado. Distinção explícita entre fechar documento/aba/servidor. Scripts ad-hoc devem ser registrados como known issue com plano de remoção.
+- **Limitação conhecida:** Shadow DOM fechado e buffers WebGL não expõem seletores DOM (HLM-KI-10); interação via coordenadas normalizadas permanece como fallback documentado, não como capacidade genérica.
+- **Arquivos criados:** `workstation/context/PHOTOCRAFT_OPERATIONAL_HIERARCHY_2026-10-18.md`.
 
-## 2026-10-19 — D-049 issues 80/20 pós-auditoria
-G0 import runtime referencia módulo snapshot-views.ts ausente do HEAD antigo; G1 schema_valid=false ou ausente pode coexistir com valid_count positivo e WorkItem completed; schema inválido com items=[] exige teste RED; G2 tool schema browser_snapshot não expõe view/focus e payload pode duplicar elements; B0 bridge/Learning localmente parcialmente corrigidos sem release qualification. Reconferir HEAD e status antes da ação. [Handoff](D049_BROWSER_EXECUTION_80_20_2026-10-19.md).
+### HLM-KI-10 — Isolamento de Shadow DOM e nós WebGL na observação semântica (P05)
+- **Detectado:** 2026-10-18, Windows 11. **Estado:** DOCUMENTADO / MITIGADO NO RUNTIME (P05 / D-049).
+- **Fingerprint observável:** Elementos encapsulados em `shadowRoot` no modo `closed` ou interfaces renderizadas diretamente no buffer WebGL/Canvas sem nós no DOM não expõem seletores de contêiner ancestral via `closest()` no documento raiz.
+- **Mitigação:** O observador opera em modo fail-safe não-bloqueante: caso o breadcrumb não seja resolvido, recorre a papéis ARIA e tags padrão; na ausência de sinal semântico, o Question Engine reporta honestamente a ausência de interpretação autônoma e pergunta a intenção humana diretamente.
+- **Limitação conhecida:** Editores web com Shadow DOM fechado podem não expor o nome do painel ancestral sem inspeção profunda de `composedPath()`.
 
+### HLM-KI-09 — Captura visual real limitada a 3 fps e dependente de FFmpeg local (P02)
+- **Detectado:** 2026-10-18, Windows 11. **Estado:** MITIGADO NO RUNTIME (P02 / D-049).
+- **Fingerprint observável:** `LearningSessionRecorder` captura frames via `WebContentsView.capturePage()` a ~3 fps serializados; vídeo codificado em WebM (libvpx-vp9) via FFmpeg stdin. Se FFmpeg não estiver instalado ou falhar, `videoStatus='blocked'` e gravação prossegue sem vídeo (eventos/snapshots/questions preservados).
+- **Mitigação:** Captura serializada com flag `frameCaptureInFlight` evita sobreposição; backpressure tratado via drain; stop aguarda encoder exit (timeout 5s); output <4KB rejeitado como falha. Frequência ajustável se evidência mostrar necessidade.
+- **Limitação conhecida:** 3 fps é suficiente para demonstrações operacionais mas insuficiente para animações rápidas ou transições suaves. Snapshots persistem apenas frames capturados (não interpolados). Associação gesto-frame usa janela ±500ms.
 
-## BROW-REF-20261018 — Browser percepção/autoridade/forense [OPEN — D-049 / DOCS ONLY]
-- **Segurança de diretório:** `workstation/browser_bridge.py::_validate_safe_destination` utiliza prefixo de string e `browser_save_json` valida um Path mas grava o Path original; reproduzir com caminho-irmão prefixado/symlinks e corrigir sem relaxar `allowed_roots`. Não classificar exploit comprovado sem execução real.
-- **Learning lease:** `startLearning(tabId)` chama `takeControl(ownerTaskId)`; com aba escolhida sem owner e aba ativa diferente pode haver lease no escopo errado; adicionar RED/GREEN Electron com aba não ativa.
-- **Verificação remota:** `browser_batch_actions` valida efeitos locais; clique em COMMIT remoto demanda readback semântico persistido, nunca promover sucesso a partir de ACK, DOM toggle ou teste fixture-only.
-- **Contexto:** já existem redaction e schemas parciais, mas faltam evidência de proteção fim-a-fim, views por tarefa e validator de JSON Schema; compatibilidade do `browser_snapshot` default é gate.
-- **Forense:** `PortableTrace` e Journal existentes, sem timeline correlacionada a screenshot opt-in e sem comparador causal entre TaskRuns no caminho auditado.
-- **Qualificação:** CI `workstation-ci.yml` `f436e949` / #39154888493 = failure, jobs não disponíveis nesta auditoria. PR #85 merged não implica automação qualificada. D-049 não fechou issues, não executou testes, não alterou runtime.
-[Plano e aceites](BROWSER_REFINEMENT_2026-10-18.md).
-
-
-## 2026-10-17 — DOGFOOD-01…08 (ATIVOS; D-048)
-- **DOGFOOD-01 P0:** navegador preto em pesquisa; suspeita de navegação/viewport/host, ainda sem causa confirmada. `workstation-browser-runtime.ts`, Hub/chat, Electron; requer repro + recuperação sem perda de sessão.
-- **DOGFOOD-02 P0:** navegador preto após notificações/overlays; `native-view-occlusion.ts` remove/reanexa a view por `setVisible`. Verificar corrida de MutationObserver, ownership e reattach. Não marcar corrigido por cobertura de mocks.
-- **DOGFOOD-03 P0:** gravação de vídeo do modo Aprender é sintética (`lavfi color=black -t 1`), apesar de status `stopped`; screenshot callback não persistiu snapshots na demonstração observada. Corrigir captura **real** com consentimento e validação.
-- **DOGFOOD-04 P1:** perguntas proativas invadem editor PhotoCraft; `learning-controls.tsx` renderiza card dentro de seu host; mover renderização para o chat, manter controls no browser.
-- **DOGFOOD-05 P1:** Question Engine pergunta genericamente coordenadas de Canvas, sem contexto visual/causal.
-- **DOGFOOD-06 P1:** botão stop LearningSession não demonstrou chamada de produção a `record_human_demonstration_candidate`; M2 só fronteira/teste isolado.
-- **DOGFOOD-07 P1:** falta pergunta essencial de formato no briefing de convite; operação PhotoCraft depende de passos e scripts ad hoc.
-- **DOGFOOD-08 P1:** pouca observabilidade no transcript de identificação/compilação/reuso; `SUGGEST_COMPILE` ainda não fecha uma rota validada.
-**Nota de reconciliação HLM-KI-01…05:** estados anteriores "MITIGADO/IMPLEMENTADO" descrevem mecanismos e testes declarados, não evidência E2E da sessão real. Nenhum item é encerrado por esta atualização documental. [Reproduções e gates](HERMES_WORK_DOGFOOD_RECOVERY_PLAN_2026-10-17.md).
-
-## HLM-KI-06…10 — Falhas confirmadas por revisão estática do código da main (2026-10-17)
-- **HLM-KI-06 [P0]: vídeo FAKE:** `LearningSessionRecorder.startVideoRecording` usa FFmpeg `color=black` 1s, não Browser; gates G/M0 errados. Teste de sessão desliga vídeo. **OPEN**.
-- **HLM-KI-07 [P0 SECURITY]: ingestão `console.debug(__HERMES_GESTURE__)` forjável, sem vínculo suficiente de tab/webContents/documentEpoch/origin/owner nos handlers; risco de spoofing e mistura de abas. **OPEN**.
-- **HLM-KI-08 [P0]: navegação off-origin altera status mas não interrompe encoder; `relativeTimeMs=Date.now` sem alinhamento; snapshots sem refs e falhas de gravação silenciadas. **OPEN**.
-- **HLM-KI-09 [P1]: Question Engine usa 3 templates com scores constantes para um evento; nenhum processamento multimodal de segmento e nenhuma reinterpretação efetiva após correção. **OPEN**.
-- **HLM-KI-10 [P1]: `record_human_demonstration_candidate` apenas método Python/testes isolados, sem orquestração de LearningSession→candidata em runtime real. **OPEN**.
-- **Observação:** revisão de código, não reprodução Electron; preservadas entregas locais parciais e M3 HOLD. [Auditoria](LEARNING_MODE_AUDIT_2026-10-17.md) · [Handoff](../learning-mode/HLM_MVP_CORRECTIVE_IMPLEMENTER_PROMPT.md).
-
+### KI-045 — Tela preta do Browser Nativo após overlay/transferência Hub↔Chat [FIXED_UNIT_QUALIFICATION_PENDING_NATIVE]
+- **Detectado:** 2026-10-18, Windows 11, Electron/Chromium. **Estado:** FIXED_UNIT_QUALIFICATION_PENDING_NATIVE.
+- **Fingerprint observável:** WebContentsView permanece parkada (`viewVisible=false` ou `attached=false`) após fechamento de overlay (`OverlayView`, `Dialog`, `Sheet`, `CommandPalette`) ou transferência Hub↔Chat durante occlusão; usuário vê tela preta até resize manual ou nova navegação.
+- **Causa raiz confirmada:** `WorkstationBrowserRuntime.setVisible(true)` exigia `this.attached === true` para restaurar a view. Quando `detachActiveView` executava durante a janela de occlusão (ex.: transferência de host enquanto overlay estava aberto), `attached` permanecia `false` e a chamada de restauração tornava-se no-op, deixando a WebContentsView fora da árvore de child views do Electron.
+- **Correção aplicada (HWH-P01-FIX):** `setVisible(true)` agora executa re-attach defensivo quando `entry`, `ownerWindow` e `bounds` são válidos, independente de `this.attached`. A intenção explícita de visibilidade do host autoriza a restauração sem roubar propriedade de outra sessão. Arquivo: `apps/desktop/electron/workstation-browser-runtime.ts:1859-1873`.
+- **Testes automatizados:** 15/15 PASS em `apps/desktop/src/app/browser/native-view-occlusion.test.ts`, incluindo novo cenário "restores visibility after overlay dismissal even when host was detached during occlusion".
+- **Qualificação nativa pendente:** Teste real no Electron/Windows (fixture + pesquisa + toast/dialog/menu + Hub↔Chat × 10 ciclos) ainda não executado nesta sessão. Decisão final GO/HOLD depende dessa evidência.
+- **Arquivos modificados:** `apps/desktop/electron/workstation-browser-runtime.ts`, `apps/desktop/src/app/browser/native-view-occlusion.test.ts`.
 
 ## HLM-MVP — Riscos conhecidos e estado de mitigação (2026-10-17, pós-implementação M0–M2)
 - **HLM-KI-01 (Conteúdo sensível / Login):** MITIGADO NO RUNTIME. Captura restrita à aba e origem permitida; navegação para origem não autorizada ou página de login pausa imediatamente a gravação (`status="paused"`) ANTES da emissão de novos frames ou eventos. Gestos ignoram inputs editáveis e campos sensíveis. Arquivos persistidos localmente sem upload externo.
@@ -52,6 +43,8 @@ G0 import runtime referencia módulo snapshot-views.ts ausente do HEAD antigo; G
 - **HLM-KI-04 (Ausência de recibo de runtime / Falsa promoção):** MITIGADO NA FRONTEIRA. `CandidateLesson` recebe `source="human_demonstration"` e permanece estritamente como candidata inerte (`status="candidate"`), rejeitando promoção ou atribuição de `VERIFIED_SUCCESS` sem execução autônoma verificada sob TaskRun.
 - **HLM-KI-05 (Isolamento de PRs criativas #97/#98):** MITIGADO NA BRANCH. Implementação desenvolvida e testada de forma independente de editores criativos profundos, utilizando fixtures padrão do Chromium e contratos de browser nativo.
 - **HLM-KI-06 (Replay autônomo M3 não comprovado):** ATIVO (HOLD). Replay supervisionado permanece em HOLD até que um TaskRun completo com verificação independente de efeitos em navegador real seja executado de forma auditável.
+- **HLM-KI-07 (Perguntas genéricas de coordenadas no Canvas / Alucinação de cliques):** MITIGADO NO RUNTIME (P04). Templates numéricos ingênuos substituídos por segmentação temporal (>5s) e causal (`workstation-learning-segmenter.ts`), derivando hipóteses de contexto observável (`activeTool`, `targetRole`, atalhos). Na ausência de sinais semânticos e de provedor ativo, o sistema registra formalmente a ausência de interpretação autônoma e pergunta a intenção humana diretamente, sem inventar significados para cliques e drags no Canvas.
+- **HLM-KI-08 (Duplicação de CandidateLesson em múltiplos Stops):** MITIGADO NA FRONTEIRA (P04). `record_human_demonstration_candidate` em `skill_learning.py` implementa idempotência via `find_candidate_by_learning_session(learning_session_id)`, retornando a candidata já existente sem duplicar registros ou artefatos no disco.
 
 ### KI-044 — One-Click bloqueia início após install saudável e reinstala pacotes não afetados [RESOLVED_LOCALLY_WINDOWS_PS51]
 - **Detectado:** 2026-10-16, Windows 11, Python 3.14, Node 26.7.0. **Estado:** RESOLVIDO NO RUNTIME E QUALIFICADO LOCALMENTE EM WINDOWS POWERSHELL 5.1; PENDENTE CI EXATO.

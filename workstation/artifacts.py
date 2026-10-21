@@ -8,7 +8,6 @@ reference (``artifact://...``) and read on demand.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 import hashlib
 import json
 import logging
@@ -19,11 +18,9 @@ from typing import Any, Dict, List, Optional, Union
 
 from hermes_constants import get_hermes_home
 
+from workstation.contracts import utc_now as _utc_now
+
 logger = logging.getLogger(__name__)
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass(slots=True)

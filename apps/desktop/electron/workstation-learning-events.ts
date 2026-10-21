@@ -20,12 +20,42 @@ export interface RawHumanBrowserGesture {
   elementTag?: string
   inputType?: string
   isEditable?: boolean
+  containerBreadcrumb?: string
+  currentValue?: string
+  unit?: string
+  valueUnit?: string
+  domDelta?: DomMutationDelta
   key?: string
   ctrl?: boolean
   meta?: boolean
   alt?: boolean
   shift?: boolean
 }
+
+export type DomMutationEffectKind =
+  | 'modal_opened'
+  | 'state_toggled'
+  | 'item_added'
+  | 'item_removed'
+  | 'none'
+
+export interface DomMutationDelta {
+  effectKind: DomMutationEffectKind
+  summary?: string
+}
+
+export interface SafeHumanBrowserGestureTarget {
+  role: string
+  accessible_name?: string
+  accessibleName?: string
+  container_breadcrumb?: string
+  containerBreadcrumb?: string
+  current_value?: string
+  currentValue?: string
+  unit?: string
+  valueUnit?: string
+}
+
 export interface SafeHumanBrowserGesture {
   schema: 'hermes.human_gesture.v1'
   event_id: string
@@ -34,13 +64,31 @@ export interface SafeHumanBrowserGesture {
   time_ms: number
   kind: RawHumanBrowserGesture['kind']
   normalized_position?: { x: number; y: number }
-  target?: { role: string; accessible_name?: string }
+  target?: SafeHumanBrowserGestureTarget
   shortcut?: string
+  dom_delta?: DomMutationDelta
+  domDelta?: DomMutationDelta
   actor: 'human'
 }
+
 const SENSITIVE = /password|passcode|secret|token|key|credential|authorization|cookie|otp|recovery|private|account|session|api|payment|card|email|address/i
-const allowedRoles = new Set(['button','menuitem','tab','checkbox','radio','slider','option','switch','link'])
+const allowedRoles = new Set([
+  'button',
+  'menuitem',
+  'tab',
+  'checkbox',
+  'radio',
+  'slider',
+  'option',
+  'switch',
+  'link',
+  'canvas',
+  'dialog',
+  'combobox',
+  'spinbutton'
+])
 const allowedKeys = new Set(['Enter','Escape','Backspace','Delete','Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','Home','End','PageUp','PageDown',...'1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')])
+const NON_TEXT_INPUT_TYPES = new Set(['range', 'number', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color'])
 
 function clamp(n: number): number { return Math.min(1, Math.max(0, n)) }
 
@@ -53,10 +101,20 @@ function isValidRawGesture(raw: RawHumanBrowserGesture): boolean {
 }
 
 function isEditableTarget(raw: RawHumanBrowserGesture): boolean {
-  if (raw.isEditable || raw.inputType) {return true}
+  if (raw.isEditable) {return true}
   const tag = raw.elementTag?.toLowerCase()
+  if (tag === 'textarea') {return true}
 
-  return tag === 'input' || tag === 'textarea'
+  const inputType = raw.inputType?.toLowerCase()
+  if (inputType) {
+    if (!NON_TEXT_INPUT_TYPES.has(inputType)) {
+      return true
+    }
+  } else if (tag === 'input') {
+    return true
+  }
+
+  return false
 }
 
 function extractShortcut(raw: RawHumanBrowserGesture): string | null {
@@ -85,16 +143,60 @@ function extractNormalizedPosition(raw: RawHumanBrowserGesture): { x: number; y:
   }
 }
 
-function extractTarget(raw: RawHumanBrowserGesture): { role: string; accessible_name?: string } | undefined {
-  const role = raw.role?.toLowerCase().trim() ?? ''
+function resolveRawRole(raw: RawHumanBrowserGesture): string {
+  const explicit = raw.role?.toLowerCase().trim()
+  if (explicit) {return explicit}
 
-  if (!allowedRoles.has(role)) {return undefined}
-  const output: { role: string; accessible_name?: string } = { role }
+  const tag = raw.elementTag?.toLowerCase()
+  if (tag === 'canvas') {return 'canvas'}
+  if (tag === 'select') {return 'combobox'}
+  if (tag === 'input') {
+    if (raw.inputType === 'range') {return 'slider'}
+    if (raw.inputType === 'number') {return 'spinbutton'}
+  }
+
+  return ''
+}
+
+function attachTargetMetadata(output: SafeHumanBrowserGestureTarget, raw: RawHumanBrowserGesture): void {
   const name = raw.accessibleName?.trim()
-
   if (name && name.length <= 80 && !SENSITIVE.test(name)) {
     output.accessible_name = name
+    output.accessibleName = name
   }
+
+  if (raw.containerBreadcrumb) {
+    const breadcrumb = raw.containerBreadcrumb.trim()
+    if (breadcrumb && breadcrumb.length <= 120 && !SENSITIVE.test(breadcrumb)) {
+      output.container_breadcrumb = breadcrumb
+      output.containerBreadcrumb = breadcrumb
+    }
+  }
+
+  if (raw.currentValue !== undefined) {
+    const val = String(raw.currentValue).trim()
+    if (val && val.length <= 60 && !SENSITIVE.test(val)) {
+      output.current_value = val
+      output.currentValue = val
+    }
+  }
+
+  const unit = raw.unit || raw.valueUnit
+  if (unit) {
+    const u = String(unit).trim()
+    if (u && u.length <= 20 && !SENSITIVE.test(u)) {
+      output.unit = u
+      output.valueUnit = u
+    }
+  }
+}
+
+function extractTarget(raw: RawHumanBrowserGesture): SafeHumanBrowserGestureTarget | undefined {
+  const role = resolveRawRole(raw)
+  if (!allowedRoles.has(role)) {return undefined}
+
+  const output: SafeHumanBrowserGestureTarget = { role }
+  attachTargetMetadata(output, raw)
 
   return output
 }
@@ -128,6 +230,16 @@ export function normalizeHumanGesture(raw: RawHumanBrowserGesture): SafeHumanBro
   const target = extractTarget(raw)
 
   if (target) {output.target = target}
+
+  if (raw.domDelta) {
+    const effectKind = raw.domDelta.effectKind || 'none'
+    const summary = raw.domDelta.summary && !SENSITIVE.test(raw.domDelta.summary)
+      ? raw.domDelta.summary.slice(0, 150)
+      : undefined
+    const delta: DomMutationDelta = { effectKind, summary }
+    output.dom_delta = delta
+    output.domDelta = delta
+  }
 
   return output
 }

@@ -267,6 +267,10 @@ class ExperienceValidationPromotionCoordinator:
                     lifecycle_info["state"] = "VALIDATION_FAILED"
                     lifecycle_info["updated_at"] = datetime.now(UTC).isoformat()
                     self.registry.register(candidate)
+                    from workstation.milestones import record_validation_milestone
+                    record_validation_milestone(
+                        candidate, False, validation_receipts, task_id, run_id, v_reasons[0] if v_reasons else None
+                    )
                     return CoordinatorCycleResult(
                         candidate_id=candidate.id,
                         action="validation_failed",
@@ -282,6 +286,8 @@ class ExperienceValidationPromotionCoordinator:
                 ]
                 lifecycle_info["updated_at"] = datetime.now(UTC).isoformat()
                 self.registry.register(candidate)
+                from workstation.milestones import record_validation_milestone
+                record_validation_milestone(candidate, True, validation_receipts, task_id, run_id)
                 emit_event(TelemetryEventType.VERIFIER_VALIDATION_COMPLETED,
                            source_owner="workstation.experience_lifecycle",
                            task_id=task_id, run_id=run_id, capability_id=candidate.id,

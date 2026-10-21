@@ -44,6 +44,28 @@ export interface WorkstationEventSnapshot {
   events: WorkstationJournalEvent[]
 }
 
+export type WorkstationMilestoneStage =
+  | 'observed'
+  | 'candidate'
+  | 'compilation_started'
+  | 'validation_passed'
+  | 'validation_failed'
+  | 'capability_selected'
+  | 'executed'
+  | 'rejected'
+
+export interface WorkstationMilestone {
+  eventId: string
+  sessionId: string
+  stage: WorkstationMilestoneStage
+  occurredAt: string
+  taskRunId?: string
+  learningSessionId?: string
+  capabilityId?: string
+  evidenceRefs: string[]
+  reasonCode?: string
+}
+
 type ResourceState = Pick<
   WorkstationBrowserState,
   'runtime' | 'ready' | 'paused' | 'controlOwner' | 'controlReady' | 'tabs' | 'tasks' | 'lastError'

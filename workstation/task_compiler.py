@@ -105,6 +105,169 @@ def requires_compilation(agent: Any, calls: list) -> bool:
     return CompilationDecision.REQUIRE_COMPILE in decisions_for_calls(agent, calls)
 
 
+def suggest_compilation_checkpoint(agent: Any, calls: list, *, task_id: str, run_id: str, artifacts: ArtifactStore | None = None) -> dict | None:
+    """Consume SUGGEST_COMPILE without forcing compilation or promoting a capability.
+
+    Preserves the cause/evidence, emits an observable event for the runtime/agent, and
+    returns a non-blocking checkpoint payload when at least one call is suggested for
+    compilation. Returns None when no suggestion applies. Never upgrades to REQUIRE_COMPILE
+    and never triggers promotion.
+    """
+    from workstation.execution_policy import CompilationDecision, decisions_for_calls
+    decisions = decisions_for_calls(agent, calls)
+    suggested_indices = [idx for idx, decision in enumerate(decisions) if decision == CompilationDecision.SUGGEST_COMPILE]
+    if not suggested_indices:
+        return None
+    candidates = getattr(agent, "_work_compilation_candidates", {}) or {}
+    evidence_refs: list[str] = []
+    candidate_summaries: list[dict[str, Any]] = []
+    store = artifacts or ArtifactStore()
+    owner = str(task_id or run_id or "unknown")
+    for idx in suggested_indices:
+        name, args = unwrap_call(calls[idx])
+        key = f"{name}:{idx}"
+        summary = {
+            "call_index": idx,
+            "tool": name,
+            "decision": CompilationDecision.SUGGEST_COMPILE.value,
+        }
+        matched = next((c for k, c in candidates.items() if c.pattern_id == key or c.operation_fingerprint == key), None)
+        if matched is not None:
+            summary["candidate_pattern_id"] = matched.pattern_id
+            summary["candidate_operation_fingerprint"] = matched.operation_fingerprint
+            summary["candidate_target_family"] = matched.target_family
+            summary["candidate_occurrences"] = matched.occurrences
+            summary["candidate_verified_successes"] = matched.verified_successes
+        candidate_summaries.append(summary)
+    try:
+        ref = store.store(owner, f"suggest_compile_checkpoint_{run_id}.json", {
+            "schema": "workstation.suggest_compile_checkpoint.v1",
+            "task_id": str(task_id),
+            "run_id": str(run_id),
+            "candidates": candidate_summaries,
+            "total_suggested": len(suggested_indices),
+        })
+        evidence_refs.append(ref.ref)
+    except Exception:  # health: allow BLE001 -- checkpoint persistence failure must not block execution
+        pass
+    try:
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(
+            TelemetryEventType.CAPABILITY_EXECUTION_FINISHED,
+            source_owner="workstation.task_compiler",
+            task_id=str(task_id),
+            run_id=str(run_id),
+            operation_id=None,
+            route=None,
+            status="SUGGEST_COMPILE_OBSERVED",
+            payload={"checkpoint_refs": evidence_refs, "suggested_calls": len(suggested_indices)},
+        )
+    except Exception:  # health: allow BLE001 -- telemetry emission failure must not block execution
+        pass
+    return {
+        "decision": CompilationDecision.SUGGEST_COMPILE.value,
+        "suggested_call_count": len(suggested_indices),
+        "checkpoint_refs": evidence_refs,
+        "candidates": candidate_summaries,
+    }
+
+
+def consume_suggest_compile_checkpoint(
+    agent: Any,
+    checkpoint: dict[str, Any],
+    *,
+    task_id: str,
+    run_id: str,
+    artifacts: ArtifactStore | None = None,
+) -> dict[str, Any]:
+    """Etapa B: bridge SUGGEST_COMPILE checkpoint → ExperienceCompiler/monitor.
+
+    Consumes the checkpoint produced by ``suggest_compilation_checkpoint``, triggers
+    mining/validation through the existing learning plane when eligible, and returns
+    a structured receipt. Never promotes a capability automatically; promotion stays
+    gated by ``ExperiencePromotionPolicy`` and the canonical validation pipeline.
+    Opaque/JS-only traces are rejected with an explicit reason rather than silently
+    dropped. Failures preserve evidence and return a rejection receipt.
+    """
+    store = artifacts or ArtifactStore()
+    owner = str(task_id or run_id or "unknown")
+    candidates_summary = checkpoint.get("candidates") or []
+    if not candidates_summary:
+        return {"status": "rejected", "reason": "no_candidates_in_checkpoint", "task_id": task_id, "run_id": run_id}
+
+    target_families = {c.get("candidate_target_family") for c in candidates_summary if c.get("candidate_target_family")}
+    fingerprints = {c.get("candidate_operation_fingerprint") for c in candidates_summary if c.get("candidate_operation_fingerprint")}
+
+    # Reject opaque/JS-only procedures: they cannot produce typed steps.
+    traces = list(getattr(agent, "_work_procedure_trace", []) or [])
+    opaque_count = sum(1 for t in traces if t.get("execution_class") == "opaque_adaptive_execution")
+    semantic_count = len(traces) - opaque_count
+    if semantic_count < 2 and opaque_count > 0:
+        reason = "opaque_adaptive_traces_only"
+        try:
+            ref = store.store(owner, f"suggest_compile_rejection_{run_id}.json", {
+                "schema": "workstation.suggest_compile_rejection.v1",
+                "task_id": task_id, "run_id": run_id,
+                "reason": reason, "opaque_count": opaque_count, "semantic_count": semantic_count,
+                "target_families": sorted(target_families), "fingerprints": sorted(fingerprints),
+            })
+        except Exception:  # health: allow BLE001 -- rejection persistence must not block
+            ref = None
+        return {"status": "rejected", "reason": reason, "evidence_ref": getattr(ref, "ref", None),
+                "opaque_trace_count": opaque_count, "semantic_trace_count": semantic_count}
+
+    mined_ids: list[str] = []
+    validated_ids: list[str] = []
+    denial_reasons: list[str] = []
+    try:
+        from workstation.experience_compiler.compilability_monitor import get_compilability_monitor
+        monitor = get_compilability_monitor(artifacts=store)
+        mined = monitor.mine_candidate_in_run(str(task_id), str(run_id)) if monitor.enabled else []
+        mined_ids = [c.id for c in mined]
+        for cap in mined:
+            valid, _proof, reasons = monitor.validate_candidate_run_local(
+                cap, task_id=str(task_id), run_id=str(run_id),
+            )
+            if valid:
+                validated_ids.append(cap.id)
+            else:
+                denial_reasons.extend(reasons or ["validation_denied"])
+    except Exception as exc:  # health: allow BLE001 -- learning plane failure must not block execution
+        denial_reasons.append(f"learning_plane_error:{type(exc).__name__}")
+
+    receipt = {
+        "status": "validated" if validated_ids else ("mined_only" if mined_ids else "no_eligible_candidate"),
+        "task_id": task_id, "run_id": run_id,
+        "target_families": sorted(target_families),
+        "fingerprints": sorted(fingerprints),
+        "mined_capability_ids": mined_ids,
+        "validated_capability_ids": validated_ids,
+        "denial_reasons": sorted(set(denial_reasons)),
+        "opaque_trace_count": opaque_count,
+        "semantic_trace_count": semantic_count,
+    }
+    try:
+        ref = store.store(owner, f"suggest_compile_receipt_{run_id}.json", {
+            "schema": "workstation.suggest_compile_receipt.v1", **receipt,
+        })
+        receipt["evidence_ref"] = ref.ref
+    except Exception:  # health: allow BLE001 -- receipt persistence must not block
+        pass
+    try:
+        from workstation.telemetry import TelemetryEventType, emit_event
+        emit_event(
+            TelemetryEventType.CAPABILITY_EXECUTION_FINISHED,
+            source_owner="workstation.task_compiler",
+            task_id=str(task_id), run_id=str(run_id), operation_id=None, route=None,
+            status=f"SUGGEST_COMPILE_BRIDGE_{receipt['status'].upper()}",
+            payload={"mined": len(mined_ids), "validated": len(validated_ids),
+                     "denials": len(denial_reasons)},
+        )
+    except Exception:  # health: allow BLE001 -- telemetry failure must not block
+        pass
+    return receipt
+
+
 def discovery_guidance(agent=None):
     names = getattr(agent, "valid_tool_names", ()) if agent is not None else (
         "read_file", "search_files", "browser_snapshot", "browser_extract_items", "tool_describe")
@@ -793,6 +956,26 @@ class TaskCompiler:
                 if identity_record:
                     identity_record.update({"status": "uncertain", "persisted": None, "verifier_status": "pending"})
                 self.store.update_item_checkpoint(item.id, f"step_{index}_dispatch", metadata={"mutation_identity": identity_record})
+                # Etapa A: consume SUGGEST_COMPILE at safe boundary (post-auth, pre-dispatch).
+                # Never blocks execution; checkpoint is observable evidence for the learning plane.
+                try:
+                    from tools.effects import unwrap_call as _unwrap_for_suggest
+                    suggest_calls = [(step["tool"], args)]
+                    suggest_cp = suggest_compilation_checkpoint(
+                        agent=None, calls=suggest_calls,
+                        task_id=str(metadata.get("canonical_task_id") or task_id),
+                        run_id=str(execution_run_id or metadata.get("run_id") or ""),
+                        artifacts=self.artifacts,
+                    )
+                    if suggest_cp is not None:
+                        consume_suggest_compile_checkpoint(
+                            agent=None, checkpoint=suggest_cp,
+                            task_id=str(metadata.get("canonical_task_id") or task_id),
+                            run_id=str(execution_run_id or metadata.get("run_id") or ""),
+                            artifacts=self.artifacts,
+                        )
+                except Exception:  # health: allow BLE001 -- suggest-compile checkpoint must never block dispatch
+                    pass
                 metrics["tool_calls"] += 1
                 metrics["tool_input_bytes"] += len(json.dumps(args).encode())
                 started = time.monotonic()

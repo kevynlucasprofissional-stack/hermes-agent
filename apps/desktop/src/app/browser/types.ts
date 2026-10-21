@@ -177,6 +177,7 @@ export interface WorkstationBrowserBridge {
   learningGetQuestions: () => Promise<LearningQuestionItem[]>
   onState: (callback: (state: WorkstationBrowserState) => void) => () => void
   onLearningState?: (callback: (state: LearningSessionState | null) => void) => () => void
+  onMilestone?: (callback: (milestone: WorkstationMilestone) => void) => () => void
   onOpenChatPreview?: (callback: (data: { url: string; taskId?: string }) => void) => () => void
 }
 
@@ -217,6 +218,8 @@ export type LearningQuestionKind =
 export interface LearningQuestionItem {
   id: string
   sessionId: string
+  runtimeSessionId?: string
+  storedSessionId?: string
   tabId: string
   eventRefs: string[]
   fromMs: number
@@ -250,10 +253,36 @@ export interface LearningSessionState {
   allowlistedOrigin: string
   eventsCount: number
   questionsCount: number
+  segmentsCount?: number
   pendingQuestions: LearningQuestionItem[]
   videoStatus: 'recording' | 'stopped' | 'blocked' | 'error' | 'disabled'
   lastError: string | null
   sessionDir: string
   userBusy: boolean
+  compilationStatus?: 'pending_compilation' | 'compiled' | 'none'
+  candidateLessonId?: string
 }
+
+export type WorkstationMilestoneStage =
+  | 'observed'
+  | 'candidate'
+  | 'compilation_started'
+  | 'validation_passed'
+  | 'validation_failed'
+  | 'capability_selected'
+  | 'executed'
+  | 'rejected'
+
+export interface WorkstationMilestone {
+  eventId: string
+  sessionId: string
+  stage: WorkstationMilestoneStage
+  occurredAt: string
+  taskRunId?: string
+  learningSessionId?: string
+  capabilityId?: string
+  evidenceRefs: string[]
+  reasonCode?: string
+}
+
 
