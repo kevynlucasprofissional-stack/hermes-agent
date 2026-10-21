@@ -1118,6 +1118,7 @@ def browser_wait_for_ready(
     min_elements: int = 0,
     timeout_seconds: float = 15.0,
     poll_interval: float = 0.5,
+    adaptive: bool = True,
     task_id: Optional[str] = None,
     session_id: Optional[str] = None,
 ) -> dict[str, Any]:
@@ -1129,6 +1130,28 @@ def browser_wait_for_ready(
     text and element inventory are sufficient proxies for WhatsApp Web readiness
     (selector presence → text/ref match; auth/QR states → known strings).
 
+    **Adaptive polling** (default ``adaptive=True``): uses a tiered interval to
+    reduce latency on fast loads without increasing overhead on slow ones:
+    0.2s for the first 2s, 0.5s from 2–8s, then 1.0s until timeout. Pass
+    ``adaptive=False`` to use a fixed ``poll_interval`` (legacy behaviour).
+
+    **Efficient usage guide — WhatsApp Web E2E phases:**
+
+    * **post_navigate**: ``any_text=['Conversas', 'Pesquisar'], min_elements=1``
+      Replaces manual JS polling loops that search for chat-list text. Typical
+      saving vs ``browser_console`` while-loop: ~3–4 s.
+    * **post_search_type**: ``all_text=[<typed search term>]``
+      Confirms the search box reflects the typed value before clicking a result.
+    * **post_click_chat**: ``any_text=[<contact name>], min_elements=1``
+      Waits for the conversation panel to render after selecting a chat row.
+    * **post_send**: do NOT use WFR. Use ``browser_console`` to verify message
+      content and delivery icons (structured data WFR cannot provide).
+
+    When to use ``browser_snapshot`` directly instead of WFR: when you need the
+    full element inventory or accessibility tree for extraction (not just a
+    boolean readiness check). WFR already calls snapshot internally; calling
+    both in sequence wastes a round-trip.
+
     Returns ``{"ready": True, "elapsed_seconds": ..., "element_count": ...}`` on
     success, or ``{"ready": False, "timeout": True, ...}`` with diagnostic
     details on failure. Never raises; callers inspect the dict.
@@ -1139,6 +1162,15 @@ def browser_wait_for_ready(
     deadline = start + max(0.5, timeout_seconds)
     last_result: dict[str, Any] = {"ready": False}
 
+    def _current_interval(elapsed: float) -> float:
+        if not adaptive:
+            return poll_interval
+        if elapsed < 2.0:
+            return 0.2
+        if elapsed < 8.0:
+            return 0.5
+        return 1.0
+
     while _time.monotonic() < deadline:
         try:
             raw = _dispatch(
@@ -1148,7 +1180,7 @@ def browser_wait_for_ready(
             snap = json.loads(raw) if isinstance(raw, str) else raw
         except Exception as exc:
             last_result = {"ready": False, "error": str(exc)}
-            _time.sleep(poll_interval)
+            _time.sleep(_current_interval(_time.monotonic() - start))
             continue
 
         snapshot_text = ""
@@ -1202,8 +1234,270 @@ def browser_wait_for_ready(
             "missing": missing,
             "element_count": element_count,
         }
-        _time.sleep(poll_interval)
+        _time.sleep(_current_interval(_time.monotonic() - start))
 
     last_result["timeout"] = True
     last_result["elapsed_seconds"] = round(_time.monotonic() - start, 3)
     return last_result
+
+
+# ---------------------------------------------------------------------------
+# WhatsApp-specific snapshot-first helpers (Phase D-1)
+# Contract spec: workstation/context/browser-tools-contract-spec.md
+# Finding F1: browser_console runs in isolated context; snapshot is authoritative.
+# ---------------------------------------------------------------------------
+
+def _compute_snapshot_hash(snapshot: dict[str, Any]) -> str:
+    """Stable hash of snapshot text prefix + element_count for cache invalidation."""
+    import hashlib
+    text = str(snapshot.get("snapshot") or "")[:500]
+    count = int(snapshot.get("element_count") or 0)
+    return hashlib.sha256(f"{count}|{text}".encode()).hexdigest()[:16]
+
+
+def _classify_wa_state(
+    snapshot: dict[str, Any],
+    *,
+    consecutive_empty: int = 0,
+) -> dict[str, Any]:
+    """Classify WhatsApp Web state from snapshot text (snapshot-first, no eval).
+
+    Returns dict with keys: ready (bool), state (str), error_code (str|None).
+    States: LOGGED_IN, QR_SCREEN, LOADING, STALE_SNAPSHOT.
+    """
+    text = str(snapshot.get("snapshot") or "")
+    lower = text.lower()
+    element_count = int(snapshot.get("element_count") or 0)
+
+    # Stale detection: 3+ consecutive polls with zero elements
+    if consecutive_empty >= 3 and element_count == 0:
+        return {"ready": False, "state": "STALE_SNAPSHOT", "error_code": "STALE_SNAPSHOT"}
+
+    # QR screen markers
+    qr_markers = ["use seu telefone", "scan the qr", "qr code", "escanear"]
+    if any(m in lower for m in qr_markers):
+        return {"ready": False, "state": "QR_SCREEN", "error_code": "QR_SCREEN_DETECTED"}
+
+    # Loading markers
+    loading_markers = ["carregando", "loading"]
+    if element_count < 5 and any(m in lower for m in loading_markers):
+        return {"ready": False, "state": "LOADING", "error_code": None}
+
+    # Logged-in markers: chat list visible + sufficient elements
+    logged_in_markers = ["conversas", "chats", "pesquisar"]
+    has_textbox = "[@e" in text and "textbox" in lower
+    if any(m in lower for m in logged_in_markers) and element_count >= 10 and has_textbox:
+        return {"ready": True, "state": "LOGGED_IN", "error_code": None}
+
+    # Ambiguous / still loading
+    if element_count < 5:
+        return {"ready": False, "state": "LOADING", "error_code": None}
+
+    return {"ready": False, "state": "LOADING", "error_code": None}
+
+
+def whatsapp_wait_for_ready(
+    *,
+    timeout_seconds: float = 30.0,
+    poll_interval: float = 1.0,
+    require_logged_in: bool = True,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Wait until WhatsApp Web is usable (logged-in, chat list visible).
+
+    Snapshot-first implementation (Finding F1): uses ``browser_snapshot`` as the
+    sole authority for readiness. ``browser_console`` is NOT used because it
+    executes in an isolated frame where WA DOM selectors are invisible.
+
+    Integrates with the adaptive polling tiers from ``browser_wait_for_ready``
+    when called with default intervals. Adds QR-screen detection and snapshot
+    cache to avoid redundant re-classification on stable DOMs.
+
+    Returns
+    -------
+    dict
+        On success: ``{"ready": True, "state": "LOGGED_IN", "elapsed_seconds": ...,
+        "element_count": ..., "snapshot_revision": ...}``.
+        On failure: ``{"ready": False, "state": ..., "error_code": ..., ...}``.
+        Never raises.
+    """
+    import time as _time
+
+    start = _time.monotonic()
+    deadline = start + max(0.5, timeout_seconds)
+    prev_hash: Optional[str] = None
+    prev_state: Optional[dict[str, Any]] = None
+    consecutive_empty = 0
+    snapshot_revision = 0
+    last_result: dict[str, Any] = {"ready": False}
+
+    while _time.monotonic() < deadline:
+        try:
+            raw = _dispatch(
+                "browser_snapshot", {"full": False},
+                task_id=task_id, session_id=session_id, model_facing=False,
+            )
+            snap = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception as exc:
+            last_result = {"ready": False, "state": "ERROR", "error_code": "CONTROLLER_UNAVAILABLE", "error": str(exc)}
+            _time.sleep(poll_interval)
+            continue
+
+        snapshot_revision += 1
+        current_hash = _compute_snapshot_hash(snap)
+
+        # Cache hit: same DOM → reuse previous classification
+        if current_hash == prev_hash and prev_state is not None:
+            element_count = int(snap.get("element_count") or 0)
+            if element_count == 0:
+                consecutive_empty += 1
+            else:
+                consecutive_empty = 0
+            # Re-check stale even on cache hit
+            if consecutive_empty >= 3:
+                return {
+                    "ready": False, "state": "STALE_SNAPSHOT",
+                    "error_code": "STALE_SNAPSHOT",
+                    "elapsed_seconds": round(_time.monotonic() - start, 3),
+                    "element_count": 0, "snapshot_revision": snapshot_revision,
+                }
+            if prev_state.get("ready"):
+                return {
+                    **prev_state,
+                    "elapsed_seconds": round(_time.monotonic() - start, 3),
+                    "element_count": int(snap.get("element_count") or 0),
+                    "snapshot_revision": snapshot_revision,
+                }
+            last_result = {**prev_state, "snapshot_revision": snapshot_revision}
+            _time.sleep(poll_interval)
+            continue
+
+        # Cache miss: re-classify
+        prev_hash = current_hash
+        element_count = int(snap.get("element_count") or 0)
+        consecutive_empty = 0 if element_count > 0 else consecutive_empty + 1
+
+        state = _classify_wa_state(snap, consecutive_empty=consecutive_empty)
+        prev_state = state
+
+        if state.get("ready"):
+            return {
+                **state,
+                "elapsed_seconds": round(_time.monotonic() - start, 3),
+                "element_count": element_count,
+                "snapshot_revision": snapshot_revision,
+            }
+
+        # Early exit on QR when login is required
+        if require_logged_in and state.get("error_code") == "QR_SCREEN_DETECTED":
+            return {
+                **state,
+                "elapsed_seconds": round(_time.monotonic() - start, 3),
+                "element_count": element_count,
+                "snapshot_revision": snapshot_revision,
+            }
+
+        last_result = {
+            **state,
+            "element_count": element_count,
+            "snapshot_revision": snapshot_revision,
+        }
+        _time.sleep(poll_interval)
+
+    last_result["timeout"] = True
+    last_result["elapsed_seconds"] = round(_time.monotonic() - start, 3)
+    last_result.setdefault("error_code", "LOADING_TIMEOUT")
+    return last_result
+
+
+def _extract_search_ref(snapshot: dict[str, Any]) -> Optional[str]:
+    """Extract @eN ref for the WhatsApp search textbox from snapshot text."""
+    text = str(snapshot.get("snapshot") or "")
+    # Match pattern: [@eN] textbox "...Pesquisar..." or "...Search..."
+    pattern = r'\[(@e\d+)\]\s+textbox\s+"[^"]*(?:Pesquisar|Search)[^"]*"'
+    match = re.search(pattern, text, re.IGNORECASE)
+    return match.group(1) if match else None
+
+
+def _parse_search_results(
+    snapshot: dict[str, Any],
+    *,
+    max_results: int = 5,
+) -> list[dict[str, str]]:
+    """Parse search result gridcells from snapshot text into structured refs."""
+    text = str(snapshot.get("snapshot") or "")
+    results: list[dict[str, str]] = []
+    # Match gridcell rows: [@eN] gridcell "label text"
+    pattern = r'\[(@e\d+)\]\s+gridcell\s+"([^"]+)"'
+    for match in re.finditer(pattern, text):
+        ref = match.group(1)
+        label = match.group(2)
+        # Skip non-result entries (e.g., section headers)
+        if len(label.strip()) < 3:
+            continue
+        results.append({"ref": ref, "label": label, "type": "chat"})
+        if len(results) >= max_results:
+            break
+    return results
+
+
+def _verify_conversation_header(
+    snapshot: dict[str, Any],
+    *,
+    contact_name_hint: Optional[str] = None,
+) -> dict[str, Any]:
+    """Verify conversation header matches expected contact (snapshot-first)."""
+    text = str(snapshot.get("snapshot") or "")
+    # Extract header text: [@eN] header "Name"
+    pattern = r'\[@e\d+\]\s+header\s+"([^"]+)"'
+    match = re.search(pattern, text)
+    if not match:
+        return {"verified": False, "header_text": None, "error_code": "NO_CONVERSATION_OPEN"}
+
+    header_text = match.group(1)
+    if contact_name_hint and contact_name_hint.lower() not in header_text.lower():
+        return {"verified": False, "header_text": header_text, "error_code": "HEADER_MISMATCH"}
+
+    return {"verified": True, "header_text": header_text, "error_code": None}
+
+
+def _is_composer_empty(snapshot: dict[str, Any]) -> bool:
+    """Check if composer is empty by button revert signal (not innerText).
+
+    Per contract spec / batch-send §6: zero-width nodes keep innerText non-empty.
+    The reliable signal is the send button reverting to 'Mensagem de voz'.
+    """
+    text = str(snapshot.get("snapshot") or "")
+    lower = text.lower()
+    return "mensagem de voz" in lower or "voice message" in lower
+
+
+def _extract_delivery_proof(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Extract delivery proof from last message data-id + aria-label."""
+    text = str(snapshot.get("snapshot") or "")
+    # Match: data-id="..." aria-label="Entregue|Lida|..."
+    pattern = r'data-id="([^"]+)"[^[]*aria-label="([^"]+)"'
+    matches = list(re.finditer(pattern, text))
+    if not matches:
+        return {"delivered": False, "message_data_id": None, "ack_label": None}
+
+    last = matches[-1]
+    return {
+        "delivered": True,
+        "message_data_id": last.group(1),
+        "ack_label": last.group(2),
+    }
+
+
+def _validate_phone_digits(phone: str) -> bool:
+    """Reject masked or non-numeric phone digits."""
+    if not phone:
+        return False
+    stripped = phone.replace("+", "").replace(" ", "").replace("-", "")
+    return stripped.isdigit() and "*" not in phone
+
+
+def _validate_message_body(message: str) -> bool:
+    """Reject messages with unreplaced template placeholders."""
+    return "{NOME}" not in message and "{nome}" not in message
