@@ -379,6 +379,77 @@ class TestWhatsappSendMessageIntegration:
         mock_dispatch.assert_not_called()
 
 
+class TestWindowsAppLaunch:
+    """Unit tests for windows_app_launch (standalone, no browser dispatch)."""
+
+    @patch("tools.browser_workstation.platform.system", return_value="Linux")
+    def test_not_windows_rejected(self, mock_platform):
+        """Non-Windows platform returns NOT_WINDOWS error."""
+        from tools.browser_workstation import windows_app_launch
+        result = windows_app_launch(app_name="notepad.exe")
+        assert result["launched"] is False
+        assert result["error_code"] == "NOT_WINDOWS"
+
+    @patch("tools.browser_workstation.subprocess.run")
+    @patch("tools.browser_workstation.platform.system", return_value="Windows")
+    def test_window_not_visible_timeout(self, mock_platform, mock_run):
+        """Process launches but no MainWindowHandle found → WINDOW_NOT_VISIBLE."""
+        from tools.browser_workstation import windows_app_launch
+        # First call (launch) succeeds silently; second+ calls (Get-Process) return empty
+        mock_run.return_value = MagicMock(
+            stdout="", stderr="", returncode=0
+        )
+        result = windows_app_launch(
+            app_name="notepad.exe", timeout_seconds=0.1
+        )
+        assert result["launched"] is False
+        assert result["error_code"] == "WINDOW_NOT_VISIBLE"
+
+    @patch("tools.browser_workstation.subprocess.run")
+    @patch("tools.browser_workstation.platform.system", return_value="Windows")
+    def test_launch_success_with_window(self, mock_platform, mock_run):
+        """Successful launch with MainWindowHandle found returns launched=True."""
+        import json as _json
+        from tools.browser_workstation import windows_app_launch
+
+        process_info = _json.dumps({
+            "Id": 12345,
+            "MainWindowHandle": 654321,
+            "MainWindowTitle": "Notepad"
+        })
+
+        def side_effect(cmd, **kwargs):
+            cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+            if "Start-Process" in cmd_str:
+                return MagicMock(stdout="", stderr="", returncode=0)
+            elif "Get-Process" in cmd_str:
+                return MagicMock(stdout=process_info, stderr="", returncode=0)
+            elif "Add-Type" in cmd_str:
+                return MagicMock(stdout="OK", stderr="", returncode=0)
+            return MagicMock(stdout="", stderr="", returncode=0)
+
+        mock_run.side_effect = side_effect
+        result = windows_app_launch(
+            app_name="notepad.exe", bring_to_front=True, timeout_seconds=2.0
+        )
+        assert result["launched"] is True
+        assert result["pid"] == 12345
+        assert result["window_handle"] == 654321
+        assert result["window_title"] == "Notepad"
+        assert result["brought_to_front"] is True
+
+    @patch("tools.browser_workstation.subprocess.run")
+    @patch("tools.browser_workstation.platform.system", return_value="Windows")
+    def test_launch_exception_returns_error(self, mock_platform, mock_run):
+        """subprocess.run raising exception returns LAUNCH_FAILED."""
+        from tools.browser_workstation import windows_app_launch
+        mock_run.side_effect = OSError("access denied")
+        result = windows_app_launch(app_name="protected.exe")
+        assert result["launched"] is False
+        assert result["error_code"] == "LAUNCH_FAILED"
+        assert "access denied" in result.get("error", "")
+
+
 class TestWhatsappWaitForReadyIntegration:
     """Integration tests with mocked _dispatch for full polling loop."""
 

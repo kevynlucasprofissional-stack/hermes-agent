@@ -19,8 +19,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import platform
 import re
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -1501,6 +1503,125 @@ def _validate_phone_digits(phone: str) -> bool:
 def _validate_message_body(message: str) -> bool:
     """Reject messages with unreplaced template placeholders."""
     return "{NOME}" not in message and "{nome}" not in message
+
+
+# ---------------------------------------------------------------------------
+# Windows desktop app launcher (standalone, outside browser dispatcher)
+# Contract spec: workstation/context/browser-tools-contract-spec.md §4
+# ---------------------------------------------------------------------------
+
+def windows_app_launch(
+    *,
+    app_name: str,
+    exe_path: Optional[str] = None,
+    bring_to_front: bool = True,
+    timeout_seconds: float = 10.0,
+) -> dict[str, Any]:
+    """Launch a Windows desktop app and verify its window is visible.
+
+    Standalone implementation using ``subprocess.run`` + PowerShell. Does NOT
+    use the browser dispatcher. Verifies ``MainWindowHandle != 0`` to confirm
+    the window actually surfaced (not just a background process). Optionally
+    brings the window to foreground via ``ShowWindow(SW_RESTORE)`` +
+    ``SetForegroundWindow``.
+
+    Returns
+    -------
+    dict
+        On success: ``{"launched": True, "pid": int, "window_handle": int,
+        "window_title": str, "brought_to_front": bool}``.
+        On failure: ``{"launched": False, "error_code": str, ...}``.
+        Never raises.
+    """
+    import platform
+    if platform.system() != "Windows":
+        return {"launched": False, "error_code": "NOT_WINDOWS",
+                "error": f"Platform is {platform.system()}, not Windows"}
+
+    import subprocess
+    import time as _time
+
+    # Step 1: Launch the app
+    launch_cmd: list[str]
+    if exe_path:
+        launch_cmd = ["powershell", "-NoProfile", "-Command",
+                       f"Start-Process -FilePath '{exe_path}'"]
+    else:
+        # Try Start-Apps first, fall back to Start-Process by name
+        launch_cmd = ["powershell", "-NoProfile", "-Command",
+                       f"Start-Process '{app_name}'"]
+
+    try:
+        subprocess.run(launch_cmd, capture_output=True, timeout=5, check=False)
+    except Exception as exc:
+        return {"launched": False, "error_code": "LAUNCH_FAILED",
+                "error": str(exc)}
+
+    # Step 2: Find process with MainWindowHandle != 0
+    proc_name = Path(exe_path).stem if exe_path else app_name.replace(".exe", "")
+    ps_script = (
+        f"Get-Process -Name '*{proc_name}*' -ErrorAction SilentlyContinue | "
+        f"Where-Object {{ $_.MainWindowHandle -ne 0 }} | "
+        f"Select-Object -First 1 Id, MainWindowHandle, MainWindowTitle | "
+        f"ConvertTo-Json -Compress"
+    )
+    deadline = _time.monotonic() + max(1.0, timeout_seconds)
+    pid: Optional[int] = None
+    handle: Optional[int] = None
+    title: Optional[str] = None
+
+    while _time.monotonic() < deadline:
+        try:
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", ps_script],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if result.stdout.strip():
+                info = json.loads(result.stdout.strip())
+                if isinstance(info, dict) and info.get("Id"):
+                    pid = int(info["Id"])
+                    handle = int(info.get("MainWindowHandle", 0))
+                    title = str(info.get("MainWindowTitle", ""))
+                    break
+        except Exception:
+            pass
+        _time.sleep(0.5)
+
+    if pid is None or handle is None or handle == 0:
+        return {"launched": False, "error_code": "WINDOW_NOT_VISIBLE",
+                "app_name": app_name, "timeout_seconds": timeout_seconds}
+
+    # Step 3: Bring to front if requested
+    brought = False
+    if bring_to_front:
+        fg_script = (
+            f"Add-Type -TypeDefinition '"
+            f"using System; using System.Runtime.InteropServices;"
+            f"public class Win32 {{"
+            f"[DllImport(\"user32.dll\")] public static extern bool ShowWindow(IntPtr h, int n);"
+            f"[DllImport(\"user32.dll\")] public static extern bool SetForegroundWindow(IntPtr h);"
+            f"}}';"
+            f"$h = [IntPtr]{handle};"
+            f"[Win32]::ShowWindow($h, 9) | Out-Null;"
+            f"[Win32]::SetForegroundWindow($h) | Out-Null;"
+            f"Write-Host 'OK'"
+        )
+        try:
+            fg_result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command", fg_script],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            brought = "OK" in (fg_result.stdout or "")
+        except Exception:
+            brought = False
+
+    return {
+        "launched": True,
+        "pid": pid,
+        "window_handle": handle,
+        "window_title": title or "",
+        "brought_to_front": brought,
+    }
 
 
 def whatsapp_send_message(
