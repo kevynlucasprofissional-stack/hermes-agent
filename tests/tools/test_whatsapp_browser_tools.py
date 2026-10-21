@@ -286,6 +286,99 @@ class TestWhatsappSendMessageParsing:
         assert _validate_message_body("Olá, João!") is True
 
 
+class TestWhatsappSearchContactIntegration:
+    """Integration tests for whatsapp_search_contact with mocked dispatch."""
+
+    @patch("tools.browser_workstation._dispatch")
+    def test_search_returns_results(self, mock_dispatch):
+        """Search types query and parses gridcell results from snapshot."""
+        mock_dispatch.side_effect = _make_dispatch_side_effect(
+            [LOGGED_IN_SNAPSHOT, SEARCH_RESULTS_SNAPSHOT]
+        )
+        from tools.browser_workstation import whatsapp_search_contact
+        result = whatsapp_search_contact(query="João", max_results=5)
+        assert result["found"] is True
+        assert result["result_count"] >= 2
+        assert result["search_ref"] == "@e12"
+        # Verify browser_type was called with correct ref
+        type_calls = [c for c in mock_dispatch.call_args_list if c[0][0] == "browser_type"]
+        assert len(type_calls) == 1
+        assert type_calls[0][0][1]["ref"] == "@e12"
+
+    @patch("tools.browser_workstation._dispatch")
+    def test_search_input_not_found(self, mock_dispatch):
+        """Snapshot without search textbox returns SEARCH_INPUT_NOT_FOUND."""
+        no_input_snap = {"success": True, "snapshot": "No inputs", "element_count": 3}
+        mock_dispatch.side_effect = _make_dispatch_side_effect([no_input_snap])
+        from tools.browser_workstation import whatsapp_search_contact
+        result = whatsapp_search_contact(query="test")
+        assert result["found"] is False
+        assert result["error_code"] == "SEARCH_INPUT_NOT_FOUND"
+
+
+class TestWhatsappSendMessageIntegration:
+    """Integration tests for whatsapp_send_message with mocked dispatch."""
+
+    @patch("tools.browser_workstation._dispatch")
+    def test_send_delivered(self, mock_dispatch):
+        """Full send flow: navigate → header check → click → delivery proof."""
+        mock_dispatch.side_effect = _make_dispatch_side_effect(
+            [CONVERSATION_OPEN_SNAPSHOT, DELIVERY_PROOF_SNAPSHOT]
+        )
+        from tools.browser_workstation import whatsapp_send_message
+        result = whatsapp_send_message(
+            phone_digits="5564999999999",
+            message="Olá, tudo bem?",
+            contact_name_hint="João Silva",
+            verify_delivery=True,
+            delivery_timeout_seconds=2.0,
+        )
+        assert result["sent"] is True
+        assert result["state"] == "DELIVERED"
+        assert "DEF456" in result.get("message_data_id", "")
+        assert result.get("ack_label") == "Entregue"
+        assert result.get("header_verified") == "João Silva"
+
+    @patch("tools.browser_workstation._dispatch")
+    def test_send_header_mismatch(self, mock_dispatch):
+        """Header mismatch aborts send before clicking."""
+        mock_dispatch.side_effect = _make_dispatch_side_effect(
+            [HEADER_MISMATCH_SNAPSHOT]
+        )
+        from tools.browser_workstation import whatsapp_send_message
+        result = whatsapp_send_message(
+            phone_digits="5564999999999",
+            message="Teste",
+            contact_name_hint="João Silva",
+        )
+        assert result["sent"] is False
+        assert result["error_code"] == "HEADER_MISMATCH"
+
+    @patch("tools.browser_workstation._dispatch")
+    def test_send_masked_phone_rejected(self, mock_dispatch):
+        """Masked phone digits are rejected before any dispatch call."""
+        from tools.browser_workstation import whatsapp_send_message
+        result = whatsapp_send_message(
+            phone_digits="+556****7992",
+            message="Teste",
+        )
+        assert result["sent"] is False
+        assert result["error_code"] == "MASKED_PHONE"
+        mock_dispatch.assert_not_called()
+
+    @patch("tools.browser_workstation._dispatch")
+    def test_send_placeholder_leak_rejected(self, mock_dispatch):
+        """Unreplaced {NOME} placeholder is rejected before dispatch."""
+        from tools.browser_workstation import whatsapp_send_message
+        result = whatsapp_send_message(
+            phone_digits="5564999999999",
+            message="Olá, {NOME}!",
+        )
+        assert result["sent"] is False
+        assert result["error_code"] == "TEMPLATE_PLACEHOLDER_LEAK"
+        mock_dispatch.assert_not_called()
+
+
 class TestWhatsappWaitForReadyIntegration:
     """Integration tests with mocked _dispatch for full polling loop."""
 

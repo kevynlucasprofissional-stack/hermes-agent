@@ -1501,3 +1501,217 @@ def _validate_phone_digits(phone: str) -> bool:
 def _validate_message_body(message: str) -> bool:
     """Reject messages with unreplaced template placeholders."""
     return "{NOME}" not in message and "{nome}" not in message
+
+
+def whatsapp_send_message(
+    *,
+    phone_digits: str,
+    message: str,
+    contact_name_hint: Optional[str] = None,
+    verify_delivery: bool = True,
+    delivery_timeout_seconds: float = 10.0,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Send a WhatsApp message via deep link and verify delivery (snapshot-first).
+
+    Validates inputs (no masked phones, no unreplaced placeholders), navigates
+    via ``browser_navigate`` to the WA send URL, verifies the conversation
+    header matches ``contact_name_hint``, clicks the send button obtained from
+    the snapshot, and proves delivery by detecting a new ``data-id`` with an
+    ack ``aria-label`` in the messages panel. Composer emptiness is checked by
+    button revert signal ('Mensagem de voz'), never by innerText (batch-send §6).
+
+    Returns
+    -------
+    dict
+        On success: ``{"sent": True, "state": "DELIVERED", "message_data_id": ...,
+        "ack_label": ..., "header_verified": ..., "composer_empty_after": True}``.
+        On failure: ``{"sent": False, "state": ..., "error_code": ..., ...}``.
+        Never raises.
+    """
+    # Pre-validation
+    if not _validate_phone_digits(phone_digits):
+        return {"sent": False, "state": "INVALID_INPUT", "error_code": "MASKED_PHONE"}
+    if not _validate_message_body(message):
+        return {"sent": False, "state": "INVALID_INPUT", "error_code": "TEMPLATE_PLACEHOLDER_LEAK"}
+
+    import time as _time
+    from urllib.parse import quote
+
+    # Step 1: Deep link navigation
+    url = f"https://web.whatsapp.com/send?phone={phone_digits}&text={quote(message)}"
+    try:
+        _dispatch(
+            "browser_navigate", {"url": url},
+            task_id=task_id, session_id=session_id, model_facing=False,
+        )
+    except Exception as exc:
+        return {"sent": False, "state": "NAVIGATION_FAILED", "error_code": "CONTROLLER_UNAVAILABLE", "error": str(exc)}
+
+    # Step 2: Wait for conversation header to appear
+    deadline = _time.monotonic() + 8.0
+    header_snap = None
+    while _time.monotonic() < deadline:
+        try:
+            raw = _dispatch("browser_snapshot", {"full": False}, task_id=task_id, session_id=session_id, model_facing=False)
+            header_snap = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception:
+            _time.sleep(0.5)
+            continue
+        hdr = _verify_conversation_header(header_snap, contact_name_hint=None)
+        if hdr.get("verified"):
+            break
+        _time.sleep(0.5)
+    else:
+        return {"sent": False, "state": "NO_CONVERSATION_OPEN", "error_code": "NO_CONVERSATION_OPEN"}
+
+    # Step 3: Header mismatch check
+    if contact_name_hint:
+        hdr_check = _verify_conversation_header(header_snap, contact_name_hint=contact_name_hint)
+        if not hdr_check.get("verified"):
+            return {
+                "sent": False, "state": "HEADER_MISMATCH",
+                "error_code": "HEADER_MISMATCH",
+                "header_text": hdr_check.get("header_text"),
+            }
+
+    # Step 4: Find and click send button from snapshot
+    send_ref = None
+    snap_text = str(header_snap.get("snapshot") or "")
+    import re as _re
+    for m in _re.finditer(r'\[(@e\d+)\]\s+button\s+"[^"]*(?:Enviar|Send)[^"]*"', snap_text, _re.IGNORECASE):
+        send_ref = m.group(1)
+        break
+    if not send_ref:
+        return {"sent": False, "state": "SEND_BUTTON_NOT_FOUND", "error_code": "NO_CONVERSATION_OPEN"}
+
+    try:
+        _dispatch("browser_click", {"ref": send_ref}, task_id=task_id, session_id=session_id, model_facing=False)
+    except Exception as exc:
+        return {"sent": False, "state": "CLICK_FAILED", "error_code": "CONTROLLER_UNAVAILABLE", "error": str(exc)}
+
+    # Step 5: Post-send verification
+    if not verify_delivery:
+        return {"sent": True, "state": "SENT_UNCONFIRMED", "header_verified": hdr_check.get("header_text") if contact_name_hint else None}
+
+    proof_deadline = _time.monotonic() + max(1.0, delivery_timeout_seconds)
+    while _time.monotonic() < proof_deadline:
+        _time.sleep(0.5)
+        try:
+            raw_post = _dispatch("browser_snapshot", {"full": False}, task_id=task_id, session_id=session_id, model_facing=False)
+            post_snap = json.loads(raw_post) if isinstance(raw_post, str) else raw_post
+        except Exception:
+            continue
+        composer_empty = _is_composer_empty(post_snap)
+        proof = _extract_delivery_proof(post_snap)
+        if proof.get("delivered") and composer_empty:
+            return {
+                "sent": True, "state": "DELIVERED",
+                "message_data_id": proof.get("message_data_id"),
+                "ack_label": proof.get("ack_label"),
+                "header_verified": hdr_check.get("header_text") if contact_name_hint else None,
+                "composer_empty_after": True,
+            }
+
+    return {
+        "sent": True, "state": "SENT_UNCONFIRMED",
+        "error_code": "DELIVERY_TIMEOUT",
+        "header_verified": hdr_check.get("header_text") if contact_name_hint else None,
+        "composer_empty_after": _is_composer_empty(post_snap) if 'post_snap' in dir() else None,
+    }
+
+
+def whatsapp_search_contact(
+    *,
+    query: str,
+    max_results: int = 5,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Search WhatsApp contacts/chats by name or phone suffix (snapshot-first).
+
+    Uses the search textbox ref extracted from ``browser_snapshot`` and
+    ``browser_type`` to enter the query. Results are parsed from snapshot
+    gridcells — never from ``browser_console`` (Finding F1).
+
+    Returns
+    -------
+    dict
+        On success: ``{"found": True, "results": [...], "search_ref": "@eN",
+        "result_count": N}``.
+        On failure: ``{"found": False, "error_code": "...", ...}``.
+        Never raises.
+    """
+    # Step 1: get current snapshot and extract search ref
+    try:
+        raw = _dispatch(
+            "browser_snapshot", {"full": False},
+            task_id=task_id, session_id=session_id, model_facing=False,
+        )
+        snap = json.loads(raw) if isinstance(raw, str) else raw
+    except Exception as exc:
+        return {
+            "found": False,
+            "error_code": "CONTROLLER_UNAVAILABLE",
+            "error": str(exc),
+        }
+
+    search_ref = _extract_search_ref(snap)
+    if not search_ref:
+        return {
+            "found": False,
+            "error_code": "SEARCH_INPUT_NOT_FOUND",
+            "recommended_action": "reload_page",
+        }
+
+    # Step 2: type query into search box via browser_type
+    try:
+        _dispatch(
+            "browser_type",
+            {"ref": search_ref, "text": query, "mode": "plain_text_paste"},
+            task_id=task_id, session_id=session_id, model_facing=False,
+        )
+    except Exception as exc:
+        return {
+            "found": False,
+            "error_code": "TYPE_FAILED",
+            "error": str(exc),
+            "search_ref": search_ref,
+        }
+
+    # Step 3: wait briefly for results to render, then re-snapshot
+    import time as _time
+    _time.sleep(0.6)
+
+    try:
+        raw2 = _dispatch(
+            "browser_snapshot", {"full": False},
+            task_id=task_id, session_id=session_id, model_facing=False,
+        )
+        snap2 = json.loads(raw2) if isinstance(raw2, str) else raw2
+    except Exception as exc:
+        return {
+            "found": False,
+            "error_code": "CONTROLLER_UNAVAILABLE",
+            "error": str(exc),
+            "search_ref": search_ref,
+        }
+
+    # Step 4: parse results from updated snapshot
+    results = _parse_search_results(snap2, max_results=max_results)
+
+    if not results:
+        return {
+            "found": False,
+            "error_code": "NO_RESULTS",
+            "search_ref": search_ref,
+            "result_count": 0,
+        }
+
+    return {
+        "found": True,
+        "results": results,
+        "search_ref": search_ref,
+        "result_count": len(results),
+    }
