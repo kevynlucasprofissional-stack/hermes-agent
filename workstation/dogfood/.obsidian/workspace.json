@@ -49,8 +49,7 @@
               "title": "Timestamps em todo o Hermes Work"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
@@ -217,10 +216,11 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "3c15d3fc70a64cd8",
+  "active": "2f5444958a503cef",
   "lastOpenFiles": [
-    "dados/Sessões Claude/Implementação, validação E2E e auditoria de eficiência da função `browser_wait_for_ready` para automação do WhatsApp Web no Hermes Workstation..md",
+    "19.10.26.md",
     "dados/Sessões Claude/Timestamps em todo o Hermes Work.md",
+    "dados/Sessões Claude/Implementação, validação E2E e auditoria de eficiência da função `browser_wait_for_ready` para automação do WhatsApp Web no Hermes Workstation..md",
     "dados/Contexto Hermes/18.10.26 Comparativo Browser/B18.10.26 Análises comparativas do Browser por Fable 5.1.md",
     "dados/Contexto Hermes/18.10.26 Comparativo Browser/BSegunda auditoria adversarial — Browser nativo Hermes Workstation.md",
     "dados/Contexto Hermes/18.10.26 Comparativo Browser 1/BSegunda auditoria adversarial — Browser nativo Hermes Workstation.md",
@@ -244,7 +244,6 @@
     "dados/Sessões Claude/Missão P1A - Inventário Incremental de Conversas Não Lidas (WhatsApp Web).md",
     "dados/Sessões Claude/P0A Browser Admission NOT_DISPATCHED.md",
     "dados/Sessões Claude/Auditoria Forense da Falha na Automação do WhatsApp (Hermes Work).md",
-    "dados/Sessões Claude/Missão P1B - Persistência Operacional SQLite do Controle WhatsApp ACIRV.md",
     "dados/Sessões Claude",
     "dados/Sessões Hermes/abrir-whatsapp-2-20261019.json",
     "dados/Sessões Hermes/invent-rio-de-pasta-de-downloads-e-ranking-20261019.json",

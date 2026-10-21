@@ -142,7 +142,7 @@ export function registerWorkstationBrowserIpc(): void {
     senderWindow(event)
 
     const runtime = getWorkstationBrowserRuntime()
-    const targetTabId = typeof tabId === 'string' ? tabId : runtime.activeTabId
+    const targetTabId = typeof tabId === 'string' ? tabId : runtime.state().activeTabId
 
     if (targetTabId) {
       const expectedWc = runtime.getWebContents(targetTabId)
