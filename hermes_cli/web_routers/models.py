@@ -7,6 +7,8 @@ Extracted from ``hermes_cli.web_server``; helpers/state that tests monkeypatch o
 import asyncio
 import concurrent.futures
 import logging
+import threading
+import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -58,33 +60,72 @@ def _load_config_scoped(profile: Optional[str]) -> dict:
 # blackholed model.base_url can hold this response for tens of seconds — and the
 # Desktop Model Settings page waits on it (#63214).
 _MODEL_INFO_PROBE_BUDGET_S = 5.0
+_MODEL_INFO_CACHE_TTL_S = 60.0
+
+# Single-flight + TTL cache for context-length probes. Keyed by
+# (profile, model, base_url) so different profiles or custom endpoints
+# never share stale results. The lock serializes cache reads/writes;
+# the actual probe runs in a worker thread and is deduplicated via
+# _inflight so N concurrent requests for the same model fire one probe.
+_model_info_cache: dict[str, tuple[float, int]] = {}
+_model_info_inflight: dict[str, concurrent.futures.Future[int]] = {}
+_model_info_lock = threading.Lock()
 
 
 def _bounded_context_length_probe(model: str, base_url: str, provider: str) -> int:
-    """``get_model_context_length`` with the route's blocking budget.
+    """``get_model_context_length`` with single-flight dedup and TTL cache.
 
-    On timeout the abandoned probe keeps running in its worker thread (bounded
-    by its own per-request timeouts) while the response degrades to
-    ``auto_context_length = 0`` ("auto-detected: unknown").
+    Concurrent requests for the same (model, base_url) share one probe;
+    subsequent calls within the TTL window reuse the cached result without
+    spawning a new thread pool. On timeout the abandoned probe keeps running
+    in its worker thread while the response degrades to 0 ("unknown").
     """
     from agent.model_metadata import get_model_context_length
 
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="model-info-probe")
+    cache_key = f"{model}:{base_url}:{provider}"
+    now = time.monotonic()
+
+    with _model_info_lock:
+        cached = _model_info_cache.get(cache_key)
+        if cached is not None:
+            cached_at, value = cached
+            if now - cached_at < _MODEL_INFO_CACHE_TTL_S:
+                return value
+
+        inflight = _model_info_inflight.get(cache_key)
+        if inflight is not None and not inflight.done():
+            # Another request is already probing this model; wait on it.
+            pass
+        else:
+            pool = concurrent.futures.ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="model-info-probe"
+            )
+            inflight = pool.submit(
+                get_model_context_length, model=model, base_url=base_url,
+                provider=provider, config_context_length=None
+            )
+            _model_info_inflight[cache_key] = inflight
+            # Attach cleanup: cache the result (or 0 on timeout/error) and
+            # remove the inflight entry so future calls after TTL re-probe.
+            def _settle(fut: concurrent.futures.Future[int], key: str = cache_key, p = pool) -> None:
+                try:
+                    result = fut.result(timeout=0)
+                except Exception:
+                    result = 0
+                with _model_info_lock:
+                    _model_info_cache[key] = (time.monotonic(), result)
+                    _model_info_inflight.pop(key, None)
+                p.shutdown(wait=False)
+            inflight.add_done_callback(_settle)
+
     try:
-        return pool.submit(
-            get_model_context_length, model=model, base_url=base_url, provider=provider,
-            config_context_length=None
-        ).result(timeout=_MODEL_INFO_PROBE_BUDGET_S)
+        return inflight.result(timeout=_MODEL_INFO_PROBE_BUDGET_S)
     except concurrent.futures.TimeoutError:
         _log.warning(
             "GET /api/model/info: context-length probe for %r at %s exceeded %.1fs — returning unknown",
             model, base_url or "<default>", _MODEL_INFO_PROBE_BUDGET_S,
         )
         return 0
-    finally:
-        # wait=False: never block the response (or interpreter exit) on the
-        # abandoned probe.
-        pool.shutdown(wait=False)
 
 
 @router.get("/api/model/info")
