@@ -912,7 +912,9 @@ export function useGatewayBoot({
           return
         }
 
-        console.log(`[boot-perf] phase=renderer.hydration.completed renderer_elapsed_ms=${Math.round(performance.now())} hydration_duration_ms=${Math.round(performance.now() - hydrationStartMs)}`)
+        window.hermesDesktop?.logLine?.(
+          `[boot-perf] phase=renderer.hydration.completed renderer_elapsed_ms=${Math.round(performance.now())} hydration_duration_ms=${Math.round(performance.now() - hydrationStartMs)}`
+        )
         completeDesktopBoot()
         bootCompleted = true
         // Rediscover local-runtime jobs (model downloads, runtime installs)
