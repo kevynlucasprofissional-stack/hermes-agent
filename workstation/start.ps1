@@ -53,17 +53,15 @@ $env:HERMES_PYTHON = $VenvPython
 $env:PATH = "$VenvScripts;$env:PATH"
 $env:HERMES_WORKSTATION_BROWSER = "1"
 
-# Upstream Hermes dev mode exposes the renderer over CDP on 127.0.0.1:9222 by
-# default for diagnostic scripts. Workstation's embedded Browser does NOT need
-# that TCP debugger: it controls its WebContents directly through Electron's
-# webContents.debugger API. Disable the external renderer debugger unless the
-# developer explicitly opted into a port, avoiding collisions with Chrome,
-# another Hermes dev instance, Browser tooling, or a stale process.
+# One-Click always launches the source-tree Vite dev server (npm run dev).
+# Restore the desktop renderer's local CDP debugger for DOM inspection and
+# console diagnostics. Packaged builds are still gated by electron/dev-cdp.ts.
+# Preserve a caller override: 9333 changes ports; 'off' disables CDP.
 if (-not $env:HERMES_DESKTOP_CDP_PORT) {
-  $env:HERMES_DESKTOP_CDP_PORT = "off"
-  $WorkstationDisabledRendererCdp = $true
+  $env:HERMES_DESKTOP_CDP_PORT = "9222"
+  $WorkstationDefaultRendererCdp = $true
 } else {
-  $WorkstationDisabledRendererCdp = $false
+  $WorkstationDefaultRendererCdp = $false
 }
 
 if ($env:OS -match "Windows_NT") {
@@ -104,19 +102,30 @@ try {
   Write-Host "Starting Hermes Desktop with Workstation Browser..." -ForegroundColor Cyan
   Write-Host "Python runtime: $VenvPython"
   Write-Host "Node runtime:   $nodeVersion"
-  if ($WorkstationDisabledRendererCdp) {
-    Write-Host "Renderer CDP:   off (Workstation default; internal Browser CDP remains enabled)"
+  Write-Host "Dev server:      http://127.0.0.1:5174 (Vite + HMR)"
+  if ($WorkstationDefaultRendererCdp) {
+    Write-Host "Renderer CDP:    127.0.0.1:9222 (automatic dev/debug mode)"
   } else {
-    Write-Host "Renderer CDP:   $env:HERMES_DESKTOP_CDP_PORT (explicit override)"
+    Write-Host "Renderer CDP:    $env:HERMES_DESKTOP_CDP_PORT (explicit override)"
   }
   Write-Host ""
   Write-Host "Keep this terminal open while Hermes Desktop is running." -ForegroundColor DarkGray
   Write-Host "To stop the dev server later, press Ctrl+C once and answer Y/S if Windows asks to terminate the batch job." -ForegroundColor DarkGray
   Write-Host ""
 
-  & npm run dev --workspace apps/desktop
-  if ($LASTEXITCODE -ne 0) {
-    throw "Hermes Desktop exited with code ${LASTEXITCODE}."
+  # Invoke dev script directly from the desktop workspace directory.
+  # Using `npm run dev --workspace apps/desktop` fails when npm hoists
+  # concurrently to root without creating bin links in the workspace;
+  # running from the workspace directory lets npm resolve hoisted bins
+  # via the standard node_modules resolution chain.
+  Push-Location (Join-Path $Root "apps\desktop")
+  try {
+    & npm run dev
+    if ($LASTEXITCODE -ne 0) {
+      throw "Hermes Desktop exited with code ${LASTEXITCODE}."
+    }
+  } finally {
+    Pop-Location
   }
 }
 finally {
