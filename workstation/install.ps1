@@ -19,10 +19,20 @@ function Invoke-NativeChecked {
     [object[]]$Arguments = @()
   )
 
-  & $Command @Arguments
+  # Native CLIs (uv, npm, node) write progress/diagnostics to stderr even on
+  # success. PowerShell's $ErrorActionPreference = Stop converts any stderr
+  # output into a terminating NativeCommandError BEFORE the assignment can
+  # capture it, aborting the bootstrap. Execute via cmd /c to bypass the
+  # PowerShell pipeline entirely; gate failure solely on exit code.
+  $argString = ($Arguments | ForEach-Object { $_ }) -join ' '
+  $cmdLine = "`"$Command`" $argString"
+  $output = cmd /c "$cmdLine" 2>&1
   if ($LASTEXITCODE -ne 0) {
-    throw "Command failed with exit code ${LASTEXITCODE}: $Command $($Arguments -join ' ')"
+    $detail = ($output | Out-String).Trim()
+    throw "Command failed with exit code ${LASTEXITCODE}: $Command $($Arguments -join ' ')`n$detail"
   }
+  # Re-emit successful output so callers that capture stdout still see it.
+  if ($output) { $output }
 }
 
 function Test-PythonCandidate {
