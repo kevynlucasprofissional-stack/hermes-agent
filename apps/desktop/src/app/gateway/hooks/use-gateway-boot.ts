@@ -874,16 +874,30 @@ export function useGatewayBoot({
 
         void refreshActiveProfile().catch(() => undefined)
 
-        // [boot-perf] renderer hydration timing: measures the wall-clock cost of the
-        // three parallel bootstrap fetches so cold-start bottlenecks are visible
-        // in the dev console without adding overhead to the hot path.
+        // [boot-perf] renderer hydration timing: measures each parallel bootstrap
+        // fetch individually so cold-start bottlenecks are attributable to a
+        // specific call (seedDefaultCwd / refreshHermesConfig / refreshSessions).
+        // All three still run concurrently; only the measurement is sequential-safe.
         const hydrationStartMs = performance.now()
         console.log(`[boot-perf] phase=renderer.hydration.started renderer_elapsed_ms=${Math.round(hydrationStartMs)}`)
 
+        const measureHydrationCall = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
+          const start = performance.now()
+          try {
+            return await fn()
+          } finally {
+            console.log(`[boot-perf] phase=renderer.hydration.${label} duration_ms=${Math.round(performance.now() - start)}`)
+          }
+        }
+
         await Promise.all([
-          seedDefaultCwd(ownsSwitch),
-          callbacksRef.current.refreshHermesConfig(false, ownsSwitch).catch(() => undefined),
-          callbacksRef.current.refreshSessions(ownsSwitch).catch(() => undefined)
+          measureHydrationCall('seedDefaultCwd', () => seedDefaultCwd(ownsSwitch)),
+          measureHydrationCall('refreshHermesConfig', () =>
+            callbacksRef.current.refreshHermesConfig(false, ownsSwitch).catch(() => undefined)
+          ),
+          measureHydrationCall('refreshSessions', () =>
+            callbacksRef.current.refreshSessions(ownsSwitch).catch(() => undefined)
+          )
         ])
 
         if (!ownsSwitch()) {
