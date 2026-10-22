@@ -306,6 +306,14 @@ try {
       Invoke-Step -Name "[2/4] Validating existing Workstation install..." -Script $InstallScript -Arguments @("-SkipDependencies")
     }
     Invoke-Step -Name "[3/4] Running strict Workstation doctor..." -Script $DoctorScript -Arguments @("-Strict")
+
+    # [boot-perf] PowerShell bootstrap milestones: wall-clock timing from script
+    # entry to Desktop launch. These are diagnostic logs only; the upstream
+    # fingerprint includes this file so the first run after this change will
+    # trigger an expected repair cycle (documented in commit message).
+    $bootstrapStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    Write-Host "[boot-perf] phase=bootstrap.pre_launch bootstrap_elapsed_ms=$($bootstrapStopwatch.ElapsedMilliseconds)"
+
     Invoke-Step -Name "[4/4] Starting Hermes Work..." -Script $StartScript -Arguments @("-SkipInstall")
     exit 0
   } finally {

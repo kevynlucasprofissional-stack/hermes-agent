@@ -105,6 +105,7 @@ import {
   shouldLatchSshClientFailure,
   sshClientFailedError
 } from './backend-start-failure'
+import { recordBootMilestone } from './boot-perf'
 import { describeBootstrapFailure } from './bootstrap-failure-copy'
 import {
   detectRemoteDisplay,
@@ -2456,6 +2457,7 @@ installCrashForensics({ flush: flushDesktopLogBufferSync, log: rememberLog })
 // A rejected loadURL leaves a blank window and, unhandled, no trace anywhere
 // the user can send us. `label` names the surface so the log says which one.
 function loadWindowUrl(win, url, label) {
+  recordBootMilestone('renderer.load.started', rememberLog)
   win.loadURL(url).catch(error => rememberLog(`${label} failed to load: ${describeCrashReason(error)}`))
 }
 
@@ -15039,6 +15041,7 @@ function closeQuickEntryWindow() {
 }
 
 function createWindow() {
+  recordBootMilestone('window.create.begin', rememberLog)
   const icon = getAppIconPath()
   const savedWindowState = readWindowState()
   mainWindow = new BrowserWindow({
@@ -15073,6 +15076,7 @@ function createWindow() {
   })
 
   const appIcon = icon
+
   if (appIcon && typeof (mainWindow as any).setIcon === 'function') {
     mainWindow.setIcon(appIcon)
   }
@@ -15117,8 +15121,12 @@ function createWindow() {
     mainWindow.maximize()
   }
 
+  recordBootMilestone('window.created', rememberLog)
+
   const revealController = wireWindowReveal(createdMainWindow, {
     onRevealed: () => {
+      recordBootMilestone('window.revealed', rememberLog)
+
       // Persist geometry as soon as the window is visible so a crash before the
       // first clean resize/move/close still captures the restored bounds (#56726).
       schedulePersistWindowState()
@@ -15494,9 +15502,15 @@ function createWindow() {
   // this in-flight boot instead of duplicating it; early boot-progress events
   // the renderer misses are recovered by its getBootProgress() pull on mount.
   const startup = defaultRoute ? connectDesktopProfileRoute(defaultRoute) : startHermes()
-  startup.catch(error => rememberLog(error.stack || error.message))
+  startup
+    .then(() => recordBootMilestone('backend.connection.resolved', rememberLog))
+    .catch(error => {
+      recordBootMilestone('backend.connection.failed', rememberLog)
+      rememberLog(error.stack || error.message)
+    })
 
   mainWindow.webContents.once('did-finish-load', () => {
+    recordBootMilestone('renderer.did-finish-load', rememberLog)
     // Zoom restore is handled by wireCommonWindowHandlers (shared with session
     // windows); no need to reapply it here.
     broadcastBootProgress()
@@ -15765,6 +15779,7 @@ registerCreativeCanonicalHandlers(ipcMain, {
 }, event => {
   const invoke = event as IpcMainInvokeEvent
   const browser = BrowserWindow.fromWebContents(invoke.sender)
+
   return Boolean(browser && !browser.isDestroyed() && invoke.senderFrame === invoke.sender.mainFrame)
 })
 registerWindowControlIpc(ipcMain, sender => BrowserWindow.fromWebContents(sender))
@@ -19351,6 +19366,8 @@ app.on('open-url', (event, url) => {
 })
 
 app.whenReady().then(() => {
+  recordBootMilestone('electron.ready', rememberLog)
+
   // Post-update relaunch detection (App Installer arm): when the previous
   // version wrote the one-shot pending-relaunch marker before quitting into
   // an OS package swap, consume it here — the renderer toasts "Hermes
