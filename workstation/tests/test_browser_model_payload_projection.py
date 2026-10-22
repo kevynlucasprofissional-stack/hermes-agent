@@ -296,3 +296,71 @@ def test_internal_controller_dispatch_retains_structured_elements(snapshot_contr
     result = json.loads(raw)
     assert result["elements"] == _ELEMENTS
     assert "elements_projected" not in result
+
+
+# ---------------------------------------------------------------- viewport soft-filter (Fase 1)
+
+
+def _payload_with_bounds(elements: list[dict], viewport_height: int = 900) -> dict:
+    """Build a payload where each element carries bounds.y for viewport filter tests."""
+    base = _payload(elements)
+    base["viewportHeight"] = viewport_height
+    return base
+
+
+def test_viewport_filter_disabled_by_default(monkeypatch):
+    monkeypatch.delenv("HERMES_BROWSER_VIEWPORT_FILTER", raising=False)
+    elements = [
+        {"ref": "@e1", "tag": "button", "role": "button", "label": "Far",
+         "value": "", "disabled": False, "bounds": {"x": 0, "y": 5000, "width": 100, "height": 40}},
+    ] * 6
+    projected = bw.project_model_browser_payload(_payload_with_bounds(elements))
+    assert "viewport_filter" not in projected
+    idx = projected.get("element_index", {})
+    for entry in idx.values():
+        assert "offscreen" not in entry
+
+
+def test_offscreen_elements_preserved_with_semantic_attributes(monkeypatch):
+    monkeypatch.setenv("HERMES_BROWSER_VIEWPORT_FILTER", "1")
+    elements = [
+        {"ref": "@e1", "tag": "button", "role": "button", "label": "Visible",
+         "value": "", "disabled": False, "bounds": {"x": 0, "y": 100, "width": 80, "height": 32}},
+        {"ref": "@e2", "tag": "button", "role": "button", "label": "Offscreen Semantic",
+         "value": "", "disabled": False, "testid": "far-btn",
+         "bounds": {"x": 0, "y": 5000, "width": 80, "height": 32}},
+        {"ref": "@e3", "tag": "input", "role": "textbox", "label": "Also Offscreen",
+         "value": "", "disabled": False, "name": "far-input",
+         "bounds": {"x": 0, "y": 6000, "width": 200, "height": 32}},
+        {"ref": "@e4", "tag": "button", "role": "button", "label": "Visible2",
+         "value": "", "disabled": False, "bounds": {"x": 0, "y": 200, "width": 80, "height": 32}},
+        {"ref": "@e5", "tag": "button", "role": "button", "label": "Offscreen2",
+         "value": "", "disabled": False, "testid": "far-btn-2",
+         "bounds": {"x": 0, "y": 7000, "width": 80, "height": 32}},
+        {"ref": "@e6", "tag": "a", "role": "link", "label": "Link Offscreen",
+         "value": "", "disabled": False, "name": "far-link",
+         "bounds": {"x": 0, "y": 8000, "width": 120, "height": 32}},
+    ]
+    projected = bw.project_model_browser_payload(_payload_with_bounds(elements))
+    assert projected.get("viewport_filter", {}).get("enabled") is True
+    idx = projected.get("element_index", {})
+    # Semantic offscreen elements must be preserved with tag
+    assert idx.get("@e2", {}).get("offscreen") is True
+    assert idx.get("@e2", {}).get("testid") == "far-btn"
+    assert idx.get("@e3", {}).get("offscreen") is True
+    assert idx.get("@e3", {}).get("name") == "far-input"
+    assert idx.get("@e5", {}).get("offscreen") is True
+    assert idx.get("@e6", {}).get("offscreen") is True
+    # Visible element must NOT be tagged offscreen
+    e1_entry = idx.get("@e1", {})
+    assert e1_entry.get("offscreen") is not True
+
+
+def test_fail_open_on_low_element_count(monkeypatch):
+    monkeypatch.setenv("HERMES_BROWSER_VIEWPORT_FILTER", "1")
+    elements = [
+        {"ref": "@e1", "tag": "button", "role": "button", "label": "Only",
+         "value": "", "disabled": False, "bounds": {"x": 0, "y": 9000, "width": 80, "height": 32}},
+    ]
+    projected = bw.project_model_browser_payload(_payload_with_bounds(elements))
+    assert "viewport_filter" not in projected

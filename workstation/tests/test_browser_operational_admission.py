@@ -410,7 +410,7 @@ def test_p0_7_effect_sensitive_timeout_read_vs_mutation(monkeypatch):
     monkeypatch.setattr("tools.browser_workstation._read_control", lambda: {"url": "http://127.0.0.1:9999", "token": "abc"})
 
     def fake_urlopen(*args, **kwargs):
-        raise socket.timeout("timed out")
+        raise TimeoutError("timed out")
 
     monkeypatch.setattr("tools.browser_workstation.urlopen", fake_urlopen)
 
@@ -539,3 +539,53 @@ def test_p0_9_dogfood_rich_editor_and_zero_planning_fanout():
     )
     assert r_type_2["success"] is True
     assert sim_db["card_2"] == new_desc
+
+
+def test_anchor_scroll_re_resolve_on_offscreen_target():
+    """When _find_ref_by_anchor returns ELEMENT_OFFSCREEN_NEEDS_SCROLL,
+    execute_primitive must auto-scroll, re-snapshot and re-resolve (max 1 attempt)."""
+    from workstation.operational_kernel import OperationalKernel
+
+    kernel = OperationalKernel()
+    call_log: list[tuple[str, dict]] = []
+
+    # Simulated dispatch: first snapshot returns offscreen element (via element_index),
+    # second returns visible after scroll.
+    def sim_dispatch(action: str, args: dict):
+        call_log.append((action, args))
+        if action == "browser_snapshot":
+            snap_count = sum(1 for a, _ in call_log if a == "browser_snapshot")
+            if snap_count <= 1:
+                return {
+                    "elements": [
+                        {"ref": "@e99", "tag": "button", "role": "button", "label": "Far",
+                         "name": "far-btn", "value": "", "disabled": False},
+                    ],
+                    "element_index": {
+                        "@e99": {"offscreen": True, "y_offset": 5000},
+                    },
+                }
+            return {
+                "elements": [
+                    {"ref": "@e99", "tag": "button", "role": "button", "label": "Far",
+                     "name": "far-btn", "value": "", "disabled": False},
+                ],
+                "element_index": {},
+            }
+        if action == "browser_scroll":
+            return {"success": True}
+        if action == "browser_click":
+            return {"success": True, "clicked": args.get("ref")}
+        return {"success": True}
+
+    result = kernel.execute_primitive(
+        "browser_click",
+        {"anchor": {"type": "name", "value": "far-btn"}},
+        dispatch=sim_dispatch,
+        context={},
+    )
+
+    assert result["success"] is True
+    actions = [a for a, _ in call_log]
+    assert "browser_scroll" in actions, f"Expected auto-scroll in call log: {actions}"
+    assert actions.count("browser_snapshot") >= 2, f"Expected re-snapshot after scroll: {actions}"

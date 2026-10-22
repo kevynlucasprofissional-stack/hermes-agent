@@ -156,6 +156,7 @@ _WORKSTATION_SCHEMA_TOOLS = frozenset({
     "browser_extract_items",
     "browser_inventory_unread",
     "browser_batch_actions",
+    "browser_wait_for_ready",
     # Extension management is a Desktop-session capability: the agent can
     # request it explicitly, but non-Desktop sessions never carry these
     # schemas. Runtime reachability/policy remain checked at dispatch.
@@ -1037,6 +1038,46 @@ def project_model_browser_payload(result: Any) -> Any:
     projected["elements_projected"] = True
     if index:
         projected["element_index"] = index
+
+    # Viewport soft-filter: mark offscreen elements instead of removing them.
+    # Gated by env var; fails open on low element count or missing geometry.
+    viewport_filter_enabled = os.environ.get("HERMES_BROWSER_VIEWPORT_FILTER", "0") == "1"
+    if viewport_filter_enabled and isinstance(elements, list) and len(elements) >= 5:
+        viewport_height = result.get("viewportHeight")
+        if isinstance(viewport_height, (int, float)) and viewport_height > 0:
+            threshold = 1500
+            offscreen_count = 0
+            preserved_semantic_count = 0
+            filtered_index = dict(projected.get("element_index") or {})
+            for element in elements:
+                bounds = element.get("bounds")
+                if not isinstance(bounds, dict):
+                    continue
+                y = bounds.get("y")
+                h = bounds.get("height")
+                if not isinstance(y, (int, float)) or not isinstance(h, (int, float)):
+                    continue
+                if y >= viewport_height + threshold:
+                    ref = str(element.get("ref") or "")
+                    has_semantic = bool(
+                        element.get("role") or element.get("testid") or element.get("name")
+                    )
+                    entry = dict(filtered_index.get(ref) or {})
+                    entry["offscreen"] = True
+                    entry["y_offset"] = int(y)
+                    filtered_index[ref] = entry
+                    offscreen_count += 1
+                    if has_semantic:
+                        preserved_semantic_count += 1
+            if offscreen_count > 0:
+                projected["element_index"] = filtered_index
+                projected["viewport_filter"] = {
+                    "enabled": True,
+                    "threshold_px": threshold,
+                    "offscreen_count": offscreen_count,
+                    "preserved_semantic_count": preserved_semantic_count,
+                }
+
     return projected
 
 

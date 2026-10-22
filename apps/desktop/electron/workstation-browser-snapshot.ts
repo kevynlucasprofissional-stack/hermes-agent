@@ -21,6 +21,13 @@ export interface AXNode {
   properties?: Array<{ name: string; value?: { value?: unknown } }>
 }
 
+export interface ElementBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface AXInventoryElement {
   ref: string
   tag: string
@@ -30,6 +37,7 @@ export interface AXInventoryElement {
   disabled: boolean
   testid?: string
   name?: string
+  bounds?: ElementBounds
 }
 
 export interface PageInventoryResult {
@@ -39,6 +47,7 @@ export interface PageInventoryResult {
   totalTextChars: number
   truncated: boolean
   elements: AXInventoryElement[]
+  viewportHeight?: number
   spaNotice?: string
   wallDetected?: boolean
   wallReason?: string
@@ -174,6 +183,13 @@ export async function tryAccessibilitySnapshot(
               el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('alt') || el.getAttribute('title') || el.getAttribute('placeholder')) ||
               el.innerText || el.textContent || ''
             ).replace(/\\s+/g, ' ').trim().slice(0, 240);
+            var rect = el.getBoundingClientRect();
+            var bounds = (rect.width > 0 && rect.height > 0) ? {
+              x: Math.round(rect.x),
+              y: Math.round(rect.y),
+              width: Math.round(rect.width),
+              height: Math.round(rect.height)
+            } : undefined;
             return {
               ref: ref,
               tag: tag,
@@ -182,7 +198,8 @@ export async function tryAccessibilitySnapshot(
               value: val ? val.slice(0, 240) : undefined,
               disabled: Boolean(el.disabled || (el.getAttribute && el.getAttribute('aria-disabled') === 'true')),
               testid: testid || undefined,
-              name: (el.getAttribute && el.getAttribute('name')) || undefined
+              name: (el.getAttribute && el.getAttribute('name')) || undefined,
+              bounds: bounds
             };
           }`,
             returnByValue: true
@@ -231,13 +248,18 @@ export async function tryAccessibilitySnapshot(
     const text = rawText.slice(0, maxTextChars)
     const truncated = rawText.length > maxTextChars
 
+    const viewportHeight = Number(
+      await wc.executeJavaScript('window.innerHeight', true)
+    ) || undefined
+
     return {
       url: docMeta.url,
       title: docMeta.title,
       text,
       totalTextChars: docMeta.totalTextChars ?? rawText.length,
       truncated,
-      elements
+      elements,
+      viewportHeight
     }
   } catch {
     return null

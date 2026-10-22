@@ -292,10 +292,24 @@ class OperationalKernel:
             if not dispatch:
                 raise RuntimeError("Browser primitive requires dispatch function")
             ref = inputs.get("ref")
-            if not ref and inputs.get("anchor"):
+            anchor = inputs.get("anchor")
+            if not ref and anchor:
                 snap = dispatch("browser_snapshot", {"full": False})
                 elements = snap.get("elements", []) if isinstance(snap, dict) else []
-                ref = self._find_ref_by_anchor(elements, inputs["anchor"])
+                element_index = snap.get("element_index") if isinstance(snap, dict) else None
+                resolved = self._find_ref_by_anchor(elements, anchor, element_index=element_index)
+                if isinstance(resolved, dict) and resolved.get("error") == "ELEMENT_OFFSCREEN_NEEDS_SCROLL":
+                    dispatch("browser_scroll", {"direction": "down", "amount": resolved.get("y_offset", 800)})
+                    snap2 = dispatch("browser_snapshot", {"full": False})
+                    elements2 = snap2.get("elements", []) if isinstance(snap2, dict) else []
+                    element_index2 = snap2.get("element_index") if isinstance(snap2, dict) else None
+                    ref2 = self._find_ref_by_anchor(elements2, anchor, element_index=element_index2)
+                    if isinstance(ref2, str):
+                        ref = ref2
+                    else:
+                        raise CapabilityDriftError(f"Target offscreen and not resolved after scroll: {inputs}")
+                elif isinstance(resolved, str):
+                    ref = resolved
             if not ref:
                 raise CapabilityDriftError(f"Target ref could not be resolved for click: {inputs}")
             return dispatch("browser_click", {"ref": ref})
@@ -307,7 +321,20 @@ class OperationalKernel:
             if not ref and anchor:
                 snap = dispatch("browser_snapshot", {"full": False})
                 elements = snap.get("elements", []) if isinstance(snap, dict) else []
-                ref = self._find_ref_by_anchor(elements, anchor)
+                element_index = snap.get("element_index") if isinstance(snap, dict) else None
+                resolved = self._find_ref_by_anchor(elements, anchor, element_index=element_index)
+                if isinstance(resolved, dict) and resolved.get("error") == "ELEMENT_OFFSCREEN_NEEDS_SCROLL":
+                    dispatch("browser_scroll", {"direction": "down", "amount": resolved.get("y_offset", 800)})
+                    snap2 = dispatch("browser_snapshot", {"full": False})
+                    elements2 = snap2.get("elements", []) if isinstance(snap2, dict) else []
+                    element_index2 = snap2.get("element_index") if isinstance(snap2, dict) else None
+                    ref2 = self._find_ref_by_anchor(elements2, anchor, element_index=element_index2)
+                    if isinstance(ref2, str):
+                        ref = ref2
+                    else:
+                        raise CapabilityDriftError(f"Target offscreen and not resolved after scroll: {inputs}")
+                elif isinstance(resolved, str):
+                    ref = resolved
             if not ref and not anchor:
                 raise CapabilityDriftError(f"Target ref could not be resolved for type: {inputs}")
             default_mode = "plain_text_paste" if primitive in {"paste_text_semantic", "paste", "plain_text_paste"} else "insert_text"
@@ -364,30 +391,70 @@ class OperationalKernel:
             return dispatch(primitive, inputs)
         raise ValueError(f"Unknown primitive: {primitive}")
 
-    def _find_ref_by_anchor(self, elements: list[dict[str, Any]], anchor: dict[str, Any]) -> str | None:
+    def _find_ref_by_anchor(
+        self,
+        elements: list[dict[str, Any]],
+        anchor: dict[str, Any],
+        element_index: dict[str, dict[str, Any]] | None = None,
+    ) -> str | dict[str, Any] | None:
+        """Resolve anchor to ref; returns structured error if target is offscreen."""
+        found_ref: str | None = None
+        found_element: dict[str, Any] | None = None
+
         if anchor.get('type') in {'testid', 'role_name', 'text'}:
             from workstation.memory import ProcedureStep
-            return ProcedureStep(action='resolve', fallback_anchors=[anchor]).resolve_anchor(elements, strict=True) if elements else None
-        anchor_type = anchor.get("type")
-        anchor_val = str(anchor.get("value", "")).lower()
-        if anchor_type == "testid":
-            for el in elements:
-                tid = str(el.get("testid", el.get("attributes", {}).get("data-testid", ""))).lower()
-                if tid and tid == anchor_val:
-                    return el.get("ref")
-        elif anchor_type == "name":
-            for el in elements:
-                n = str(el.get("name", "")).lower()
-                if n and n == anchor_val:
-                    return el.get("ref")
-        elif anchor_type == "role_name":
-            role_req, _, label_req = anchor_val.partition(":")
-            for el in elements:
-                r = str(el.get("role", "")).lower()
-                lbl = str(el.get("label", el.get("name", ""))).lower()
-                if role_req in r and label_req in lbl:
-                    return el.get("ref")
-        return None
+            if elements:
+                resolved = ProcedureStep(action='resolve', fallback_anchors=[anchor]).resolve_anchor(elements, strict=True)
+                if isinstance(resolved, str):
+                    found_ref = resolved
+                    for el in elements:
+                        if el.get("ref") == resolved:
+                            found_element = el
+                            break
+        else:
+            anchor_type = anchor.get("type")
+            anchor_val = str(anchor.get("value", "")).lower()
+            if anchor_type == "testid":
+                for el in elements:
+                    tid = str(el.get("testid", el.get("attributes", {}).get("data-testid", ""))).lower()
+                    if tid and tid == anchor_val:
+                        found_ref = el.get("ref")
+                        found_element = el
+                        break
+            elif anchor_type == "name":
+                for el in elements:
+                    n = str(el.get("name", "")).lower()
+                    if n and n == anchor_val:
+                        found_ref = el.get("ref")
+                        found_element = el
+                        break
+            elif anchor_type == "role_name":
+                role_req, _, label_req = anchor_val.partition(":")
+                for el in elements:
+                    r = str(el.get("role", "")).lower()
+                    lbl = str(el.get("label", el.get("name", ""))).lower()
+                    if role_req in r and label_req in lbl:
+                        found_ref = el.get("ref")
+                        found_element = el
+                        break
+
+        # Check if resolved element is marked offscreen by viewport filter.
+        # The offscreen flag lives in the projected element_index, not on raw elements.
+        if found_ref:
+            idx_entry = (element_index or {}).get(found_ref)
+            is_offscreen = False
+            y_offset = 0
+            if isinstance(idx_entry, dict) and idx_entry.get("offscreen"):
+                is_offscreen = True
+                y_offset = int(idx_entry.get("y_offset", 0))
+            elif found_element and found_element.get("offscreen"):
+                is_offscreen = True
+                bounds = found_element.get("bounds")
+                y_offset = int(bounds.get("y", 0)) if isinstance(bounds, dict) else 0
+            if is_offscreen:
+                return {"error": "ELEMENT_OFFSCREEN_NEEDS_SCROLL", "ref": found_ref, "y_offset": y_offset}
+
+        return found_ref
 
     # -------------------------------------------------------------------------
     # Condition Verification (Preconditions / Postconditions)

@@ -415,6 +415,13 @@ interface BrowserControlRequest {
   call_key?: unknown
 }
 
+interface ElementBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 interface PageInventory {
   url: string
   title: string
@@ -430,7 +437,9 @@ interface PageInventory {
     disabled: boolean
     testid?: string
     name?: string
+    bounds?: ElementBounds
   }>
+  viewportHeight?: number
   wallDetected?: boolean
   wallReason?: string
   spaNotice?: string
@@ -787,6 +796,13 @@ function inventoryScript(maxText: number, maxElements: number): string {
         name ||
         ''
       ).replace(/\\s+/g, ' ').trim().slice(0, 240);
+      var rect = el.getBoundingClientRect();
+      var bounds = (rect.width > 0 && rect.height > 0) ? {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      } : undefined;
       out.push({
         ref: ref,
         tag: tag,
@@ -795,7 +811,8 @@ function inventoryScript(maxText: number, maxElements: number): string {
         value: value ? value.slice(0, 240) : undefined,
         disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
         testid: testid || undefined,
-        name: name || undefined
+        name: name || undefined,
+        bounds: bounds
       });
     }
 
@@ -803,6 +820,7 @@ function inventoryScript(maxText: number, maxElements: number): string {
     return {
       url: location.href,
       title: document.title || '',
+      viewportHeight: window.innerHeight,
       text: bodyText.slice(0, ${maxText}),
       totalTextChars: bodyText.length,
       truncated: bodyText.length > ${maxText} || candidates.length > ${maxElements},
