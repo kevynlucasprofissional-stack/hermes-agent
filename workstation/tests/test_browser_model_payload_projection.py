@@ -364,3 +364,85 @@ def test_fail_open_on_low_element_count(monkeypatch):
     ]
     projected = bw.project_model_browser_payload(_payload_with_bounds(elements))
     assert "viewport_filter" not in projected
+
+
+# ---------------------------------------------------------------------------
+# Fase 2 — PageFingerprint Cache unit tests
+# ---------------------------------------------------------------------------
+
+def _make_snapshot_result(url: str = "https://example.com/page", title: str = "Example",
+                          snapshot_text: str = "Some page text", revision: int = 1,
+                          mutation_count: int = 0) -> dict:
+    """Build a minimal raw snapshot result for cache tests."""
+    return {
+        "url": url,
+        "title": title,
+        "snapshot": snapshot_text,
+        "revision": revision,
+        "mutation_count": mutation_count,
+        "elements": [],
+        "element_count": 0,
+    }
+
+
+def test_fingerprint_cache_miss_then_hit():
+    cache = bw.PageFingerprintCache(ttl_seconds=5.0)
+    result = _make_snapshot_result()
+    fp = bw._compute_fingerprint(result)
+    assert fp is not None
+
+    # First lookup must be a miss
+    assert cache.get("task-1", fp) is None
+
+    payload = {"snapshot": "cached-payload", "element_count": 0}
+    cache.set("task-1", fp, payload)
+
+    # Second lookup with same fingerprint must be a hit
+    cached = cache.get("task-1", fp)
+    assert cached is not None
+    assert cached["snapshot"] == "cached-payload"
+
+
+def test_fingerprint_cache_invalidation_clears_entries():
+    cache = bw.PageFingerprintCache(ttl_seconds=5.0)
+    result = _make_snapshot_result()
+    fp = bw._compute_fingerprint(result)
+    cache.set("task-2", fp, {"data": "v1"})
+    assert cache.get("task-2", fp) is not None
+
+    cache.invalidate("task-2")
+    assert cache.get("task-2", fp) is None
+
+
+def test_fingerprint_cache_ttl_expiry(monkeypatch):
+    cache = bw.PageFingerprintCache(ttl_seconds=1.0)
+    result = _make_snapshot_result()
+    fp = bw._compute_fingerprint(result)
+    cache.set("task-3", fp, {"data": "ephemeral"})
+
+    # Simulate time passing beyond TTL by patching time.monotonic
+    original_monotonic = __import__("time").monotonic
+    fake_time = [original_monotonic()]
+
+    def advancing_monotonic():
+        fake_time[0] += 2.0
+        return fake_time[0]
+
+    monkeypatch.setattr(__import__("time"), "monotonic", advancing_monotonic)
+    assert cache.get("task-3", fp) is None
+
+
+def test_fingerprint_cache_mutation_changes_fingerprint():
+    result_v0 = _make_snapshot_result(mutation_count=0)
+    result_v1 = _make_snapshot_result(mutation_count=1)
+    fp0 = bw._compute_fingerprint(result_v0)
+    fp1 = bw._compute_fingerprint(result_v1)
+    assert fp0 is not None
+    assert fp1 is not None
+    assert fp0 != fp1
+
+
+def test_compute_fingerprint_returns_none_without_required_fields():
+    assert bw._compute_fingerprint({}) is None
+    assert bw._compute_fingerprint({"url": "https://x.com"}) is None
+    assert bw._compute_fingerprint({"url": "https://x.com", "snapshot": ""}) is None

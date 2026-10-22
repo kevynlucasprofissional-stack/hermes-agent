@@ -16,6 +16,8 @@ Routing invariants:
 
 from __future__ import annotations
 
+import collections
+import hashlib
 import json
 import logging
 import os
@@ -775,6 +777,108 @@ def _record_browser_controller_outcome(
                  metadata=metadata)
 
 
+# ---------------------------------------------------------------------------
+# Fase 2 — PageFingerprint Cache (deduplicação temporal de snapshots)
+# ---------------------------------------------------------------------------
+
+class _SnapshotCacheEntry:
+    __slots__ = ("expires_at", "fingerprint", "payload")
+
+    def __init__(self, fingerprint: str, payload: Any, ttl_seconds: float):
+        self.fingerprint = fingerprint
+        self.payload = payload
+        self.expires_at = time.monotonic() + ttl_seconds
+
+
+class PageFingerprintCache:
+    """In-memory cache keyed by task/session with composite fingerprint.
+
+    Cache key: ``url|revision|mutation_count|sha256(text[:500])[:32]``
+    TTL default: 5 seconds.  Eviction happens on every ``get`` / ``set``.
+    """
+
+    def __init__(self, ttl_seconds: float = 5.0, max_entries: int = 64):
+        self._ttl = ttl_seconds
+        self._max = max_entries
+        # {task_key: OrderedDict[fingerprint, _SnapshotCacheEntry]}
+        self._store: dict[str, collections.OrderedDict] = {}
+
+    # -- public API ---------------------------------------------------------
+
+    def get(self, task_key: str, fingerprint: str) -> Any | None:
+        bucket = self._store.get(task_key)
+        if bucket is None:
+            return None
+        entry = bucket.get(fingerprint)
+        if entry is None:
+            return None
+        if time.monotonic() > entry.expires_at:
+            del bucket[fingerprint]
+            return None
+        # refresh expiry on hit
+        entry.expires_at = time.monotonic() + self._ttl
+        return entry.payload
+
+    def set(self, task_key: str, fingerprint: str, payload: Any) -> None:
+        bucket = self._store.setdefault(task_key, collections.OrderedDict())
+        bucket[fingerprint] = _SnapshotCacheEntry(fingerprint, payload, self._ttl)
+        # evict oldest when over capacity
+        while len(bucket) > self._max:
+            bucket.popitem(last=False)
+
+    def invalidate(self, task_key: str) -> None:
+        self._store.pop(task_key, None)
+
+    # -- housekeeping -------------------------------------------------------
+
+    def sweep(self) -> None:
+        now = time.monotonic()
+        dead_keys: list[str] = []
+        for tk, bucket in self._store.items():
+            for fp, entry in list(bucket.items()):
+                if now > entry.expires_at:
+                    del bucket[fp]
+            if not bucket:
+                dead_keys.append(tk)
+        for tk in dead_keys:
+            del self._store[tk]
+
+
+# module-level singleton (lazy-created on first access)
+_snapshot_cache: PageFingerprintCache | None = None
+
+
+def _get_snapshot_cache() -> PageFingerprintCache:
+    global _snapshot_cache
+    if _snapshot_cache is None:
+        _snapshot_cache = PageFingerprintCache()
+    return _snapshot_cache
+
+
+def _compute_fingerprint(result: dict[str, Any]) -> str | None:
+    """Return composite fingerprint or ``None`` when insufficient data."""
+    url = result.get("url")
+    if not isinstance(url, str) or not url:
+        return None
+    revision = result.get("revision")
+    mutation_count = result.get("mutation_count", 0)
+    snapshot_text = result.get("snapshot")
+    if not isinstance(snapshot_text, str) or not snapshot_text:
+        return None
+    text_hash = hashlib.sha256(snapshot_text[:500].encode("utf-8", errors="replace")).hexdigest()[:32]
+    return f"{url}|{revision}|{mutation_count}|{text_hash}"
+
+
+_MUTATING_ACTIONS = frozenset({
+    "browser_click", "browser_type", "browser_fill",
+    "browser_batch_actions", "browser_scroll", "browser_select_option",
+})
+
+# Per-task mutation counter for cache invalidation.
+# Keyed by task_key; incremented on every mutating action.
+_mutation_counters: dict[str, int] = {}
+
+
 def _dispatch(
     action: str,
     args: dict[str, Any],
@@ -940,9 +1044,54 @@ def _dispatch(
             desktop_ui.emit("workstation.browser.open", {"url": str(args.get("url") or ""), "task_id": key})
         except Exception:
             pass
+
+    # Fase 2 — PageFingerprint Cache integration.
+    # Mutating actions invalidate the per-task cache and bump the counter so
+    # the next snapshot produces a fresh fingerprint. Fail-open on any error.
+    cache_enabled = os.environ.get("HERMES_BROWSER_SNAPSHOT_CACHE", "0") == "1"
+    if cache_enabled:
+        try:
+            if action in _MUTATING_ACTIONS:
+                _mutation_counters[key] = _mutation_counters.get(key, 0) + 1
+                _get_snapshot_cache().invalidate(key)
+        except Exception:
+            pass
+
     if isinstance(result, str):
         return result
-    return json.dumps(project_model_browser_payload(result) if model_facing else result, ensure_ascii=False)
+
+    # Fase 2 — Snapshot cache lookup BEFORE projection.
+    # On hit, return the cached projected payload directly (skip re-projection).
+    # The fingerprint is computed over the raw result so we can detect changes
+    # even when the projected form would be identical.
+    if cache_enabled and model_facing and isinstance(result, dict) and action == "browser_snapshot":
+        try:
+            mutation_count = _mutation_counters.get(key, 0)
+            result_with_mc = {**result, "mutation_count": mutation_count}
+            fp = _compute_fingerprint(result_with_mc)
+            if fp:
+                cached = _get_snapshot_cache().get(key, fp)
+                if cached is not None:
+                    cached_copy = {**cached, "snapshot_cache": "hit", "fingerprint": fp}
+                    return json.dumps(cached_copy, ensure_ascii=False)
+        except Exception:
+            pass
+
+    projected = project_model_browser_payload(result) if model_facing else result
+
+    # Snapshot cache: store projected payload keyed by composite fingerprint.
+    # Only cache successful snapshots; never cache errors or non-dict payloads.
+    if cache_enabled and model_facing and isinstance(projected, dict) and action == "browser_snapshot":
+        try:
+            mutation_count = _mutation_counters.get(key, 0)
+            projected["mutation_count"] = mutation_count
+            fp = _compute_fingerprint(projected)
+            if fp:
+                _get_snapshot_cache().set(key, fp, projected)
+        except Exception:
+            pass
+
+    return json.dumps(projected, ensure_ascii=False)
 
 
 _INVENTORY_SECTION = "Interactive elements:\n"

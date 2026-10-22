@@ -20,13 +20,19 @@ function Invoke-NativeChecked {
   )
 
   # Native CLIs (uv, npm, node) write progress/diagnostics to stderr even on
-  # success. PowerShell's $ErrorActionPreference = Stop converts any stderr
-  # output into a terminating NativeCommandError BEFORE the assignment can
-  # capture it, aborting the bootstrap. Execute via cmd /c to bypass the
-  # PowerShell pipeline entirely; gate failure solely on exit code.
-  $argString = ($Arguments | ForEach-Object { $_ }) -join ' '
-  $cmdLine = "`"$Command`" $argString"
-  $output = cmd /c "$cmdLine" 2>&1
+  # success. With $ErrorActionPreference = Stop at script scope, PowerShell
+  # renders stderr as NativeCommandError records even when captured via 2>&1,
+  # producing red noise in the console and Tee-Object logs. SilentlyContinue
+  # suppresses that rendering entirely; we still inspect $LASTEXITCODE to
+  # detect real failures. Restore the original preference immediately after.
+  $prevEAP = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = 'SilentlyContinue'
+    $output = & $Command @Arguments 2>&1
+  } finally {
+    $ErrorActionPreference = $prevEAP
+  }
+
   if ($LASTEXITCODE -ne 0) {
     $detail = ($output | Out-String).Trim()
     throw "Command failed with exit code ${LASTEXITCODE}: $Command $($Arguments -join ' ')`n$detail"
