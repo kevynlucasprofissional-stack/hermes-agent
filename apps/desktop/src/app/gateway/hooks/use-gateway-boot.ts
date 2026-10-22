@@ -879,14 +879,22 @@ export function useGatewayBoot({
         // specific call (seedDefaultCwd / refreshHermesConfig / refreshSessions).
         // All three still run concurrently; only the measurement is sequential-safe.
         const hydrationStartMs = performance.now()
-        console.log(`[boot-perf] phase=renderer.hydration.started renderer_elapsed_ms=${Math.round(hydrationStartMs)}`)
+        // Send hydration markers to main process via IPC so they land in
+        // desktop.log alongside the electron.* phases. Console output from
+        // the renderer is not captured by rememberLog in dev mode.
+        window.hermesDesktop?.logLine?.(
+          `[boot-perf] phase=renderer.hydration.started renderer_elapsed_ms=${Math.round(hydrationStartMs)}`
+        )
 
         const measureHydrationCall = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
           const start = performance.now()
           try {
             return await fn()
           } finally {
-            console.log(`[boot-perf] phase=renderer.hydration.${label} duration_ms=${Math.round(performance.now() - start)}`)
+            const durationMs = Math.round(performance.now() - start)
+            window.hermesDesktop?.logLine?.(
+              `[boot-perf] phase=renderer.hydration.${label} duration_ms=${durationMs}`
+            )
           }
         }
 
