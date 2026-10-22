@@ -121,6 +121,46 @@ def emit_native_browser_observation(
             result_bytes=_nonnegative_int(response_bytes),
             payload=payload,
         )
+
+        # Fase 3 — Unified telemetry aggregator hook (best-effort, fail-open).
+        # Feeds the in-memory BrowserOptimizationMetrics without altering the
+        # event stream above. Never raises into the caller path.
+        try:
+            from .browser_optimization_metrics import record_browser_observation
+
+            viewport_filter = data.get("viewport_filter") if isinstance(data, Mapping) else None
+            offscreen_count = 0
+            semantic_count = 0
+            viewport_enabled = False
+            original_chars = 0
+            if isinstance(viewport_filter, Mapping):
+                offscreen_count = _nonnegative_int(viewport_filter.get("offscreen_count")) or 0
+                semantic_count = _nonnegative_int(viewport_filter.get("preserved_semantic_count")) or 0
+                viewport_enabled = bool(viewport_filter.get("enabled"))
+                # Estimate original chars from projected + savings when available.
+                proj_chars = payload.get("snapshot_chars") or 0
+                delta = payload.get("delta_chars") or 0
+                original_chars = proj_chars + delta if (proj_chars and delta) else 0
+
+            items_count = 0
+            if action == "browser_extract_items":
+                items_raw = data.get("items") if isinstance(data, Mapping) else None
+                if isinstance(items_raw, list):
+                    items_count = len(items_raw)
+
+            record_browser_observation(
+                session_id,
+                action=action,
+                chars=payload.get("snapshot_chars") or 0,
+                cached=bool(payload.get("cached")),
+                offscreen_count=offscreen_count,
+                semantic_count=semantic_count,
+                viewport_filter_enabled=viewport_enabled,
+                original_chars=original_chars,
+                items_count=items_count,
+            )
+        except Exception:
+            pass
     except Exception:
         # The analytics projection never controls an effect or exception route.
         return
