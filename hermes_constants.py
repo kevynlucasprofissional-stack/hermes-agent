@@ -410,6 +410,11 @@ def get_bundled_skills_dir(default: Path | None = None) -> Path:
     return _packaged_dir("HERMES_BUNDLED_SKILLS", default, "skills")
 
 
+def get_site_ops_dir(default: Path | None = None) -> Path:
+    """Return the site-ops directory, honoring package-manager wrappers (``HERMES_SITE_OPS``)."""
+    return _packaged_dir("HERMES_SITE_OPS", default, "site-ops")
+
+
 def get_hermes_dir(new_subpath: str, old_name: str, *, home: Path | None = None) -> Path:
     """Resolve a Hermes subdirectory, honouring a populated legacy ``<old_name>/`` (no migration).
 

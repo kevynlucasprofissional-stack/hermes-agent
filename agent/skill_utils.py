@@ -11,6 +11,7 @@ from pathlib import Path, PurePath
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from hermes_constants import (
+    get_bundled_skills_dir,
     get_config_path,
     get_skills_dir,
     get_subprocess_home,
@@ -379,9 +380,9 @@ def display_skill_create_dir() -> str:
 
 
 # Cross-directory precedence, lowest tier wins: trusted project > local profile > skills.create_dir >
-# skills.external_dirs. Inside ONE tier two different skills sharing a name stay ambiguous — refused,
+# skills.external_dirs > bundled. Inside ONE tier two different skills sharing a name stay ambiguous — refused,
 # never guessed (59da8ec4e) — while identical copies under one root resolve to the shallowest.
-TIER_PROJECT, TIER_LOCAL, TIER_CREATE_DIR, TIER_EXTERNAL = range(4)
+TIER_PROJECT, TIER_LOCAL, TIER_CREATE_DIR, TIER_EXTERNAL, TIER_BUNDLED = range(5)
 # Leading words of every same-tier refusal (skill_view error, preload/cron label) — one spelling.
 AMBIGUOUS_SKILL_PREFIX = "Ambiguous skill name "
 # (shadowed path, *sorted higher-tier paths) already judged: the identity check (it hashes both
@@ -399,12 +400,15 @@ def get_skill_search_roots(local: Optional[Path] = None, *, include_project: boo
     if create_dir is not None and create_dir.is_dir():
         roots.append((TIER_CREATE_DIR, create_dir))
     roots += [(TIER_EXTERNAL, d) for d in get_external_skills_dirs()]
+    bundled = get_bundled_skills_dir()
+    if bundled.is_dir():
+        roots.append((TIER_BUNDLED, bundled))
     seen: set[Path] = set()
     return [(t, d) for t, d in roots if not (d in seen or seen.add(d))]
 
 
 def get_all_skills_dirs() -> list[Path]:
-    """Skill dirs: local ``~/.hermes/skills/`` first, then create_dir, then external.
+    """Skill dirs: local ``~/.hermes/skills/`` first, then create_dir, then external, then bundled.
     Trusted project dirs are NOT included (higher precedence; see get_project_skills_dirs)."""
     return [d for _tier, d in get_skill_search_roots(include_project=False)]
 

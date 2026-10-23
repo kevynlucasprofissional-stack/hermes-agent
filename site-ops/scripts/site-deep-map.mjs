@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Site Deep Map — Recursive UI mapping for external sites via CDP
 //
 // Maps ALL interactive elements on external sites loaded in Hermes' native
@@ -5,73 +6,28 @@
 // CDP target (not the Hermes renderer), enabling full DOM access.
 //
 // Usage:
-//   node scripts/site-deep-map.mjs init <url-pattern>   — start fresh map for site matching pattern
-//   node scripts/site-deep-map.mjs continue             — resume from last state
-//   node scripts/site-deep-map.mjs status               — show progress
-//   node scripts/site-deep-map.mjs scan                 — single-pass element scan (no navigation)
+//   node site-deep-map.mjs init <url-pattern>   — start fresh map for site matching pattern
+//   node site-deep-map.mjs continue             — resume from last state
+//   node site-deep-map.mjs status [url-pattern] — show progress
+//   node site-deep-map.mjs scan [url-pattern]   — single-pass element scan (no navigation)
 //
 // Output: workstation/dogfood/artifacts/site-map-<slug>.json
 // State:  workstation/dogfood/artifacts/site-map-<slug>-state.json
-//
-// Architecture: "LLM writes script > Script > Runtime > Script > Runtime > Output"
-// This script IS the deterministic layer. The LLM only analyzes the output.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { CdpClient } from '../framework/cdp-client.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const ARTIFACTS_DIR = resolve(__dirname, '../../../workstation/dogfood/artifacts')
+const workspaceRoot = resolve(__dirname, '../..')
+const ARTIFACTS_DIR = resolve(workspaceRoot, 'workstation/dogfood/artifacts')
 if (!existsSync(ARTIFACTS_DIR)) mkdirSync(ARTIFACTS_DIR, { recursive: true })
 
-const port = Number(process.env.HERMES_DESKTOP_CDP_PORT || 9222)
 const args = process.argv.slice(2)
 const command = args[0] || 'status'
 
-// --- Target Discovery ---
-async function findTarget(urlPattern) {
-  const targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json()
-  const pages = targets.filter(t => t.type === 'page' && t.url !== 'about:blank' && t.url !== '')
-
-  if (urlPattern) {
-    const match = pages.find(t => t.url.includes(urlPattern) || (t.title || '').includes(urlPattern))
-    if (match) return match
-    throw new Error(`No CDP target matching "${urlPattern}". Available: ${pages.map(p => p.url).join(', ')}`)
-  }
-
-  // Auto-detect: prefer non-Hermes pages
-  const external = pages.filter(t => !t.url.includes('127.0.0.1:5174'))
-  if (external.length === 1) return external[0]
-  if (external.length > 1) {
-    console.error(`Multiple external targets found. Specify one:`)
-    external.forEach(p => console.error(`  - ${p.title || '(no title)'} → ${p.url}`))
-    process.exit(1)
-  }
-  throw new Error('No external CDP targets found. Open a site in Hermes browser first.')
-}
-
-// --- CDP Connection ---
-let ws, id = 0
-const pending = new Map()
-
-async function connectCDP(target) {
-  ws = new WebSocket(target.webSocketDebuggerUrl)
-  ws.addEventListener('message', (ev) => {
-    const m = JSON.parse(ev.data)
-    if (pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id) }
-  })
-  await new Promise(r => ws.addEventListener('open', r))
-  console.error(`[SITE-MAP] Connected to: ${target.title || target.url}`)
-}
-
-const evalExpr = async (expr) => {
-  const i = ++id
-  const p = new Promise((res) => pending.set(i, res))
-  ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true, awaitPromise: true } }))
-  const r = await p
-  if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || 'eval error')
-  return r.result.result.value
-}
+const client = new CdpClient()
 
 // --- State Management ---
 function slugify(url) {
@@ -111,7 +67,7 @@ function saveMap(slug, map) {
 
 // --- Element Scanning ---
 async function scanCurrentScreen(label = 'main') {
-  const elements = await evalExpr(`(() => {
+  const elements = await client.eval(`(() => {
     const interactive = document.querySelectorAll(
       'button, [role="button"], a[href], input, select, textarea, ' +
       '[role="tab"], [role="textbox"], [contenteditable="true"], ' +
@@ -175,7 +131,7 @@ async function scanCurrentScreen(label = 'main') {
     return results
   })()`)
 
-  const structure = await evalExpr(`(() => {
+  const structure = await client.eval(`(() => {
     const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4')).map(h => ({
       level: parseInt(h.tagName[1]), text: h.textContent?.trim().substring(0, 100)
     }))
@@ -189,8 +145,9 @@ async function scanCurrentScreen(label = 'main') {
 
 // --- Commands ---
 async function cmdInit(urlPattern) {
-  const target = await findTarget(urlPattern)
-  await connectCDP(target)
+  const target = await client.findTarget(urlPattern)
+  await client.connect(target)
+  console.error(`[SITE-MAP] Connected to: ${target.title || target.url}`)
   const slug = slugify(target.url)
   const state = { slug, url: target.url, completedPhases: [], pendingPhases: ['main'], lastUpdated: new Date().toISOString() }
   saveState(slug, state)
@@ -199,7 +156,7 @@ async function cmdInit(urlPattern) {
 }
 
 async function cmdStatus(urlPattern) {
-  const target = await findTarget(urlPattern)
+  const target = await client.findTarget(urlPattern)
   const slug = slugify(target.url)
   const state = loadState(slug)
   const map = loadMap(slug)
@@ -214,8 +171,9 @@ async function cmdStatus(urlPattern) {
 }
 
 async function cmdScan(urlPattern) {
-  const target = await findTarget(urlPattern)
-  await connectCDP(target)
+  const target = await client.findTarget(urlPattern)
+  await client.connect(target)
+  console.error(`[SITE-MAP] Connected to: ${target.title || target.url}`)
   const slug = slugify(target.url)
   const screen = await scanCurrentScreen('main')
   const map = loadMap(slug)
@@ -226,8 +184,9 @@ async function cmdScan(urlPattern) {
 }
 
 async function cmdContinue(urlPattern) {
-  const target = await findTarget(urlPattern)
-  await connectCDP(target)
+  const target = await client.findTarget(urlPattern)
+  await client.connect(target)
+  console.error(`[SITE-MAP] Connected to: ${target.title || target.url}`)
   const slug = slugify(target.url)
   const state = loadState(slug)
   const map = loadMap(slug)
@@ -271,5 +230,5 @@ try {
   console.error(JSON.stringify({ error: err.message }))
   process.exit(1)
 } finally {
-  if (ws) ws.close()
+  client.close()
 }

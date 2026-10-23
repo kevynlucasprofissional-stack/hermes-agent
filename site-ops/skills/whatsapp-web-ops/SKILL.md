@@ -4,9 +4,9 @@ description: Native WhatsApp Web operations via CDP with auto-healing site map
 version: 1.0.0
 native: true
 auto_update: true
-site_map: assets/site-maps/whatsapp-web.json
-operations_script: scripts/site-ops/whatsapp-web.mjs
-deep_map_script: scripts/site-deep-map.mjs
+site_map: site-ops/maps/whatsapp-web.json
+operations_script: site-ops/scripts/site-ops/whatsapp-web.mjs
+deep_map_script: site-ops/scripts/site-deep-map.mjs
 ---
 
 # WhatsApp Web Operations — Native Skill
@@ -20,8 +20,8 @@ This skill uses a **three-layer architecture** for maximum efficiency and resili
 
 | Layer | File | Purpose | Mutability |
 |-------|------|---------|------------|
-| **Deterministic Ops** | `scripts/site-ops/whatsapp-web.mjs` | Fast CLI operations (open-chat, send-message, get-unread) | Stable; updated when selectors change |
-| **Site Map** | `assets/site-maps/whatsapp-web.json` | Baseline element catalog with selectors | Versioned in repo; overridden locally on heal |
+| **Deterministic Ops** | `site-ops/scripts/site-ops/whatsapp-web.mjs` | Fast CLI operations (open-chat, send-message, get-unread) | Stable; updated when selectors change |
+| **Site Map** | `site-ops/maps/whatsapp-web.json` | Baseline element catalog with selectors | Versioned in repo; overridden locally on heal |
 | **Playbook** | This file (`SKILL.md`) | Instructions for LLM on when/how to use ops + map | Updated when new capabilities are discovered |
 
 ### Why three layers?
@@ -36,8 +36,8 @@ This skill uses a **three-layer architecture** for maximum efficiency and resili
 When ANY operation fails due to selector mismatch or missing element:
 
 1. **Detect**: Script throws error with selector that failed
-2. **Re-map**: Run `node apps/desktop/scripts/site-deep-map.mjs init "web.whatsapp.com" && node apps/desktop/scripts/site-deep-map.mjs scan "web.whatsapp.com"`
-3. **Compare**: Diff new map against baseline (`assets/site-maps/whatsapp-web.json`)
+2. **Re-map**: Run `node site-ops/scripts/site-deep-map.mjs init "web.whatsapp.com" && node site-ops/scripts/site-deep-map.mjs scan "web.whatsapp.com"`
+3. **Compare**: Diff new map against baseline (`site-ops/maps/whatsapp-web.json`)
 4. **Update local override**: Save new map to `.claude/site-maps/whatsapp-web.local.json` (user-local, not committed)
 5. **Retry**: Re-run the failed operation with updated selectors
 6. **Report**: If retry succeeds, log what changed. If it still fails, ask user for guidance.
@@ -56,13 +56,13 @@ Never auto-update the repo baseline from a single healing event.
 
 ```bash
 # Open chat with a contact (searches + clicks first result)
-node apps/desktop/scripts/site-ops/whatsapp-web.mjs open-chat "Contact Name"
+node site-ops/scripts/site-ops/whatsapp-web.mjs open-chat "Contact Name"
 
 # Send message in currently open chat
-node apps/desktop/scripts/site-ops/whatsapp-web.mjs send-message "Hello world"
+node site-ops/scripts/site-ops/whatsapp-web.mjs send-message "Hello world"
 
 # Get total unread message count
-node apps/desktop/scripts/site-ops/whatsapp-web.mjs get-unread-count
+node site-ops/scripts/site-ops/whatsapp-web.mjs get-unread-count
 ```
 
 All operations connect directly to WhatsApp Web's CDP target (not the Hermes renderer),
@@ -72,7 +72,7 @@ bypassing the Hermes AI layer entirely for speed.
 
 Before attempting any WhatsApp Web automation:
 
-1. **Check if map exists**: Read `assets/site-maps/whatsapp-web.json`
+1. **Check if map exists**: Read `site-ops/maps/whatsapp-web.json`
 2. **Find your target element**: Search `screens.main.elements[]` by `ariaLabel`, `text`, `role`, or `testId`
 3. **Use the selector**: Prefer `data-testid` > `aria-label` > `role` > text-based selectors
 4. **If element not found**: Trigger auto-healing protocol above
@@ -80,7 +80,7 @@ Before attempting any WhatsApp Web automation:
 ### Example: finding the search input
 
 ```javascript
-const map = require('./assets/site-maps/whatsapp-web.json')
+const map = require('./site-ops/maps/whatsapp-web.json')
 const searchInput = map.screens.main.elements.find(e =>
   e.ariaLabel?.includes('Search') || e.placeholder?.includes('Search')
 )
@@ -104,15 +104,15 @@ The LLM should proactively improve this skill when:
 This skill is referenced by `/hermes-work-control` as a native site capability.
 When the user asks to interact with WhatsApp Web, `/hermes-work-control` should:
 
-1. Check if WhatsApp Web is open in Hermes browser (`site-deep-map.mjs status "web.whatsapp.com"`)
+1. Check if WhatsApp Web is open in Hermes browser (`node site-ops/scripts/site-deep-map.mjs status "web.whatsapp.com"`)
 2. If not open, ask Hermes AI to open it via chat injection
 3. Once open, delegate to this skill's operations script
 4. Never use raw CDP eval for WhatsApp operations — always go through the deterministic layer
 
 ## Files
 
-- `apps/desktop/assets/site-skills/whatsapp-web-ops/SKILL.md` — This playbook
-- `apps/desktop/assets/site-maps/whatsapp-web.json` — Baseline site map (versioned)
-- `apps/desktop/scripts/site-ops/whatsapp-web.mjs` — Deterministic operations CLI
-- `apps/desktop/scripts/site-deep-map.mjs` — Deep mapping tool for re-scanning
+- `site-ops/skills/whatsapp-web-ops/SKILL.md` — This playbook
+- `site-ops/maps/whatsapp-web.json` — Baseline site map (versioned)
+- `site-ops/scripts/site-ops/whatsapp-web.mjs` — Deterministic operations CLI
+- `site-ops/scripts/site-deep-map.mjs` — Deep mapping tool for re-scanning
 - `.claude/site-maps/whatsapp-web.local.json` — Local override (auto-healed, not committed)

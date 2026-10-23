@@ -336,3 +336,25 @@ class TestBOMToleranceSiblingSites:
         assert fm is not None
         assert fm.get("name") == "bp"
 
+
+def test_tier_bundled_in_skill_search_roots(tmp_path, monkeypatch):
+    """Bundled skills directory appears in search roots as lowest-priority TIER_BUNDLED."""
+    from agent.skill_utils import (
+        TIER_BUNDLED,
+        get_all_skills_dirs,
+        get_skill_search_roots,
+    )
+
+    assert TIER_BUNDLED == 4
+    bundled_dir = tmp_path / "bundled_skills"
+    bundled_dir.mkdir()
+    monkeypatch.setenv("HERMES_BUNDLED_SKILLS", str(bundled_dir))
+
+    roots = get_skill_search_roots(include_project=False)
+    tiers = [tier for tier, path in roots]
+    assert TIER_BUNDLED in tiers
+    assert (TIER_BUNDLED, bundled_dir) in roots
+    assert tiers.index(TIER_BUNDLED) == len(tiers) - 1
+    assert bundled_dir in get_all_skills_dirs()
+
+
