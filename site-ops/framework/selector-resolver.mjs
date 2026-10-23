@@ -1,28 +1,35 @@
-// site-ops/framework/selector-resolver.mjs
-// Selector Resolver — Priority-based selector lookup and element discovery in site maps.
+// Selector Resolver — Priority-based selector lookup in site maps
+// Extracted from whatsapp-web.mjs
 
-export function getScreenElements(map, screenName = 'main') {
-  if (!map || !map.screens) return []
-  const screen = map.screens[screenName]
-  return screen?.elements || []
-}
-
-function findInScreens(map, predicate, returnAll = false) {
-  if (!map || !map.screens) return returnAll ? [] : null
-  const results = []
+/**
+ * Find element in site map using a predicate function.
+ * Searches all screens and returns the first matching element.
+ * 
+ * @param {Object} map - Site map object with screens
+ * @param {Function} predicate - Function(el) => boolean
+ * @returns {Object|null} Matching element with selector, or null
+ */
+export function findElement(map, predicate) {
   for (const [screenName, screen] of Object.entries(map.screens || {})) {
     for (const el of screen.elements || []) {
       if (predicate(el)) {
-        if (!returnAll) return { ...el, screen: screenName }
-        results.push({ ...el, screen: screenName })
+        return { ...el, screen: screenName }
       }
     }
   }
-  return returnAll ? results : null
+  return null
 }
 
-export function buildSelector(element) {
+/**
+ * Build best CSS selector for an element based on available attributes.
+ * Priority: data-testid > aria-label > id > role > text (short)
+ * 
+ * @param {Object} element - Element from site map
+ * @returns {string} CSS selector
+ */
+export function resolveSelector(element) {
   if (!element) return ''
+  
   if (element.testId) {
     return `[data-testid="${element.testId}"]`
   }
@@ -41,107 +48,46 @@ export function buildSelector(element) {
     const tag = element.tag || '*'
     return `${tag}:has-text("${element.text.replace(/"/g, '\\"').substring(0, 40)}")`
   }
-  if (element.selector) {
-    return element.selector
-  }
   return ''
 }
 
-export const resolveSelector = buildSelector
+export const buildSelector = resolveSelector
 
-export function findElement(map, findersOrPredicate, screenName = 'main') {
-  if (typeof findersOrPredicate === 'function') {
-    const elements = getScreenElements(map, screenName)
-    const match = elements.find(findersOrPredicate)
-    if (match) return match
-    return findInScreens(map, findersOrPredicate, false)
-  }
-  if (Array.isArray(findersOrPredicate)) {
-    for (const fn of findersOrPredicate) {
-      const result = fn(map)
-      if (result) return result
-    }
-  }
-  return null
-}
 
-export function findElements(map, predicate, screenName = 'main') {
-  const elements = getScreenElements(map, screenName)
-  return elements.filter(predicate)
-}
-
-export function findElementByTestId(map, testId) {
-  return findInScreens(map, el => el.testId === testId)
-}
-export const findByTestId = findElementByTestId
-
-export function findElementByAriaLabel(map, ariaLabel, options = {}) {
-  const { exact = false, includes = false } = options
-  return findInScreens(map, el => {
-    if (!el.ariaLabel) return false
-    if (exact) return el.ariaLabel === ariaLabel
-    if (includes) return el.ariaLabel.includes(ariaLabel)
-    return el.ariaLabel === ariaLabel || el.ariaLabel.includes(ariaLabel)
-  })
-}
-export const findByAriaLabel = findElementByAriaLabel
-
-export function findElementByPlaceholder(map, placeholder, options = {}) {
-  const { exact = false, includes = false } = options
-  return findInScreens(map, el => {
-    if (!el.placeholder) return false
-    if (exact) return el.placeholder === placeholder
-    if (includes) return el.placeholder.includes(placeholder)
-    return el.placeholder === placeholder || el.placeholder.includes(placeholder)
-  })
-}
-export const findByPlaceholder = findElementByPlaceholder
-
-export function findElementByRole(map, role) {
-  return findInScreens(map, el => el.role === role)
-}
-export const findByRole = findElementByRole
-
-export function findElementByText(map, text, options = {}) {
-  const { includes = false, maxLength = 80 } = options
-  return findInScreens(map, el => {
-    if (!el.text) return false
-    const t = el.text.substring(0, maxLength)
-    return includes ? t.includes(text) : t === text
-  })
-}
-export const findByText = findElementByText
-
-export function findElementByCategory(map, category) {
-  return findInScreens(map, el => el.category === category)
-}
-
-export function findNavTriggers(map) {
-  return findInScreens(map, el => el.isNavTrigger === true, true)
-}
+/**
+ * High-level finders for common element types
+ */
 
 export function findInputElement(map) {
-  return findElement(map, [
-    m => findElementByRole(m, 'textbox'),
-    m => findElementByCategory(m, 'input'),
-    m => findInScreens(m, el => el.contentEditable === 'true')
-  ])
+  return findElement(map, e => e.role === 'textbox' || e.category === 'input' || e.contentEditable === 'true')
 }
 
 export function findSearchInput(map) {
-  return findElement(map, [
-    m => findElementByAriaLabel(m, 'Search', { includes: true }),
-    m => findElementByPlaceholder(m, 'Search', { includes: true }),
-    m => findElementByTestId(m, 'search-input'),
-    m => findElementByTestId(m, 'search'),
-  ])
+  return findElement(map, e => 
+    e.ariaLabel?.includes('Search') || 
+    e.placeholder?.includes('Search') ||
+    e.testId === 'search-input' ||
+    e.testId === 'search'
+  )
 }
 
 export function findMessageInput(map) {
-  return findElement(map, [
-    m => findElementByAriaLabel(m, 'Type a message', { exact: true }),
-    m => findElementByRole(m, 'textbox'),
-    m => findElementByTestId(m, 'message-input'),
-    m => findElementByTestId(m, 'composer'),
-  ])
+  return findElement(map, e => 
+    e.ariaLabel === 'Type a message' || 
+    e.role === 'textbox' ||
+    e.testId === 'message-input' ||
+    e.testId === 'composer'
+  )
+}
+
+export function findNavTriggers(map) {
+  const results = []
+  for (const [screenName, screen] of Object.entries(map.screens || {})) {
+    for (const el of screen.elements || []) {
+      if (el.isNavTrigger) {
+        results.push({ ...el, screen: screenName })
+      }
+    }
+  }
+  return results
 }
