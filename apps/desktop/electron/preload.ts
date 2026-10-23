@@ -109,6 +109,13 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
       return () => ipcRenderer.removeListener('hermes:workstation-browser:open-chat-preview', listener)
     }
   },
+  siteOps: {
+    execute: (site: string, operation: string, args?: string[], options?: { timeoutMs?: number; sitePattern?: string; siteSlug?: string }) =>
+      ipcRenderer.invoke('hermes:site-ops:execute', { site, operation, args, options }),
+    deepMap: (command: 'init' | 'scan' | 'status', sitePattern: string) =>
+      ipcRenderer.invoke('hermes:site-ops:deep-map', command, sitePattern),
+    cancel: (procId?: string) => ipcRenderer.invoke('hermes:site-ops:cancel', procId)
+  },
   glassSupported: translucencySupport?.glass === true,
   translucencySupported: translucencySupport?.translucency === true,
   // Launch-flag fact: the app was started with --local, so the renderer may

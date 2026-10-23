@@ -341,6 +341,7 @@ import { buildHudWindowUrl } from './hud-url'
 import { linuxOzoneBackend, resolveHudWindowing } from './hud-windowing'
 import { INSTALL_STAMP, installShape } from './install-stamp'
 import type { InstallStamp } from './install-stamp'
+import { disposeSiteOpsIpc, registerSiteOpsIpc } from './ipc/site-ops'
 import { applyLaunchProfileOverride } from './launch-profile'
 import { fetchLinkTitle, resolveFaviconCached } from './link-metadata'
 import { CHROMIUM_LOG_FILENAME, enableLinuxCrashDiagnostics, linuxCrashDiagnostics } from './linux-crash-diagnostics'
@@ -18696,6 +18697,9 @@ const terminalIpc = registerTerminalIpc({
 
 const disposeTerminalSession = terminalIpc.disposeTerminalSession
 
+// Site operations IPC (hermes:site-ops:*) — see ipc/site-ops.ts.
+registerSiteOpsIpc()
+
 ipcMain.handle(
   'hermes:updates:check',
   async (_event: Electron.IpcMainInvokeEvent, opts?: { force?: boolean }): Promise<UpdaterStatusWire> =>
@@ -19821,6 +19825,7 @@ app.on('before-quit', event => {
   // Kill open PTYs before environment teardown to avoid the node-pty#904
   // ThreadSafeFunction SIGABRT race.
   terminalIpc.disposeAllTerminalSessions()
+  disposeSiteOpsIpc()
 
   void backendShutdown.run()
 })
