@@ -4,8 +4,54 @@ import type { WorkstationBrowserBridge } from './types'
 
 export const NATIVE_VIEW_OCCLUDER_SELECTOR = '[data-native-view-occluder="true"]'
 
+export function isElementActiveOccluder(el: Element): boolean {
+  if (el.getAttribute('data-native-view-occluder') !== 'true') {
+    return false
+  }
+
+  // If the element itself or any ancestor has data-state="closed", it is closing/closed and not occluding
+  if (el.getAttribute('data-state') === 'closed' || Boolean(el.closest('[data-state="closed"]'))) {
+    return false
+  }
+
+  // If the element itself or any ancestor has aria-hidden="true"
+  if (el.getAttribute('aria-hidden') === 'true' || Boolean(el.closest('[aria-hidden="true"]'))) {
+    return false
+  }
+
+  // Hidden attribute or inline styles
+  if (el instanceof HTMLElement) {
+    if (el.hidden || el.style.display === 'none' || el.style.visibility === 'hidden') {
+      return false
+    }
+  }
+
+  // Computed style check if available in DOM environment
+  if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+    try {
+      const style = window.getComputedStyle(el)
+
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return false
+      }
+    } catch {
+      // Ignore if element is detached
+    }
+  }
+
+  return true
+}
+
 export function isNativeViewOccluded(root: ParentNode = document): boolean {
-  return Boolean(root.querySelector(NATIVE_VIEW_OCCLUDER_SELECTOR))
+  const elements = root.querySelectorAll(NATIVE_VIEW_OCCLUDER_SELECTOR)
+
+  for (let i = 0; i < elements.length; i++) {
+    if (isElementActiveOccluder(elements[i])) {
+      return true
+    }
+  }
+
+  return false
 }
 
 export interface NativeViewGate {
@@ -81,7 +127,12 @@ export function useNativeViewOcclusion(
       }, 0)
     })
 
-    observer.observe(document.body, { childList: true, subtree: true })
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-native-view-occluder', 'data-state', 'aria-hidden', 'style', 'class', 'hidden']
+    })
 
     return () => {
       observer.disconnect()

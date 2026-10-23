@@ -44,13 +44,14 @@ export function registerWorkstationBrowserIpc(): void {
   ipcMain.handle('hermes:workstation-browser:reload', () => getWorkstationBrowserRuntime().reload())
   ipcMain.handle('hermes:workstation-browser:stop', () => getWorkstationBrowserRuntime().stop())
   ipcMain.handle('hermes:workstation-browser:focus', () => getWorkstationBrowserRuntime().focus())
-  ipcMain.handle('hermes:workstation-browser:attach', (event, bounds, host, preferredTaskId, ownerId) =>
+  ipcMain.handle('hermes:workstation-browser:attach', (event, bounds, host, preferredTaskId, ownerId, visible) =>
     getWorkstationBrowserRuntime().attach(
       senderWindow(event),
       bounds as WorkstationBrowserBounds,
       typeof host === 'string' ? host : 'hub',
       typeof preferredTaskId === 'string' ? preferredTaskId : null,
-      typeof ownerId === 'string' ? ownerId : null
+      typeof ownerId === 'string' ? ownerId : null,
+      typeof visible === 'boolean' ? visible : undefined
     )
   )
   ipcMain.handle('hermes:workstation-browser:set-bounds', (event, bounds, expectedHost, expectedOwnerId) =>

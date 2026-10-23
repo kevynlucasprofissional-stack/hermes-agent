@@ -8,20 +8,6 @@
         "type": "tabs",
         "children": [
           {
-            "id": "2f5444958a503cef",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Prompts.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Prompts"
-            }
-          },
-          {
             "id": "f2914e9361d3cb31",
             "type": "leaf",
             "state": {
@@ -48,8 +34,23 @@
               "icon": "lucide-file",
               "title": "Timestamps em todo o Hermes Work"
             }
+          },
+          {
+            "id": "f5166207149aa457",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Prompts.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Prompts"
+            }
           }
-        ]
+        ],
+        "currentTab": 2
       }
     ],
     "direction": "vertical"
@@ -216,10 +217,26 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "2f5444958a503cef",
+  "active": "f5166207149aa457",
   "lastOpenFiles": [
-    "19.10.26.md",
+    "P05_2026-10-18.md",
+    "dados/Sessões Hermes/enviar-mensagem-teste-para-kevyn-acirv-no-whatsa-20261021.json",
+    "dados/Sessões Hermes/enviar-mensagem-de-agradecimento-pelo-whatsapp-20261021.json",
+    "dados/Sessões Hermes/enviar-email-de-agradecimento-aos-participantes--20261021.json",
+    "dados/Sessões Hermes/enviar-9-e-mails-p-s-evento-acirv-20261021.json",
+    "dados/Sessões Hermes/automatizar-envio-de-mensagem-no-whatsapp-web-20261021.json",
+    "dados/Sessões Claude/Otimização do browser nativo do Hermes Workstation com implementação de Viewport Filter, PageFingerprint Cache e Telemetria Unificada.md",
+    "artifacts/site-ops-implementation-plan-s3.md",
+    "artifacts/site-ops-architecture-evaluation-s2.md",
+    "artifacts/site-map-web-whatsapp-com.json",
+    "artifacts/site-map-web-whatsapp-com-state.json",
+    "artifacts/hermes-complete-map.json",
+    "artifacts/deep-map-state.json",
+    "artifacts",
+    "23.10.26.md",
     "dados/Sessões Claude/Timestamps em todo o Hermes Work.md",
+    "Prompts.md",
+    "19.10.26.md",
     "dados/Sessões Claude/Implementação, validação E2E e auditoria de eficiência da função `browser_wait_for_ready` para automação do WhatsApp Web no Hermes Workstation..md",
     "dados/Contexto Hermes/18.10.26 Comparativo Browser/B18.10.26 Análises comparativas do Browser por Fable 5.1.md",
     "dados/Contexto Hermes/18.10.26 Comparativo Browser/BSegunda auditoria adversarial — Browser nativo Hermes Workstation.md",
@@ -231,7 +248,6 @@
     "dados/Sessões Claude/Análise comparativa browser Hermes Workstation.md",
     "dados/Sessões Claude/Implementação de automação WhatsApp Web no browser interno do Hermes Workstation + auditoria e configuração permanente de skills essenciais..md",
     "dados/Sessões Claude/HERMES WORK DOGFOODING CONTÍNUO.md",
-    "Prompts.md",
     "dados/Sessões Claude/Consolidação do Repositório Hermes Agent.md",
     "dados/Sessões Claude/Auditoria e MVP de Síntese Operacional Inerte (Hermes Learning Mode).md",
     "dados/Sessões Claude/D-049 Browser Refinement 80 20.md",
@@ -239,21 +255,6 @@
     "dados/Sessões Claude/P02 - Captura Visual Real do Modo Aprender.md",
     "dados/Sessões Claude/Consolidação Seletiva do Repositório hermes-agent.md",
     "dados/Sessões Claude/Hermes Work D-049 (Auditoria Retrospectiva).md",
-    "dados/Sessões Claude/Validação P2 WBR-20261019.md",
-    "dados/Sessões Claude/Sessão D-049 Browser 80 20 (G0 + G1).md",
-    "dados/Sessões Claude/Missão P1A - Inventário Incremental de Conversas Não Lidas (WhatsApp Web).md",
-    "dados/Sessões Claude/P0A Browser Admission NOT_DISPATCHED.md",
-    "dados/Sessões Claude/Auditoria Forense da Falha na Automação do WhatsApp (Hermes Work).md",
-    "dados/Sessões Claude",
-    "dados/Sessões Hermes/abrir-whatsapp-2-20261019.json",
-    "dados/Sessões Hermes/invent-rio-de-pasta-de-downloads-e-ranking-20261019.json",
-    "dados/Sessões Hermes/buscar-memes-anti-petistas-no-youtube-20261019.json",
-    "dados/Sessões Hermes/abrir-o-google-20261019.json",
-    "dados/Sessões Hermes/abrir-photocraft-2-20261019.json",
-    "dados/Contexto Hermes/Não confirmado 38587.crdownload",
-    "dados/Contexto Hermes/Não confirmado 972633.crdownload",
-    "dados/Contexto Hermes/Não confirmado 110482.crdownload",
-    "dados/Contexto Hermes/Não confirmado 456963.crdownload",
     "{62EAF3D1-FEEC-4B7A-BDD1-C239002242F0}.png"
   ]
 }

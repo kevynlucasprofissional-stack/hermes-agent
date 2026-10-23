@@ -31,6 +31,7 @@ from workstation.control_plane.lattice import (
 from workstation.operational_capabilities import (
     CapabilityLifecycle, OperationalCapability, OperationalCapabilityRegistry
 )
+from workstation.milestones import record_router_rejection, record_router_selection
 
 
 class MatchState(str, Enum):
@@ -520,8 +521,6 @@ class CapabilityRouter:
                 continue
 
             # Verifier and acceptance contract
-            acceptance = operation_intent.acceptance
-            policy_str = getattr(acceptance, "policy", "evidence")
             verifier_raw = contract.verifier or cap.verifier_contract
             verifier_contract = (
                 verifier_raw if isinstance(verifier_raw, VerificationContract)
@@ -579,7 +578,6 @@ class CapabilityRouter:
                     "routing_certificate_" + cert.certificate_hash() + ".json", cert.to_dict(), schema="workstation.routing_certificate.v1").ref
                 link_decision_receipt(ranking_receipt_ref, self.registry.artifacts,
                     task_id=runtime_state.get("task_id"), run_id=run_id, operation_id=operation_id, certificate_ref=cert_ref)
-            from workstation.milestones import record_router_rejection, record_router_selection
             record_router_selection(cap, cert, runtime_state, run_id)
             return ExecutableDecision(capability=cap, certificate=cert, system1_receipt_ref=ranking_receipt_ref)
 

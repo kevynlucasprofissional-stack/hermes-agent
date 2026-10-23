@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-10-18T13:48:21.685Z",
+  "electronVersion": "40.10.2",
+  "chromeVersion": "144.0.7559.236",
+  "session": {
+    "sessionId": "learn-1792331297988-tab-elec",
+    "videoStatus": "stopped",
+    "framesRecorded": 10,
+    "eventsRecorded": 5
+  },
+  "video": {
+    "path": "C:\\Users\\Kevyn Lucas\\AppData\\Roaming\\Electron\\real-electron-learning-proof\\learn-1792331297988-tab-elec\\media\\recording.webm",
+    "fileSizeBytes": 94366,
+    "codec": "vp9",
+    "pixelFormat": "yuv420p",
+    "width": 1280,
+    "height": 720,
+    "durationSeconds": 3.333,
+    "container": "matroska,webm"
+  },
+  "frameIndex": {
+    "count": 10,
+    "sampleFrame0": {
+      "frame_number": 0,
+      "timestamp_ms": 1792331298157,
+      "pts_ms": 0,
+      "relative_ms": 165,
+      "duration_ms": 250,
+      "width": 1280,
+      "height": 720,
+      "bytes": 188870
+    }
+  },
+  "snapshots": {
+    "count": 5,
+    "files": [
+      "snap_evt-step-1_600.png",
+      "snap_evt-step-2_1200.png",
+      "snap_evt-step-3_1800.png",
+      "snap_evt-step-4_2400.png",
+      "snap_evt-step-5_3000.png"
+    ]
+  },
+  "verificationPassed": true
+}

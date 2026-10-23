@@ -1,0 +1,176 @@
+[
+  {
+    "session": 1,
+    "type": "baseline",
+    "wall_time_s": 6.323,
+    "tool_calls": 8,
+    "success": false,
+    "steps": [
+      {
+        "step": 1,
+        "action": "snapshot",
+        "time_s": 0.436,
+        "has_pane": true
+      },
+      {
+        "step": 2,
+        "action": "click_search",
+        "time_s": 0.192,
+        "success": false
+      },
+      {
+        "step": 3,
+        "action": "type_contact",
+        "time_s": 0.1,
+        "success": false
+      },
+      {
+        "step": 4,
+        "action": "snapshot_results",
+        "time_s": 0.124,
+        "result_ref": "@e22"
+      },
+      {
+        "step": 5,
+        "action": "click_result",
+        "time_s": 0.134,
+        "success": false
+      },
+      {
+        "step": 6,
+        "action": "navigate_deep_link",
+        "time_s": 0.172,
+        "success": false
+      },
+      {
+        "step": 7,
+        "action": "snapshot_composer",
+        "time_s": 0.109,
+        "has_send_btn": true
+      },
+      {
+        "step": 8,
+        "action": "click_send",
+        "time_s": 0.254,
+        "ref": "@e58",
+        "success": false
+      }
+    ]
+  },
+  {
+    "session": 2,
+    "type": "baseline",
+    "wall_time_s": 5.561,
+    "tool_calls": 8,
+    "success": false,
+    "steps": [
+      {
+        "step": 1,
+        "action": "snapshot",
+        "time_s": 0.305,
+        "has_pane": true
+      },
+      {
+        "step": 2,
+        "action": "click_search",
+        "time_s": 0.2,
+        "success": false
+      },
+      {
+        "step": 3,
+        "action": "type_contact",
+        "time_s": 0.081,
+        "success": false
+      },
+      {
+        "step": 4,
+        "action": "snapshot_results",
+        "time_s": 0.03,
+        "result_ref": "@e22"
+      },
+      {
+        "step": 5,
+        "action": "click_result",
+        "time_s": 0.032,
+        "success": false
+      },
+      {
+        "step": 6,
+        "action": "navigate_deep_link",
+        "time_s": 0.033,
+        "success": false
+      },
+      {
+        "step": 7,
+        "action": "snapshot_composer",
+        "time_s": 0.043,
+        "has_send_btn": true
+      },
+      {
+        "step": 8,
+        "action": "click_send",
+        "time_s": 0.034,
+        "ref": "@e58",
+        "success": false
+      }
+    ]
+  },
+  {
+    "session": 3,
+    "type": "baseline",
+    "wall_time_s": 5.079,
+    "tool_calls": 8,
+    "success": false,
+    "steps": [
+      {
+        "step": 1,
+        "action": "snapshot",
+        "time_s": 0.046,
+        "has_pane": true
+      },
+      {
+        "step": 2,
+        "action": "click_search",
+        "time_s": 0.033,
+        "success": false
+      },
+      {
+        "step": 3,
+        "action": "type_contact",
+        "time_s": 0.039,
+        "success": false
+      },
+      {
+        "step": 4,
+        "action": "snapshot_results",
+        "time_s": 0.048,
+        "result_ref": "@e22"
+      },
+      {
+        "step": 5,
+        "action": "click_result",
+        "time_s": 0.033,
+        "success": false
+      },
+      {
+        "step": 6,
+        "action": "navigate_deep_link",
+        "time_s": 0.018,
+        "success": false
+      },
+      {
+        "step": 7,
+        "action": "snapshot_composer",
+        "time_s": 0.044,
+        "has_send_btn": true
+      },
+      {
+        "step": 8,
+        "action": "click_send",
+        "time_s": 0.016,
+        "ref": "@e58",
+        "success": false
+      }
+    ]
+  }
+]

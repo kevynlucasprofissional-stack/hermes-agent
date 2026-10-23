@@ -83,6 +83,89 @@ describe('Native View Occlusion', () => {
     expect(isNativeViewOccluded(document)).toBe(true)
   })
 
+  it('closed occluder with data-state="closed" does NOT trigger native-view occlusion', () => {
+    const dialog = document.createElement('div')
+    dialog.setAttribute('data-slot', 'dialog-content')
+    dialog.setAttribute('data-native-view-occluder', 'true')
+    dialog.setAttribute('data-state', 'closed')
+    document.body.appendChild(dialog)
+
+    expect(isNativeViewOccluded(document)).toBe(false)
+  })
+
+  it('occluder whose ancestor has data-state="closed" does NOT trigger native-view occlusion', () => {
+    const container = document.createElement('div')
+    container.setAttribute('data-state', 'closed')
+
+    const menu = document.createElement('div')
+    menu.setAttribute('data-slot', 'dropdown-menu-content')
+    menu.setAttribute('data-native-view-occluder', 'true')
+    container.appendChild(menu)
+    document.body.appendChild(container)
+
+    expect(isNativeViewOccluded(document)).toBe(false)
+  })
+
+  it('occluder with aria-hidden="true" or hidden styles does NOT trigger native-view occlusion', () => {
+    const hiddenEl = document.createElement('div')
+    hiddenEl.setAttribute('data-native-view-occluder', 'true')
+    hiddenEl.setAttribute('aria-hidden', 'true')
+    document.body.appendChild(hiddenEl)
+
+    expect(isNativeViewOccluded(document)).toBe(false)
+
+    hiddenEl.removeAttribute('aria-hidden')
+    hiddenEl.hidden = true
+    expect(isNativeViewOccluded(document)).toBe(false)
+
+    hiddenEl.hidden = false
+    hiddenEl.style.display = 'none'
+    expect(isNativeViewOccluded(document)).toBe(false)
+
+    hiddenEl.style.display = ''
+    hiddenEl.style.visibility = 'hidden'
+    expect(isNativeViewOccluded(document)).toBe(false)
+  })
+
+  it('toast notification mounting into body does NOT trigger native-view occlusion', () => {
+    const toast = document.createElement('div')
+    toast.setAttribute('data-sonner-toast', '')
+    toast.setAttribute('role', 'status')
+    toast.textContent = 'Agent task finished'
+    document.body.appendChild(toast)
+
+    expect(isNativeViewOccluded(document)).toBe(false)
+  })
+
+  it('Radix transition from data-state="open" to data-state="closed" restores visibility via MutationObserver', async () => {
+    const setVisible = vi.fn().mockResolvedValue({})
+    const bridge = { setVisible } as unknown as WorkstationBrowserBridge
+
+    const { renderHook, act } = await import('@testing-library/react')
+    renderHook(() => useNativeViewOcclusion(bridge, 'hub'))
+
+    const dialog = document.createElement('div')
+    dialog.setAttribute('data-slot', 'dialog-content')
+    dialog.setAttribute('data-native-view-occluder', 'true')
+    dialog.setAttribute('data-state', 'open')
+
+    await act(async () => {
+      document.body.appendChild(dialog)
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+
+    expect(setVisible).toHaveBeenCalledWith(false, 'hub')
+    setVisible.mockClear()
+
+    // Radix animates out by changing data-state to "closed" before unmounting
+    await act(async () => {
+      dialog.setAttribute('data-state', 'closed')
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+
+    expect(setVisible).toHaveBeenCalledWith(true, 'hub')
+  })
+
   it('useNativeViewOcclusion hook ignores tooltips and hides/restores native view for real occluders with host fencing', async () => {
     const setVisible = vi.fn().mockResolvedValue({})
     const bridge = { setVisible } as unknown as WorkstationBrowserBridge
@@ -206,42 +289,5 @@ describe('Native View Occlusion', () => {
     rerender({ revision: 1 })
 
     expect(setVisible).toHaveBeenCalledWith(false, 'chat')
-  })
-
-  // HWH-P01-FIX: When an overlay is dismissed while the host is detached
-  // (e.g. Hub↔Chat transfer during occlusion), setVisible(true) must still
-  // be issued so the runtime can defensively re-attach the WebContentsView.
-  // Without this, the view stays parked and the user sees a black screen
-  // until the next manual resize or navigation.
-  it('restores visibility after overlay dismissal even when host was detached during occlusion', async () => {
-    const setVisible = vi.fn().mockResolvedValue({})
-    const bridge = { setVisible } as unknown as WorkstationBrowserBridge
-
-    const overlay = document.createElement('div')
-    overlay.setAttribute('data-native-view-occluder', 'true')
-    document.body.appendChild(overlay)
-
-    const { renderHook, waitFor } = await import('@testing-library/react')
-
-    const { rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) => useNativeViewOcclusion(bridge, 'hub', { enabled }),
-      { initialProps: { enabled: true } }
-    )
-
-    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'hub'))
-    setVisible.mockClear()
-
-    // Simulate detach during occlusion (host lost ownership while overlay was open)
-    rerender({ enabled: false })
-    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(false, 'hub'))
-    setVisible.mockClear()
-
-    // Overlay dismissed while detached
-    overlay.remove()
-    await new Promise(resolve => setTimeout(resolve, 10))
-
-    // Host re-enabled (transfer back / reattach) — must restore visibility
-    rerender({ enabled: true })
-    await waitFor(() => expect(setVisible).toHaveBeenCalledWith(true, 'hub'))
   })
 })

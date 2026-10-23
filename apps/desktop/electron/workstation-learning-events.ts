@@ -30,6 +30,8 @@ export interface RawHumanBrowserGesture {
   meta?: boolean
   alt?: boolean
   shift?: boolean
+  frame_number?: number
+  snapshot_ref?: string
 }
 
 export type DomMutationEffectKind =
@@ -69,9 +71,12 @@ export interface SafeHumanBrowserGesture {
   dom_delta?: DomMutationDelta
   domDelta?: DomMutationDelta
   actor: 'human'
+  frame_number?: number
+  snapshot_ref?: string
 }
 
 const SENSITIVE = /password|passcode|secret|token|key|credential|authorization|cookie|otp|recovery|private|account|session|api|payment|card|email|address/i
+
 const allowedRoles = new Set([
   'button',
   'menuitem',
@@ -87,6 +92,7 @@ const allowedRoles = new Set([
   'combobox',
   'spinbutton'
 ])
+
 const allowedKeys = new Set(['Enter','Escape','Backspace','Delete','Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','Home','End','PageUp','PageDown',...'1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')])
 const NON_TEXT_INPUT_TYPES = new Set(['range', 'number', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color'])
 
@@ -103,9 +109,11 @@ function isValidRawGesture(raw: RawHumanBrowserGesture): boolean {
 function isEditableTarget(raw: RawHumanBrowserGesture): boolean {
   if (raw.isEditable) {return true}
   const tag = raw.elementTag?.toLowerCase()
+
   if (tag === 'textarea') {return true}
 
   const inputType = raw.inputType?.toLowerCase()
+
   if (inputType) {
     if (!NON_TEXT_INPUT_TYPES.has(inputType)) {
       return true
@@ -145,13 +153,18 @@ function extractNormalizedPosition(raw: RawHumanBrowserGesture): { x: number; y:
 
 function resolveRawRole(raw: RawHumanBrowserGesture): string {
   const explicit = raw.role?.toLowerCase().trim()
+
   if (explicit) {return explicit}
 
   const tag = raw.elementTag?.toLowerCase()
+
   if (tag === 'canvas') {return 'canvas'}
+
   if (tag === 'select') {return 'combobox'}
+
   if (tag === 'input') {
     if (raw.inputType === 'range') {return 'slider'}
+
     if (raw.inputType === 'number') {return 'spinbutton'}
   }
 
@@ -160,6 +173,7 @@ function resolveRawRole(raw: RawHumanBrowserGesture): string {
 
 function attachTargetMetadata(output: SafeHumanBrowserGestureTarget, raw: RawHumanBrowserGesture): void {
   const name = raw.accessibleName?.trim()
+
   if (name && name.length <= 80 && !SENSITIVE.test(name)) {
     output.accessible_name = name
     output.accessibleName = name
@@ -167,6 +181,7 @@ function attachTargetMetadata(output: SafeHumanBrowserGestureTarget, raw: RawHum
 
   if (raw.containerBreadcrumb) {
     const breadcrumb = raw.containerBreadcrumb.trim()
+
     if (breadcrumb && breadcrumb.length <= 120 && !SENSITIVE.test(breadcrumb)) {
       output.container_breadcrumb = breadcrumb
       output.containerBreadcrumb = breadcrumb
@@ -175,6 +190,7 @@ function attachTargetMetadata(output: SafeHumanBrowserGestureTarget, raw: RawHum
 
   if (raw.currentValue !== undefined) {
     const val = String(raw.currentValue).trim()
+
     if (val && val.length <= 60 && !SENSITIVE.test(val)) {
       output.current_value = val
       output.currentValue = val
@@ -182,8 +198,10 @@ function attachTargetMetadata(output: SafeHumanBrowserGestureTarget, raw: RawHum
   }
 
   const unit = raw.unit || raw.valueUnit
+
   if (unit) {
     const u = String(unit).trim()
+
     if (u && u.length <= 20 && !SENSITIVE.test(u)) {
       output.unit = u
       output.valueUnit = u
@@ -193,6 +211,7 @@ function attachTargetMetadata(output: SafeHumanBrowserGestureTarget, raw: RawHum
 
 function extractTarget(raw: RawHumanBrowserGesture): SafeHumanBrowserGestureTarget | undefined {
   const role = resolveRawRole(raw)
+
   if (!allowedRoles.has(role)) {return undefined}
 
   const output: SafeHumanBrowserGestureTarget = { role }
@@ -233,12 +252,22 @@ export function normalizeHumanGesture(raw: RawHumanBrowserGesture): SafeHumanBro
 
   if (raw.domDelta) {
     const effectKind = raw.domDelta.effectKind || 'none'
+
     const summary = raw.domDelta.summary && !SENSITIVE.test(raw.domDelta.summary)
       ? raw.domDelta.summary.slice(0, 150)
       : undefined
+
     const delta: DomMutationDelta = { effectKind, summary }
     output.dom_delta = delta
     output.domDelta = delta
+  }
+
+  if (typeof raw.frame_number === 'number') {
+    output.frame_number = raw.frame_number
+  }
+
+  if (typeof raw.snapshot_ref === 'string') {
+    output.snapshot_ref = raw.snapshot_ref
   }
 
   return output

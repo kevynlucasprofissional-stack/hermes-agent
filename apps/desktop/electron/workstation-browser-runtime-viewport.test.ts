@@ -43,11 +43,23 @@ const electron = vi.hoisted(() => {
       this.frameRate = rate
     }
 
+    loadError: Error | null = null
+
     async loadURL(url: string): Promise<void> {
+      if (this.loadError) {
+        const err = this.loadError
+        this.loadError = null
+        throw err
+      }
+
       this.url = url
       this.emit('did-start-loading')
       this.emit('did-navigate')
       this.emit('did-stop-loading')
+    }
+
+    emitEvent(event: string, ...args: unknown[]): void {
+      this.emit(event, ...args)
     }
 
     getURL(): string {
@@ -87,9 +99,13 @@ const electron = vi.hoisted(() => {
   class FakeWebContentsView {
     readonly webContents = new FakeWebContents()
     bounds = { x: 0, y: 0, width: 0, height: 0 }
+    visible = true
     setBackgroundColor(): void {}
     setBounds(bounds: { x: number; y: number; width: number; height: number }): void {
       this.bounds = bounds
+    }
+    setVisible(visible: boolean): void {
+      this.visible = visible
     }
   }
 
@@ -377,3 +393,149 @@ test('showTask activates task tab and attaches with specified host', () => {
   assert.equal(runtime.state().tasks.length, 1)
   assert.equal(runtime.state().tasks[0].taskId, 'task-viewport-1')
 })
+
+test('attach with visible: false does not mount child view until setVisible(true)', () => {
+  const runtime = new WorkstationBrowserRuntime(createPersistence('attach-hidden'))
+  const window = new BrowserWindow()
+
+  const fakeWindow = window as unknown as {
+    contentView: { children: any[] }
+  }
+
+  const bounds = { x: 0, y: 0, width: 800, height: 600 }
+
+  runtime.ensure()
+  runtime.attach(window as unknown as Electron.BrowserWindow, bounds, 'hub', undefined, undefined, false)
+
+  assert.equal(runtime.state().attached, true)
+  assert.equal(fakeWindow.contentView.children.length, 0)
+
+  // When overlay closes, setVisible(true) mounts the child view with valid bounds
+  runtime.setVisible(true, 'hub')
+  assert.equal(fakeWindow.contentView.children.length, 1)
+  const view = fakeWindow.contentView.children[0]
+  assert.deepEqual(view.bounds, bounds)
+  assert.equal(view.visible, true)
+
+  // When overlay opens, setVisible(false) unmounts the child view
+  runtime.setVisible(false, 'hub')
+  assert.equal(fakeWindow.contentView.children.length, 0)
+})
+
+test('setVisible enforces host and ownerId fencing in both directions', () => {
+  const runtime = new WorkstationBrowserRuntime(createPersistence('visible-fencing'))
+  const window = new BrowserWindow()
+
+  const fakeWindow = window as unknown as {
+    contentView: { children: any[] }
+  }
+
+  const bounds = { x: 0, y: 0, width: 800, height: 600 }
+
+  runtime.ensure()
+  runtime.attach(window as unknown as Electron.BrowserWindow, bounds, 'chat', 'task-1', 'owner-chat-1', true)
+  assert.equal(fakeWindow.contentView.children.length, 1)
+
+  // Stale session or different host cannot hide the view
+  runtime.setVisible(false, 'hub')
+  assert.equal(fakeWindow.contentView.children.length, 1)
+
+  runtime.setVisible(false, 'chat', 'other-session')
+  assert.equal(fakeWindow.contentView.children.length, 1)
+
+  // Right owner hides the view
+  runtime.setVisible(false, 'chat', 'owner-chat-1')
+  assert.equal(fakeWindow.contentView.children.length, 0)
+
+  // Stale session cannot re-show the view and steal visibility
+  runtime.setVisible(true, 'chat', 'other-session')
+  assert.equal(fakeWindow.contentView.children.length, 0)
+
+  // Right owner restores the view
+  runtime.setVisible(true, 'chat', 'owner-chat-1')
+  assert.equal(fakeWindow.contentView.children.length, 1)
+})
+
+test('activateTab respects viewVisible and does not force child view when hidden', () => {
+  const runtime = new WorkstationBrowserRuntime(createPersistence('activatetab-hidden'))
+  const window = new BrowserWindow()
+
+  const fakeWindow = window as unknown as {
+    contentView: { children: any[] }
+  }
+
+  const bounds = { x: 0, y: 0, width: 800, height: 600 }
+
+  runtime.ensure()
+  runtime.attach(window as unknown as Electron.BrowserWindow, bounds, 'hub', undefined, undefined, false)
+  assert.equal(fakeWindow.contentView.children.length, 0)
+
+  // Create a second tab
+  const stateAfterCreate = runtime.createTab('https://example.com', false)
+  const tab2 = stateAfterCreate.tabs[stateAfterCreate.tabs.length - 1]
+  runtime.activateTab(tab2.id)
+
+  // Must still NOT mount child view because viewVisible is false
+  assert.equal(fakeWindow.contentView.children.length, 0)
+
+  // Setting visible mounts tab2
+  runtime.setVisible(true, 'hub')
+  assert.equal(fakeWindow.contentView.children.length, 1)
+  assert.equal(runtime.state().activeTabId, tab2.id)
+})
+
+test('navigate absorbs ERR_ABORTED (-3) without throwing or setting lastError', async () => {
+  const runtime = new WorkstationBrowserRuntime(createPersistence('nav-aborted'))
+  const window = new BrowserWindow()
+
+  const fakeWindow = window as unknown as {
+    contentView: { children: any[] }
+  }
+
+  const bounds = { x: 0, y: 0, width: 800, height: 600 }
+
+  runtime.ensure()
+  runtime.attach(window as unknown as Electron.BrowserWindow, bounds, 'hub')
+  const view = fakeWindow.contentView.children[0]
+  assert.ok(view)
+
+  // Simulate ERR_ABORTED (-3) on loadURL
+  const abortError: any = new Error('ERR_ABORTED (-3)')
+  abortError.code = 'ERR_ABORTED'
+  abortError.errno = -3
+  view.webContents.loadError = abortError
+
+  // navigate must NOT reject and must NOT set lastError
+  await runtime.navigate('https://example.com/search?q=test')
+  assert.equal(runtime.state().lastError, null)
+})
+
+test('did-fail-load ignores ERR_ABORTED and captures real network failure in lastError', async () => {
+  const runtime = new WorkstationBrowserRuntime(createPersistence('nav-fail-load'))
+  const window = new BrowserWindow()
+
+  const fakeWindow = window as unknown as {
+    contentView: { children: any[] }
+  }
+
+  const bounds = { x: 0, y: 0, width: 800, height: 600 }
+
+  runtime.ensure()
+  runtime.attach(window as unknown as Electron.BrowserWindow, bounds, 'hub')
+  const view = fakeWindow.contentView.children[0]
+  assert.ok(view)
+
+  // Emitting did-fail-load with errorCode -3 (ERR_ABORTED) should NOT set lastError
+  view.webContents.emitEvent('did-fail-load', {}, -3, 'ERR_ABORTED', 'https://example.com', true)
+  assert.equal(runtime.state().lastError, null)
+
+  // Emitting did-fail-load with real failure (e.g. -105 ERR_NAME_NOT_RESOLVED) sets lastError
+  view.webContents.emitEvent('did-fail-load', {}, -105, 'ERR_NAME_NOT_RESOLVED', 'https://nonexistent.domain', true)
+  assert.ok(runtime.state().lastError?.includes('ERR_NAME_NOT_RESOLVED'))
+
+  // Next successful navigation clears lastError
+  await runtime.navigate('https://example.com')
+  assert.equal(runtime.state().lastError, null)
+})
+
+

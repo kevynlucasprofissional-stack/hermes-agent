@@ -1,0 +1,32 @@
+[
+  {
+    "session": 1,
+    "wall_time_s": 5.351,
+    "wfr_time_s": 0.961,
+    "search_time_s": 0.769,
+    "send_time_s": 3.621,
+    "sent": true,
+    "state": "SENT_UNCONFIRMED",
+    "error_code": "DELIVERY_TIMEOUT"
+  },
+  {
+    "session": 2,
+    "wall_time_s": 4.461,
+    "wfr_time_s": 0.079,
+    "search_time_s": 0.765,
+    "send_time_s": 3.616,
+    "sent": true,
+    "state": "SENT_UNCONFIRMED",
+    "error_code": "DELIVERY_TIMEOUT"
+  },
+  {
+    "session": 3,
+    "wall_time_s": 4.408,
+    "wfr_time_s": 0.065,
+    "search_time_s": 0.785,
+    "send_time_s": 3.557,
+    "sent": true,
+    "state": "SENT_UNCONFIRMED",
+    "error_code": "DELIVERY_TIMEOUT"
+  }
+]

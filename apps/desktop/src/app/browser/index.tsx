@@ -25,7 +25,7 @@ import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/s
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 
 import { LearningControls } from './learning-controls'
-import { useNativeViewOcclusion } from './native-view-occlusion'
+import { isNativeViewOccluded, useNativeViewOcclusion } from './native-view-occlusion'
 import { TaskJournalDrawer } from './task-journal-drawer'
 import { TaskRail } from './task-rail'
 import type {
@@ -552,7 +552,8 @@ export function BrowserView() {
       }
 
       const bounds = rectToBounds(rect)
-      setState(await (attach ? bridge.attach(bounds, 'hub') : bridge.setBounds(bounds, 'hub')))
+      const visible = !creativeActiveRef.current && !isNativeViewOccluded(document)
+      setState(await (attach ? bridge.attach(bounds, 'hub', undefined, undefined, visible) : bridge.setBounds(bounds, 'hub')))
     },
     [bridge]
   )

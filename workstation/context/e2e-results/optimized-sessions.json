@@ -1,0 +1,58 @@
+[
+  {
+    "session": 1,
+    "type": "optimized",
+    "wall_time_s": 7.145,
+    "tool_calls": 3,
+    "success": false,
+    "wfr_state": "LOGGED_IN",
+    "wfr_time_s": 0.358,
+    "search_found": false,
+    "search_time_s": 0.11,
+    "send_time_s": 6.676,
+    "send_result": {
+      "sent": false,
+      "state": "CLICK_FAILED",
+      "error_code": "CONTROLLER_UNAVAILABLE",
+      "error": "target_obscured"
+    }
+  },
+  {
+    "session": 2,
+    "type": "optimized",
+    "wall_time_s": 12.146,
+    "tool_calls": 3,
+    "success": false,
+    "wfr_state": "LOGGED_IN",
+    "wfr_time_s": 0.386,
+    "search_found": true,
+    "search_time_s": 1.094,
+    "send_time_s": 10.666,
+    "send_result": {
+      "sent": true,
+      "state": "SENT_UNCONFIRMED",
+      "error_code": "DELIVERY_TIMEOUT",
+      "header_verified": null,
+      "composer_empty_after": false
+    }
+  },
+  {
+    "session": 3,
+    "type": "optimized",
+    "wall_time_s": 11.188,
+    "tool_calls": 3,
+    "success": false,
+    "wfr_state": "LOGGED_IN",
+    "wfr_time_s": 0.054,
+    "search_found": true,
+    "search_time_s": 0.694,
+    "send_time_s": 10.44,
+    "send_result": {
+      "sent": true,
+      "state": "SENT_UNCONFIRMED",
+      "error_code": "DELIVERY_TIMEOUT",
+      "header_verified": null,
+      "composer_empty_after": false
+    }
+  }
+]

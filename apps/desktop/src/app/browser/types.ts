@@ -138,7 +138,8 @@ export interface WorkstationBrowserBridge {
     bounds: WorkstationBrowserBounds,
     host?: string,
     preferredTaskId?: string,
-    ownerId?: string
+    ownerId?: string,
+    visible?: boolean
   ) => Promise<WorkstationBrowserState>
   setBounds: (
     bounds: WorkstationBrowserBounds,

@@ -48,17 +48,17 @@ def test_p0_1_read_preview_is_pure_read():
 
 def test_p0_1_drive_preview_action_sensitive_effect():
     """drive_preview must classify effect by subaction."""
-    from tools.effects import READ_EFFECTS, WRITE_EFFECTS
+    from tools.effects import READ_EFFECTS
 
     # elements action is read/discovery
     eff_elem = tool_effect("drive_preview", args={"action": "elements"})
     assert eff_elem in READ_EFFECTS
 
-    # mutating actions
-    assert tool_effect("drive_preview", args={"action": "click"}) in WRITE_EFFECTS
-    assert tool_effect("drive_preview", args={"action": "type", "text": "hello"}) in WRITE_EFFECTS
-    assert tool_effect("drive_preview", args={"action": "scroll"}) in WRITE_EFFECTS
-    assert tool_effect("drive_preview", args={"action": "press", "key": "Enter"}) in WRITE_EFFECTS
+    # interactive actions are not reads and are never compiled as durable writes
+    assert tool_effect("drive_preview", args={"action": "click"}) == ToolEffect.INTERACTIVE
+    assert tool_effect("drive_preview", args={"action": "type", "text": "hello"}) == ToolEffect.INTERACTIVE
+    assert tool_effect("drive_preview", args={"action": "scroll"}) == ToolEffect.INTERACTIVE
+    assert tool_effect("drive_preview", args={"action": "press", "key": "Enter"}) == ToolEffect.INTERACTIVE
 
     # fail-closed for unknown actions
     assert tool_effect("drive_preview", args={"action": "unknown_subaction"}) == ToolEffect.MUTATION
@@ -130,9 +130,11 @@ def test_p0_3_browser_read_http_allowed_methods_and_forbidden_destinations():
 
 
 def test_p0_3_browser_read_http_is_pure_read():
-    """browser_read_http is registered as ToolEffect.PURE_READ and never requires compile."""
+    """browser_read_http resolves GET/HEAD to PURE_READ and stays fail-closed without args."""
     from tools.effects import ToolEffect, tool_effect
-    assert tool_effect("browser_read_http") == ToolEffect.PURE_READ
+    assert tool_effect("browser_read_http", args={"method": "GET"}) == ToolEffect.PURE_READ
+    assert tool_effect("browser_read_http", args={"method": "HEAD"}) == ToolEffect.PURE_READ
+    assert tool_effect("browser_read_http") == ToolEffect.MUTATION
 
     agent = mock_agent()
     calls = [

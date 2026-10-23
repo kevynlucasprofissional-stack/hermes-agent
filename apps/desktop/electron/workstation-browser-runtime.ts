@@ -1602,14 +1602,33 @@ export class WorkstationBrowserRuntime {
     }
 
     if (wasAttached && this.ownerWindow && this.bounds) {
-      this.ensureChildView(this.ownerWindow, entry.view)
-      entry.view.setBounds(this.bounds)
-      this.applyFrameRate(entry, true)
+      if (this.viewVisible !== false) {
+        this.ensureChildView(this.ownerWindow, entry.view)
+        entry.view.setBounds(this.bounds)
 
-      try {
-        entry.view.webContents.focus()
-      } catch {
-        // View may have crashed between checks.
+        try {
+          entry.view.setVisible(true)
+        } catch {
+          // ignore
+        }
+
+        this.applyFrameRate(entry, true)
+
+        try {
+          entry.view.webContents.focus()
+        } catch {
+          // View may have crashed between checks.
+        }
+      } else {
+        this.removeChildView(entry)
+
+        try {
+          entry.view.setVisible(false)
+        } catch {
+          // ignore
+        }
+
+        this.applyFrameRate(entry, false)
       }
 
       this.attached = true
@@ -1629,7 +1648,19 @@ export class WorkstationBrowserRuntime {
       throw new Error('Hermes Browser has no active tab.')
     }
 
-    await wc.loadURL(normalizeWorkstationBrowserTarget(value))
+    try {
+      await wc.loadURL(normalizeWorkstationBrowserTarget(value))
+    } catch (error: any) {
+      const isAborted =
+        error?.code === 'ERR_ABORTED' ||
+        error?.errno === -3 ||
+        (typeof error?.message === 'string' && error.message.includes('ERR_ABORTED'))
+
+      if (!isAborted) {
+        this.lastError = error?.message ? `Failed to load: ${error.message}` : String(error)
+      }
+    }
+
     this.emitState()
 
     return this.state()
@@ -1679,11 +1710,18 @@ export class WorkstationBrowserRuntime {
     rawBounds: WorkstationBrowserBounds,
     host: 'hub' | 'chat' | string = 'hub',
     preferredTaskId?: string | null,
-    ownerId?: string | null
+    ownerId?: string | null,
+    visible?: boolean
   ): WorkstationBrowserState {
     this.ensureSession()
     this.ensureBrowserSessionStateRestored()
-    this.viewVisible = true
+
+    if (visible !== undefined) {
+      this.viewVisible = visible
+    } else {
+      this.viewVisible = true
+    }
+
     this.preferredTaskId = preferredTaskId || null
     this.viewportOwnerId = ownerId || preferredTaskId || null
 
@@ -1767,18 +1805,37 @@ export class WorkstationBrowserRuntime {
     this.bindViewportGeometry(window)
     this.bounds = bounds
     this.viewportHost = host
-    this.ensureChildView(window, entry.view)
-    entry.view.setBounds(bounds)
-    this.applyFrameRate(entry, true)
 
-    try {
-      entry.view.webContents.focus()
-    } catch {
-      // View may have crashed between checks.
+    if (this.viewVisible) {
+      this.ensureChildView(window, entry.view)
+      entry.view.setBounds(bounds)
+
+      try {
+        entry.view.setVisible(true)
+      } catch {
+        // ignore
+      }
+
+      this.applyFrameRate(entry, true)
+
+      try {
+        entry.view.webContents.focus()
+      } catch {
+        // View may have crashed between checks.
+      }
+    } else {
+      this.removeChildView(entry)
+
+      try {
+        entry.view.setVisible(false)
+      } catch {
+        // ignore
+      }
+
+      this.applyFrameRate(entry, false)
     }
 
     this.attached = true
-    this.viewVisible = true
     this.emitState()
 
     return this.state()
@@ -1860,7 +1917,6 @@ export class WorkstationBrowserRuntime {
     }
 
     if (
-      !visible &&
       expectedOwnerId !== undefined &&
       this.viewportOwnerId !== null &&
       expectedOwnerId !== this.viewportOwnerId
@@ -1874,9 +1930,17 @@ export class WorkstationBrowserRuntime {
     if (!visible) {
       if (entry) {
         this.removeChildView(entry)
+
+        try {
+          entry.view.setVisible(false)
+        } catch {
+          // ignore
+        }
+
+        this.applyFrameRate(entry, false)
       }
     } else {
-      if (entry && this.ownerWindow && this.bounds) {
+      if (entry && this.ownerWindow && !this.ownerWindow.isDestroyed() && this.bounds) {
         // HWH-P01-FIX: When an overlay is dismissed, setVisible(true) arrives
         // but this.attached may still be false if detachActiveView ran during
         // the occlusion window (e.g. Hub↔Chat transfer while overlay was open).
@@ -1888,8 +1952,17 @@ export class WorkstationBrowserRuntime {
         if (!this.attached) {
           this.attached = true
         }
+
         this.ensureChildView(this.ownerWindow, entry.view)
         entry.view.setBounds(this.bounds)
+
+        try {
+          entry.view.setVisible(true)
+        } catch {
+          // ignore
+        }
+
+        this.applyFrameRate(entry, true)
       }
     }
 
@@ -2345,6 +2418,7 @@ export class WorkstationBrowserRuntime {
 
     if (safe && this.learningRecorder) {
       const status = this.learningRecorder.getStatus()
+
       if (status) {
         this.emitMilestone({
           eventId: `ms-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -3008,10 +3082,12 @@ export class WorkstationBrowserRuntime {
       case 'browser_click': {
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
         let clickResult: { target?: ElementTargetMetadata }
+
         try {
           clickResult = await this.clickRef(entry, String(args.ref ?? ''), anchor)
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
+
           if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
             try {
               this.sessionStatePersistence().recordPreEffectTerminal({
@@ -3026,8 +3102,10 @@ export class WorkstationBrowserRuntime {
               // and the admission fence remains until reconciliation.
             }
           }
+
           throw error
         }
+
         await delay(220)
 
         const opId = controllerOperationId
@@ -3071,10 +3149,12 @@ export class WorkstationBrowserRuntime {
         const mode = (args.mode === 'plain_text_paste' ? 'plain_text_paste' : 'insert_text') as 'insert_text' | 'plain_text_paste'
         const anchor = (args.semantic_anchor || args.anchor) as { type?: string; value?: string } | undefined
         let typeResult: { target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }
+
         try {
           typeResult = await this.typeRef(entry, String(args.ref ?? ''), String(args.text ?? ''), { clear, append, mode, anchor })
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
+
           if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
             try {
               this.sessionStatePersistence().recordPreEffectTerminal({
@@ -3089,8 +3169,10 @@ export class WorkstationBrowserRuntime {
               // and the admission fence remains until reconciliation.
             }
           }
+
           throw error
         }
+
         await delay(160)
 
         const opId = controllerOperationId
@@ -3138,7 +3220,6 @@ export class WorkstationBrowserRuntime {
 
       case 'browser_inventory_unread':
         return this.inventoryUnreadForEntry(entry, args)
-
       case 'browser_scroll': {
         await this.scrollEntry(entry, String(args.direction ?? 'down'))
         await delay(140)
@@ -3297,10 +3378,12 @@ export class WorkstationBrowserRuntime {
             switch (step.kind) {
               case 'click': {
                 let res: { target?: ElementTargetMetadata }
+
                 try {
                   res = await this.clickRef(entry, step.ref, step.anchor)
                 } catch (error) {
                   const message = error instanceof Error ? error.message : String(error)
+
                   if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
                     try {
                       this.sessionStatePersistence().recordPreEffectTerminal({
@@ -3314,8 +3397,10 @@ export class WorkstationBrowserRuntime {
                       // Terminal recording is best-effort; the batch executor handles propagation.
                     }
                   }
+
                   throw error
                 }
+
                 await delay(120)
 
                 return { before, result: res }
@@ -3324,6 +3409,7 @@ export class WorkstationBrowserRuntime {
               case 'type': {
                 const clear = step.clear !== undefined ? Boolean(step.clear) : !step.append
                 let res: { target?: ElementTargetMetadata; chars_inserted?: number; semantic_effect?: string }
+
                 try {
                   res = await this.typeRef(entry, step.ref, step.text, {
                     clear,
@@ -3332,6 +3418,7 @@ export class WorkstationBrowserRuntime {
                   })
                 } catch (error) {
                   const message = error instanceof Error ? error.message : String(error)
+
                   if (message === 'stale_or_unknown_ref' || message === 'ref_required' || message === 'ambiguous_anchor') {
                     try {
                       this.sessionStatePersistence().recordPreEffectTerminal({
@@ -3345,6 +3432,7 @@ export class WorkstationBrowserRuntime {
                       // Terminal recording is best-effort; the batch executor handles propagation.
                     }
                   }
+
                   throw error
                 }
 
@@ -4998,6 +5086,7 @@ export class WorkstationBrowserRuntime {
 
     try {
       const result = (await wc.executeJavaScript(script, true)) as Record<string, unknown>
+
       return {
         success: true,
         runtime: 'electron-chromium',
@@ -5279,12 +5368,24 @@ export class WorkstationBrowserRuntime {
       entry.loading = false
       this.emitState()
     })
+    wc.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      if (isMainFrame && errorCode !== -3) {
+        entry.loading = false
+        this.lastError = `Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`
+        this.emitState()
+      }
+    })
 
     const refreshStructuralMetadata = (): void => {
       entry.documentEpoch = `${Date.now()}-${entry.id.slice(0, 8)}`
       entry.mutationRevision = 0
       this.extractCache.invalidateTab(entry.id)
       this.updateEntrySafeMetadata(entry, wc.getURL(), wc.getTitle())
+
+      if (this.lastError) {
+        this.lastError = null
+      }
+
       this.persistBrowserSessionState()
       this.emitState()
 

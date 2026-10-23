@@ -2,15 +2,15 @@ import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { LearningControls } from '@/app/browser/learning-controls'
-import { useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
+import { isNativeViewOccluded, useNativeViewOcclusion } from '@/app/browser/native-view-occlusion'
 import { TaskJournalDrawer } from '@/app/browser/task-journal-drawer'
-import { useLearningChatBridge } from '@/app/chat/hooks/use-learning-chat-bridge'
 import type {
   LearningSessionState,
   WorkstationBrowserBounds,
   WorkstationBrowserState,
   WorkstationBrowserTabState
 } from '@/app/browser/types'
+import { useLearningChatBridge } from '@/app/chat/hooks/use-learning-chat-bridge'
 import { isElementInHiddenPane, usePaneVisible } from '@/components/pane-shell/pane-visibility'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -308,7 +308,8 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
 
       if (attach || keyMismatch) {
         lastAttachedRef.current = currentKey
-        setState(await bridge.attach(bounds, 'chat', preferredTaskId ?? undefined, ownerId))
+        const visible = paneVisible && !isNativeViewOccluded(document)
+        setState(await bridge.attach(bounds, 'chat', preferredTaskId ?? undefined, ownerId, visible))
       } else {
         setState(await bridge.setBounds(bounds, 'chat', ownerId))
       }

@@ -44,8 +44,8 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     reload: () => ipcRenderer.invoke('hermes:workstation-browser:reload'),
     stop: () => ipcRenderer.invoke('hermes:workstation-browser:stop'),
     focus: () => ipcRenderer.invoke('hermes:workstation-browser:focus'),
-    attach: (bounds, host, preferredTaskId, ownerId) =>
-      ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host, preferredTaskId, ownerId),
+    attach: (bounds, host, preferredTaskId, ownerId, visible) =>
+      ipcRenderer.invoke('hermes:workstation-browser:attach', bounds, host, preferredTaskId, ownerId, visible),
     setBounds: (bounds, expectedHost, expectedOwnerId) =>
       ipcRenderer.invoke('hermes:workstation-browser:set-bounds', bounds, expectedHost, expectedOwnerId),
     detach: (expectedHost?: string, expectedOwnerId?: string) =>
