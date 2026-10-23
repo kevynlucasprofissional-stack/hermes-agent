@@ -797,7 +797,7 @@ class PageFingerprintCache:
     TTL default: 5 seconds.  Eviction happens on every ``get`` / ``set``.
     """
 
-    def __init__(self, ttl_seconds: float = 5.0, max_entries: int = 64):
+    def __init__(self, ttl_seconds: float = 0.6, max_entries: int = 64):
         self._ttl = ttl_seconds
         self._max = max_entries
         # {task_key: OrderedDict[fingerprint, _SnapshotCacheEntry]}
@@ -872,6 +872,7 @@ def _compute_fingerprint(result: dict[str, Any]) -> str | None:
 _MUTATING_ACTIONS = frozenset({
     "browser_click", "browser_type", "browser_fill",
     "browser_batch_actions", "browser_scroll", "browser_select_option",
+    "browser_navigate", "browser_press",
 })
 
 # Per-task mutation counter for cache invalidation.

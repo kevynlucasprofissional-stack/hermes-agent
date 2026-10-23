@@ -488,3 +488,105 @@ class TestWhatsappWaitForReadyIntegration:
         result = whatsapp_wait_for_ready(timeout_seconds=0.1, poll_interval=0.01)
         assert result["ready"] is False
         assert result.get("timeout") is True
+
+
+# ---------------------------------------------------------------------------
+# Cache TTL and invalidation regression tests (D-1b)
+# ---------------------------------------------------------------------------
+
+class TestSnapshotCacheTTLAndInvalidation:
+    """Regression tests for PageFingerprintCache TTL and mutation invalidation.
+
+    Contract I-3 requires:
+    - TTL between 500–800ms (default 0.6s)
+    - Invalidation on browser_click, browser_type, browser_fill,
+      browser_batch_actions, browser_scroll, browser_select_option,
+      browser_navigate, browser_press
+    """
+
+    def test_cache_default_ttl_is_within_contract_range(self):
+        """PageFingerprintCache default TTL must be 0.5–0.8s per contract I-3."""
+        from tools.browser_workstation import PageFingerprintCache
+
+        cache = PageFingerprintCache()
+        assert 0.5 <= cache._ttl <= 0.8, (
+            f"Cache TTL {cache._ttl}s outside contract range [0.5, 0.8]"
+        )
+
+    def test_cache_hit_within_ttl(self):
+        """Cache returns cached value when accessed within TTL."""
+        from tools.browser_workstation import PageFingerprintCache
+
+        cache = PageFingerprintCache(ttl_seconds=0.6)
+        cache.set("task-1", "fp-abc", {"state": "LOGGED_IN"})
+        result = cache.get("task-1", "fp-abc")
+        assert result is not None
+        assert result["state"] == "LOGGED_IN"
+
+    def test_cache_miss_after_ttl_expires(self):
+        """Cache returns None when TTL has elapsed."""
+        import time
+        from tools.browser_workstation import PageFingerprintCache
+
+        cache = PageFingerprintCache(ttl_seconds=0.1)
+        cache.set("task-1", "fp-abc", {"state": "LOGGED_IN"})
+        time.sleep(0.15)
+        result = cache.get("task-1", "fp-abc")
+        assert result is None
+
+    def test_mutating_actions_set_includes_navigate_and_press(self):
+        """_MUTATING_ACTIONS must include browser_navigate and browser_press."""
+        from tools.browser_workstation import _MUTATING_ACTIONS
+
+        assert "browser_navigate" in _MUTATING_ACTIONS
+        assert "browser_press" in _MUTATING_ACTIONS
+        assert "browser_click" in _MUTATING_ACTIONS
+        assert "browser_type" in _MUTATING_ACTIONS
+
+    @patch("tools.browser_workstation._request_json")
+    def test_navigate_invalidates_snapshot_cache(self, mock_request):
+        """browser_navigate action must invalidate the per-task snapshot cache."""
+        import os
+        from tools.browser_workstation import _dispatch, _get_snapshot_cache
+
+        cache = _get_snapshot_cache()
+        task_key = "test-nav-invalidate"
+        fp = "test-fp-nav"
+        cache.set(task_key, fp, {"state": "STALE"})
+
+        mock_request.return_value = {"success": True}
+        old = os.environ.get("HERMES_BROWSER_SNAPSHOT_CACHE")
+        try:
+            os.environ["HERMES_BROWSER_SNAPSHOT_CACHE"] = "1"
+            _dispatch("browser_navigate", {"url": "https://web.whatsapp.com/"}, task_id=task_key)
+        finally:
+            if old is None:
+                os.environ.pop("HERMES_BROWSER_SNAPSHOT_CACHE", None)
+            else:
+                os.environ["HERMES_BROWSER_SNAPSHOT_CACHE"] = old
+
+        assert cache.get(task_key, fp) is None
+
+    @patch("tools.browser_workstation._request_json")
+    def test_press_invalidates_snapshot_cache(self, mock_request):
+        """browser_press action must invalidate the per-task snapshot cache."""
+        import os
+        from tools.browser_workstation import _dispatch, _get_snapshot_cache
+
+        cache = _get_snapshot_cache()
+        task_key = "test-press-invalidate"
+        fp = "test-fp-press"
+        cache.set(task_key, fp, {"state": "STALE"})
+
+        mock_request.return_value = {"success": True}
+        old = os.environ.get("HERMES_BROWSER_SNAPSHOT_CACHE")
+        try:
+            os.environ["HERMES_BROWSER_SNAPSHOT_CACHE"] = "1"
+            _dispatch("browser_press", {"key": "Enter"}, task_id=task_key)
+        finally:
+            if old is None:
+                os.environ.pop("HERMES_BROWSER_SNAPSHOT_CACHE", None)
+            else:
+                os.environ["HERMES_BROWSER_SNAPSHOT_CACHE"] = old
+
+        assert cache.get(task_key, fp) is None
