@@ -53,15 +53,15 @@ $env:HERMES_PYTHON = $VenvPython
 $env:PATH = "$VenvScripts;$env:PATH"
 $env:HERMES_WORKSTATION_BROWSER = "1"
 
-# One-Click always launches the source-tree Vite dev server (npm run dev).
-# Restore the desktop renderer's local CDP debugger for DOM inspection and
-# console diagnostics. Packaged builds are still gated by electron/dev-cdp.ts.
-# Preserve a caller override: 9333 changes ports; 'off' disables CDP.
+# Workstation's embedded Browser controls its WebContents directly, so the
+# external renderer CDP debugger stays OFF by default to avoid port collisions
+# with Chrome, another dev instance, Browser tooling, or a stale process.
+# Opt in explicitly: 9222/9333 selects a port; 'off' disables CDP.
 if (-not $env:HERMES_DESKTOP_CDP_PORT) {
-  $env:HERMES_DESKTOP_CDP_PORT = "9222"
-  $WorkstationDefaultRendererCdp = $true
+  $env:HERMES_DESKTOP_CDP_PORT = "off"
+  $WorkstationDisabledRendererCdp = $true
 } else {
-  $WorkstationDefaultRendererCdp = $false
+  $WorkstationDisabledRendererCdp = $false
 }
 
 if ($env:OS -match "Windows_NT") {
@@ -103,8 +103,8 @@ try {
   Write-Host "Python runtime: $VenvPython"
   Write-Host "Node runtime:   $nodeVersion"
   Write-Host "Dev server:      http://127.0.0.1:5174 (Vite + HMR)"
-  if ($WorkstationDefaultRendererCdp) {
-    Write-Host "Renderer CDP:    127.0.0.1:9222 (automatic dev/debug mode)"
+  if ($WorkstationDisabledRendererCdp) {
+    Write-Host "Renderer CDP:    off (Workstation default; internal Browser CDP remains enabled)"
   } else {
     Write-Host "Renderer CDP:    $env:HERMES_DESKTOP_CDP_PORT (explicit override)"
   }
