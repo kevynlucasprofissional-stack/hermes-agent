@@ -145,6 +145,7 @@ class SiteOpsRunner:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                check=False,
                 env={**os.environ, 'HERMES_DESKTOP_CDP_PORT': '9222'}
             )
             stdout = result.stdout.strip()
