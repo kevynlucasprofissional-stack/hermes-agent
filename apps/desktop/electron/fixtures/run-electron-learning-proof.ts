@@ -6,7 +6,7 @@
  * correlates gestures and snapshots, and verifies the resulting WebM with ffprobe.
  */
 
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -127,7 +127,7 @@ async function run() {
       ctrl: step === 3 ? true : undefined
     })
 
-    console.log(`[proof] Step ${step}/5 recorded. Frames: ${recorder.getStatus()?.eventsCount}`)
+    console.log(`[proof] Step ${step}/5 recorded. Events: ${recorder.getStatus()?.eventsCount}`)
   }
 
   // 5. Stop recording and flush FFmpeg container
@@ -139,8 +139,9 @@ async function run() {
   const snapshotsDir = path.join(finalState.sessionDir, 'snapshots')
 
   // 6. Validate with ffprobe
-  const probeRaw = execSync(
-    `ffprobe -v quiet -print_format json -show_format -show_streams "${videoPath}"`,
+  const probeRaw = execFileSync(
+    'ffprobe',
+    ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', videoPath],
     { encoding: 'utf-8' }
   )
 
@@ -148,7 +149,9 @@ async function run() {
   const videoStream = probe.streams.find((s: any) => s.codec_type === 'video')
 
   const stat = fs.statSync(videoPath)
-  const frameLines = fs.readFileSync(frameIndexPath, 'utf-8').trim().split('\n')
+  const frameLines = fs.readFileSync(frameIndexPath, 'utf-8')
+    .split(/\r?\n/)
+    .filter(line => line.trim().length > 0)
   const snapshots = fs.readdirSync(snapshotsDir)
 
   const proofReport = {
@@ -158,7 +161,7 @@ async function run() {
     session: {
       sessionId: finalState.sessionId,
       videoStatus: finalState.videoStatus,
-      framesRecorded: finalState.eventsCount,
+      framesRecorded: frameLines.length,
       eventsRecorded: finalState.eventsCount
     },
     video: {
@@ -183,11 +186,16 @@ async function run() {
       finalState.videoStatus === 'stopped' &&
       stat.size > 5000 &&
       videoStream?.codec_name === 'vp9' &&
+      frameLines.length >= 4 &&
       snapshots.length >= 4
   }
 
   const proofFile = path.join(__dirname, 'real-electron-recording-proof.json')
   fs.writeFileSync(proofFile, JSON.stringify(proofReport, null, 2), 'utf-8')
+
+  if (!proofReport.verificationPassed) {
+    throw new Error('Electron learning proof verification failed; inspect ' + proofFile)
+  }
 
   console.log('[proof] SUCCESS! Proof report generated at:', proofFile)
   console.log(JSON.stringify(proofReport, null, 2))

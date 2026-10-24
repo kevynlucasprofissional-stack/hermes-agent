@@ -92,6 +92,49 @@ export function checkRootInstall(appDir, rootDir) {
     }
   }
 
+  // A package.json alone does not prove that ESM files were installed.
+  // Check every icon module re-exported by the installed package's entrypoint.
+  const iconPackage = "@icons-pack/react-simple-icons"
+  if (wanted.includes(iconPackage)) {
+    try {
+      const fromApp = createRequire(join(appDir, "package.json"))
+      const iconPackageJson = fromApp.resolve(`${iconPackage}/package.json`)
+      const iconDir = dirname(iconPackageJson)
+      const index = readFileSync(join(iconDir, "index.mjs"), "utf8")
+      const iconModuleNames = [
+        ...new Set(
+          [...index.matchAll(/from ['"]\.\/icons\/([^'"]+\.mjs)['"]/g)]
+            .map(match => match[1])
+        )
+      ]
+      if (iconModuleNames.length === 0) {
+        return {
+          ok: false,
+          error: `${iconPackage}: index.mjs contains no resolvable icon exports. ` +
+            `Restore the locked install with: cd ${rootDir} && npm ci`
+        }
+      }
+      const absent = iconModuleNames.filter(name =>
+        !existsSync(join(iconDir, "icons", name))
+      )
+      if (absent.length > 0) {
+        return {
+          ok: false,
+          error: `${iconPackage}: ${absent.length}/${iconModuleNames.length} exported ESM modules are missing ` +
+            `(examples: ${absent.slice(0, 3).join(", ")}). ` +
+            `Restore the locked install with: cd ${rootDir} && npm ci`
+        }
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        error: `${iconPackage}: incomplete/unreadable ESM installation ` +
+          `(${error instanceof Error ? error.message : String(error)}). ` +
+          `Restore the locked install with: cd ${rootDir} && npm ci`
+      }
+    }
+  }
+
   // `vite.config.ts` aliases react/react-dom to whatever this workspace resolves,
   // and React refuses to run when the two come from different installed copies
   // ("Minified React error #527" — it throws before the first paint, so the app

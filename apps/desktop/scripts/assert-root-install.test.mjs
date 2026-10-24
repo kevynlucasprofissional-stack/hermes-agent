@@ -182,3 +182,57 @@ test('checkRootInstall keeps the floor when the manifest is unreadable', () => {
     fs.rmSync(tempRoot, { recursive: true, force: true })
   }
 })
+
+
+test('checkRootInstall rejects a present but truncated icons package', () => {
+  const packageName = '@icons-pack/react-simple-icons'
+  const { tempRoot, appDir } = makeTree({
+    manifest: { dependencies: { [packageName]: '13.11.1' } },
+    rootPackages: [...BUILD_CRITICAL, packageName]
+  })
+  try {
+    const dir = path.join(tempRoot, 'node_modules', '@icons-pack', 'react-simple-icons')
+    fs.writeFileSync(path.join(dir, 'index.mjs'),
+      "export { default as SiTest } from './icons/SiTest.mjs';\n", 'utf8')
+    const result = checkRootInstall(appDir, tempRoot)
+    assert.equal(result.ok, false)
+    assert.match(result.error, /SiTest\.mjs/)
+    assert.match(result.error, /npm ci/)
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true })
+  }
+})
+
+test('checkRootInstall accepts complete icons ESM exports', () => {
+  const packageName = '@icons-pack/react-simple-icons'
+  const { tempRoot, appDir } = makeTree({
+    manifest: { dependencies: { [packageName]: '13.11.1' } },
+    rootPackages: [...BUILD_CRITICAL, packageName]
+  })
+  try {
+    const dir = path.join(tempRoot, 'node_modules', '@icons-pack', 'react-simple-icons')
+    const icons = path.join(dir, 'icons')
+    fs.mkdirSync(icons, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'index.mjs'),
+      "export { default as SiTest } from './icons/SiTest.mjs';\n", 'utf8')
+    fs.writeFileSync(path.join(icons, 'SiTest.mjs'), 'export default () => null;\n', 'utf8')
+    assert.deepEqual(checkRootInstall(appDir, tempRoot), { ok: true })
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true })
+  }
+})
+
+test('checkRootInstall rejects an icons package with a missing entrypoint', () => {
+  const packageName = '@icons-pack/react-simple-icons'
+  const { tempRoot, appDir } = makeTree({
+    manifest: { dependencies: { [packageName]: '13.11.1' } },
+    rootPackages: [...BUILD_CRITICAL, packageName]
+  })
+  try {
+    const result = checkRootInstall(appDir, tempRoot)
+    assert.equal(result.ok, false)
+    assert.match(result.error, /incomplete\/unreadable ESM installation/)
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true })
+  }
+})
