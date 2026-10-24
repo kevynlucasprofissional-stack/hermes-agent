@@ -17,6 +17,19 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow {
   return window
 }
 
+function learningControlRuntime(event: IpcMainInvokeEvent, tabId?: string) {
+  const window = senderWindow(event)
+  const runtime = getWorkstationBrowserRuntime()
+
+  if (event.sender !== window.webContents || !event.senderFrame
+    || event.senderFrame !== window.webContents.mainFrame
+    || !runtime.isLearningControlOwner(window, tabId)) {
+    throw new Error('learning_owner_mismatch: IPC sender is not the owning host window main frame')
+  }
+
+  return runtime
+}
+
 export function registerWorkstationBrowserIpc(): void {
   ipcMain.handle('hermes:workstation-browser:status', () => getWorkstationBrowserRuntime().ensure())
   ipcMain.handle('hermes:workstation-browser:ensure', () => getWorkstationBrowserRuntime().ensure())
@@ -140,7 +153,7 @@ export function registerWorkstationBrowserIpc(): void {
     )
   )
   ipcMain.handle('hermes:workstation-browser:learning:start', (event, tabId, sessionId, intensity) => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     const runtime = getWorkstationBrowserRuntime()
     const targetTabId = typeof tabId === 'string' ? tabId : runtime.state().activeTabId
@@ -148,7 +161,7 @@ export function registerWorkstationBrowserIpc(): void {
     if (targetTabId) {
       const expectedWc = runtime.getWebContents(targetTabId)
 
-      if (!expectedWc || expectedWc.id !== event.sender.id) {
+      if (!expectedWc || !runtime.isLearningControlOwner(senderWindow(event), targetTabId)) {
         throw new Error('learning_owner_mismatch: IPC sender does not match target tab webContents')
       }
     }
@@ -160,7 +173,7 @@ export function registerWorkstationBrowserIpc(): void {
     )
   })
   ipcMain.handle('hermes:workstation-browser:learning:stop', event => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     const runtime = getWorkstationBrowserRuntime()
     const status = runtime.getLearningStatus()
@@ -168,7 +181,7 @@ export function registerWorkstationBrowserIpc(): void {
     if (status?.tabId) {
       const expectedWc = runtime.getWebContents(status.tabId)
 
-      if (!expectedWc || expectedWc.id !== event.sender.id) {
+      if (!expectedWc || !runtime.isLearningControlOwner(senderWindow(event), status.tabId)) {
         throw new Error('learning_owner_mismatch: IPC sender does not match learning session tab')
       }
     }
@@ -176,7 +189,7 @@ export function registerWorkstationBrowserIpc(): void {
     return runtime.stopLearning()
   })
   ipcMain.handle('hermes:workstation-browser:learning:discard', event => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     const runtime = getWorkstationBrowserRuntime()
     const status = runtime.getLearningStatus()
@@ -184,7 +197,7 @@ export function registerWorkstationBrowserIpc(): void {
     if (status?.tabId) {
       const expectedWc = runtime.getWebContents(status.tabId)
 
-      if (!expectedWc || expectedWc.id !== event.sender.id) {
+      if (!expectedWc || !runtime.isLearningControlOwner(senderWindow(event), status.tabId)) {
         throw new Error('learning_owner_mismatch: IPC sender does not match learning session tab')
       }
     }
@@ -192,12 +205,12 @@ export function registerWorkstationBrowserIpc(): void {
     return runtime.discardLearning()
   })
   ipcMain.handle('hermes:workstation-browser:learning:status', event => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     return getWorkstationBrowserRuntime().getLearningStatus()
   })
   ipcMain.handle('hermes:workstation-browser:learning:intensity', (event, intensity) => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     const runtime = getWorkstationBrowserRuntime()
     const status = runtime.getLearningStatus()
@@ -205,7 +218,7 @@ export function registerWorkstationBrowserIpc(): void {
     if (status?.tabId) {
       const expectedWc = runtime.getWebContents(status.tabId)
 
-      if (!expectedWc || expectedWc.id !== event.sender.id) {
+      if (!expectedWc || !runtime.isLearningControlOwner(senderWindow(event), status.tabId)) {
         throw new Error('learning_owner_mismatch: IPC sender does not match learning session tab')
       }
     }
@@ -213,7 +226,7 @@ export function registerWorkstationBrowserIpc(): void {
     return runtime.setLearningIntensity(String(intensity ?? 'intensivo'))
   })
   ipcMain.handle('hermes:workstation-browser:learning:answer', (event, questionId, action, userCorrection) => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     const runtime = getWorkstationBrowserRuntime()
     const status = runtime.getLearningStatus()
@@ -221,7 +234,7 @@ export function registerWorkstationBrowserIpc(): void {
     if (status?.tabId) {
       const expectedWc = runtime.getWebContents(status.tabId)
 
-      if (!expectedWc || expectedWc.id !== event.sender.id) {
+      if (!expectedWc || !runtime.isLearningControlOwner(senderWindow(event), status.tabId)) {
         throw new Error('learning_owner_mismatch: IPC sender does not match learning session tab')
       }
     }
@@ -233,7 +246,7 @@ export function registerWorkstationBrowserIpc(): void {
     )
   })
   ipcMain.handle('hermes:workstation-browser:learning:questions', event => {
-    senderWindow(event)
+    learningControlRuntime(event)
 
     return getWorkstationBrowserRuntime().getLearningQuestions()
   })

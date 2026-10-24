@@ -224,8 +224,10 @@ export class LearningSessionRecorder {
     return Array.from(this.questionsMap.values())
   }
 
+  private finalizing = false
+
   async start(config: LearningSessionConfig): Promise<LearningSessionState> {
-    if (this.isActive()) {
+    if (this.isActive() || this.finalizing) {
       throw new Error(`learning_session_already_active:${this.state?.sessionId}`)
     }
 
@@ -317,6 +319,23 @@ export class LearningSessionRecorder {
     return this.getStatus()!
   }
 
+  updateDocument(tabId: string, webContentsId: number, documentEpoch: string, targetUrl: string): boolean {
+    if (!this.state || !this.isActive()
+      || this.state.tabId !== tabId || this.state.webContentsId !== webContentsId) {
+      return false
+    }
+
+    if (!this.checkNavigation(targetUrl)) {
+      return false
+    }
+
+    this.state.documentEpoch = documentEpoch
+    this.lastFrameBuffer = null
+    this.latestSnapshotRef = null
+    this.persistManifest()
+    return true
+  }
+
   checkNavigation(targetUrl: string): boolean {
     if (!this.state || !this.isActive()) {return true}
 
@@ -387,7 +406,10 @@ export class LearningSessionRecorder {
   }
 
   async recordGesture(raw: RawHumanBrowserGesture): Promise<SafeHumanBrowserGesture | null> {
-    if (!this.state || this.state.status !== 'learning') {
+    const recording = this.state
+
+    if (!recording || recording.status !== 'learning'
+      || raw.tabId !== recording.tabId || raw.documentEpoch !== recording.documentEpoch) {
       return null
     }
 
@@ -438,6 +460,11 @@ export class LearningSessionRecorder {
         try {
           const res = await this.captureScreenshot(this.state.tabId)
 
+        if (this.state !== recording || recording.status !== 'learning'
+          || recording.documentEpoch !== raw.documentEpoch) {
+          return null
+        }
+
           if (res?.success && res.screenshot_path) {
             safe.snapshot_ref = res.screenshot_path
             this.latestSnapshotRef = res.screenshot_path
@@ -446,6 +473,11 @@ export class LearningSessionRecorder {
           // ignore
         }
       }
+    }
+
+    if (this.state !== recording || recording.status !== 'learning'
+      || recording.documentEpoch !== raw.documentEpoch) {
+      return null
     }
 
     if (this.segmenter) {
@@ -458,7 +490,8 @@ export class LearningSessionRecorder {
     // Evaluate potential questions triggered by this action
     await this.evaluateQuestions()
 
-    return safe
+    return this.state === recording && recording.status === 'learning'
+      && recording.documentEpoch === raw.documentEpoch ? safe : null
   }
 
   async evaluateQuestions(): Promise<LearningQuestionItem[]> {
@@ -589,6 +622,17 @@ export class LearningSessionRecorder {
   }
 
   async stop(): Promise<LearningSessionState> {
+    if (this.finalizing) {throw new Error('learning_session_finalizing')}
+    this.finalizing = true
+
+    try {
+      return await this.stopSession()
+    } finally {
+      this.finalizing = false
+    }
+  }
+
+  private async stopSession(): Promise<LearningSessionState> {
     if (!this.state || this.state.status === 'idle') {
       return this.state || {
         schema: 'hermes.learning_session.v1',
@@ -616,6 +660,7 @@ export class LearningSessionRecorder {
     }
 
     // Await encoder shutdown and frame index flush before finalizing state
+    this.pause()
     await this.stopVideoRecording()
 
     this.state.status = 'idle'
@@ -745,9 +790,21 @@ export class LearningSessionRecorder {
   }
 
   async discard(): Promise<void> {
+    if (this.finalizing) {throw new Error('learning_session_finalizing')}
+    this.finalizing = true
+
+    try {
+      await this.discardSession()
+    } finally {
+      this.finalizing = false
+    }
+  }
+
+  private async discardSession(): Promise<void> {
     if (!this.state) {return}
 
     const sessionDir = this.state.sessionDir
+    this.pause()
     await this.stopVideoRecording()
 
     this.state = null

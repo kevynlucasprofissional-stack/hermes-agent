@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  buildLearningObserverScript,
+  installLearningDomObserver,
   detectDomMutationDelta,
   extractContainerBreadcrumb,
   extractControlValueAndUnit,
@@ -206,14 +206,55 @@ describe('HLM-MVP DOM breadcrumbs, value extraction, and fast deltas (P05)', () 
     })
   })
 
-  describe('buildLearningObserverScript', () => {
-    it('generates a valid client-side script containing essential breadcrumb and delta primitives', () => {
-      const script = buildLearningObserverScript()
-      expect(script).toContain('window.__hermesLearningActive')
-      expect(script).toContain('BREADCRUMB_SELECTOR')
-      expect(script).toContain('observePostAction')
-      expect(script).toContain('__HERMES_GESTURE__')
-      expect(script).toContain('Painel de Camadas')
+  describe('isolated DOM observer', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+      vi.useRealTimers()
+    })
+
+    it('rejects page-dispatched events', () => {
+      const emit = vi.fn()
+      const stop = installLearningDomObserver(emit)
+      const button = document.createElement('button')
+      document.body.append(button)
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }))
+      expect(emit).not.toHaveBeenCalled()
+      stop()
+    })
+
+    it('preserves trusted click metadata and cancels pending observation on cleanup', async () => {
+      vi.useFakeTimers()
+      const add = vi.spyOn(window, 'addEventListener')
+      const emit = vi.fn()
+      const stop = installLearningDomObserver(emit)
+      const click = add.mock.calls.find(([type]) => type === 'click')?.[1] as (event: MouseEvent) => void
+      const button = document.createElement('button')
+      button.innerText = 'Apply'
+      document.body.append(button)
+      const event = { isTrusted: true, target: button, clientX: 20, clientY: 30 } as unknown as MouseEvent
+
+      click(event)
+      await vi.advanceTimersByTimeAsync(250)
+      expect(emit).toHaveBeenCalledWith(expect.objectContaining({ kind: 'click', accessibleName: 'Apply', x: 20, y: 30 }))
+      emit.mockClear()
+      click(event)
+      stop()
+      await vi.advanceTimersByTimeAsync(250)
+      expect(emit).not.toHaveBeenCalled()
+    })
+
+    it('does not collect password fields even for trusted input', () => {
+      const add = vi.spyOn(window, 'addEventListener')
+      const emit = vi.fn()
+      const stop = installLearningDomObserver(emit)
+      const keydown = add.mock.calls.find(([type]) => type === 'keydown')?.[1] as (event: KeyboardEvent) => void
+      const input = document.createElement('input')
+      input.type = 'password'
+      input.value = 'not-for-capture'
+      keydown({ isTrusted: true, target: input, key: 'Enter' } as unknown as KeyboardEvent)
+      expect(emit).not.toHaveBeenCalled()
+      stop()
     })
   })
 })

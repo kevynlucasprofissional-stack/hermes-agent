@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { connectAiControl } from './ai-control-client.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ARTIFACTS_DIR = resolve(__dirname, '../../../workstation/dogfood/artifacts')
@@ -24,39 +25,12 @@ const STATE_FILE = resolve(ARTIFACTS_DIR, 'deep-map-state.json')
 
 if (!existsSync(ARTIFACTS_DIR)) mkdirSync(ARTIFACTS_DIR, { recursive: true })
 
-const port = Number(process.env.HERMES_DESKTOP_CDP_PORT || 9222)
 const args = process.argv.slice(2)
 const command = args[0] || 'status'
-
-// --- CDP Connection ---
-let targets
-try {
-  targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json()
-} catch {
-  console.error(JSON.stringify({ error: `no CDP on 127.0.0.1:${port}` }))
-  process.exit(1)
-}
-const t = targets.find((t) => t.url.includes('5174')) ?? targets.find((t) => t.type === 'page')
-if (!t) { console.error(JSON.stringify({ error: 'no page target' })); process.exit(1) }
-
-const ws = new WebSocket(t.webSocketDebuggerUrl)
-let id = 0
-const pending = new Map()
-ws.addEventListener('message', (ev) => {
-  const m = JSON.parse(ev.data)
-  if (pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id) }
-})
-await new Promise((r) => ws.addEventListener('open', r))
-
-const evalExpr = async (expr) => {
-  const i = ++id
-  const p = new Promise((res) => pending.set(i, res))
-  ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true, awaitPromise: true } }))
-  const r = await p
-  if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || 'eval error')
-  return r.result.result.value
-}
-
+let client
+try { client = await connectAiControl() }
+catch (err) { console.error(JSON.stringify({ error: err.message })); process.exit(1) }
+const evalExpr = expression => client.evaluate(expression)
 // --- Module definitions ---
 const MODULES = ['workstation', 'capabilities', 'messaging', 'artifacts', 'scheduled', 'vault', 'kanban']
 const MODULE_DISPLAY_NAMES = {
@@ -464,5 +438,5 @@ try {
   console.error(JSON.stringify({ error: err.message }))
   process.exit(1)
 } finally {
-  ws.close()
+  client.close()
 }

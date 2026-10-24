@@ -4,23 +4,17 @@
  * The renderer is a Chromium page, so `--remote-debugging-port` turns it into
  * something the repo's existing CDP tooling (`scripts/eval.mjs`,
  * `scripts/perf/lib/cdp.mjs`, the `diag-*` / `probe-*` family) can attach to
- * and read the live DOM from. Every one of those scripts already defaults to
- * 9222, so a dev-server run opens 9222 and they just work.
- *
- * If you are running a dev server you are already executing arbitrary local
- * JS — vite's module graph and every postinstall in node_modules — so a
- * loopback debugging port does not meaningfully widen that. `perf:serve`
- * already opens one unconditionally. What must never happen is a *packaged*
- * app exposing it, which is the one hard gate here.
+ * and read the live DOM from. The ordinary launcher and direct dev-server
+ * runs now use the separate authenticated native AI Control bridge instead;
+ * Chromium CDP is powerful and must require an explicit developer opt-in.
  *
  *  - packaged build              → always closed, whatever the env says.
  *  - no HERMES_DESKTOP_DEV_SERVER → closed (an unpackaged `electron .` against
  *    dist/ is how the packaged app gets smoke tested; it should behave like
  *    the packaged app).
- *  - otherwise                    → open on 9222, or HERMES_DESKTOP_CDP_PORT.
- *
- * `HERMES_DESKTOP_CDP_PORT=off` (or `0` / `false`) opts out for anyone who
- * wants the port closed on a dev run.
+ *  - dev run without explicit opt-in → closed (native AI Control available).
+ *  - dev run with HERMES_DESKTOP_CDP_PORT=9222 → open, debug use only.
+ *  - HERMES_DESKTOP_CDP_PORT=off / 0 / false → explicitly closed.
  *
  * The port binds to loopback (Chromium's default) and the address is
  * deliberately not configurable: there is no reason to expose a renderer
@@ -28,7 +22,7 @@
  */
 
 /** Why the port is closed, for a one-line log the developer can act on. */
-type ClosedReason = 'packaged' | 'no-dev-server' | 'opted-out' | 'invalid-port'
+type ClosedReason = 'packaged' | 'no-dev-server' | 'not-requested' | 'opted-out' | 'invalid-port'
 
 type DevCdpDecision = { port: number; reason: null } | { port: null; reason: ClosedReason }
 
@@ -67,7 +61,7 @@ function resolveDevCdpPort({ env, isPackaged, devServer }: DevCdpInput): DevCdpD
   const requested = (env.HERMES_DESKTOP_CDP_PORT ?? '').trim()
 
   if (!requested) {
-    return { port: DEFAULT_PORT, reason: null }
+    return { port: null, reason: 'not-requested' }
   }
 
   if (OPT_OUT.has(requested.toLowerCase())) {
@@ -100,6 +94,8 @@ function describeDevCdpDecision(decision: DevCdpDecision): string | null {
     case 'packaged':
 
     case 'no-dev-server':
+
+    case 'not-requested':
       return null
   }
 }

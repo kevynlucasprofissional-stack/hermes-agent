@@ -203,3 +203,96 @@ test('P0A-07: terminal once written cannot be overwritten', () => {
   const admission = fresh.load()?.operationAdmissions?.[identity.operationId]
   assert.equal(admission?.terminal?.reason, 'STALE_OR_UNKNOWN_REF', 'original terminal preserved')
 })
+
+// P0-08: reconcilePendingAdmission records RECONCILED terminal with evidence and unblocks subsequent operations
+test('P0-08: reconcilePendingAdmission records RECONCILED terminal and unblocks subsequent operations', () => {
+  const { file, owner, identity } = fixture()
+  assert.equal(owner.admitBrowserMutation(identity), 'admitted')
+
+  // Verify blocked before reconciliation
+  const nextIdentity = { ...identity, operationId: 'op-stale-next', argumentsDigest: 'b'.repeat(64) }
+  assert.equal(owner.admitBrowserMutation(nextIdentity), 'blocked_by_prior_uncertain_effect')
+
+  // Reconcile with evidence
+  const res = owner.reconcilePendingAdmission({
+    operationId: identity.operationId,
+    reason: 'OPERATOR_RECONCILED',
+    evidence: 'OPERATOR_REVIEW',
+    evidenceDetails: 'Verified WhatsApp message was delivered after human check',
+    resolvedBy: 'operator-1'
+  })
+  assert.equal(res.reconciled, true)
+
+  const fresh = new BrowserSessionStateFilePersistence(file)
+  const admission = fresh.load()?.operationAdmissions?.[identity.operationId]
+  assert.ok(admission?.terminal, 'terminal must be persisted')
+  assert.equal(admission.terminal.kind, 'RECONCILED')
+  assert.equal(admission.terminal.reason, 'OPERATOR_RECONCILED')
+  assert.equal(admission.terminal.evidence, 'OPERATOR_REVIEW')
+  assert.equal(admission.terminal.resolvedBy, 'operator-1')
+
+  // Now subsequent operation is admitted
+  assert.equal(fresh.admitBrowserMutation(nextIdentity), 'admitted')
+})
+
+// P0-09: reconcilePendingAdmission rejects invalid reason or evidence
+test('P0-09: reconcilePendingAdmission rejects invalid reason or evidence', () => {
+  const { owner, identity } = fixture()
+  assert.equal(owner.admitBrowserMutation(identity), 'admitted')
+
+  assert.throws(
+    () => owner.reconcilePendingAdmission({
+      operationId: identity.operationId,
+      reason: 'INVALID_REASON' as any,
+      evidence: 'OPERATOR_REVIEW'
+    }),
+    /invalid_reconcile_reason/
+  )
+
+  assert.throws(
+    () => owner.reconcilePendingAdmission({
+      operationId: identity.operationId,
+      reason: 'OPERATOR_RECONCILED',
+      evidence: 'INVALID_EVIDENCE' as any
+    }),
+    /invalid_reconcile_evidence/
+  )
+})
+
+// P0-10: listPendingAdmissions filters acknowledged and terminal admissions
+test('P0-10: listPendingAdmissions lists only unacknowledged, non-terminal operations', () => {
+  const { owner, identity } = fixture()
+  assert.equal(owner.admitBrowserMutation(identity), 'admitted')
+
+  const pendingList1 = owner.listPendingAdmissions()
+  assert.equal(pendingList1.length, 1)
+  assert.equal(pendingList1[0].operationId, identity.operationId)
+
+  // Reconcile it
+  owner.reconcilePendingAdmission({
+    operationId: identity.operationId,
+    reason: 'OPERATOR_RECONCILED',
+    evidence: 'OPERATOR_REVIEW'
+  })
+
+  const pendingList2 = owner.listPendingAdmissions()
+  assert.equal(pendingList2.length, 0, 'reconciled operation must no longer be pending')
+})
+
+// P0-11: workstationBrowserSessionStatePath respects HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE
+test('P0-11: workstationBrowserSessionStatePath respects environment variable override', async () => {
+  const { workstationBrowserSessionStatePath } = await import('./workstation-browser-runtime')
+  const customPath = path.resolve(os.tmpdir(), 'custom-session-ledger.json')
+  const original = process.env.HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE
+
+  try {
+    process.env.HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE = customPath
+    assert.equal(workstationBrowserSessionStatePath(), customPath)
+  } finally {
+    if (original === undefined) {
+      delete process.env.HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE
+    } else {
+      process.env.HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE = original
+    }
+  }
+})

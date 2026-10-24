@@ -15,8 +15,12 @@ const DEV_SERVER = 'http://127.0.0.1:5174'
 /** The ordinary `npm run dev` / `hgui` run. */
 const devRun = { env: {}, isPackaged: false, devServer: DEV_SERVER }
 
-test('a dev-server run opens the default port with no opt-in', () => {
-  assert.deepEqual(resolveDevCdpPort(devRun), { port: DEFAULT_PORT, reason: null })
+test('a dev-server run leaves Chromium CDP closed without explicit opt-in', () => {
+  assert.deepEqual(resolveDevCdpPort(devRun), { port: null, reason: 'not-requested' })
+})
+
+test('an explicit dev opt-in opens port 9222', () => {
+  assert.deepEqual(resolveDevCdpPort({ ...devRun, env: { HERMES_DESKTOP_CDP_PORT: '9222' } }), { port: DEFAULT_PORT, reason: null })
 })
 
 test('a packaged build never opens the port, however loudly the env asks', () => {

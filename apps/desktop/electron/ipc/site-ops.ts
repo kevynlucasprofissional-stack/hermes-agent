@@ -1,12 +1,25 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { ipcMain, type IpcMainInvokeEvent } from 'electron'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const workspaceRoot = resolve(__dirname, '..', '..', '..')
-const SITE_OPS_SCRIPTS = resolve(workspaceRoot, 'site-ops', 'scripts')
+
+// Source modules live under electron/ipc; the bundled entry lives under dist.
+// Prefer the packaged payload's explicit location when it is provided.
+const siteOpsCandidates = [
+  resolve(__dirname, '..', '..', '..', '..', 'site-ops'),
+  resolve(__dirname, '..', '..', '..', 'site-ops')
+]
+
+const siteOpsRoot = process.env.HERMES_SITE_OPS
+  ? resolve(process.env.HERMES_SITE_OPS)
+  : siteOpsCandidates.find(root => existsSync(resolve(root, 'scripts', 'site-deep-map.mjs'))) ?? siteOpsCandidates[0]
+
+const workspaceRoot = resolve(siteOpsRoot, '..')
+const SITE_OPS_SCRIPTS = resolve(siteOpsRoot, 'scripts')
 const SITE_OPS_SITE_OPS = resolve(SITE_OPS_SCRIPTS, 'site-ops')
 const DEEP_MAP_SCRIPT = resolve(SITE_OPS_SCRIPTS, 'site-deep-map.mjs')
 
@@ -41,10 +54,6 @@ function getScriptPath(site: string, operation: string): string {
   }
 
   throw new Error(`Unknown site/operation: ${site}/${operation}`)
-}
-
-function getDeepMapArgs(command: 'init' | 'scan' | 'status', sitePattern: string): string[] {
-  return [DEEP_MAP_SCRIPT, command, sitePattern]
 }
 
 async function runNodeScript(scriptPath: string, args: string[], timeoutMs: number): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -152,16 +161,23 @@ export function registerSiteOpsIpc(): void {
 
   ipcMain.handle('hermes:site-ops:deep-map', async (_event, command: 'init' | 'scan' | 'status', sitePattern: string): Promise<SiteOpsResult> => {
     try {
-      const args = getDeepMapArgs(command, sitePattern)
-      const { stdout, stderr, exitCode } = await runNodeScript('node', args, 120000)
+      const { stdout, stderr, exitCode } = await runNodeScript(DEEP_MAP_SCRIPT, [command, sitePattern], 120000)
 
       if (exitCode === 0) {
         try {
-          const parsed = stdout.trim() ? JSON.parse(stdout.trim()) : {}
+          const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>
 
-          return { success: true, data: parsed }
+          const valid = parsed && typeof parsed === 'object' && (
+            (command === 'init' && parsed.initialized === true && typeof parsed.slug === 'string') ||
+            (command === 'scan' && parsed.scanned === true && typeof parsed.elements === 'number') ||
+            (command === 'status' && typeof parsed.slug === 'string' && Array.isArray(parsed.pendingPhases))
+          )
+
+          return valid
+            ? { success: true, data: parsed }
+            : { success: false, error: `Incomplete deep-map ${command} result`, data: parsed }
         } catch {
-          return { success: true, data: { raw: stdout } }
+          return { success: false, error: 'Invalid JSON output from deep-map', data: stdout }
         }
       } else {
         return { success: false, error: stderr || `Deep map ${command} failed` }

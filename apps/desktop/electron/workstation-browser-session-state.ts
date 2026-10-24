@@ -53,16 +53,17 @@ export interface BrowserSessionTab {
 }
 
 /**
- * Terminal state for an admission that was proven NOT to have dispatched any
- * page effect. Only pre-effect resolution failures (stale ref before scroll,
- * focus or CDP dispatch) may record this. Post-effect failures remain
- * uncertain and must NOT receive a terminal.
+ * Terminal state for an admission. Pre-effect failures record NOT_DISPATCHED.
+ * Post-effect or operator-inspected resolutions record RECONCILED with evidence,
+ * preserving immutable audit history.
  */
 export interface AdmissionTerminal {
-  kind: 'NOT_DISPATCHED'
-  reason: 'STALE_OR_UNKNOWN_REF' | 'REF_REQUIRED' | 'AMBIGUOUS_ANCHOR'
-  evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+  kind: 'NOT_DISPATCHED' | 'RECONCILED'
+  reason: 'STALE_OR_UNKNOWN_REF' | 'REF_REQUIRED' | 'AMBIGUOUS_ANCHOR' | 'OPERATOR_RECONCILED' | 'EVIDENCE_RECONCILED'
+  evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT' | 'OPERATOR_REVIEW' | 'OBSERVED_STATE' | 'RECEIPT_PROVEN'
   recordedAt: string
+  resolvedBy?: string
+  evidenceDetails?: string
 }
 
 /** Structural idempotency fence owned by BrowserSessionState, NOT an effect verifier. */
@@ -699,6 +700,104 @@ export class BrowserSessionStateFilePersistence {
         this.admissionPersistenceFailed = true
         throw new Error('browser_admission_persistence_unavailable', { cause: error })
       }
+    })
+  }
+
+  /**
+   * Reconcile an unacknowledged/uncertain admission with verified evidence.
+   * Preserves immutable audit history while releasing the admission fence for future mutations.
+   */
+  reconcilePendingAdmission(params: {
+    operationId: string
+    reason: AdmissionTerminal['reason']
+    evidence: AdmissionTerminal['evidence']
+    evidenceDetails?: string
+    resolvedBy?: string
+  }): { operationId: string; reconciled: boolean } {
+    const validReasons = new Set([
+      'STALE_OR_UNKNOWN_REF', 'REF_REQUIRED', 'AMBIGUOUS_ANCHOR',
+      'OPERATOR_RECONCILED', 'EVIDENCE_RECONCILED'
+    ])
+    if (!validReasons.has(params.reason)) {
+      throw new Error('invalid_reconcile_reason')
+    }
+
+    const validEvidences = new Set([
+      'TARGET_RESOLUTION_PRE_PAGE_EFFECT', 'OPERATOR_REVIEW',
+      'OBSERVED_STATE', 'RECEIPT_PROVEN'
+    ])
+    if (!validEvidences.has(params.evidence)) {
+      throw new Error('invalid_reconcile_evidence')
+    }
+
+    if (this.admissionPersistenceFailed) {
+      throw new Error('browser_admission_persistence_unavailable')
+    }
+
+    return this.withExclusiveAdmissionLock(() => {
+      this.loaded = false
+      this.cached = null
+      this.preserveUnsupportedVersion = false
+      const snapshot = this.load()
+
+      if (!snapshot && this.io.existsSync(this.filePath)) {
+        throw new Error('browser_admission_state_unavailable')
+      }
+
+      const current = snapshot ?? emptyBrowserSessionState(this.now)
+      const prior = current.operationAdmissions?.[params.operationId]
+
+      if (!prior) {
+        throw new Error('browser_admission_not_found')
+      }
+
+      if (prior.terminal) {
+        return { operationId: params.operationId, reconciled: true }
+      }
+
+      const terminal: AdmissionTerminal = {
+        kind: 'RECONCILED',
+        reason: params.reason,
+        evidence: params.evidence,
+        recordedAt: this.now().toISOString(),
+        ...(params.resolvedBy ? { resolvedBy: params.resolvedBy } : {}),
+        ...(params.evidenceDetails ? { evidenceDetails: params.evidenceDetails } : {})
+      }
+
+      try {
+        this.save({
+          ...current,
+          savedAt: this.now().toISOString(),
+          operationAdmissions: {
+            ...(current.operationAdmissions ?? {}),
+            [params.operationId]: { ...prior, terminal }
+          }
+        })
+
+        const syncIO = this.io as typeof fs
+        if (syncIO.openSync && syncIO.fsyncSync && syncIO.closeSync) {
+          const fd = syncIO.openSync(this.filePath, 'r+')
+          try { syncIO.fsyncSync(fd) } finally { syncIO.closeSync(fd) }
+        }
+
+        return { operationId: params.operationId, reconciled: true }
+      } catch (error) {
+        this.admissionPersistenceFailed = true
+        throw new Error('browser_admission_persistence_unavailable', { cause: error })
+      }
+    })
+  }
+
+  /**
+   * List pending admissions (unacknowledged and without terminal state)
+   * for controlled operator inspection and audit.
+   */
+  listPendingAdmissions(taskId?: string): BrowserMutationAdmission[] {
+    const snapshot = this.load()
+    const admissions = Object.values(snapshot?.operationAdmissions ?? {})
+    return admissions.filter(a => {
+      if (taskId && a.taskId !== taskId) return false
+      return a.acknowledged !== true && !a.terminal
     })
   }
 

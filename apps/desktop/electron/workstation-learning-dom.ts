@@ -290,210 +290,104 @@ export function observeQuickDomDelta(root: Node, durationMs = 250): Promise<DomM
   })
 }
 
-export function buildLearningObserverScript(): string {
-  return `(() => {
-    if (window.__hermesLearningActive) return;
-    window.__hermesLearningActive = true;
+export function installLearningDomObserver(emit: (gesture: Record<string, unknown>) => void): () => void {
+  let active = true
+  const pending = new Set<() => void>()
+  const interactiveSelector = 'button, a, [role], [data-tool], [data-action], canvas, input, select'
+  const functionalKeys = new Set(['Enter', 'Escape', 'Tab', 'Backspace', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
 
-    const SENSITIVE = /password|passcode|secret|token|key|credential|authorization|cookie|otp|recovery|private|account|session|api|payment|card|email|address/i;
-    const SAFE_INPUT_TYPES = new Set(['range', 'number', 'checkbox', 'radio', 'button']);
-    const BREADCRUMB_SELECTOR = '[role="toolbar"], [role="navigation"], [role="dialog"], [role="tabpanel"], aside, [id*="panel"], [id*="sidebar"], [class*="panel"], [class*="layer"], [class*="prop"]';
+  function targetFor(event: Event): Element | null {
+    if (!active || !event.isTrusted || !(event.target instanceof Element)) {return null}
+    const target = event.target
+    const interactive = target.closest(interactiveSelector) || target
 
-    function isSens(el) {
-      if (!el) return false;
-      if (el.isContentEditable || el.getAttribute?.('contenteditable') === 'true' || el.getAttribute?.('contenteditable') === '' || el.tagName === 'TEXTAREA') return true;
-      if (el.tagName === 'INPUT') {
-        const type = (el.type || 'text').toLowerCase();
-        if (!SAFE_INPUT_TYPES.has(type)) return true;
-      }
-      const name = el.getAttribute?.('aria-label') || el.getAttribute?.('title') || '';
-      return SENSITIVE.test(name);
+    return isElementSensitive(target) || isElementSensitive(interactive) ? null : interactive
+  }
+
+  function describeTarget(element: Element): Record<string, unknown> {
+    const tag = element.tagName.toLowerCase()
+    const role = element.getAttribute('role')
+      || ({ button: 'button', a: 'link', canvas: 'canvas' } as Record<string, string>)[tag]
+      || (tag === 'input' && element.getAttribute('type') === 'range' ? 'slider' : undefined)
+    const name = element.getAttribute('aria-label') || element.getAttribute('title')
+      || element.getAttribute('data-tool')
+      || (tag === 'button' ? (element as HTMLElement).innerText?.slice(0, 80) : undefined)
+
+    return { tag, role, accessibleName: name, containerBreadcrumb: extractContainerBreadcrumb(element) }
+  }
+
+  function afterAction(gesture: Record<string, unknown>): void {
+    const records: MutationRecord[] = []
+    const observer = new MutationObserver((mutations) => records.push(...mutations.slice(0, 200 - records.length)))
+    const root = document.body || document.documentElement
+
+    observer.observe(root, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ['class', 'aria-expanded', 'aria-selected', 'hidden', 'disabled']
+    })
+
+    const cancel = (): void => {
+      clearTimeout(timer)
+      observer.disconnect()
+      pending.delete(cancel)
     }
+    const timer = setTimeout(() => {
+      records.push(...observer.takeRecords().slice(0, 200 - records.length))
+      cancel()
+      if (active) {emit({ ...gesture, domDelta: detectDomMutationDelta(records) })}
+    }, 250)
 
-    function extractBreadcrumb(el) {
-      if (!el) return undefined;
-      const c = el.closest?.(BREADCRUMB_SELECTOR);
-      if (!c) return undefined;
-      const explicit = c.getAttribute?.('aria-label') || c.getAttribute?.('title') || c.getAttribute?.('data-panel-title') || c.getAttribute?.('data-panel');
-      if (explicit && SENSITIVE.test(explicit)) return undefined;
-      const idClass = (c.id + ' ' + c.className).toLowerCase();
-      if (SENSITIVE.test(idClass)) return undefined;
-      if (explicit && explicit.trim()) return explicit.slice(0, 80);
-      const h = c.querySelector?.('h1, h2, h3, h4, [class*="title"], [class*="header"], legend');
-      if (h && h.textContent) {
-        if (SENSITIVE.test(h.textContent)) return undefined;
-        return h.textContent.trim().slice(0, 80);
-      }
-      if (/layer|camada/i.test(idClass)) return 'Painel de Camadas';
-      if (/filter|filtro/i.test(idClass)) return 'Painel de Filtros';
-      if (/prop|ajuste/i.test(idClass)) return 'Painel de Propriedades';
-      if (/tool|toolbar/i.test(idClass)) return 'Barra de Ferramentas';
-      if (/sidebar/i.test(idClass)) return 'Barra Lateral';
-      const role = c.getAttribute?.('role')?.toLowerCase();
-      if (role === 'dialog' || c.tagName === 'DIALOG') return 'Janela de Diálogo';
-      if (role === 'toolbar') return 'Barra de Ferramentas';
-      return undefined;
+    pending.add(cancel)
+  }
+
+  const onClick = (event: MouseEvent): void => {
+    const target = targetFor(event)
+    if (!target) {return}
+    const info = describeTarget(target)
+
+    afterAction({
+      kind: 'click', x: event.clientX, y: event.clientY,
+      viewportWidth: window.innerWidth, viewportHeight: window.innerHeight,
+      role: info.role, accessibleName: info.accessibleName, elementTag: info.tag,
+      containerBreadcrumb: info.containerBreadcrumb, ...extractControlValueAndUnit(target)
+    })
+  }
+  const onPointer = (event: PointerEvent): void => {
+    const target = targetFor(event)
+    if (!target) {return}
+
+    emit({
+      kind: event.type, x: event.clientX, y: event.clientY,
+      viewportWidth: window.innerWidth, viewportHeight: window.innerHeight,
+      target: describeTarget(target)
+    })
+  }
+  const onKey = (event: KeyboardEvent): void => {
+    const target = targetFor(event)
+    if (!target) {return}
+    const hasModifier = event.ctrlKey || event.metaKey || event.altKey
+
+    if (hasModifier) {
+      afterAction({
+        kind: 'shortcut', key: event.key, ctrl: event.ctrlKey, meta: event.metaKey,
+        alt: event.altKey, shift: event.shiftKey
+      })
+    } else if (functionalKeys.has(event.key)) {
+      emit({ kind: 'key', key: event.key, target: describeTarget(target) })
     }
+  }
 
-    function extractValue(el) {
-      if (!el || isSens(el)) return {};
-      let val = el.getAttribute?.('aria-valuetext') || el.getAttribute?.('aria-valuenow');
-      if (!val && el.tagName === 'INPUT' && (el.type === 'range' || el.type === 'number')) {
-        val = el.value;
-      } else if (!val && el.tagName === 'SELECT') {
-        val = el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : el.value;
-      }
-      if (!val || SENSITIVE.test(val)) return {};
-      val = String(val).trim();
-      const m = val.match(/(%|px|pt|em|rem|deg|s|ms)$/i);
-      return { currentValue: val.slice(0, 50), unit: m ? m[1] : undefined };
-    }
+  window.addEventListener('click', onClick, true)
+  window.addEventListener('pointerdown', onPointer, true)
+  window.addEventListener('pointerup', onPointer, true)
+  window.addEventListener('keydown', onKey, true)
 
-    function detectDelta(mutations) {
-      let modal = false;
-      let added = false;
-      let removed = false;
-      let toggled = false;
-      let toggledAttr = '';
-      for (const m of mutations) {
-        if (m.type === 'childList') {
-          for (const n of m.addedNodes) {
-            if (n && n.nodeType === 1) {
-              if (n.matches?.('dialog, [role="dialog"], [class*="modal"]') || n.querySelector?.('dialog, [role="dialog"]')) {
-                modal = true; break;
-              }
-              if (n.matches?.('[role="listitem"], [class*="layer"], li') || n.querySelector?.('[class*="layer"]')) added = true;
-            }
-          }
-          for (const n of m.removedNodes) {
-            if (n && n.nodeType === 1) {
-              if (n.matches?.('[role="listitem"], [class*="layer"], li')) removed = true;
-            }
-          }
-        } else if (m.type === 'attributes') {
-          if (['class', 'aria-expanded', 'aria-selected', 'hidden', 'disabled'].includes(m.attributeName)) {
-            toggled = true; toggledAttr = m.attributeName;
-          }
-        }
-      }
-      if (modal) return { effectKind: 'modal_opened', summary: 'Diálogo ou modal aberto após a ação' };
-      if (added) return { effectKind: 'item_added', summary: 'Novo item ou camada adicionado à interface' };
-      if (removed) return { effectKind: 'item_removed', summary: 'Item ou camada removido da interface' };
-      if (toggled) return { effectKind: 'state_toggled', summary: 'Alternância de estado (' + toggledAttr + ')' };
-      return { effectKind: 'none' };
-    }
-
-    function observePostAction(cb) {
-      if (typeof MutationObserver === 'undefined') { cb({ effectKind: 'none' }); return; }
-      const records = [];
-      const obs = new MutationObserver(m => records.push(...m));
-      try {
-        obs.observe(document.body || document.documentElement, {
-          childList: true, subtree: true, attributes: true,
-          attributeFilter: ['class', 'aria-expanded', 'aria-selected', 'hidden', 'disabled']
-        });
-      } catch (_) { cb({ effectKind: 'none' }); return; }
-      setTimeout(() => {
-        try { records.push(...obs.takeRecords()); obs.disconnect(); } catch (_) {}
-        cb(detectDelta(records));
-      }, 250);
-    }
-
-    window.addEventListener('click', (e) => {
-      if (!window.__hermesLearningActive || isSens(e.target)) return;
-      const target = e.target;
-      const interactive = target.closest?.('button, a, [role], [data-tool], [data-action], canvas, input, select') || target;
-      const role = interactive.getAttribute?.('role') || (interactive.tagName === 'BUTTON' ? 'button' : (interactive.tagName === 'A' ? 'link' : (interactive.tagName === 'CANVAS' ? 'canvas' : (interactive.tagName === 'INPUT' && interactive.type === 'range' ? 'slider' : ''))));
-      const name = interactive.getAttribute?.('aria-label') || interactive.getAttribute?.('title') || interactive.getAttribute?.('data-tool') || (interactive.tagName === 'BUTTON' ? (interactive.innerText || '').slice(0, 80) : '');
-      const breadcrumb = extractBreadcrumb(interactive);
-      const valObj = extractValue(interactive);
-
-      observePostAction((delta) => {
-        console.debug('__HERMES_GESTURE__' + JSON.stringify({
-          kind: 'click',
-          x: e.clientX,
-          y: e.clientY,
-          viewportWidth: window.innerWidth,
-          viewportHeight: window.innerHeight,
-          role: role || undefined,
-          accessibleName: name || undefined,
-          elementTag: interactive.tagName?.toLowerCase(),
-          containerBreadcrumb: breadcrumb,
-          currentValue: valObj.currentValue,
-          unit: valObj.unit,
-          domDelta: delta
-        }));
-      });
-    }, true);
-
-    function extractTargetInfo(el) {
-      if (!el || !el.tagName) return undefined;
-      const interactive = el.closest?.('button, a, [role], [data-tool], [data-action], canvas, input, select') || el;
-      const role = interactive.getAttribute?.('role') || (interactive.tagName === 'BUTTON' ? 'button' : (interactive.tagName === 'A' ? 'link' : (interactive.tagName === 'CANVAS' ? 'canvas' : (interactive.tagName === 'INPUT' && interactive.type === 'range' ? 'slider' : ''))));
-      const name = interactive.getAttribute?.('aria-label') || interactive.getAttribute?.('title') || interactive.getAttribute?.('data-tool') || (interactive.tagName === 'BUTTON' ? (interactive.innerText || '').slice(0, 80) : '');
-      const tag = interactive.tagName?.toLowerCase();
-      const breadcrumb = extractBreadcrumb(interactive);
-      if (!role && !name && !breadcrumb && tag !== 'canvas') return undefined;
-      return {
-        tag: tag,
-        role: role || undefined,
-        accessibleName: name || undefined,
-        containerBreadcrumb: breadcrumb
-      };
-    }
-
-    window.addEventListener('pointerdown', (e) => {
-      if (!window.__hermesLearningActive || isSens(e.target)) return;
-      const target = extractTargetInfo(e.target);
-      console.debug('__HERMES_GESTURE__' + JSON.stringify({
-        kind: 'pointerdown',
-        x: e.clientX,
-        y: e.clientY,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        target: target
-      }));
-    }, true);
-
-    window.addEventListener('pointerup', (e) => {
-      if (!window.__hermesLearningActive || isSens(e.target)) return;
-      const target = extractTargetInfo(e.target);
-      console.debug('__HERMES_GESTURE__' + JSON.stringify({
-        kind: 'pointerup',
-        x: e.clientX,
-        y: e.clientY,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        target: target
-      }));
-    }, true);
-
-    window.addEventListener('keydown', (e) => {
-      if (!window.__hermesLearningActive || isSens(e.target)) return;
-      const hasMod = e.ctrlKey || e.metaKey || e.altKey;
-      const functionalKeys = ['Enter', 'Escape', 'Tab', 'Backspace', 'Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-      const isFunctional = functionalKeys.includes(e.key);
-      if (!hasMod && !isFunctional) return;
-      if (hasMod) {
-        observePostAction((delta) => {
-          console.debug('__HERMES_GESTURE__' + JSON.stringify({
-            kind: 'shortcut',
-            key: e.key,
-            ctrl: e.ctrlKey,
-            meta: e.metaKey,
-            alt: e.altKey,
-            shift: e.shiftKey,
-            domDelta: delta
-          }));
-        });
-      } else {
-        const target = extractTargetInfo(e.target);
-        console.debug('__HERMES_GESTURE__' + JSON.stringify({
-          kind: 'key',
-          key: e.key,
-          target: target
-        }));
-      }
-    }, true);
-  })();`
+  return () => {
+    active = false
+    window.removeEventListener('click', onClick, true)
+    window.removeEventListener('pointerdown', onPointer, true)
+    window.removeEventListener('pointerup', onPointer, true)
+    window.removeEventListener('keydown', onKey, true)
+    for (const cancel of pending) {cancel()}
+  }
 }

@@ -251,6 +251,7 @@ import {
   type UninstallSummaryDetails
 } from './desktop-uninstall'
 import { describeDevCdpDecision, resolveDevCdpPort } from './dev-cdp'
+import { createAiControlBridge } from './ai-control-bridge'
 import { preReadyDockLaunchSteps } from './dock-launch-order'
 import { embedHostOrigin } from './embed-host'
 import { installEmbedReferer } from './embed-referer'
@@ -1956,6 +1957,44 @@ function registerMediaProtocol(): void {
 }
 
 let mainWindow = null
+
+// AI Control is a native, per-launch opt-in; the renderer cannot grant itself
+// privileged control by writing a JavaScript flag. The only external port is
+// bound to loopback while the user explicitly enables the shortcut.
+const aiControlBridge = createAiControlBridge({
+  controlFile: path.join(app.getPath('userData'), 'ai-control-bridge.json'),
+  getWebContents: () => mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null,
+  onStateChange: active => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('hermes:ai-control:state', active)
+    }
+    rememberLog('[ai-control] ' + (active ? 'enabled (authenticated loopback bridge)' : 'disabled'))
+  }
+})
+ipcMain.handle('hermes:ai-control:status', event =>
+  event.sender === mainWindow?.webContents && aiControlBridge.active()
+)
+app.on('before-quit', () => { void aiControlBridge.disable() })
+
+// WebContentsViews receive their own native keyboard events when the Browser
+// guest has focus. Route the same physical shortcut to the primary-window
+// authority; otherwise AI Control would appear broken inside Workstation.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('before-input-event', (event, input) => {
+    if (contents === mainWindow?.webContents ||
+        !mainWindow || mainWindow.isDestroyed() ||
+        BrowserWindow.getFocusedWindow() !== mainWindow ||
+        input.type !== 'keyDown' || input.isAutoRepeat ||
+        !input.control || !input.shift || input.key.toLowerCase() !== 'a') {
+      return
+    }
+    event.preventDefault()
+    void aiControlBridge.toggle().catch(error => {
+      rememberLog('[ai-control] guest shortcut failed: ' + String(error))
+    })
+  })
+})
+
 const backendConnectionState = createBackendConnectionState<ReturnType<typeof spawn>, any>()
 
 const localBackendLifecycle = createLocalBackendLifecycle<ChildProcess>({
@@ -6897,6 +6936,18 @@ function installDevToolsShortcut(window) {
     }
 
     const key = input.key.toLowerCase()
+
+    // Native keyboard shortcut is the ONLY way to grant AI Control. A page
+    // script changing window.__hermesAiControlActive cannot open the bridge.
+    if (window === mainWindow && input.control && input.shift && key === 'a') {
+      event.preventDefault()
+      if (!input.isAutoRepeat) {
+        void aiControlBridge.toggle().catch(error => {
+          rememberLog('[ai-control] toggle failed: ' + String(error))
+        })
+      }
+      return
+    }
 
     // A renderer binding gets first refusal. Chromium otherwise claims F12
     // before the renderer can capture or dispatch it.
@@ -15288,6 +15339,7 @@ function createWindow() {
 
   // the closed wrapper remains truthy, so clear only the window this callback owns.
   mainWindow.on('closed', () => {
+    void aiControlBridge.disable()
     closePetOverlay()
     wakeIndicatorController.close()
 

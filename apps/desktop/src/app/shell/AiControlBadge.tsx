@@ -7,39 +7,40 @@ declare global {
 }
 
 /**
- * Visual indicator for AI control mode.
- *
- * Reads `window.__hermesAiControlActive` (set by Claude Code via CDP eval or
- * toggled locally via Ctrl+Shift+A). Polls every 500ms — simplicity over
- * perfect reactivity; the flag is a cooperative signal, not a security gate.
- *
- * Mounted in the main shell (contrib/controller.tsx). HUD and browser popout
- * windows intentionally omit it: AI control targets the primary workspace.
+ * AI Control is owned by Electron's native shortcut (Ctrl+Shift+A).
+ * This indicator mirrors the main-process authorization; setting the legacy
+ * JS flag does not grant a token or enable the local control bridge.
  */
 export function AiControlBadge() {
-  const [active, setActive] = useState(() => Boolean(window.__hermesAiControlActive))
+  const [active, setActive] = useState(false)
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setActive(Boolean(window.__hermesAiControlActive))
-    }, 500)
-    return () => clearInterval(id)
-  }, [])
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
-        event.preventDefault()
-        window.__hermesAiControlActive = !window.__hermesAiControlActive
-        setActive(window.__hermesAiControlActive)
-      }
+    const bridge = window.hermesDesktop?.aiControl
+    if (!bridge) return
+    let mounted = true
+    let receivedPush = false
+    const unsubscribe = bridge.onStatus(enabled => {
+      receivedPush = true
+      if (mounted) setActive(enabled)
+    })
+    void bridge.getStatus().then(enabled => {
+      if (mounted && !receivedPush) setActive(enabled)
+    }).catch(() => {
+      if (mounted && !receivedPush) setActive(false)
+    })
+    return () => {
+      mounted = false
+      unsubscribe()
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
+
+  useEffect(() => {
+    // Compatibility for existing navigation scripts. Not an authority source.
+    window.__hermesAiControlActive = active
+    return () => { window.__hermesAiControlActive = false }
+  }, [active])
 
   if (!active) return null
-
   return (
     <div
       aria-live="polite"

@@ -14,50 +14,24 @@
 // All commands use a single CDP connection. Output is JSON to stdout.
 // Requires AI Control active (Ctrl+Shift+A).
 
-import { readFileSync } from 'node:fs'
+import { connectAiControl } from './ai-control-client.mjs'
 
-const port = Number(process.env.HERMES_DESKTOP_CDP_PORT || 9222)
 const args = process.argv.slice(2)
 const command = args[0]
-
 if (!command) {
-  console.error('Usage: hermes-nav.mjs <command> [args...]')
-  console.error('Commands: status, goto, click, read, inject, tour')
+  console.error('Usage: hermes-nav.mjs <status|goto|click|read|inject|tour>')
   process.exit(1)
 }
+let client
+try { client = await connectAiControl() }
+catch (err) { console.error(JSON.stringify({ error: err.message })); process.exit(1) }
+const evalExpr = expression => client.evaluate(expression)
 
-// --- CDP Connection (single, reused) ---
-let targets
-try {
-  targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json()
-} catch {
-  console.error(JSON.stringify({ error: `no CDP on 127.0.0.1:${port}` }))
-  process.exit(1)
+async function requireAiControl() {
+  if (!(await evalExpr('window.__hermesAiControlActive'))) {
+    throw new Error('AI Control not active. Press Ctrl+Shift+A.')
+  }
 }
-const t = targets.find((t) => t.url.includes('5174')) ?? targets.find((t) => t.type === 'page')
-if (!t) {
-  console.error(JSON.stringify({ error: `no page target` }))
-  process.exit(1)
-}
-
-const ws = new WebSocket(t.webSocketDebuggerUrl)
-let id = 0
-const pending = new Map()
-ws.addEventListener('message', (ev) => {
-  const m = JSON.parse(ev.data)
-  if (pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id) }
-})
-await new Promise((r) => ws.addEventListener('open', r))
-
-const evalExpr = async (expr) => {
-  const i = ++id
-  const p = new Promise((res) => pending.set(i, res))
-  ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression: expr, returnByValue: true, awaitPromise: true } }))
-  const r = await p
-  if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || 'eval exception')
-  return r.result.result.value
-}
-
 // --- Module selectors (data-sidebar + text based; sidebar buttons lack aria-label) ---
 // Sidebar nav buttons use data-sidebar="menu-button" and have no aria-label.
 // We match by exact textContent within that scoped set to avoid session list items.
@@ -89,6 +63,7 @@ async function cmdStatus() {
 }
 
 async function cmdGoto(moduleName) {
+  await requireAiControl()
   const key = moduleName.toLowerCase()
   const clickExpr = buildModuleClickExpr(key)
 
@@ -110,6 +85,7 @@ async function cmdGoto(moduleName) {
 }
 
 async function cmdClick(selector) {
+  await requireAiControl()
   const result = await evalExpr(`(() => { const el = document.querySelector('${selector.replace(/'/g, "\\'")}'); if (!el) return { error: 'not found' }; el.click(); return { clicked: true, tag: el.tagName, text: (el.textContent || '').trim().substring(0, 60) }; })()`)
   return result
 }
@@ -193,5 +169,5 @@ try {
   console.error(JSON.stringify({ error: err.message }))
   process.exit(1)
 } finally {
-  ws.close()
+  client.close()
 }

@@ -30,6 +30,7 @@ function productIdentity(source, stamp) {
 /** Every file bundleElectronMain writes: the only outputs that bake the install stamp. */
 export const electronOutputs = Object.freeze({
   main: 'electron-main.mjs', preload: 'electron-preload.js', previewGuestPreload: 'preview-guest-preload.js',
+  learningPreload: 'workstation-learning-preload.js',
 })
 
 /** Bundle main/preload using only the prepared workspace's compiler. */
@@ -77,6 +78,12 @@ export async function bundleElectronMain({ source, out, stamp, dev = false }) {
     entryPoints: [join(source, 'apps/desktop/electron/preload.ts')],
     format: 'cjs',
     outfile: join(out, electronOutputs.preload),
+  })
+  await build({
+    ...common,
+    entryPoints: [join(source, 'apps/desktop/electron/workstation-learning-preload.ts')],
+    format: 'cjs',
+    outfile: join(out, electronOutputs.learningPreload),
   })
   // Preview-pane <webview> guest preload; main.ts hands this path to the
   // preview webview via will-attach-webview.

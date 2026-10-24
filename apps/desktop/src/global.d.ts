@@ -35,6 +35,10 @@ export type DesktopMachineProfile = MachineProfile
 declare global {
   interface Window {
     hermesDesktop: {
+      aiControl: {
+        getStatus: () => Promise<boolean>
+        onStatus: (callback: (active: boolean) => void) => () => void
+      }
       creativeCanonical: {
         open: (payload: { projectId: string }) => Promise<unknown>
         apply: (payload: {

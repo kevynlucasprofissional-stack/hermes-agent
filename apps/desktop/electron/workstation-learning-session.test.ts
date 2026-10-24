@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { RawHumanBrowserGesture } from './workstation-learning-events'
 import {
@@ -29,6 +29,117 @@ describe('HLM-MVP LearningSessionRecorder (owner Electron)', () => {
     }
 
     fs.rmSync(tempDir, { recursive: true, force: true })
+    vi.restoreAllMocks()
+  })
+
+  it('rejects gestures from another tab or document before recording them', async () => {
+    await recorder.start({
+      runtimeSessionId: 'runtime-capture-owner',
+      storedSessionId: 'stored-capture-owner',
+      tabId: 'owner-tab',
+      webContentsId: 42,
+      documentEpoch: 'current-epoch',
+      allowlistedOrigin: 'https://app.example.com',
+      videoEnabled: false
+    })
+
+    const gesture: RawHumanBrowserGesture = {
+      eventId: 'capture-owner-event',
+      tabId: 'owner-tab',
+      documentEpoch: 'current-epoch',
+      relativeTimeMs: 1,
+      kind: 'click',
+      role: 'button',
+      accessibleName: 'Apply'
+    }
+
+    expect(await recorder.recordGesture({ ...gesture, tabId: 'other-tab' })).toBeNull()
+    expect(await recorder.recordGesture({ ...gesture, documentEpoch: 'old-epoch' })).toBeNull()
+    expect(recorder.getStatus()?.eventsCount).toBe(0)
+    expect(await recorder.recordGesture(gesture)).not.toBeNull()
+    expect(recorder.getStatus()?.eventsCount).toBe(1)
+  })
+
+  it('rebinds only the owning document after allowed navigation', async () => {
+    await recorder.start({
+      runtimeSessionId: 'runtime-navigation', storedSessionId: 'stored-navigation',
+      tabId: 'owner-tab', webContentsId: 42, documentEpoch: 'before-navigation',
+      allowlistedOrigin: 'https://app.example.com', videoEnabled: false
+    })
+    expect(recorder.updateDocument('other-tab', 42, 'wrong', 'https://app.example.com')).toBe(false)
+    expect(recorder.updateDocument('owner-tab', 99, 'wrong', 'https://app.example.com')).toBe(false)
+    const cache = recorder as unknown as { lastFrameBuffer: Buffer | null; latestSnapshotRef: string | null }
+    cache.lastFrameBuffer = Buffer.from('previous-document-frame')
+    cache.latestSnapshotRef = 'snapshots/previous-document.png'
+    expect(recorder.updateDocument('owner-tab', 42, 'after-navigation', 'https://app.example.com/editor')).toBe(true)
+    const gesture: RawHumanBrowserGesture = {
+      eventId: 'navigation-event', tabId: 'owner-tab', documentEpoch: 'before-navigation',
+      relativeTimeMs: 1, kind: 'click', role: 'button', accessibleName: 'Apply'
+    }
+    expect(await recorder.recordGesture(gesture)).toBeNull()
+    const recorded = await recorder.recordGesture({ ...gesture, documentEpoch: 'after-navigation' })
+    expect(recorded).not.toBeNull()
+    expect(recorded?.snapshot_ref).toBe(path.join(tempDir, 'shot.png'))
+    expect(recorder.updateDocument('owner-tab', 42, 'off-origin', 'https://other.example.com')).toBe(false)
+    expect(recorder.getStatus()?.status).toBe('paused')
+    expect(await recorder.recordGesture({ ...gesture, documentEpoch: 'after-navigation' })).toBeNull()
+  })
+
+  it('does not resurrect a discarded session when a pending screenshot completes', async () => {
+    let finishScreenshot!: (result: { success: boolean; screenshot_path: string }) => void
+    recorder = new LearningSessionRecorder({
+      baseDir: tempDir,
+      captureScreenshot: () => new Promise((resolve) => {finishScreenshot = resolve})
+    })
+    const state = await recorder.start({
+      runtimeSessionId: 'runtime-discard-race', storedSessionId: 'stored-discard-race',
+      tabId: 'owner-tab', webContentsId: 42, documentEpoch: 'document-1',
+      allowlistedOrigin: 'https://app.example.com', videoEnabled: false
+    })
+    const gesture: RawHumanBrowserGesture = {
+      eventId: 'pending-screenshot', tabId: 'owner-tab', documentEpoch: 'document-1',
+      relativeTimeMs: 1, kind: 'click', role: 'button', accessibleName: 'Apply'
+    }
+    const pending = recorder.recordGesture(gesture)
+    const discard = recorder.discard()
+    expect(await recorder.recordGesture({ ...gesture, eventId: 'after-discard' })).toBeNull()
+    await discard
+    finishScreenshot({ success: true, screenshot_path: path.join(tempDir, 'late.png') })
+    expect(await pending).toBeNull()
+    expect(recorder.getStatus()).toBeNull()
+    expect(fs.existsSync(state.sessionDir)).toBe(false)
+  })
+
+  it('closes capture before encoder shutdown and prevents overlapping finalization', async () => {
+    const config: LearningSessionConfig = {
+      runtimeSessionId: 'runtime-stop-race', storedSessionId: 'stored-stop-race',
+      tabId: 'owner-tab', webContentsId: 42, documentEpoch: 'document-1',
+      allowlistedOrigin: 'https://app.example.com', videoEnabled: false
+    }
+    await recorder.start(config)
+    const engine = recorder as unknown as {
+      stopVideoRecording: () => Promise<void>
+      compileDemonstrationCandidate: (pkg: unknown) => Promise<void>
+    }
+    let finishEncoder!: () => void
+    vi.spyOn(engine, 'stopVideoRecording').mockImplementation(() => new Promise((resolve) => {finishEncoder = resolve}))
+    vi.spyOn(engine, 'compileDemonstrationCandidate').mockResolvedValue(undefined)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true } as Response)
+    const stopping = recorder.stop()
+
+    try {
+      expect(await recorder.recordGesture({
+        eventId: 'during-stop', tabId: 'owner-tab', documentEpoch: 'document-1',
+        relativeTimeMs: 1, kind: 'click', role: 'button', accessibleName: 'Apply'
+      })).toBeNull()
+      await expect(recorder.start(config)).rejects.toThrow(/learning_session_already_active/)
+      await expect(recorder.discard()).rejects.toThrow('learning_session_finalizing')
+    } finally {
+      finishEncoder()
+      await stopping
+    }
+
+    expect(recorder.getStatus()).toBeNull()
   })
 
   it('starts learning session with default intensivo intensity and persists manifest', async () => {

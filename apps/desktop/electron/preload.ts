@@ -26,6 +26,14 @@ const localSkin = ipcRenderer.sendSync('hermes:skin:local')
 import { unwrapExpectedNotFound } from './api-expected-404'
 
 contextBridge.exposeInMainWorld('hermesDesktop', {
+  aiControl: {
+    getStatus: () => ipcRenderer.invoke('hermes:ai-control:status'),
+    onStatus: callback => {
+      const listener = (_event, active) => callback(active === true)
+      ipcRenderer.on('hermes:ai-control:state', listener)
+      return () => ipcRenderer.removeListener('hermes:ai-control:state', listener)
+    }
+  },
   creativeCanonical: {
     open: payload => ipcRenderer.invoke('hermes:creative:canonical:open', payload),
     apply: payload => ipcRenderer.invoke('hermes:creative:canonical:apply', payload)

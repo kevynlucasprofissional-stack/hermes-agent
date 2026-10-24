@@ -159,6 +159,8 @@ _WORKSTATION_SCHEMA_TOOLS = frozenset({
     "browser_inventory_unread",
     "browser_batch_actions",
     "browser_wait_for_ready",
+    "browser_admissions_inspect",
+    "browser_admissions_reconcile",
     # Extension management is a Desktop-session capability: the agent can
     # request it explicitly, but non-Desktop sessions never carry these
     # schemas. Runtime reachability/policy remain checked at dispatch.
@@ -915,7 +917,7 @@ def _dispatch(
         # Legacy headless callers without a chat identity may still use the
         # existing process context. This is never applied to session calls.
         rid = str(run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
-        card_id = str(kanban_card_id or (task_id if (task_id and rid) else "") or os.environ.get("HERMES_KANBAN_TASK") or "").strip() or None
+        card_id = str(kanban_card_id or os.environ.get("HERMES_KANBAN_TASK") or (task_id if (task_id and rid) else "") or "").strip() or None
 
     if card_id and rid:
         # Explicit canonical work retains the requested BrowserTask identity;
@@ -956,18 +958,20 @@ def _dispatch(
              or f"op_{action}_{uuid.uuid4().hex[:12]}")
     args.pop("operation_id", None)
     from workstation.batch_detection import call_key
+    effective_rid = rid or (session_id if session_id else (f"run-{key}" if key != "default" else None))
+    effective_sid = session_id or (key if key != "default" else None)
     payload: dict[str, Any] = {
         "action": action,
         "arguments": clean_args,
         "task_id": key,
-        "session_id": session_id,
+        "session_id": effective_sid,
         "operation_id": op_id,
         "call_key": call_key(action, clean_args),
     }
     if card_id:
         payload["kanban_card_id"] = card_id
-    if rid:
-        payload["run_id"] = rid
+    if effective_rid:
+        payload["run_id"] = effective_rid
     started_at = time.perf_counter()
     request_bytes = len(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
     try:
@@ -1827,111 +1831,60 @@ def whatsapp_send_message(
 ) -> dict[str, Any]:
     """Send a WhatsApp message via deep link and verify delivery (snapshot-first).
 
-    Validates inputs (no masked phones, no unreplaced placeholders), navigates
-    via ``browser_navigate`` to the WA send URL, verifies the conversation
-    header matches ``contact_name_hint``, clicks the send button obtained from
-    the snapshot, and proves delivery by detecting a new ``data-id`` with an
-    ack ``aria-label`` in the messages panel. Composer emptiness is checked by
-    button revert signal ('Mensagem de voz'), never by innerText (batch-send §6).
+    Uses the consolidated primitive in workstation.integrations.hermes.whatsapp_browser_executor.
+    Formal states: PREPARED, DISPATCHING, OBSERVED, CONFIRMED, UNCERTAIN, FAILED, REVIEW_REQUIRED.
 
     Returns
     -------
     dict
-        On success: ``{"sent": True, "state": "DELIVERED", "message_data_id": ...,
+        On success: ``{"sent": True, "state": "CONFIRMED", "message_data_id": ...,
         "ack_label": ..., "header_verified": ..., "composer_empty_after": True}``.
-        On failure: ``{"sent": False, "state": ..., "error_code": ..., ...}``.
+        On failure / uncertain: ``{"sent": False, "state": ..., "error_code": ..., ...}``.
         Never raises.
     """
-    # Pre-validation
-    if not _validate_phone_digits(phone_digits):
-        return {"sent": False, "state": "INVALID_INPUT", "error_code": "MASKED_PHONE"}
-    if not _validate_message_body(message):
-        return {"sent": False, "state": "INVALID_INPUT", "error_code": "TEMPLATE_PLACEHOLDER_LEAK"}
+    from workstation.integrations.hermes.whatsapp_browser_executor import (
+        whatsapp_send_message as _executor_send_message,
+        WhatsAppSendError,
+        STATE_FAILED,
+    )
 
-    import time as _time
-    from urllib.parse import quote
+    def _nav(url: str):
+        return _dispatch("browser_navigate", {"url": url}, task_id=task_id, session_id=session_id, model_facing=False)
 
-    # Step 1: Deep link navigation
-    url = f"https://web.whatsapp.com/send?phone={phone_digits}&text={quote(message)}"
+    def _snap(full: bool = False):
+        raw = _dispatch("browser_snapshot", {"full": full}, task_id=task_id, session_id=session_id, model_facing=False)
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _click(ref: str):
+        return _dispatch("browser_click", {"ref": ref}, task_id=task_id, session_id=session_id, model_facing=False)
+
     try:
-        _dispatch(
-            "browser_navigate", {"url": url},
-            task_id=task_id, session_id=session_id, model_facing=False,
+        return _executor_send_message(
+            browser_navigate=_nav,
+            browser_snapshot=_snap,
+            browser_click=_click,
+            phone_digits=phone_digits,
+            message=message,
+            contact_name_hint=contact_name_hint,
+            verify_delivery=verify_delivery,
+            delivery_timeout_seconds=delivery_timeout_seconds,
+            task_id=task_id,
+            session_id=session_id,
         )
+    except WhatsAppSendError as exc:
+        return {
+            "sent": False,
+            "state": STATE_FAILED,
+            "error_code": exc.error_code,
+            "error": str(exc),
+        }
     except Exception as exc:
-        return {"sent": False, "state": "NAVIGATION_FAILED", "error_code": "CONTROLLER_UNAVAILABLE", "error": str(exc)}
-
-    # Step 2: Wait for conversation header to appear
-    deadline = _time.monotonic() + 8.0
-    header_snap = None
-    while _time.monotonic() < deadline:
-        try:
-            raw = _dispatch("browser_snapshot", {"full": False}, task_id=task_id, session_id=session_id, model_facing=False)
-            header_snap = json.loads(raw) if isinstance(raw, str) else raw
-        except Exception:
-            _time.sleep(0.5)
-            continue
-        hdr = _verify_conversation_header(header_snap, contact_name_hint=None)
-        if hdr.get("verified"):
-            break
-        _time.sleep(0.5)
-    else:
-        return {"sent": False, "state": "NO_CONVERSATION_OPEN", "error_code": "NO_CONVERSATION_OPEN"}
-
-    # Step 3: Header mismatch check
-    if contact_name_hint:
-        hdr_check = _verify_conversation_header(header_snap, contact_name_hint=contact_name_hint)
-        if not hdr_check.get("verified"):
-            return {
-                "sent": False, "state": "HEADER_MISMATCH",
-                "error_code": "HEADER_MISMATCH",
-                "header_text": hdr_check.get("header_text"),
-            }
-
-    # Step 4: Find and click send button from snapshot
-    send_ref = None
-    snap_text = str(header_snap.get("snapshot") or "")
-    import re as _re
-    for m in _re.finditer(r'\[(@e\d+)\]\s+button\s+"[^"]*(?:Enviar|Send)[^"]*"', snap_text, _re.IGNORECASE):
-        send_ref = m.group(1)
-        break
-    if not send_ref:
-        return {"sent": False, "state": "SEND_BUTTON_NOT_FOUND", "error_code": "NO_CONVERSATION_OPEN"}
-
-    try:
-        _dispatch("browser_click", {"ref": send_ref}, task_id=task_id, session_id=session_id, model_facing=False)
-    except Exception as exc:
-        return {"sent": False, "state": "CLICK_FAILED", "error_code": "CONTROLLER_UNAVAILABLE", "error": str(exc)}
-
-    # Step 5: Post-send verification
-    if not verify_delivery:
-        return {"sent": True, "state": "SENT_UNCONFIRMED", "header_verified": hdr_check.get("header_text") if contact_name_hint else None}
-
-    proof_deadline = _time.monotonic() + max(1.0, delivery_timeout_seconds)
-    while _time.monotonic() < proof_deadline:
-        _time.sleep(0.5)
-        try:
-            raw_post = _dispatch("browser_snapshot", {"full": False}, task_id=task_id, session_id=session_id, model_facing=False)
-            post_snap = json.loads(raw_post) if isinstance(raw_post, str) else raw_post
-        except Exception:
-            continue
-        composer_empty = _is_composer_empty(post_snap)
-        proof = _extract_delivery_proof(post_snap)
-        if proof.get("delivered") and composer_empty:
-            return {
-                "sent": True, "state": "DELIVERED",
-                "message_data_id": proof.get("message_data_id"),
-                "ack_label": proof.get("ack_label"),
-                "header_verified": hdr_check.get("header_text") if contact_name_hint else None,
-                "composer_empty_after": True,
-            }
-
-    return {
-        "sent": True, "state": "SENT_UNCONFIRMED",
-        "error_code": "DELIVERY_TIMEOUT",
-        "header_verified": hdr_check.get("header_text") if contact_name_hint else None,
-        "composer_empty_after": _is_composer_empty(post_snap) if 'post_snap' in dir() else None,
-    }
+        return {
+            "sent": False,
+            "state": STATE_FAILED,
+            "error_code": "DISPATCH_FAILED",
+            "error": str(exc),
+        }
 
 
 def whatsapp_search_contact(

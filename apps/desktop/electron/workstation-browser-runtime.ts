@@ -29,6 +29,8 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { app, BrowserWindow, session, type Session, type WebContents, WebContentsView } from 'electron'
+import { randomUUID as learningActivationId } from 'node:crypto'
+import { join as learningPreloadPath } from 'node:path'
 
 import {
   type BrowserBatchAdapter,
@@ -81,7 +83,14 @@ import {
   type BrowserTaskSeed
 } from './workstation-browser-task'
 import { renderCreativeFrame, withCreativeCaptureLayout } from './workstation-creative-frame'
-import { buildLearningObserverScript } from './workstation-learning-dom'
+import {
+  captureBindingMatches,
+  isLearningCaptureAuthorized,
+  LEARNING_CAPTURE_CONTROL,
+  LEARNING_CAPTURE_GESTURE,
+  type LearningCaptureAuthority,
+  type LearningCaptureBinding
+} from './workstation-learning-capture'
 import {
   type RawHumanBrowserGesture,
   type SafeHumanBrowserGesture
@@ -526,6 +535,10 @@ export function workstationBrowserTaskStatePath(): string {
 }
 
 export function workstationBrowserSessionStatePath(): string {
+  if (process.env.HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE?.trim()) {
+    return path.resolve(process.env.HERMES_WORKSTATION_BROWSER_SESSION_STATE_FILE.trim())
+  }
+
   return path.join(workstationBasePath(), 'Runtime', 'browser-session.json')
 }
 
@@ -1487,6 +1500,7 @@ export class WorkstationBrowserRuntime {
     const view = new WebContentsView({
       webPreferences: {
         session: this.browserSession!,
+        preload: learningPreloadPath(app.getAppPath(), 'dist', 'workstation-learning-preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
@@ -2262,6 +2276,120 @@ export class WorkstationBrowserRuntime {
     }
   }
 
+  private learningCaptureBinding: LearningCaptureBinding | null = null
+  private learningCaptureEnabled = false
+  private learningNavigatingTabId: string | null = null
+  private learningLeaseExpiryTimer: ReturnType<typeof setTimeout> | null = null
+
+  private learningCaptureAuthority(entry: BrowserEntry, frameUrl: string, isMainFrame = true): LearningCaptureAuthority {
+    const taskId = entry.ownerTaskId
+    const hasLease = taskId ? this.taskLifecycle().hasActiveHumanControl(taskId) : false
+
+    return {
+      session: this.learningRecorder?.getStatus() ?? null,
+      tabId: entry.id,
+      webContentsId: entry.view.webContents.id,
+      documentEpoch: entry.documentEpoch,
+      ownerTaskId: taskId,
+      url: entry.view.webContents.getURL(),
+      frameUrl,
+      isMainFrame,
+      profileScope: workstationBrowserProfilePath(),
+      lease: hasLease && taskId ? this.taskLifecycle().task(taskId)?.humanControlLease ?? null : null,
+      nowMs: Date.now()
+    }
+  }
+
+  private deactivateLearningObserver(clearBinding = false): void {
+    const binding = this.learningCaptureBinding
+    this.learningCaptureEnabled = false
+    if (this.learningLeaseExpiryTimer) {
+      clearTimeout(this.learningLeaseExpiryTimer)
+      this.learningLeaseExpiryTimer = null
+    }
+
+    if (clearBinding) {this.learningCaptureBinding = null}
+
+    const wc = binding ? this.entries.get(binding.tabId)?.view.webContents : null
+    if (wc && !wc.isDestroyed()) {wc.send(LEARNING_CAPTURE_CONTROL, null)}
+  }
+
+  private syncLearningObserver(force = false): void {
+    const status = this.learningRecorder?.getStatus()
+    const entry = status ? this.entries.get(status.tabId) : null
+
+    if (!status || status.status !== 'learning' || !entry || entry.view.webContents.isDestroyed()) {
+      this.deactivateLearningObserver(!status || status.status === 'idle' || status.status === 'failed')
+      return
+    }
+
+    if (this.learningNavigatingTabId === entry.id) {
+      this.deactivateLearningObserver()
+      return
+    }
+
+    if (!this.learningRecorder?.checkNavigation(entry.view.webContents.getURL())) {
+      this.deactivateLearningObserver()
+      return
+    }
+
+    const authority = this.learningCaptureAuthority(entry, entry.view.webContents.mainFrame.url)
+    const lease = authority.lease
+    const previous = this.learningCaptureBinding?.sessionId === status.sessionId ? this.learningCaptureBinding : null
+
+    if (!lease || !entry.ownerTaskId || (previous && (previous.ownerTaskId !== entry.ownerTaskId
+      || previous.leaseAcquiredAt !== lease.acquiredAt || previous.leaseSessionId !== lease.sessionId))) {
+      this.learningRecorder?.pause('Human control authorization was revoked or replaced.')
+      this.deactivateLearningObserver()
+      return
+    }
+
+    const binding: LearningCaptureBinding = {
+      activationId: !force && this.learningCaptureEnabled && previous?.documentEpoch === entry.documentEpoch
+        ? previous.activationId : learningActivationId(),
+      sessionId: status.sessionId,
+      ownerTaskId: entry.ownerTaskId,
+      tabId: entry.id,
+      webContentsId: entry.view.webContents.id,
+      documentEpoch: entry.documentEpoch,
+      origin: status.allowlistedOrigin,
+      leaseAcquiredAt: lease.acquiredAt,
+      leaseSessionId: lease.sessionId
+    }
+
+    if (!isLearningCaptureAuthorized(binding, authority)) {
+      this.learningRecorder?.pause('Learning document or human control authority no longer matches the session.')
+      this.deactivateLearningObserver()
+      return
+    }
+
+    if (force || !this.learningCaptureEnabled || !previous || !captureBindingMatches(binding, previous)) {
+      this.deactivateLearningObserver()
+      this.learningCaptureBinding = binding
+      this.learningCaptureEnabled = true
+      entry.view.webContents.send(LEARNING_CAPTURE_CONTROL, binding)
+    }
+
+    if (this.learningLeaseExpiryTimer) {clearTimeout(this.learningLeaseExpiryTimer)}
+    this.learningLeaseExpiryTimer = setTimeout(() => {
+      this.learningLeaseExpiryTimer = null
+      this.emitLearningState()
+    }, Math.max(1, Date.parse(lease.expiresAt) - Date.now() + 1))
+  }
+
+  private learningCaptureIsCurrent(entry: BrowserEntry, frameUrl: string, isMainFrame = true): boolean {
+    return this.learningCaptureEnabled && this.learningCaptureBinding !== null
+      && isLearningCaptureAuthorized(this.learningCaptureBinding, this.learningCaptureAuthority(entry, frameUrl, isMainFrame))
+  }
+
+  isLearningControlOwner(window: BrowserWindow, tabId?: string): boolean {
+    if (window !== this.ownerWindow) {return false}
+    if (!tabId) {return true}
+    const entry = this.entries.get(tabId)
+
+    return Boolean(entry && !entry.view.webContents.isDestroyed())
+  }
+
   getLearningRecorder(): LearningSessionRecorder {
     if (!this.learningRecorder) {
       this.learningRecorder = new LearningSessionRecorder({
@@ -2270,7 +2398,13 @@ export class WorkstationBrowserRuntime {
 
           if (!entry) {return { success: false }}
 
-          return this.screenshotForEntry(entry) as Promise<{ success: boolean; screenshot_path?: string }>
+          this.syncLearningObserver()
+          if (!this.learningCaptureIsCurrent(entry, entry.view.webContents.mainFrame.url)) {return { success: false }}
+          const activationId = this.learningCaptureBinding?.activationId
+
+          return this.screenshotForEntry(entry, () => !entry.view.webContents.isDestroyed()
+            && activationId === this.learningCaptureBinding?.activationId
+            && this.learningCaptureIsCurrent(entry, entry.view.webContents.mainFrame.url)) as Promise<{ success: boolean; screenshot_path?: string }>
         },
         captureFrame: async (tabId: string) => {
           const entry = this.entries.get(tabId)
@@ -2279,8 +2413,19 @@ export class WorkstationBrowserRuntime {
             return { success: false, timestampMs: Date.now(), error: 'tab_unavailable' }
           }
 
+          this.syncLearningObserver()
+          if (!this.learningCaptureIsCurrent(entry, entry.view.webContents.mainFrame.url)) {
+            return { success: false, timestampMs: Date.now(), error: 'learning_capture_not_authorized' }
+          }
+          const activationId = this.learningCaptureBinding?.activationId
+
           try {
             const image = await entry.view.webContents.capturePage()
+
+            if (entry.view.webContents.isDestroyed() || activationId !== this.learningCaptureBinding?.activationId
+              || !this.learningCaptureIsCurrent(entry, entry.view.webContents.mainFrame.url)) {
+              return { success: false, timestampMs: Date.now(), error: 'learning_capture_invalidated' }
+            }
 
             if (!image || image.isEmpty()) {
               return { success: false, timestampMs: Date.now(), error: 'empty_capture' }
@@ -2367,6 +2512,7 @@ export class WorkstationBrowserRuntime {
   }
 
   async stopLearning(): Promise<LearningSessionState> {
+    this.deactivateLearningObserver(true)
     const recorder = this.getLearningRecorder()
     const state = await recorder.stop()
     this.emitLearningState()
@@ -2375,6 +2521,7 @@ export class WorkstationBrowserRuntime {
   }
 
   async discardLearning(): Promise<void> {
+    this.deactivateLearningObserver(true)
     const recorder = this.getLearningRecorder()
     await recorder.discard()
     this.emitLearningState()
@@ -2409,9 +2556,14 @@ export class WorkstationBrowserRuntime {
     return this.learningRecorder ? this.learningRecorder.getQuestions() : []
   }
 
-  async recordLearningGesture(gesture: RawHumanBrowserGesture): Promise<SafeHumanBrowserGesture | null> {
-    if (!this.learningRecorder || !this.learningRecorder.isActive()) {return null}
+  private async recordLearningGesture(gesture: RawHumanBrowserGesture, activationId: string): Promise<SafeHumanBrowserGesture | null> {
+    const binding = this.learningCaptureBinding
+    const entry = this.entries.get(gesture.tabId)
+    if (!this.learningRecorder || !binding || binding.activationId !== activationId || !entry
+      || !this.learningCaptureIsCurrent(entry, entry.view.webContents.mainFrame.url)) {return null}
     const safe = await this.learningRecorder.recordGesture(gesture)
+    if (this.learningCaptureBinding?.activationId !== activationId
+      || this.learningRecorder.getStatus()?.sessionId !== binding.sessionId) {return null}
     // Re-emit after recordGesture completes (which includes evaluateQuestions)
     // so pendingQuestions are populated in the emitted state.
     this.emitLearningState()
@@ -2444,6 +2596,7 @@ export class WorkstationBrowserRuntime {
   }
 
   private emitLearningState(): void {
+    this.syncLearningObserver()
     const status = this.getLearningStatus()
 
     for (const win of BrowserWindow.getAllWindows()) {
@@ -2455,8 +2608,9 @@ export class WorkstationBrowserRuntime {
 
   private injectLearningObserver(entry: BrowserEntry): void {
     const wc = entry.view.webContents
-    const script = buildLearningObserverScript()
-    wc.executeJavaScript(script).catch(() => undefined)
+    if (this.learningRecorder?.getStatus()?.tabId === entry.id && !wc.isDestroyed()) {
+      this.syncLearningObserver(true)
+    }
   }
 
   async cleanupCache(force = false): Promise<WorkstationBrowserState> {
@@ -2647,9 +2801,12 @@ export class WorkstationBrowserRuntime {
     // or raw page content in the session-state authority projection.
     const argumentsDigest = crypto.createHash('sha256').update(JSON.stringify(args)).digest('hex')
 
+    const effectiveSessionId = sessionHost ?? (taskId !== 'default' ? taskId : 'unbound')
+    const effectiveRunId = runId ?? (taskId !== 'default' ? `run-${taskId}` : 'unbound')
+
     return this.sessionStatePersistence().admitBrowserMutation({
       operationId, action, argumentsDigest,
-      taskId, sessionId: sessionHost ?? 'unbound', runId: runId ?? 'unbound', tabId: entry.id
+      taskId, sessionId: effectiveSessionId, runId: effectiveRunId, tabId: entry.id
     })
   }
 
@@ -2666,8 +2823,42 @@ export class WorkstationBrowserRuntime {
     const operationId = controllerBoundedIdentity(request.operation_id, 'operation identity')
     const callKey = typeof request.call_key === 'string' && request.call_key.trim() ? request.call_key.trim() : null
 
+    const effectiveSessionHost = sessionHost ?? (taskId !== 'default' ? taskId : 'unbound')
+    const effectiveRunId = runId ?? (taskId !== 'default' ? `run-${taskId}` : 'unbound')
+
     if (!action.startsWith('browser_')) {
       throw workstationControllerFault('INVALID_ARGUMENT', 'unsupported_action')
+    }
+
+    if (action === 'browser_admissions_inspect') {
+      const admissions = this.sessionStatePersistence().listPendingAdmissions(
+        typeof args.task_id === 'string' ? args.task_id : (taskId !== 'default' ? taskId : undefined)
+      )
+
+      return { success: true, pending_count: admissions.length, pending_admissions: admissions }
+    }
+
+    if (action === 'browser_admissions_reconcile') {
+      const targetOpId = typeof args.operation_id === 'string' ? args.operation_id.trim() : ''
+
+      if (!targetOpId) {
+        throw workstationControllerFault('INVALID_ARGUMENT', 'operation_id_required')
+      }
+
+      const reason = typeof args.reason === 'string' ? args.reason : 'OPERATOR_RECONCILED'
+      const evidence = typeof args.evidence === 'string' ? args.evidence : 'OPERATOR_REVIEW'
+      const evidenceDetails = typeof args.evidence_details === 'string' ? args.evidence_details : undefined
+      const resolvedBy = typeof args.resolved_by === 'string' ? args.resolved_by : 'agent'
+
+      const result = this.sessionStatePersistence().reconcilePendingAdmission({
+        operationId: targetOpId,
+        reason: reason as any,
+        evidence: evidence as any,
+        evidenceDetails,
+        resolvedBy
+      })
+
+      return { success: true, operation_id: targetOpId, reconciled: result.reconciled }
     }
 
     // Extension operations deliberately remain on the authenticated
@@ -2716,7 +2907,7 @@ export class WorkstationBrowserRuntime {
       // Preflight BEFORE binding a task or lazily restoring its tab: the
       // restoration itself may load an external URL and cause a new effect.
       const pendingId = this.sessionStatePersistence().pendingBrowserMutation(
-        taskId, sessionHost ?? 'unbound', runId ?? 'unbound'
+        taskId, effectiveSessionHost, effectiveRunId
       )
 
       if (pendingId && pendingId !== operationId) {
@@ -2764,8 +2955,8 @@ export class WorkstationBrowserRuntime {
 
         admissionStore.admitBrowserMutation({
           operationId, action, taskId,
-          sessionId: sessionHost ?? 'unbound',
-          runId: runId ?? 'unbound',
+          sessionId: effectiveSessionHost,
+          runId: effectiveRunId,
           tabId: previousAdmission.tabId,
           argumentsDigest: crypto.createHash('sha256').update(JSON.stringify(args)).digest('hex')
         })
@@ -5107,9 +5298,11 @@ export class WorkstationBrowserRuntime {
     }
   }
 
-  private async screenshotForEntry(entry: BrowserEntry): Promise<Record<string, unknown>> {
-    fs.mkdirSync(screenshotDirectory(), { recursive: true })
+  private async screenshotForEntry(entry: BrowserEntry, isAuthorized?: () => boolean): Promise<Record<string, unknown>> {
+    if (isAuthorized && !isAuthorized()) {return { success: false, error: 'learning_capture_not_authorized' }}
     const image = await entry.view.webContents.capturePage()
+    if (isAuthorized && !isAuthorized()) {return { success: false, error: 'learning_capture_invalidated' }}
+    fs.mkdirSync(screenshotDirectory(), { recursive: true })
     const filePath = path.join(screenshotDirectory(), `browser-${Date.now()}-${entry.id.slice(0, 8)}.png`)
     fs.writeFileSync(filePath, image.toPNG())
 
@@ -5330,8 +5523,12 @@ export class WorkstationBrowserRuntime {
     })
 
     const guardTopLevelNavigation = (event: { preventDefault: () => void }, url: string): void => {
-      if (this.learningRecorder?.isActive()) {
+      const learning = this.learningRecorder?.getStatus()
+      if (learning?.tabId === entry.id && learning.webContentsId === wc.id && this.learningRecorder?.isActive()) {
+        this.learningNavigatingTabId = entry.id
+        this.deactivateLearningObserver()
         this.learningRecorder.checkNavigation(url)
+        this.emitLearningState()
       }
 
       if (!permittedTopLevelUrl(url) && !this.isLoadedExtensionUrl(url)) {
@@ -5343,22 +5540,43 @@ export class WorkstationBrowserRuntime {
 
     wc.on('will-navigate', guardTopLevelNavigation)
     wc.on('will-redirect', guardTopLevelNavigation)
-    wc.on('console-message', (_event, _level, message) => {
-      if (typeof message === 'string' && message.startsWith('__HERMES_GESTURE__') && this.learningRecorder?.isActive()) {
-        try {
-          const raw = JSON.parse(message.slice('__HERMES_GESTURE__'.length))
-          // P0c: Monotonic timebase for event timestamps
-          const hrBase = this.learningRecorder?.getMonotonicMs?.() ?? Date.now()
-          raw.eventId = `ev-${hrBase}-${Math.random().toString(36).slice(2, 7)}`
-          raw.tabId = entry.id
-          raw.documentEpoch = entry.documentEpoch
-          raw.relativeTimeMs = hrBase
-          raw.schema_version = 2
-          void this.recordLearningGesture(raw)
-        } catch {
-          // ignore
-        }
+    wc.on('did-start-navigation', (details) => {
+      const learning = this.learningRecorder?.getStatus()
+      if (details.isMainFrame && !details.isSameDocument && learning?.tabId === entry.id
+        && learning.webContentsId === wc.id) {
+        this.learningNavigatingTabId = entry.id
+        this.deactivateLearningObserver()
+        this.learningRecorder?.checkNavigation(details.url)
+        this.emitLearningState()
       }
+    })
+    wc.ipc.on(LEARNING_CAPTURE_GESTURE, (event, payload: unknown) => {
+      const binding = this.learningCaptureBinding
+
+      if (!binding || !this.learningCaptureEnabled || event.sender !== wc
+        || !event.senderFrame || event.senderFrame !== wc.mainFrame
+        || !payload || typeof payload !== 'object') {return}
+
+      const message = payload as { binding?: unknown; gesture?: unknown }
+      if (!captureBindingMatches(message.binding, binding)
+        || !message.gesture || typeof message.gesture !== 'object' || Array.isArray(message.gesture)) {return}
+      this.syncLearningObserver()
+      if (!this.learningCaptureIsCurrent(entry, event.senderFrame.url)) {return}
+
+      const timeMs = this.learningRecorder?.getMonotonicMs() ?? Date.now()
+      const raw = {
+        ...message.gesture,
+        eventId: learningActivationId(),
+        tabId: binding.tabId,
+        documentEpoch: binding.documentEpoch,
+        relativeTimeMs: timeMs
+      } as RawHumanBrowserGesture
+
+      void this.recordLearningGesture(raw, binding.activationId).catch((error: unknown) => {
+        if (this.learningCaptureBinding?.activationId !== binding.activationId) {return}
+        this.learningRecorder?.pause(error instanceof Error ? error.message : 'learning_capture_failed')
+        this.emitLearningState()
+      })
     })
     wc.on('did-start-loading', () => {
       entry.loading = true
@@ -5376,8 +5594,14 @@ export class WorkstationBrowserRuntime {
       }
     })
 
-    const refreshStructuralMetadata = (): void => {
-      entry.documentEpoch = `${Date.now()}-${entry.id.slice(0, 8)}`
+    const refreshStructuralMetadata = (newDocument = false): void => {
+      if (newDocument) {
+        entry.documentEpoch = learningActivationId()
+        if (this.learningRecorder?.getStatus()?.tabId === entry.id) {
+          this.learningNavigatingTabId = entry.id
+          this.deactivateLearningObserver()
+        }
+      }
       entry.mutationRevision = 0
       this.extractCache.invalidateTab(entry.id)
       this.updateEntrySafeMetadata(entry, wc.getURL(), wc.getTitle())
@@ -5389,15 +5613,35 @@ export class WorkstationBrowserRuntime {
       this.persistBrowserSessionState()
       this.emitState()
 
-      if (this.learningRecorder?.isActive()) {
-        this.learningRecorder.checkNavigation(wc.getURL())
-        this.injectLearningObserver(entry)
+      const learning = this.learningRecorder?.getStatus()
+      if (learning?.tabId === entry.id && learning.webContentsId === wc.id && this.learningRecorder?.isActive()) {
+        if (newDocument) {
+          this.learningRecorder.updateDocument(entry.id, wc.id, entry.documentEpoch, wc.getURL())
+        } else {
+          this.learningRecorder.checkNavigation(wc.getURL())
+        }
+        this.emitLearningState()
       }
     }
 
-    wc.on('did-navigate', refreshStructuralMetadata)
-    wc.on('did-navigate-in-page', refreshStructuralMetadata)
-    wc.on('page-title-updated', refreshStructuralMetadata)
+    wc.on('did-navigate', () => refreshStructuralMetadata(true))
+    wc.on('did-navigate-in-page', () => refreshStructuralMetadata())
+    wc.on('page-title-updated', () => refreshStructuralMetadata())
+    wc.on('dom-ready', () => {
+      if (this.learningRecorder?.getStatus()?.tabId === entry.id) {
+        this.learningNavigatingTabId = null
+        this.injectLearningObserver(entry)
+      }
+    })
+    const pauseUnavailableLearning = (): void => {
+      if (this.learningRecorder?.getStatus()?.tabId === entry.id) {
+        this.learningRecorder.pause('Learning tab became unavailable.')
+        this.deactivateLearningObserver(true)
+        this.emitLearningState()
+      }
+    }
+    wc.on('destroyed', pauseUnavailableLearning)
+    wc.on('render-process-gone', pauseUnavailableLearning)
     wc.on('render-process-gone', (_event, details) => {
       this.extractCache.invalidateTab(entry.id)
       this.updateEntrySafeMetadata(entry, wc.getURL(), wc.getTitle())
@@ -5900,6 +6144,7 @@ export class WorkstationBrowserRuntime {
   }
 
   private emitState(): void {
+    this.syncLearningObserver()
     const state = this.state()
 
     for (const window of BrowserWindow.getAllWindows()) {
