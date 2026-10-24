@@ -7,17 +7,19 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$InstallScript = Join-Path $PSScriptRoot "install.ps1"
 $VenvRoot = Join-Path $Root ".venv"
 $VenvScripts = Join-Path $VenvRoot "Scripts"
 $VenvPython = Join-Path $VenvScripts "python.exe"
 
 if (-not $SkipInstall) {
-  if ($SkipPatch) {
-    & $InstallScript -SkipCorePatch
-  } else {
-    & $InstallScript
-  }
+  # A direct start must use the same fingerprint/health gates as the one-click
+  # launcher. Calling install.ps1 unconditionally ran npm ci on every start,
+  # deleting and recreating node_modules even when dependencies were healthy.
+  # oneclick_bootstrap.ps1 calls us back with -SkipInstall after validation;
+  # this branch therefore cannot recurse.
+  $BootstrapScript = Join-Path $PSScriptRoot "scripts\oneclick_bootstrap.ps1"
+  & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $BootstrapScript
+  exit $LASTEXITCODE
 }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {

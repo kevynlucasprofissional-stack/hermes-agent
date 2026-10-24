@@ -968,7 +968,7 @@ export class LearningSessionRecorder {
       const snapshotPath = path.join(this.state.sessionDir, 'snapshots', `frame_${String(this.frameNumber).padStart(6, '0')}.png`)
 
       try {
-        fs.writeFileSync(snapshotPath, result.pngBuffer)
+        fs.writeFileSync(snapshotPath, pngBuf)
       } catch {
         // Non-fatal: snapshot persistence failure does not stop recording
       }

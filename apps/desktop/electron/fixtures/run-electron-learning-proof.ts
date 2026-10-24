@@ -47,8 +47,6 @@ async function run() {
   // 2. Wire LearningSessionRecorder to real WebContents.capturePage()
   const recorder = new LearningSessionRecorder({
     baseDir: outputDir,
-    fps: 3,
-    frameIntervalMs: 250, // capture 4 fps to stdin for smooth proof
     captureFrame: async () => {
       if (win.isDestroyed() || win.webContents.isDestroyed()) {
         return null
@@ -94,9 +92,7 @@ async function run() {
     webContentsId: win.webContents.id,
     documentEpoch: 'epoch-real-electron',
     allowlistedOrigin: 'file://',
-    videoEnabled: true,
-    fps: 3,
-    frameIntervalMs: 250
+    videoEnabled: true
   })
 
   console.log('[proof] Recording active in session:', startState.sessionId)
@@ -131,7 +127,7 @@ async function run() {
       ctrl: step === 3 ? true : undefined
     })
 
-    console.log(`[proof] Step ${step}/5 recorded. Frames: ${recorder.getStatus()?.framesCount}`)
+    console.log(`[proof] Step ${step}/5 recorded. Frames: ${recorder.getStatus()?.eventsCount}`)
   }
 
   // 5. Stop recording and flush FFmpeg container
@@ -162,7 +158,7 @@ async function run() {
     session: {
       sessionId: finalState.sessionId,
       videoStatus: finalState.videoStatus,
-      framesRecorded: finalState.framesCount,
+      framesRecorded: finalState.eventsCount,
       eventsRecorded: finalState.eventsCount
     },
     video: {

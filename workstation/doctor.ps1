@@ -188,7 +188,15 @@ if ($env:HERMES_WORKSTATION_HOME -and (-not (Test-Path -LiteralPath $RuntimePath
 
 Write-Host ""
 try {
-  git -C $Root status --short
+  $gitStatus = @(& git -C $Root status --porcelain=v1 --untracked-files=normal 2>$null)
+  if ($LASTEXITCODE -ne 0) { throw "git status returned exit code $LASTEXITCODE" }
+  $trackedCount = @($gitStatus | Where-Object { $_ -notmatch '^\?\?' }).Count
+  $untrackedCount = @($gitStatus | Where-Object { $_ -match '^\?\?' }).Count
+  if ($trackedCount -eq 0 -and $untrackedCount -eq 0) {
+    Write-Host "[OK] Git working tree clean."
+  } else {
+    Write-Host "[INFO] Git working tree: $trackedCount tracked change(s), $untrackedCount untracked path(s). Run 'git status --short' for details."
+  }
 } catch {
   Write-Host "[WARN] Could not read git status." -ForegroundColor Yellow
 }

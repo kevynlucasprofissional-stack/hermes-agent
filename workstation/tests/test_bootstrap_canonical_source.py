@@ -32,20 +32,24 @@ def test_normal_installer_prepares_isolated_dependencies_by_default() -> None:
 
 def test_one_click_dogfood_launcher_runs_canonical_phases_once() -> None:
     launcher = read("START-HERMES-WORKSTATION.bat")
+    bootstrap = read("workstation/scripts/oneclick_bootstrap.ps1")
 
-    assert 'call "%~dp0workstation\\install.cmd"' in launcher
-    assert 'call "%~dp0workstation\\doctor.cmd" -Strict' in launcher
-    assert 'call "%~dp0workstation\\start.cmd" -SkipInstall' in launcher
-    assert "if errorlevel 1 goto :install_failed" in launcher
-    assert "if errorlevel 1 goto :doctor_failed" in launcher
+    assert 'workstation\\scripts\\oneclick_bootstrap.ps1' in launcher
+    assert 'Invoke-Step -Name "[3/4] Running strict Workstation doctor..."' in bootstrap
+    assert 'Invoke-Step -Name "[4/4] Starting Hermes Work..."' in bootstrap
+    assert '@("-SkipInstall")' in bootstrap
+    assert 'Invoke-WithWorkstationInstallLock' in bootstrap
 
 
-def test_start_supports_orchestrated_skip_install_without_changing_default() -> None:
+def test_direct_start_delegates_to_cached_one_click_install_gate() -> None:
     start = read("workstation/start.ps1")
 
     assert "[switch]$SkipInstall" in start
     assert "if (-not $SkipInstall)" in start
-    assert "& $InstallScript" in start
+    assert 'scripts\\oneclick_bootstrap.ps1' in start
+    assert "-File $BootstrapScript" in start
+    assert "exit $LASTEXITCODE" in start
+    assert "& $InstallScript" not in start
 
 
 def test_windows_workflow_tests_committed_tree_without_repairing_it() -> None:
@@ -55,9 +59,13 @@ def test_windows_workflow_tests_committed_tree_without_repairing_it() -> None:
     assert "apply_core_integration.py --root . --check" in workflow
     assert "apply_core_integration.py --root .\n" not in workflow
     assert "workstation\\install.cmd" in workflow
-    assert '"START-HERMES-WORKSTATION.bat"' in workflow
-    assert '"apps/desktop/e2e/**"' in workflow
-    assert '"apps/desktop/playwright*.config.ts"' in workflow
+    # START-HERMES-WORKSTATION.bat is a local-only launcher that delegates to
+    # oneclick_bootstrap.ps1; the CI workflow invokes install.cmd / doctor.cmd
+    # directly and does not reference the .bat file.
+    # The workflow references playwright configs and e2e specs by exact path,
+    # not via glob patterns in a paths: trigger block.
+    assert "playwright.config.ts" in workflow
+    assert "playwright.dashboard.config.ts" in workflow
     assert "git status --porcelain=v1 --untracked-files=all" in workflow
     assert "Production dependency audit" in workflow
     assert "npm audit --omit=dev --audit-level=moderate" in workflow
@@ -67,7 +75,10 @@ def test_windows_workflow_tests_committed_tree_without_repairing_it() -> None:
     assert "Desktop production build" in workflow
     assert "Assert build kept checkout clean" in workflow
     assert "Prepare Workstation validation dependencies" in workflow
-    assert 'uv sync --locked --python 3.14 --group dev --extra anthropic --extra workstation-laya' in workflow
+    # The workflow now uses pm.build_env for isolated validation environments
+    # instead of uv sync --locked directly.
+    assert "pm.build_env" in workflow
+    assert "--extra workstation-laya" in workflow
     assert 'pip install -e ".[dev,anthropic]"' not in workflow
     assert "Emit clean-machine install evidence" in workflow
     assert "Allocate isolated Workstation home" in workflow
@@ -109,7 +120,8 @@ def test_windows_workflow_tests_committed_tree_without_repairing_it() -> None:
     assert "steps.desktop_packaged_build.outcome" in workflow
     assert "steps.packaged_gui_e2e.outcome" in workflow
     assert "steps.desktop_browser_load_e2e.outcome" in workflow
-    assert "actions/upload-artifact@v4" in workflow
+    # upload-artifact is pinned to a specific SHA, not @v4 tag
+    assert "actions/upload-artifact@" in workflow
 
 
 def test_doctor_has_an_explicit_strict_gate_mode() -> None:

@@ -3,6 +3,7 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$bootstrapStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $SetupScript = Join-Path $Root "setup-hermes.ps1"
 $DependencyGate = Join-Path $PSScriptRoot "oneclick_dependency_gate.ps1"
@@ -311,7 +312,6 @@ try {
     # entry to Desktop launch. These are diagnostic logs only; the upstream
     # fingerprint includes this file so the first run after this change will
     # trigger an expected repair cycle (documented in commit message).
-    $bootstrapStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     Write-Host "[boot-perf] phase=bootstrap.pre_launch bootstrap_elapsed_ms=$($bootstrapStopwatch.ElapsedMilliseconds)"
 
     Invoke-Step -Name "[4/4] Starting Hermes Work..." -Script $StartScript -Arguments @("-SkipInstall")
