@@ -1,4 +1,8 @@
 # CURRENT — Workstation Engineering Journal
+
+## 2026-10-24 — WA-PII: diagnóstico validado, implementação pendente
+**Fato:** JSON original de 23/10 com 17 telefones íntegros; resposta de `read_file` mascara 17 via `agent/redact.py` + `tools/file_tools.py`. O main remoto já contém executor avançado, porém com riscos de PII e confirmação falsa. Baseline de 23/10: 156 tool calls, 101 console. **Próxima hipótese:** M1 handle trusted; M2 browser causalidade. [Journal de investigação](whatsapp-privacy-incident-2026-10-24.md) · [plano WA-D1..D6](../WHATSAPP_RELIABILITY_2026-10-24.md). Sem envio real, sem alterações de runtime nesta entrada.
+
 ## 2026-10-18 — HLM-MVP P05: Preflight Criativo Mínimo e Hierarquia de Controle do PhotoCraft (IMPLEMENTADO E TESTADO UNITARIAMENTE)
 **Branch de implementação**: `feat/hermes-work-p05-creative-briefing-photocraft-control-20261018`
 **Objetivo cumprido (parcial — dogfood pendente)**:

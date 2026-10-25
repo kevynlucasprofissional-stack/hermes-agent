@@ -1,4 +1,8 @@
 # Workstation roadmap
+
+## 2026-10-24 — WhatsApp WA-M1..M6 (PLANEJADO; nenhuma qualificação desta entrada)
+P0: telefone íntegro apenas em executor trusted, redaction mantida; Browser TaskRun/reconciliação causal. P1: envio com prova específica + fila/aprovação/idempotência. P2: leitura incremental, anexos e testes E2E. Base real de 23/10: 156 tool calls (101 console); fonte original com 17 telefones completos, `read_file` mascarado. O main já contém state machine/detector de popup; **não recriar**. [Contrato](context/WHATSAPP_RELIABILITY_2026-10-24.md) · [6 prompts](context/WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md) · [patches referência](context/WHATSAPP_REFERENCE_PATCHES_2026-10-24.md). **HOLD:** sem envios reais sem autorização, gates upstream/coordenação e GREEN.
+
 ## 2026-10-18 — HLM-MVP P05: Preflight Criativo Mínimo e Hierarquia de Controle do PhotoCraft (D-050; IMPLEMENTADO E TESTADO UNITARIAMENTE)
 **Implementação em andamento na branch `feat/hermes-work-p05-creative-briefing-photocraft-control-20261018`:**
 - **Preflight de Parâmetros Essenciais (`workstation/creative_preflight.py`):** Módulo puro que identifica tarefas de design sem dimensões/formato e formula exatamente uma pergunta bounded via ferramenta `clarify`. Comandos pontuais ("Abra o PhotoCraft") e pedidos com dimensões explícitas ("1080×1440") bypassam o preflight. Respostas persistidas na TaskRun, não em memória permanente. 30/30 testes unitários PASS em `workstation/tests/test_creative_preflight.py`.

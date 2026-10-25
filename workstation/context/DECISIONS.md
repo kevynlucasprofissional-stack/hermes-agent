@@ -1,4 +1,8 @@
 # Architectural Decisions
+
+## WA-D1..WA-D6 — WhatsApp seguro e causal (2026-10-24)
+**DECIDIDO; NÃO IMPLEMENTADO NESTA ENTRADA.** Resolver número integral apenas em executor trusted via handle sob autorização; manter `agent/redact.py` e PII mascarada para modelo/logs. Um executor nativo de efeitos; não permitir bypass CDP. Prova de nova mensagem específica; `UNCERTAIN` nunca retry automático. Browser ledger e banco de campanhas distintos, sem cópias concorrentes. Dry-run/aprovação/opt-in em lote; upstream-first/H-079. [Racional completo](WHATSAPP_RELIABILITY_2026-10-24.md) e [missões](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md).
+
 ## D-050 — Preflight Criativo Mínimo e Hierarquia de Controle do PhotoCraft (2026-10-18)
 **STATUS: IMPLEMENTADO E TESTADO UNITARIAMENTE (P05); NOT RELEASE.**
 1. **Preflight de Parâmetros Essenciais:** O módulo `workstation/creative_preflight.py` identifica tarefas de design que carecem de dimensões/formato e formula exatamente uma pergunta bounded via ferramenta `clarify`. Comandos pontuais ("Abra o PhotoCraft", "Fecha o documento") e pedidos com dimensões explícitas ("1080×1440") bypassam o preflight. Respostas são persistidas na TaskRun atual (`task_context`), nunca em memória permanente. Defaults reversíveis são permitidos; escolhas silenciosas de dimensão que inviabilizam o trabalho são proibidas.

@@ -1,5 +1,9 @@
 # Hermes Workstation — Coding-Agent Context
 
+## Entrada WhatsApp — 2026-10-24 (decisão e prompt; não runtime)
+Após as leituras obrigatórias/H-079 e coordenação, consultar [contrato WA-D1..WA-D6](WHATSAPP_RELIABILITY_2026-10-24.md), [seis prompts](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md), [código de referência](WHATSAPP_REFERENCE_PATCHES_2026-10-24.md), [jornal WA-PII](engineering-journal/whatsapp-privacy-incident-2026-10-24.md). Não confundir telefone mascarado na ferramenta com fonte incompleta. Reusar executor atual, manter redaction e Browser admission.
+
+
 ## CW-047 — ponto de entrada operacional (2026-10-17)
 Para preparar a abertura por comando de PhotoCraft/EffectCraft no Browser nativo, após H-079 e a ordem canônica de contexto, seguir [handoff objetivo](../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md). Helpers Python já versionados, **não conectados nem testados em Electron**. Baixo acoplamento D-046 continua premissa, sem autorização para novo browser/UI/kernel ou integração 3D profunda.
 

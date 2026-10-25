@@ -1,0 +1,8 @@
+# WA-PII-20261024 — entrada de investigação (2026-10-24)
+
+**Hipótese refutada:** telefones do JSON original estavam mascarados. Releitura direta do JSON de reunião = 12/12 íntegros; arquivo da oficina 23/10 = 17/17 íntegros. No transcript da sessão `abrir-aplicativo-whatsapp-2-20261023.json`, resposta `read_file` da mensagem 12 trouxe 17 números mascarados.
+**Causa validada:** `agent/redact.py::_SIGNAL_PHONE_RE` + `_redact_phone` são aplicados na saída de `tools/file_tools.py` antes de a LLM ler, por `redact_sensitive_text(file_read=True)`. A segurança atua no limite de egress; não afeta necessariamente o arquivo.
+**Descoberta em GitHub:** `whatsapp_browser_executor.py` do main já contém state machine e detector de popup (evitar implementação duplicada); persistência de raw telefone/corpo, prova de bolha antiga e fallback ACIRV/DB continuam exigindo correção. `site-ops` tem rota CDP independente. Banco externo já contém campanhas/UNIQUE por step.
+**Baseline:** sessão convites 23/10 com 365 mensagens, 156 tool calls, 101 browser_console. Não há medição corroborada de latência/tokens. Relato local prévio de 200 admissões `runId=unbound` em 23/10 permanece hipótese de regressão a qualificar na HEAD.
+**Estado:** VALIDATED mascaramento na camada de saída; PARTIAL para fluxos de execução; implementação WA-M1..M6 NÃO iniciada nesta entrada.
+**Próximo experimento:** M1, resolver handle trusted sem egress de telefone completo, comparando readback com máscara; M2, TaskRun causal/readback. Definir RED e regra de refutação antes de editar, seguir `engineering-journal/README.md` e H-079. Nunca versionar PII, fazer envio real ou limpar admission em massa.

@@ -1,5 +1,11 @@
 # Workstation Known Issues
 
+### WA-KI-20261024 — JSON integral, retorno read_file com telefone mascarado [DIAGNÓSTICO VALIDADO; OPEN]
+- **Fingerprint:** números completos na fonte, mas `+...****...` apresentado ao agente; `agent/redact.py` aplica máscara em `tools/file_tools.py` — não remover proteção upstream global.
+- **Outros riscos constatados em main 24/10:** fallback de DB ACIRV; `whatsapp_send_logs` com PII, bolha antiga confundida com confirmação, click ambíguo classificado FAILED, `site-ops` com envio CDP não reconciliado. Relato histórico de admissões `runId=unbound` precisa revalidação na HEAD.
+- **Mitigação DECIDIDA, não implantada:** WA-M1..M6; [contrato](WHATSAPP_RELIABILITY_2026-10-24.md), [prompts](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md). HOLD para envio real.
+
+
 ### KI-046 — Agente inicia tarefas de design sem parâmetros determinantes [FIXED_UNIT_TESTED]
 - **Detectado:** 2026-10-18, Windows 11. **Estado:** FIXED_UNIT_TESTED (P05 / D-050).
 - **Fingerprint observável:** Usuário solicita "Crie um convite de aniversário" e o agente abre o PhotoCraft ou cria documento com dimensões arbitrárias sem perguntar formato/destino, inviabilizando o trabalho ou exigindo retrabalho.

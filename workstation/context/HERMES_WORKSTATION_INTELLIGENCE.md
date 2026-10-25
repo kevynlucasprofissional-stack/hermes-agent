@@ -1,4 +1,8 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
+
+## 2026-10-24 — WA: privacidade lossless na execução autorizada
+A camada upstream `redact_sensitive_text` mascara E.164 nos retornos do modelo mesmo com origem íntegra. **Diferenciar plano de apresentação (masked PII) e executor trusted (source original por handle, com permissão)**. Não desativar proteção global; Browser admission e banco da campanha são authorities distintos; `UNCERTAIN` não é `FAILED` nem autorização para retry. A versão remota já tem detecção de popup e estados, mas ainda precisa de provas causais e evitar logs raw. [Contrato WA-D1..WA-D6](WHATSAPP_RELIABILITY_2026-10-24.md); [prompts M1..M6](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md). Status: DECISÃO, NÃO IMPLANTAÇÃO.
+
 ## 2026-10-18 — HLM-MVP P03: Perguntas Proativas no Chat e Marcos Operacionais de Aprendizagem
 **Inteligência de arquitetura de interface e isolamento de eventos:**
 1. **Separação de Papéis (Browser vs. Chat):** Manter o host do navegador estritamente desobstruído é vital para aplicações criativas ricas (PhotoCraft, EffectCraft). A renderização de caixas de diálogo ou cartões sobre o Canvas aciona o mecanismo de oclusão de WebContentsView do Electron (`[data-native-view-occluder="true"]`) e obscurece o trabalho do operador. Transferir as perguntas para o transcript do chat cria um fluxo conversacional natural de co-piloto, onde o usuário responde quando convier sem que a interface do canvas pisque ou entre em estado parkado.
