@@ -1,0 +1,19 @@
+# PROMPT 02 — Implementar coleta incremental e histórico factual do Trello (read-only)
+
+**Missão.** Converter o cliente Trello existente em fonte de mudanças **sem criar novo Kanban ou novo orquestrador**. Implementar leitura paginada das ações, persistência determinística de eventos e checkpoint, com zero mutações de cartões e nenhuma IA na captura.
+
+**Preflight e ownership.** Ler `AGENTS.md`, `workstation/AGENTS.md`, colaboração e estado do checkout; reivindicar exclusivamente `workstation/prefabs/trello.py`, `workstation/trello_action_journal.py`, seus testes e migration do banco canônico escolhido. Não mudar branch/worktree nem mexer em WIP alheio. O runtime existente usa SQLite no `WorkstationKanbanBridge` (`workstation/kanban.py`), mas confirmar o DB com o owner canônico antes de instalar tabelas.
+
+**Código observado e onde agir.** `workstation/prefabs/trello.py::TrelloClient._request(method,path,query,form)` já permite GET oficial; `board_lists`, `board_cards`, `card` validam IDs e retornos. Acrescentar **somente** `TrelloClient.board_actions(board, *, before=None, since=None, limit=100)` (parâmetros finais devem respeitar endpoint oficial efetivo) com validação, paginação e tratamento de rate limits, lendo `/1/boards/{id}/actions` ou endpoint compatível confirmado. Não registrar credenciais nem persistir `desc`/comentários brutos no journal base.
+
+**Código preparado.** Use `reference-code/trello_action_journal.py` e `reference-tests/test_trello_action_journal.py` deste pacote como base avaliada. Fornece `install_schema(conn)`, `normalize_action`, `append_batch(conn,board_id,actions,completed_checkpoint=...)`, `load_checkpoint`, `read_events`, tabela `trello_activity_event` com PRIMARY KEY `(board_id,action_id)` e `trello_activity_checkpoint`. Está testado **isoladamente** (5/5). Integre-o ao módulo do projeto apenas após conferir migrations, transações e contrato do DB real. **Não criar novo arquivo .db com tarefas concorrentes.**
+
+**Etapas.** (1) Testes RED via transporte `TrelloClient(credential=fake,transport=fake)` para paginação, 429, falha intermediária, ação repetida/fora de ordem, vazio, IDs inválidos, cursor, limite; (2) implementar GET e adaptador que lê até completar lote/intervalo, não avança cursor no fracasso; (3) adicionar journal sob migration compatível com versões antigas; (4) teste GREEN de reinicialização, duas consultas repetidas e recuperação sem duplicação; (5) fornecer interface de consulta por quadro/dia sem publicar dados brutos não autorizados.
+
+**DONE.** `pytest` focado e regressão das suites Trello existentes executados, dados de fixture provam sem perdas/duplicados e rollbacks atômicos. O callback de leitura não modifica Trello. Todos os eventos incluem `board_id`, `action_id`, `type`, horário e IDs de objeto/proveniência; conteúdos textuais sensíveis ficam sujeitos a políticas separadas. Documentar endpoint/limites reais observados, comandos/testes/exits, migração reversível e contrato de origem. Se acesso API live não foi autorizado, marcar integração externa **NOT TESTED**, sem alegar sincronização produtiva.
+
+---
+
+## Formato de entrega obrigatório para CADA prompt
+
+Entregar ao final: (a) HEAD/branch/dirty inicial e final; (b) caminhos sob claim do agente e integrador dono de commit; (c) contrato/decisões e desvios justificados; (d) diffs por arquivo; (e) evidência RED + GREEN com comandos e exits; (f) validação nativa onde exigida; (g) segurança e riscos residuais; (h) Known Issues que continuam abertos; (i) atualização incremental do `workstation/ROADMAP.md`, `workstation/context/HERMES_WORKSTATION_INTELLIGENCE.md` e `workstation/context/engineering-journal/CURRENT.md` somente pelo owner documental, ou handoff de inserts caso esses arquivos estejam claimed. Não chamar `DONE/RELEASE` para teste sintético ou código não integrado.

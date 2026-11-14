@@ -45,4 +45,22 @@ describe('native AI Control bridge', () => {
     await expect(bridge.toggle()).rejects.toThrow('primary_renderer_unavailable')
     expect(fs.existsSync(file)).toBe(false)
   })
+  it('replaces a previous crashed-instance discovery entry without exposing old credentials', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermes-ai-stale-'))
+    const file = path.join(dir, 'bridge.json')
+    fs.writeFileSync(file, JSON.stringify({version:1,pid:99999999,host:'127.0.0.1',port:58099,token:'stale-'.repeat(10)}))
+    const bridge = createAiControlBridge({controlFile:file,
+      getWebContents:()=>({isDestroyed:()=>false,executeJavaScript:async()=>42}), onStateChange:()=>undefined})
+    try {
+      expect(await bridge.toggle()).toBe(true)
+      const value = JSON.parse(fs.readFileSync(file,'utf8'))
+      expect(value.pid).toBe(process.pid)
+      expect(value.token).not.toContain('stale-')
+      expect((await fetch('http://127.0.0.1:'+value.port+'/status',{
+        headers:{Authorization:'Bearer '+value.token}})).status).toBe(200)
+    } finally {
+      await bridge.disable()
+      fs.rmSync(dir,{recursive:true,force:true})
+    }
+  })
 })

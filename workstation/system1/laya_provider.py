@@ -45,6 +45,8 @@ class LayaDecisionProvider:
         self.artifact_store = artifact_store or ArtifactStore()
         self._router = None
         self._router_lock = threading.Lock()
+        self._preload_lock = threading.Lock()
+        self._preload_state = "idle"
 
         # Enforce provenance on initialization
         verify_laya_provenance()
@@ -74,6 +76,35 @@ class LayaDecisionProvider:
                 auto_task_detection=False,
             )
             return self._router
+
+    def schedule_preload(self, available_bytes: int) -> str:
+        """Load the existing Router once, off the request path, with RAM headroom.
+
+        The first BrowserTask activity may request this. A refusal is not a
+        fallback failure: a normal decision may still load the model on demand.
+        """
+        if self._router is not None and self.model in self._router.loaded:
+            return "ready"
+        if available_bytes < 5 * 1024 ** 3:
+            return "deferred_memory"
+        with self._preload_lock:
+            if self._preload_state != "idle":
+                return self._preload_state
+            self._preload_state = "loading"
+        threading.Thread(target=self._preload_model, name="hermes-laya-preload", daemon=True).start()
+        return "scheduled"
+
+    def _preload_model(self) -> None:
+        try:
+            self._ensure_router().load(self.model)
+        except Exception:
+            logger.exception("Laya contextual preload failed; normal fallback remains available")
+            with self._preload_lock:
+                self._preload_state = "failed"
+        else:
+            with self._preload_lock:
+                self._preload_state = "ready"
+            logger.info("Laya contextual preload complete: %s", self.model)
 
     def __call__(self, request: DecisionRequest) -> Optional[DecisionResult]:
         return self.decide(request)

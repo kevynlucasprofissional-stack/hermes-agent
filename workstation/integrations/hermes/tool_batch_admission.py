@@ -67,6 +67,7 @@ def workstation_tool_batch_admission(
                 session_id=session_id,
                 reason="uncertain_mutation_requires_review",
                 scope=scope,
+                coalesce_waiting_run=True,
             )
             if handoff.status == "ready":
                 handoff_mgr.consume(handoff.handoff_id)

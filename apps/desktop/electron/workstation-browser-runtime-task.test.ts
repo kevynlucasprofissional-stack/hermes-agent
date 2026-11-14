@@ -18,6 +18,9 @@ const electron = vi.hoisted(() => {
     private windowOpenHandler: ((details: { url: string }) => { action: string }) | null = null
     frameRate = 60
     focused = false
+    private clickDeliveryArmed = false
+    private clickDelivered = false
+    readonly ipc = { on: () => undefined }
     readonly navigationHistory = {
       canGoBack: () => false,
       canGoForward: () => false,
@@ -27,7 +30,10 @@ const electron = vi.hoisted(() => {
     readonly debugger = {
       isAttached: () => false,
       attach: () => undefined,
-      sendCommand: async () => ({})
+      sendCommand: async (method: string, params?: { type?: string }) => {
+        // Simulate Electron acknowledging CDP input without a page-level DOM click event.
+        return {}
+      }
     }
 
     on(event: string, listener: Listener): this {
@@ -92,6 +98,8 @@ const electron = vi.hoisted(() => {
     reload(): void {}
     stop(): void {}
     async executeJavaScript(source: string): Promise<unknown> {
+      if (source.includes('window.__hermesNativeClickDelivery = proof')) {this.clickDeliveryArmed = true; this.clickDelivered = false; return true}
+      if (source.includes('const p = window.__hermesNativeClickDelivery')) {return this.clickDelivered}
       if (source.includes('__hermesWorkstationRefs')) {
         if (source.includes('byRef.get')) {
           return {
@@ -150,7 +158,21 @@ const electron = vi.hoisted(() => {
   }
 
   class FakeBrowserWindow {
+    private readonly handlers = new Map<string, Set<() => void>>()
+    on(event: string, callback: () => void): this {
+      const listeners = this.handlers.get(event) ?? new Set<() => void>()
+      listeners.add(callback)
+      this.handlers.set(event, listeners)
+      return this
+    }
+    off(event: string, callback: () => void): this {
+      this.handlers.get(event)?.delete(callback)
+      return this
+    }
+    isMinimized(): boolean {return false}
     destroyed = false
+    focused = true
+    isFocused(): boolean {return this.focused}
     readonly contentView = {
       children: [] as FakeWebContentsView[],
       addChildView: (view: FakeWebContentsView) => {
@@ -209,6 +231,7 @@ const electron = vi.hoisted(() => {
     FakeWebContents,
     FakeWebContentsView,
     app: {
+      getAppPath: () => process.cwd(),
       getPath: () => 'C:/tmp/hermes-runtime-task-app',
       whenReady: () => new Promise<never>(() => undefined),
       on: () => undefined
@@ -1391,6 +1414,50 @@ test('CRASH-ID: generated navigation admission and receipt use the same stable o
   await runtime.destroy()
 })
 
+test('P04: emulated renderer focus is scoped to click and disabled before returning', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const calls: Array<{method: string; type?: string; enabled?: boolean}> = []
+  ;(runtime as any).cdp = async (
+    _wc: unknown, method: string, params: {type?: string; enabled?: boolean}
+  ) => {
+    calls.push({method, ...params})
+    return {}
+  }
+  await (runtime as any).cdpClick({isDestroyed: () => false}, 20, 30)
+  assert.deepEqual(calls.map(call => call.method), [
+    'Emulation.setFocusEmulationEnabled',
+    'Input.dispatchMouseEvent',
+    'Input.dispatchMouseEvent',
+    'Input.dispatchMouseEvent',
+    'Emulation.setFocusEmulationEnabled'
+  ])
+  assert.equal(calls[0].enabled, true)
+  assert.equal(calls[4].enabled, false)
+  await runtime.destroy()
+})
+
+test('P04: failure to clear emulated focus fails closed after a dispatched click', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const focusCommands: boolean[] = []
+  ;(runtime as any).cdp = async (
+    _wc: unknown, method: string, params: {type?: string; enabled?: boolean}
+  ) => {
+    if (method === 'Emulation.setFocusEmulationEnabled') {
+      focusCommands.push(params.enabled === true)
+      if (params.enabled === false) {throw new Error('renderer_cleanup_failed')}
+    }
+    return {}
+  }
+  await assert.rejects(
+    (runtime as any).cdpClick({isDestroyed: () => false}, 20, 30),
+    /browser_input_focus_cleanup_uncertain/
+  )
+  assert.deepEqual(focusCommands, [true, false])
+  await runtime.destroy()
+})
+
 test('P0-03: ambiguous CDP mousePressed sends one cleanup release without blind press retry', async () => {
   runtimeHome()
   const runtime = new WorkstationBrowserRuntime()
@@ -1398,6 +1465,7 @@ test('P0-03: ambiguous CDP mousePressed sends one cleanup release without blind 
   const events: string[] = []
 
   ;(runtime as any).cdp = async (_wc: unknown, method: string, args: { type: string }) => {
+    if (method === 'Emulation.setFocusEmulationEnabled') {return {}}
     assert.equal(method, 'Input.dispatchMouseEvent')
     events.push(args.type)
 
@@ -1418,6 +1486,7 @@ test('P0-03: failed mouseReleased never retries mousePressed', async () => {
   const events: string[] = []
 
   ;(runtime as any).cdp = async (_wc: unknown, _method: string, args: { type: string }) => {
+    if (_method === 'Emulation.setFocusEmulationEnabled') {return {}}
     events.push(args.type)
 
     if (args.type === 'mouseReleased' && events.filter(event => event === 'mouseReleased').length === 1) {
@@ -1440,6 +1509,7 @@ test('P0-03: takeover between mousePressed and mouseReleased fails closed and re
   let userControlActive = false
 
   ;(runtime as any).cdp = async (_wc: unknown, _method: string, args: { type: string }) => {
+    if (_method === 'Emulation.setFocusEmulationEnabled') {return {}}
     events.push(args.type)
 
     if (args.type === 'mousePressed') {userControlActive = true}
@@ -1547,5 +1617,37 @@ test('B0.2 startLearning refuses when target tab has no ownerTaskId even if acti
   assert.equal(learningState.tabId, ownedTab.id)
   assert.equal(learningState.status, 'learning')
 
+  await runtime.destroy()
+})
+
+
+test('Browser viewport does not steal foreground focus when Hermes host is backgrounded', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const window = hostWindow()
+  window.focused = false
+  runtime.attach(window as never, {x: 0, y: 0, width: 900, height: 600}, 'hub')
+  const activeView = window.contentView.children[0]
+  assert.ok(activeView, 'the Browser should stay hosted for human interaction')
+  assert.equal(activeView.webContents.focused, false, 'background attachment must not focus the WebContents')
+  window.focused = true
+  runtime.attach(window as never, {x: 0, y: 0, width: 900, height: 600}, 'hub')
+  assert.equal(activeView.webContents.focused, true, 'the foreground host can focus the Browser for human interaction')
+  await runtime.destroy()
+})
+
+
+test('agent Browser click stays bound to WebContents while the host window has no foreground focus', async () => {
+  runtimeHome()
+  const runtime = new WorkstationBrowserRuntime()
+  const window = hostWindow()
+  window.focused = false
+  runtime.attach(window as never, {x: 0, y: 0, width: 900, height: 600}, 'chat', 'task-background-click')
+  const execute = (runtime as unknown as {executeControlRequest(request: Record<string, unknown>): Promise<Record<string, unknown>>}).executeControlRequest.bind(runtime)
+  await execute({action: 'browser_navigate', task_id: 'task-background-click', arguments: {url: 'https://example.com/background'}})
+  const result = await execute({action: 'browser_click', task_id: 'task-background-click', arguments: {ref: '@e1'}})
+  assert.equal(result.semantic_effect, 'click')
+  assert.equal(window.focused, false)
+  assert.equal(window.contentView.children[0]?.webContents.focused, false)
   await runtime.destroy()
 })

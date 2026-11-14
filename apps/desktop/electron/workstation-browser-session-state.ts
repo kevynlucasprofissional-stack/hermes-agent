@@ -67,6 +67,15 @@ export interface AdmissionTerminal {
 }
 
 /** Structural idempotency fence owned by BrowserSessionState, NOT an effect verifier. */
+/** Sanitized persistent diagnosis; no DOM, recipient, text or tokens. */
+export interface BrowserBatchUncertainty {
+  reason: string
+  stoppedAt: number | null
+  completedSteps: number
+  verifiedSteps: number
+  recordedAt: string
+}
+
 export interface BrowserMutationAdmission {
   operationId: string
   taskId: string
@@ -79,6 +88,9 @@ export interface BrowserMutationAdmission {
   acknowledged?: boolean
   /** Durable terminal for pre-effect rejections. Immutable once written. */
   terminal?: AdmissionTerminal
+  /** Sanitized, ordered child receipts supporting a verified batch parent ACK. */
+  batchStepReceiptRefs?: string[]
+  uncertainty?: BrowserBatchUncertainty
 }
 
 const MAX_BROWSER_OPERATION_ADMISSIONS = 4096
@@ -91,8 +103,27 @@ function validateAdmission(value: unknown): value is BrowserMutationAdmission {
     if (typeof op[key] !== 'string' || !validIdentifier(op[key])) {return false}
   }
 
+  const u = op.uncertainty as BrowserBatchUncertainty | undefined
+  const validUncertainty = u === undefined || (
+    op.action === 'browser_batch_actions' && Boolean(u) &&
+    typeof u.reason === 'string' && /^[a-z][a-z0-9_]{0,95}$/.test(u.reason) &&
+    typeof u.recordedAt === 'string' && !Number.isNaN(Date.parse(u.recordedAt)) &&
+    Number.isInteger(u.completedSteps) && u.completedSteps >= 0 && u.completedSteps <= 20 &&
+    Number.isInteger(u.verifiedSteps) && u.verifiedSteps >= 0 &&
+    u.verifiedSteps <= u.completedSteps &&
+    (u.stoppedAt === null || (Number.isInteger(u.stoppedAt) && u.stoppedAt >= 0 && u.stoppedAt <= 20))
+  )
+  const childRefs = op.batchStepReceiptRefs
+  const validChildRefs = childRefs === undefined || (
+    op.action === 'browser_batch_actions' && Array.isArray(childRefs) &&
+    childRefs.length > 0 && childRefs.length <= 20 &&
+    childRefs.every((ref, index) => typeof ref === 'string' && ref.length <= 1024 &&
+      ref.startsWith(`${op.operationId}:${index}:${op.tabId}:`) &&
+      /^\d+$/.test(ref.slice(`${op.operationId}:${index}:${op.tabId}:`.length)))
+  )
+
   return typeof op.argumentsDigest === 'string' && /^[a-f0-9]{64}$/.test(op.argumentsDigest) &&
-    (op.acknowledged === undefined || typeof op.acknowledged === 'boolean')
+    (op.acknowledged === undefined || typeof op.acknowledged === 'boolean') && validChildRefs && validUncertainty
 }
 
 export interface BrowserSessionStateSnapshot {
@@ -507,6 +538,7 @@ export class BrowserSessionStateFilePersistence {
   private preserveUnsupportedVersion = false
   private admissionPersistenceFailed = false
   private admissionLockHeld = false
+  private durableBatchWrite = false
   private readonly taskAdapter: BrowserTaskPersistence
 
   constructor(
@@ -604,8 +636,68 @@ export class BrowserSessionStateFilePersistence {
         throw new Error('browser_admission_state_unavailable')
       }
 
-      return this.findPendingBrowserMutation(state, taskId, sessionId, runId)
+      const blocked = this.findPendingBrowserMutation(state, taskId, sessionId, runId)
+      if (!blocked || !state) {return blocked}
+      const admission = state.operationAdmissions?.[blocked]
+      if (!admission || !this.provenNeverDispatchedBatch(state, admission)) {return blocked}
+
+      // Legacy rejected batches (before preflight validation was introduced)
+      // were recorded as pending even though the batch executor ran NO step.
+      // Safely close only these exact cases, under the admission lock; do not
+      // infer non-delivery from timeout, network failure or zero verified steps.
+      const terminal: AdmissionTerminal = {
+        kind: 'NOT_DISPATCHED',
+        reason: 'EVIDENCE_RECONCILED',
+        evidence: 'OBSERVED_STATE',
+        recordedAt: this.now().toISOString(),
+        resolvedBy: 'browser-preflight-auto-recovery',
+        evidenceDetails: 'validated-zero-step-batch-rejection'
+      }
+      try {
+        this.durableBatchWrite = true
+        try {
+          this.save({
+            ...state,
+            savedAt: this.now().toISOString(),
+            operationAdmissions: {
+              ...state.operationAdmissions,
+              [blocked]: { ...admission, terminal }
+            }
+          })
+        } finally {
+          this.durableBatchWrite = false
+        }
+      } catch (error) {
+        this.admissionPersistenceFailed = true
+        throw new Error('browser_admission_persistence_unavailable', { cause: error })
+      }
+      return this.findPendingBrowserMutation(this.load(), taskId, sessionId, runId)
     })
+  }
+
+  /** Only a parser rejection prior to ALL dispatch can self-reconcile. */
+  private provenNeverDispatchedBatch(
+    state: BrowserSessionStateSnapshot,
+    admission: BrowserMutationAdmission
+  ): boolean {
+    const u = admission.uncertainty
+    if (admission.action !== 'browser_batch_actions' || admission.terminal ||
+        admission.acknowledged === true || !u ||
+        !['invalid_step', 'invalid_batch_identity_or_size', 'authority_or_precondition_denied'].includes(u.reason) ||
+        u.completedSteps !== 0 || u.verifiedSteps !== 0 ||
+        (u.stoppedAt === null || u.stoppedAt < 0) ||
+        (admission.batchStepReceiptRefs?.length ?? 0) !== 0) {return false}
+
+    const task = state.browserTasks.tasks.find(row =>
+      row.taskId === admission.taskId &&
+      row.sessionHost === admission.sessionId && row.runId === admission.runId)
+    if (!task) {return false}
+    // A child or parent ACK means dispatch may have happened: refuse.
+    if (task.lastReceipt?.operationId === admission.operationId ||
+        task.lastReceipt?.operationId.startsWith(admission.operationId + ':')) {return false}
+    return !Object.values(state.receipts ?? {}).some(receipt =>
+      receipt.operationId === admission.operationId ||
+      receipt.operationId.startsWith(admission.operationId + ':'))
   }
 
   private findPendingBrowserMutation(
@@ -703,6 +795,162 @@ export class BrowserSessionStateFilePersistence {
     })
   }
 
+  /** Flush a verified step checkpoint under the canonical admission lock. */
+  saveSessionDurably(
+    tabs: BrowserSessionTab[],
+    activeTabId: string | null,
+    receipts: Record<string, BrowserOwnerReceipt>
+  ): void {
+    this.withExclusiveAdmissionLock(() => {
+      this.loaded = false
+      this.cached = null
+      this.preserveUnsupportedVersion = false
+      const prior = this.load()
+      if (!prior && this.io.existsSync(this.filePath)) {throw new Error('browser_session_state_unavailable')}
+      try {
+        this.durableBatchWrite = true
+        try {this.saveSession(tabs, activeTabId, receipts)} finally {this.durableBatchWrite = false}
+      } catch (error) {
+        this.admissionPersistenceFailed = true
+        throw new Error('browser_batch_checkpoint_not_durable', { cause: error })
+      }
+    })
+  }
+
+  /** Close only a fully verified batch, preserving child receipt evidence. */
+  completeVerifiedBatch(params: {
+    receipt: BrowserOwnerReceipt
+    sessionId: string
+    stepReceiptRefs: string[]
+  }): BrowserOwnerReceipt {
+    const { receipt, sessionId, stepReceiptRefs } = params
+    if (!Array.isArray(stepReceiptRefs) || stepReceiptRefs.length === 0 ||
+        stepReceiptRefs.length > 20 || !validIdentifier(sessionId) ||
+        receipt.action !== 'browser_batch_actions' ||
+        stepReceiptRefs.some((ref, index) => typeof ref !== 'string' ||
+          !ref.startsWith(`${receipt.operationId}:${index}:${receipt.tabId}:`) ||
+          !/^\d+$/.test(ref.slice(`${receipt.operationId}:${index}:${receipt.tabId}:`.length)))) {
+      throw new Error('invalid_batch_completion_evidence')
+    }
+
+    return this.withExclusiveAdmissionLock(() => {
+      this.loaded = false
+      this.cached = null
+      this.preserveUnsupportedVersion = false
+      const current = this.load()
+      if (!current) {throw new Error('browser_batch_state_unavailable')}
+      const admission = current.operationAdmissions?.[receipt.operationId]
+      const task = current.browserTasks.tasks.find(item => item.taskId === receipt.taskId)
+      const child = current.receipts?.[receipt.taskId] ?? task?.lastReceipt
+      const lastRef = stepReceiptRefs[stepReceiptRefs.length - 1]
+
+      if (!admission || admission.action !== 'browser_batch_actions' ||
+          admission.acknowledged || admission.terminal ||
+          admission.taskId !== receipt.taskId || admission.sessionId !== sessionId ||
+          admission.runId !== receipt.runId || admission.tabId !== receipt.tabId ||
+          receipt.browserTaskId !== receipt.taskId || !task ||
+          (task.runId && task.runId !== receipt.runId) ||
+          (task.sessionHost && task.sessionHost !== sessionId) ||
+          !child || lastRef !== `${child.operationId}:${child.tabId}:${child.revision}` ||
+          child.taskId !== receipt.taskId || child.runId !== receipt.runId ||
+          child.tabId !== receipt.tabId) {
+        throw new Error('browser_batch_completion_owner_or_evidence_mismatch')
+      }
+
+      const parentReceipt = { ...receipt, revision: (task.revision ?? 0) + 1 }
+      const next: BrowserSessionStateSnapshot = {
+        ...current,
+        savedAt: this.now().toISOString(),
+        browserTasks: {
+          ...current.browserTasks,
+          tasks: current.browserTasks.tasks.map(item => item.taskId === receipt.taskId
+            ? { ...item, revision: parentReceipt.revision, lastReceipt: parentReceipt }
+            : item)
+        },
+        receipts: { ...(current.receipts ?? {}), [receipt.taskId]: parentReceipt },
+        operationAdmissions: {
+          ...(current.operationAdmissions ?? {}),
+          [receipt.operationId]: {
+            ...admission,
+            batchStepReceiptRefs: [...stepReceiptRefs]
+          }
+        }
+      }
+
+      try {
+        this.durableBatchWrite = true
+        let saved: BrowserSessionStateSnapshot
+        try {saved = this.save(next)} finally {this.durableBatchWrite = false}
+        if (saved.operationAdmissions?.[receipt.operationId]?.acknowledged !== true) {
+          throw new Error('browser_batch_parent_ack_missing')
+        }
+      } catch (error) {
+        this.admissionPersistenceFailed = true
+        throw new Error('browser_batch_parent_not_durable', { cause: error })
+      }
+
+      return parentReceipt
+    })
+  }
+
+  private flushAdmissionFile(filePath = this.filePath): void {
+    const io = this.io as typeof fs
+    if (!io.openSync || !io.fsyncSync || !io.closeSync) {throw new Error('durable_sync_unavailable')}
+    const fd = io.openSync(filePath, 'r+')
+    try {io.fsyncSync(fd)} finally {io.closeSync(fd)}
+  }
+
+  /** Persist why a batch remains fenced, without treating diagnostics as an ACK. */
+  recordBatchUncertainty(params: {
+    operationId: string
+    reason: string
+    stoppedAt: number | null
+    completedSteps: number
+    verifiedSteps: number
+  }): void {
+    if (!/^[a-z][a-z0-9_]{0,95}$/.test(params.reason) ||
+        !Number.isInteger(params.completedSteps) || params.completedSteps < 0 ||
+        params.completedSteps > 20 || !Number.isInteger(params.verifiedSteps) ||
+        params.verifiedSteps < 0 || params.verifiedSteps > params.completedSteps ||
+        (params.stoppedAt !== null && (!Number.isInteger(params.stoppedAt) ||
+          params.stoppedAt < 0 || params.stoppedAt > 20))) {
+      throw new Error('invalid_batch_uncertainty')
+    }
+    this.withExclusiveAdmissionLock(() => {
+      this.loaded = false
+      this.cached = null
+      this.preserveUnsupportedVersion = false
+      const current = this.load()
+      if (!current) {throw new Error('browser_batch_state_unavailable')}
+      const prior = current.operationAdmissions?.[params.operationId]
+      if (!prior || prior.action !== 'browser_batch_actions' ||
+          prior.acknowledged || prior.terminal) {
+        throw new Error('browser_batch_uncertainty_requires_pending_admission')
+      }
+      if (prior.uncertainty) {return}
+      const uncertainty: BrowserBatchUncertainty = {
+        reason: params.reason,
+        stoppedAt: params.stoppedAt,
+        completedSteps: params.completedSteps,
+        verifiedSteps: params.verifiedSteps,
+        recordedAt: this.now().toISOString()
+      }
+      this.durableBatchWrite = true
+      try {
+        this.save({
+          ...current,
+          savedAt: this.now().toISOString(),
+          operationAdmissions: {
+            ...current.operationAdmissions,
+            [params.operationId]: { ...prior, uncertainty }
+          }
+        })
+      } finally {
+        this.durableBatchWrite = false
+      }
+    })
+  }
+
   /**
    * Reconcile an unacknowledged/uncertain admission with verified evidence.
    * Preserves immutable audit history while releasing the admission fence for future mutations.
@@ -713,6 +961,13 @@ export class BrowserSessionStateFilePersistence {
     evidence: AdmissionTerminal['evidence']
     evidenceDetails?: string
     resolvedBy?: string
+    requirePending?: boolean
+    expectedAdmission?: Pick<BrowserMutationAdmission,
+      'operationId' | 'taskId' | 'sessionId' | 'runId' | 'tabId' | 'action' | 'argumentsDigest'>
+    expectedNavigationReceipt?: Pick<BrowserOwnerReceipt,
+      'operationId' | 'taskId' | 'runId' | 'tabId' | 'safeUrl' | 'action'>
+    expectedTaskRevision?: number
+    requireNoHumanLease?: boolean
   }): { operationId: string; reconciled: boolean } {
     const validReasons = new Set([
       'STALE_OR_UNKNOWN_REF', 'REF_REQUIRED', 'AMBIGUOUS_ANCHOR',
@@ -751,6 +1006,45 @@ export class BrowserSessionStateFilePersistence {
         throw new Error('browser_admission_not_found')
       }
 
+      if (params.expectedAdmission && (
+        (['operationId', 'taskId', 'sessionId', 'runId', 'tabId', 'action', 'argumentsDigest'] as const)
+          .some(key => prior[key] !== params.expectedAdmission?.[key])
+      )) {throw new Error('browser_reconciliation_identity_changed')}
+
+      if (params.expectedNavigationReceipt) {
+        const expected = params.expectedNavigationReceipt
+        const task = current.browserTasks.tasks.find(item => item.taskId === prior.taskId)
+        const receipt = task?.lastReceipt
+        const tab = current.tabs.find(item => item.id === prior.tabId)
+        if (prior.action !== 'browser_navigate' || !receipt || !tab ||
+            tab.browserTaskId !== prior.taskId ||
+            task?.runId !== prior.runId || task.sessionHost !== prior.sessionId ||
+            (['operationId', 'taskId', 'runId', 'tabId', 'safeUrl', 'action'] as const)
+              .some(key => receipt[key] !== expected[key]) ||
+            tab.safeUrl !== expected.safeUrl) {
+          throw new Error('browser_navigation_receipt_changed')
+        }
+      }
+
+      if (params.requireNoHumanLease || params.expectedTaskRevision !== undefined) {
+        const task = current.browserTasks.tasks.find(item => item.taskId === prior.taskId)
+        const tab = current.tabs.find(item => item.id === prior.tabId)
+        const approvedRestoredBatch = prior.action === 'browser_batch_actions' &&
+          params.reason === 'OPERATOR_RECONCILED' && params.evidence === 'OPERATOR_REVIEW' &&
+          params.requirePending === true && Boolean(params.expectedAdmission) &&
+          tab?.recoveryState === 'restored'
+        if (!task || (tab?.recoveryState !== 'live' && !approvedRestoredBatch) ||
+            (params.requireNoHumanLease && task.humanControlLease) ||
+            (params.expectedTaskRevision !== undefined &&
+              (task.revision ?? 0) !== params.expectedTaskRevision)) {
+          throw new Error('browser_navigation_task_state_changed')
+        }
+      }
+
+      if (params.requirePending && (prior.terminal || prior.acknowledged === true)) {
+        throw new Error('browser_reconciliation_already_finalized')
+      }
+
       if (prior.terminal) {
         return { operationId: params.operationId, reconciled: true }
       }
@@ -765,21 +1059,24 @@ export class BrowserSessionStateFilePersistence {
       }
 
       try {
-        this.save({
-          ...current,
-          savedAt: this.now().toISOString(),
-          operationAdmissions: {
-            ...(current.operationAdmissions ?? {}),
-            [params.operationId]: { ...prior, terminal }
-          }
-        })
-
-        const syncIO = this.io as typeof fs
-        if (syncIO.openSync && syncIO.fsyncSync && syncIO.closeSync) {
-          const fd = syncIO.openSync(this.filePath, 'r+')
-          try { syncIO.fsyncSync(fd) } finally { syncIO.closeSync(fd) }
+        // Durably flush temp before renaming an irreversible terminal into place.
+        this.durableBatchWrite = true
+        try {
+          this.save({
+            ...current,
+            savedAt: this.now().toISOString(),
+            operationAdmissions: {
+              ...(current.operationAdmissions ?? {}),
+              [params.operationId]: { ...prior, terminal }
+            }
+          })
+        } finally {
+          this.durableBatchWrite = false
         }
 
+        // The temporary payload was flushed by durableBatchWrite *before*
+        // atomic publication. A second fsync after rename can throw even
+        // though the terminal is already published, creating false failure.
         return { operationId: params.operationId, reconciled: true }
       } catch (error) {
         this.admissionPersistenceFailed = true
@@ -796,7 +1093,7 @@ export class BrowserSessionStateFilePersistence {
     const snapshot = this.load()
     const admissions = Object.values(snapshot?.operationAdmissions ?? {})
     return admissions.filter(a => {
-      if (taskId && a.taskId !== taskId) return false
+      if (taskId && a.taskId !== taskId) {return false}
       return a.acknowledged !== true && !a.terminal
     })
   }
@@ -988,8 +1285,21 @@ export class BrowserSessionStateFilePersistence {
         key => existing[key as keyof BrowserMutationAdmission] !== identity[key as keyof BrowserMutationAdmission]
       )) {throw new Error('operation_identity_collision')}
 
+      // Stale Browser projections must not erase immutable verified-step audit refs.
+      if (existing?.batchStepReceiptRefs && identity.batchStepReceiptRefs &&
+          JSON.stringify(existing.batchStepReceiptRefs) !== JSON.stringify(identity.batchStepReceiptRefs)) {
+        throw new Error('batch_child_receipt_history_collision')
+      }
+
+      if (existing?.terminal && identity.terminal &&
+          JSON.stringify(existing.terminal) !== JSON.stringify(identity.terminal)) {
+        throw new Error('immutable_admission_terminal_collision')
+      }
       mergedAdmissions[id] = {
         ...identity,
+        ...(existing?.terminal ? { terminal: existing.terminal } : {}),
+        ...(existing?.batchStepReceiptRefs ? { batchStepReceiptRefs: [...existing.batchStepReceiptRefs] } : {}),
+        ...(existing?.uncertainty ? { uncertainty: existing.uncertainty } : {}),
         acknowledged: existing?.acknowledged === true || identity.acknowledged === true || undefined
       }
     }
@@ -1035,6 +1345,8 @@ export class BrowserSessionStateFilePersistence {
 
     try {
       this.io.writeFileSync(temp, JSON.stringify(normalized, null, 2), { encoding: 'utf-8', mode: 0o600 })
+      // Never expose the ACK through the canonical filename before its bytes are durable.
+      if (this.durableBatchWrite) {this.flushAdmissionFile(temp)}
 
       try {
         this.io.renameSync(temp, this.filePath)

@@ -1,0 +1,3 @@
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {parse} from 'yaml';
+const homes=[process.env.HERMES_HOME,process.env.LOCALAPPDATA&&path.join(process.env.LOCALAPPDATA,'hermes'),path.join(os.homedir(),'.hermes')].filter(Boolean);
+for(const home of [...new Set(homes)]){const file=path.join(home,'config.yaml');if(!fs.existsSync(file))continue;const obj=parse(fs.readFileSync(file,'utf8'));const grants=obj?.browser?.workstation?.upload_grants||[];console.log(JSON.stringify({home,exists:true,grant_count:grants.length,grants:grants.map(x=>({expired:Date.parse(x.expires_at)<Date.now(),isFullTask:!!x.task_id,isFullRun:!!x.run_id,isFullSession:!!x.session_id,roots:x.allowed_roots?.length||0,origins:x.allowed_origins||[]}))}))}

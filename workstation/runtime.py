@@ -674,6 +674,7 @@ class HumanHandoffManager:
         session_id: str,
         reason: str,
         scope: dict[str, str],
+        coalesce_waiting_run: bool = False,
     ) -> HumanHandoff:
         if not reason.strip() or not task_id.strip() or not session_id.strip():
             raise ValueError("task, session and reason are required for handoff")
@@ -683,6 +684,16 @@ class HumanHandoffManager:
                 if (existing.task_id == task_id and existing.session_id == session_id
                         and existing.reason == reason and existing.scope == scope):
                     return existing
+            # A pending review blocks other attempted operations in this
+            # TaskRun; do not mint more handoffs until it is resolved.
+            # Never inherit a ready/consumed review or cross a run boundary.
+            if coalesce_waiting_run:
+                for existing in self._handoffs.values():
+                    if (existing.task_id == task_id and existing.session_id == session_id
+                            and existing.reason == reason
+                            and existing.status == "waiting-for-human"
+                            and existing.scope.get("run_id") == scope.get("run_id")):
+                        return existing
             handoff = HumanHandoff(
                 handoff_id=f"handoff-{uuid4().hex}",
                 task_id=task_id,

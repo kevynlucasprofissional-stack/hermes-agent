@@ -1,3 +1,4 @@
+import type { PageWatchUiState } from "../../../electron/workstation-browser-page-watch-service"
 export type WorkstationBrowserControlOwner = 'agent' | 'human'
 
 export interface WorkstationBrowserBounds {
@@ -120,7 +121,38 @@ export interface WorkstationEventSnapshot {
   events: WorkstationEvent[]
 }
 
+export interface VerifiedNavigationReview {
+  operationId: string
+  taskId: string
+  sessionId: string
+  runId: string
+  tabId: string
+  safeUrl: string
+  webContentsId: number
+  taskRevision: number
+}
+
+export interface UncertainBatchReview {
+  operationId: string
+  taskId: string
+  sessionId: string
+  runId: string
+  tabId: string
+  reason: string
+  completedSteps: number
+  verifiedSteps: number
+  webContentsId: number
+  taskRevision: number
+}
+
 export interface WorkstationBrowserBridge {
+  listUncertainBatchReviews?: () => Promise<UncertainBatchReview[]>
+  confirmUncertainBatch?: (operationId: string) => Promise<{status: 'cancelled' | 'reconciled'; operation_id: string}>
+  listVerifiedNavigationReviews?:  () => Promise<VerifiedNavigationReview[]>
+  confirmVerifiedNavigation?: (operationId: string) => Promise<{status: 'cancelled' | 'reconciled'; operation_id: string}>
+  pageWatchStatus?: (tabId: string) => Promise<PageWatchUiState>
+  pageWatchEnable?: (tabId: string, selector: string) => Promise<PageWatchUiState>
+  pageWatchPause?: (tabId: string) => Promise<PageWatchUiState>
   status: () => Promise<WorkstationBrowserState>
   ensure: () => Promise<WorkstationBrowserState>
   resources: () => Promise<WorkstationResourceSnapshot>

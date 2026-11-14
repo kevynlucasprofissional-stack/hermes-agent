@@ -88,6 +88,24 @@ def test_blocked_previous_task_does_not_regain_authority_or_duplicate():
         assert conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0] == 1
 
 
+def test_browser_navigation_claims_existing_triaged_task_before_native_owner():
+    from workstation.batch_detection import prepare_mutation
+
+    a = agent("qa-browser-navigation-canonical")
+    request = "Primeiro abra a pagina QA, depois digite um titulo, salve e confira o resultado"
+    prepare_turn_work(a, request, human(a.session_id, request))
+    task_id = a._canonical_work_task_id
+    assert a._canonical_work_run_id is None
+    prepare_mutation(a, "browser_navigate", {"url": "http://127.0.0.1:12345/"})
+    with WorkstationKanbanBridge().get_connection() as conn:
+        task = kanban_db.get_task(conn, task_id)
+        assert task.status == "running"
+        assert str(task.current_run_id) == str(a._canonical_work_run_id)
+        assert conn.execute(
+            "SELECT COUNT(*) FROM task_runs WHERE task_id=?", (task_id,),
+        ).fetchone()[0] == 1
+
+
 def test_first_real_mutation_claims_triaged_run_only_once():
     from workstation.batch_detection import prepare_mutation
     a = agent()

@@ -753,17 +753,49 @@ def _dispatch_authorized_once(
     elif ref.name == "skill_manage":
         agent._iters_since_skill = 0
 
-    from agent.terminal_approval_batch import prepare_current_terminal
-    prepare_current_terminal(ref)
-    from agent.pre_dispatch import dispatch_pre_authorized_checkpoint
-    dispatch_pre_authorized_checkpoint(
-        ref.name,
-        ref.args,
-        ref.call_id,
-        {"agent": agent, "task_id": ref.task_id},
-    )
-    _advance_start_order(lambda: _begin_tool_execution(agent, ref, display_index))
-    return _run_with_activity_heartbeat(agent, ref.name, lambda: execute(ref.args))
+    # Point WhatsApp calls receive a real Kanban TaskRun, claimed only after
+    # tool policy/guardrails have admitted this exact single dispatch. Batch
+    # work_execute keeps its existing scope; unrelated tools remain untouched.
+    from contextlib import nullcontext
+    point_scope = nullcontext()
+    if ref.name == "whatsapp_send_message":
+        from workstation.integrations.hermes.whatsapp_point_admission import (
+            admitted_whatsapp_point_send,
+        )
+        point_scope = admitted_whatsapp_point_send(agent, ref.args, ref.call_id)
+    elif ref.name == "whatsapp_send_batch":
+        from workstation.integrations.hermes.whatsapp_point_admission import (
+            admitted_whatsapp_batch_send,
+        )
+        point_scope = admitted_whatsapp_batch_send(agent, ref.args, ref.call_id)
+    elif ref.name == "whatsapp_campaign_execute":
+        from workstation.integrations.hermes.whatsapp_point_admission import (
+            admitted_whatsapp_campaign_send,
+        )
+        point_scope = admitted_whatsapp_campaign_send(agent, ref.args, ref.call_id)
+    try:
+        point_scope.__enter__()
+    except (PermissionError, ValueError):
+        _advance_start_order()
+        # Admission has not crossed native Browser I/O. A standardized
+        # pre-dispatch refusal cannot contaminate the uncertain-send ledger.
+        return json.dumps({"sent": False, "state": "REVIEW_REQUIRED",
+                           "error_code": "TASKRUN_AUTHORITY_REQUIRED",
+                           "failure_phase": "VERIFY_TASKRUN"})
+    try:
+        from agent.terminal_approval_batch import prepare_current_terminal
+        prepare_current_terminal(ref)
+        from agent.pre_dispatch import dispatch_pre_authorized_checkpoint
+        dispatch_pre_authorized_checkpoint(
+            ref.name,
+            ref.args,
+            ref.call_id,
+            {"agent": agent, "task_id": ref.task_id},
+        )
+        _advance_start_order(lambda: _begin_tool_execution(agent, ref, display_index))
+        return _run_with_activity_heartbeat(agent, ref.name, lambda: execute(ref.args))
+    finally:
+        point_scope.__exit__(None, None, None)
 
 
 def _run_agent_tool_execution_middleware(
@@ -1716,10 +1748,19 @@ def _resolve_sequential_dispatch(agent, ref: _ToolCallRef, messages: list) -> _S
         import model_tools
 
         with model_tools.suppress_post_tool_call_hook():
+            # BrowserTask must be owned by the canonical running TaskRun, not
+            # the per-turn chat ID. The pre-dispatch hook claims this run before
+            # the registry handler executes.
+            browser_task_id = effective_task_id
+            if function_name.startswith("browser_") and getattr(
+                agent, "_canonical_work_run_id", None
+            ) is not None:
+                browser_task_id = (getattr(agent, "_canonical_work_task_id", None)
+                                   or effective_task_id)
             return model_tools.handle_function_call(
                 function_name,
                 next_args,
-                effective_task_id,
+                browser_task_id,
                 tool_call_id=tool_call_id,
                 session_id=agent.session_id or "",
                 turn_id=getattr(agent, "_current_turn_id", "") or "",

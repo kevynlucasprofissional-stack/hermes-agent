@@ -26,6 +26,18 @@ def _handler(args, **_kwargs):
             payload = {"status": "ok", "targets": [{"id": d.key, "title": d.title, "url": d.url}
                                                     for d in DESTINATIONS],
                        "trello_actions": ["board_lists", "board_cards", "card", "prepare_description"]}
+        elif action == "whatsapp_campaign_plan":
+            # Read-only, profile-scoped plan over *all* steps; never an approval.
+            if not _kwargs.get("session_id") or not _kwargs.get("tool_call_id") or set(args) - {
+                "action", "source", "campaign_slug",
+            }:
+                raise ValueError("SESSION_CONTEXT_REQUIRED")
+            from tools.whatsapp_catalog_adapter import _read_only_source
+            from workstation.prefabs.whatsapp_campaign import plan_campaign
+            source = _read_only_source(args.get("source"))
+            if source is None:
+                raise ValueError("UNAUTHORIZED_RECIPIENT_SOURCE")
+            payload = plan_campaign(source, args.get("campaign_slug"))
         elif action in {"board_lists", "board_cards", "card", "prepare_description"}:
             client = TrelloClient()
             if action == "board_lists":
@@ -49,20 +61,24 @@ def _handler(args, **_kwargs):
 registry.register(
     name="prefab_execute", toolset="desktop_ui", handler=_handler, check_fn=_available,
     schema={"name": "prefab_execute",
-            "description": ("Read-only precompiled Hermes Workstation operations. No reasoning loops, "
+            "description": ("Read-only precompiled Hermes Workstation operations, including WhatsApp "
+                            "multi-step campaign evidence audit. No sends, approvals, reasoning loops, "
                             "script execution, browser console, or external mutations. "
                             "action=catalog lists targets. Trello actions use supported official REST API, "
                             "requiring TRELLO_API_KEY and TRELLO_TOKEN configured in the Hermes runtime. "
                             "prepare_description returns a hash-only proposed update, not a write."),
             "parameters": {"type": "object", "properties": {
-                "action": {"type": "string", "enum": ["catalog", "board_lists", "board_cards", "card", "prepare_description"]},
+                "action": {"type": "string", "enum": ["catalog", "board_lists", "board_cards", "card", "prepare_description", "whatsapp_campaign_plan"]},
                 "board": {"type": "string", "description": "editorial, scrum, or Trello board ID"},
+                "source": {"type": "string", "description": "Configured, allowlisted WhatsApp source alias; no DB path."},
+                "campaign_slug": {"type": "string", "description": "Existing campaign slug; all steps audited read-only."},
                 "card_id": {"type": "string"},
                 "search": {"type": "string"},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 100},
                 "description": {"type": "string", "description": "Desired text (hash comparison only, no write)"}},
                 "required": ["action"], "additionalProperties": False},
-            "when_to_use": ("Workstation read-only operations for known Trello boards. "
+            "when_to_use": ("Workstation read-only operations for known Trello boards or native "
+                           "WhatsApp campaign planning without loading a skill. "
                            "Use for listing boards, cards, reading card details, preparing description diffs. "
                            "No mutations - all operations use official Trello REST API."),
             "do_not_use": ("Mutations (create card, update description, move card), "

@@ -4,52 +4,33 @@
 
 This downstream fork contains a first-class Hermes Workstation product layer. If a task touches `workstation/`, the Desktop Workstation Browser, `browser_*` Workstation routing, or another Workstation-owned integration point, **read `workstation/context/README.md` and follow its required reading order before editing code**. The root rules in this file remain authoritative; the Workstation context adds current downstream state, settled decisions, constraints, tests, known issues, and the maintained upstream delta. Always verify those documents against current `main` implementation and tests rather than relying on old plans or conversation state.
 
-### PRIMARY DOWNSTREAM RULE — Upstream-first change gate
+### Stage A / H-079 — optional upstream synchronization
 
-Before **any downstream runtime implementation, bug fix, refactor, behavioral adjustment or
-new feature**, do not start coding from whatever `main` happens to contain.
+The H-079 Stage A baseline workflow is **opt-in**. It is useful for planned upstream
+merges, seam reconciliation and baseline qualification, but it is **not a prerequisite**
+for a downstream implementation, bug fix, refactor, behavioral adjustment or test.
 
-Read and execute
-`workstation/context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md` first.
+Before ordinary implementation:
+- Read the relevant Workstation context and inspect the existing code and changed files.
+- Consult the latest *recorded* sync status in [workstation/UPSTREAM.md](../UPSTREAM.md)
+  and [workstation/UPSTREAM_DELTA.md](../UPSTREAM_DELTA.md) when upstream context
+  could matter. These reports are dated evidence, not live alignment guarantees.
+- Continue the target work whether Stage A is incomplete, upstream is behind,
+  or historical baseline CI is red. Record uncertainty; do not invent qualification.
+- Preserve work in progress, permissions, authority/security boundaries, and
+  regression/acceptance verification appropriate to the actual code change.
 
-Mandatory sequence:
+No upstream fetch, exact SHA pin, true-history merge, upstream drift report, or special
+maintainer waiver is required **just to implement**. If an upstream change directly
+conflicts with the target implementation, resolve that concrete dependency rather
+than imposing a global sync gate.
 
-```text
-refresh upstream
--> select/pin one exact upstream SHA
--> establish a qualified upstream-aligned baseline
--> reconcile/reclassify affected Workstation seams
--> only then implement the target downstream change
--> final upstream drift snapshot before promotion
-```
-
-The synchronization/baseline work and the target implementation must remain independently
-inspectable. Do not hide a feature inside an upstream merge and do not defer upstream drift
-until after the feature is built.
-
-### One-pin promotion closure
-
-Each downstream promotion cycle adopts **one immutable upstream SHA**. Once Stage A has
-merged and qualified that pin, do not start a second upstream merge merely because
-`upstream/main` advanced while the PR was being prepared. The final fetch is an observation:
-record the new tip, compare it with the fixed pin, classify it for the next cycle, and keep
-the candidate reproducible. It does not change the candidate's ancestry or restart
-qualification. Merge the approved PR, then fast-forward local `main` from `origin/main`.
-
-The only exception is a separately documented release hold for a confirmed defect in
-the candidate or a required GitHub check failure. A moving upstream tip alone is never a
-reason to consume the current promotion cycle with another sync.
-
-A coding agent may skip the physical upstream merge only when the pre-change gate proves
-that the selected upstream pin is already contained in the qualified baseline and no newer
-relevant upstream delta needs adoption. If upstream moved, classify the delta before
-editing target code.
-
-If required exact-head baseline CI is red, ordinary feature work is blocked until the
-baseline failure is closed or an explicit documented exception exists.
-
-This rule has priority over convenience, historical patch locations and local feature
-urgency.
+When the maintainer **elects** to synchronize upstream, use the archived H-079
+[procedure](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md) for its pin/merge/seam
+discipline and keep sync work separately reviewable. Never describe an unqualified
+candidate as an upstream-qualified baseline. Release/promotion CI requirements
+remain governed by the deliverable's own risk and explicit release contract;
+they are not universal pre-coding gates.
 
 ### Workstation upstream-sync / first-party seam rule
 

@@ -7,6 +7,20 @@ from tools.effects import WRITE_EFFECTS, tool_effect, unwrap_call
 from agent.tool_guardrails import classify_tool_failure
 
 
+# Browser's generic registry marks navigation and interaction INTERACTIVE.
+# Some interactions can persist external effects; at the Workstation safety
+# boundary, lost acknowledgements for these MUST enter the mutation ledger.
+# Navigation/scroll/back remain their existing generic effect classes.
+_POTENTIALLY_MUTATING_BROWSER = frozenset({
+    "browser_click", "browser_type", "browser_press",
+    "browser_batch_actions", "browser_file_upload",
+})
+
+
+def is_workstation_mutation(name, args=None):
+    return name in _POTENTIALLY_MUTATING_BROWSER or tool_effect(name, args=args) in WRITE_EFFECTS
+
+
 def mutation_identity(name, args, *, task_id=None, run_id=None):
     """Bounded identity from owner metadata; unknown effects never claim persistence."""
     from tools.effects import tool_contract
@@ -73,7 +87,7 @@ def detects_fan_out(agent, calls):
     seen = set(getattr(agent, "_work_completed_mutations", {})) | set(getattr(agent, "_work_mutation_evidence", {}))
     for call in calls:
         name, args = unwrap_call(call)
-        if name == "work_execute" or tool_effect(name, args=args) not in WRITE_EFFECTS:
+        if name == "work_execute" or not is_workstation_mutation(name, args):
             continue
         key = call_key(name, args)
         if key in seen:
@@ -84,6 +98,35 @@ def detects_fan_out(agent, calls):
         if counts[signature] >= 3:
             return True
     return False
+
+
+def _whatsapp_pre_dispatch_refusal(name, raw):
+    """A known pre-send failure has no external effect and must not create a human handoff."""
+    if name != "whatsapp_send_message":
+        return False
+    try:
+        value = json.loads(raw) if isinstance(raw, str) else raw
+    except (ValueError, TypeError):
+        return False
+    if not isinstance(value, dict) or value.get("sent") is not False:
+        return False
+    if value.get("state") not in {"FAILED", "REVIEW_REQUIRED"}:
+        return False
+    phase = value.get("failure_phase")
+    if phase in {"PRE_SEND", "NAVIGATE", "RESOLVE_RECIPIENT", "VERIFY_TASKRUN",
+                 "VERIFY_SENDER", "RECHECK_RECIPIENT", "VERIFY_CHAT", "COMPOSE"}:
+        return True
+    # Compatibility with earlier releases that did not label pre-send failures.
+    return value.get("error_code") in {
+        "TASKRUN_AUTHORITY_REQUIRED",
+        "SESSION_CONTEXT_REQUIRED",
+        "INVALID_BROWSER_SCOPE",
+        "RECIPIENT_NAME_REQUIRED",
+        "RECIPIENT_NAME_MISMATCH",
+        "RECIPIENT_IDENTITY_CHANGED",
+        "SELF_CHAT_SENDER_UNVERIFIED",
+        "CAUSAL_RECEIPT_REQUIRED",
+    } and phase is None
 
 
 def record_mutation(agent, name, args, raw, *, dispatched=True, duration_ms=None):
@@ -101,9 +144,18 @@ def record_mutation(agent, name, args, raw, *, dispatched=True, duration_ms=None
     observe_capability(capabilities, name, args, raw)
     agent._work_capabilities = capabilities
     text = raw if isinstance(raw, str) else json.dumps(raw)
-    if tool_effect(name, args=args) not in WRITE_EFFECTS:
+    if not is_workstation_mutation(name, args):
         return
+    refused_no_effect = _whatsapp_pre_dispatch_refusal(name, raw)
     failed = classify_tool_failure(name, text)[0]
+    # A causal send receipt may be a structured status, not a generic tool error.
+    if name == "whatsapp_send_message":
+        try:
+            parsed = json.loads(text)
+        except (ValueError, TypeError):
+            parsed = None
+        if isinstance(parsed, dict) and parsed.get("state") == "UNCERTAIN":
+            failed = True
     # Raw result belongs to the existing ArtifactStore, never to replan text.
     from workstation.artifacts import ArtifactStore
     from workstation.reference_plane import content_reference, blob_references
@@ -113,6 +165,10 @@ def record_mutation(agent, name, args, raw, *, dispatched=True, duration_ms=None
     completed = getattr(agent, "_work_completed_mutations", {})
     key = call_key(name, args)
     evidence = getattr(agent, "_work_mutation_evidence", {})
+    # Preserve the first uncertain effect and its actual evidence reference.
+    # A later refused attempt cannot re-label a previously ambiguous click.
+    if evidence.get(key, {}).get("status") == "uncertain":
+        return
     from workstation.execution_policy import semantic_operation_fingerprint
     signature = structural_signature(name, args)
     sem_fp = semantic_operation_fingerprint(name, args)
@@ -128,14 +184,18 @@ def record_mutation(agent, name, args, raw, *, dispatched=True, duration_ms=None
     record = mutation_identity(name, args, task_id=getattr(agent, "_canonical_work_task_id", None),
                                run_id=getattr(agent, "_canonical_work_run_id", None))
     record.update({"evidence_ref": ref, "verifier_status": "not_verified",
-                   "persisted": None, "status": "uncertain" if failed else "executed_unverified",
+                   "persisted": None, "status": (
+                       "uncertain" if evidence.get(key, {}).get("status") == "uncertain"
+                       else "refused_no_effect" if refused_no_effect
+                       else "uncertain" if failed else "executed_unverified"
+                   ),
                    "operation_fingerprint": op_fp,
                    "semantic_fingerprint": sem_fp,
                    "structural_signature": signature})
     evidence[key] = record
     agent._work_mutation_evidence = evidence
     store.store(owner, "mutation_" + key + ".json", record)
-    if failed:
+    if failed or refused_no_effect or record["status"] == "uncertain":
         return
     if key not in completed:
         completed[key] = ref
@@ -153,8 +213,13 @@ def prepare_mutation(agent, name, args):
         return
     if name == 'tool_call':
         name, args = args.get('name', ''), args.get('arguments', {})
-    if tool_effect(name, args=args) not in WRITE_EFFECTS:
-        return
+    if not is_workstation_mutation(name, args):
+        # A delegated Browser task must claim its run before navigating:
+        # otherwise the page opens under the chat ID and the following type
+        # starts a different BrowserTask on about:blank.
+        if not (name == "browser_navigate"
+                and getattr(agent, "_canonical_work_task_id", None)):
+            return
     # Middleware may have rewritten arguments after the model's admission check.
     # Recheck the final operation before persisting or crossing mutable I/O.
     from types import SimpleNamespace

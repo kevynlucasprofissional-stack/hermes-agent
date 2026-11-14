@@ -3,7 +3,7 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-with open('workstation/dogfood/dados/Sessões Hermes/enviar-convites-de-oficina-via-wa.me-20261023.json', 'r', encoding='utf-8', errors='ignore') as f:
+with open('workstation/dogfood/dados/Sessões Hermes/01-WhatsApp-e-Campanhas/enviar-convites-de-oficina-via-wa.me-20261023.json', 'r', encoding='utf-8', errors='ignore') as f:
     d = json.load(f)
 
 msgs = d if isinstance(d, list) else d.get('messages', [])

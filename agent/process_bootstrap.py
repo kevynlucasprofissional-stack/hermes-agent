@@ -107,6 +107,18 @@ def enable_happy_eyeballs_on_client(client) -> None:
         _enable_happy_eyeballs(transport, proxy_pool_types)
 
 
+def prewarm_openai_sdk() -> None:
+    """Complete the SDK's circular imports before agent/background threads start.
+
+    Python 3.14 can raise _DeadlockError on parallel cold imports of
+    openai.types.chat; warming this dependency on the startup thread avoids
+    having separate importer module locks acquired in opposite orders.
+    """
+    _load_openai_cls()
+    from openai.types.chat import ChatCompletion
+    from openai.resources.chat.completions import Completions
+
+
 def _load_openai_cls() -> type:
     """Import and cache ``openai.OpenAI``."""
     global _OPENAI_CLS_CACHE

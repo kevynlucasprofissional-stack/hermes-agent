@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from workstation.vault import VaultManager, configure_vault_dir, get_default_vault_manager
+from .source_edit import VaultEditConflict, read_note_source, update_note_source
 
 _log = logging.getLogger(__name__)
 
@@ -33,6 +34,12 @@ class WriteNoteRequest(BaseModel):
     tags: Optional[List[str]] = Field(default=None, description="Tags list")
     frontmatter: Optional[Dict[str, Any]] = Field(default=None, description="Frontmatter metadata")
     subfolder: Optional[str] = Field(default=None, description="Subfolder within vault")
+    create_only: bool = Field(default=False, description="Reject creation when title or target path already exists")
+
+
+class UpdateNoteSourceRequest(BaseModel):
+    content: str
+    expected_revision: str
 
 
 class AppendNoteRequest(BaseModel):
@@ -80,7 +87,19 @@ def get_note(title: str):
     note = mgr.get_note(title)
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Note '{title}' not found")
-    return {"note": note}
+    return {"note": read_note_source(mgr, note)}
+
+
+@router.put("/notes/{rel_path:path}")
+def update_note_source_route(rel_path: str, payload: UpdateNoteSourceRequest):
+    """Edit the exact file; reject stale changes instead of overwriting them."""
+    mgr = _get_vault()
+    try:
+        return {"status": "ok", "note": update_note_source(mgr, rel_path, payload.content, payload.expected_revision)}
+    except VaultEditConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (ValueError, OSError, UnicodeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/notes")
@@ -88,14 +107,21 @@ def create_or_update_note(payload: WriteNoteRequest):
     """Create or overwrite a Markdown note."""
     mgr = _get_vault()
     try:
-        note = mgr.write_note(
-            title=payload.title,
-            content=payload.content,
-            tags=payload.tags,
-            frontmatter=payload.frontmatter,
-            subfolder=payload.subfolder,
-        )
-        return {"status": "ok", "note": note}
+        with mgr._lock:
+            if payload.create_only:
+                target = mgr._safe_note_path(payload.title, payload.subfolder)
+                if target.exists() or target.is_symlink() or mgr.index.resolve_title(payload.title):
+                    raise HTTPException(status_code=409, detail="A note with this title already exists")
+            note = mgr.write_note(
+                title=payload.title,
+                content=payload.content,
+                tags=payload.tags,
+                frontmatter=payload.frontmatter,
+                subfolder=payload.subfolder,
+            )
+            return {"status": "ok", "note": read_note_source(mgr, note)}
+    except HTTPException:
+        raise
     except Exception as e:
         _log.exception("Failed to write note")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

@@ -1,5 +1,106 @@
 # Workstation roadmap
 
+## WA-OPC-011 — 12/11/2026: modo individual autônomo, pré-flight real PASS
+
+O cartão obrigatório de aprovação humana foi removido do fluxo registrado de envio individual, sem liberar lotes/campanhas. O comando do usuário em TaskRun canônica delega a operação; o schema do modelo exige recipient_ref + expected_recipient_name literal + message e impede seleção por nome aproximado. Proteções mantidas: referência confiável, rechecagem de contato, self-chat/autoria, browser owner, destino no painel, intenção durável, clique único, recibo causal OBSERVED sem replay. O módulo/testes de aprovação humana foram retirados do caminho; approval_fingerprint legado não é preenchido por delegação. Diagnóstico de falha agora fornece failure_phase e error_code sem PII. Pré-flight real na BrowserTask 20261112_142759_01539d: PASS em 197 ms, 3 inspeções, 5 amostras de autoria, zero envios, control DB 0 logs. Regressão fresca: 240 PASS / 0 FAIL em 19 arquivos. Não houve teste de envio novo após esta alteração; o usuário deverá recarregar o Hermes manualmente quando for testar o agente. Roteiro: context/WA_OPC011_HERMES_REAL_TEST_20261112.md.
+
+
+
+## 2026-11-12 — Plano Kanban canônico × Browser nativo (PREPARADO; implementação genérica PENDENTE)
+
+[Plano técnico e prompts P1–P5](context/BROWSER_KANBAN_GENERIC_VERIFICATION_PLAN_20261112.md). O Kanban executável continua em `hermes_cli/kanban_db.py`, com aceitação via `workstation/kanban.py`; o Kanban visual de `plugins/workstation-board` permanece independente. Prioridade P1 contrato/readback por operação, P2 integração e E2E de gravação no Chromium nativo, P3 reconciliação somente leitura sem repetir mutação, P4 vínculo Kanban Hermes↔Trello e título bilateral, P5 demais campos sob gate. Fixture QA local `workstation/tests/fixtures/browser_kanban_qa_fixture.py` e teste HTTP/SQLite preparados: **1 PASS**, sem Browser E2E ainda. Recibos específicos de arquivo/Trello/WhatsApp preexistentes são preservados; ação ACK/DOM não certifica persistência externa. Checkout compartilhado e trabalho anterior preservados; nenhuma alteração em provedores externos por este planejamento.
+
+## WA-OPC-011 — 12/11/2026: ensaio individual preparado, execução externa pendente
+
+Emissor host de aprovação humana baseado na fila autenticada do Hermes; só decisão once, vinculada a TaskRun, operation_id, destinatário e digest do texto. O wrapper reconfirma autoria do auto-chat e identidade do destinatário antes do envio. A impressão digital da concessão é persistida no banco separado antes da navegação. Browser nativo compõe texto sem colocá-lo na URL e correlaciona ID novo, autoria, texto exato e ACK em estado OBSERVED (DOM, não servidor). Ferramentas e skill disponíveis na projeção Desktop; fonte ACIRV read-only. Testes atuais: 218 PASS / 0 FAIL em 18 arquivos. Não houve envio novo. Ensaio do usuário: context/WA_OPC011_HERMES_REAL_TEST_20261112.md. Campanhas permanecem HOLD.
+
+
+
+## WA-OPC-011 ? 12/11/2026: tool de contatos + caminho DOM integrados; aprova??o host ? gate
+
+Criados whatsapp_find_contacts read-only, fonte acirv_contacts autorizada em configura??o local, skill whatsapp-native-operator e verificador operacional OBSERVED (nunca server CONFIRMED). O executor individual j? tem um caminho nativo por BrowserTask/TaskRun; pr?-flight de destinat?rio, baseline e p?s-clique de ID/autor/status s?o testados sinteticamente. Entretanto, o adaptador sempre passa approved_operation_verified=false / expected_author ausente e o executor retorna REVIEW_REQUIRED antes de qualquer envio. Essa trava ? INTENCIONAL: ainda n?o h? emissor confi?vel host de aprova??o por destinat?rio + conte?do + opera??o. Regredir para o executor legado ou inferir autoriza??o do TaskRun ? proibido. Regress?o: 206 PASS/0 FAIL em 16 arquivos. Fonte ACIRV lida somente; nenhum envio a terceiro. Pr?xima prioridade: emissor de aprova??o e teste real de envio individual autorizado. Campanhas/OBSERVED checkpoint ap?s o envio individual. [Contexto](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+## WA-OPC-011 — 12/11/2026: recibo causal DOM de self-chat confirmado; campanha permanece HOLD
+
+Pesquisa no upstream `NousResearch/hermes-agent`, GitHub e em `referências/02-Browser-Automacao-Web`: o executor `whatsapp_browser_executor.py` ainda espera atributos `data-chat-id`/`data-direction`/`data-ack` inexistentes no DOM real. O padrão de correção é **baseline de IDs + ID novo + marcador único + autoria + ACK descendente associado**, conforme implementação mínima pura `whatsapp_causal_receipt.py` e cinco testes. **Um envio único autorizado ao próprio número** pela BrowserTask nativa retornou `CAUSAL_DOM_RECEIPT_OBSERVED` com `ack=read`, `click_count=1`; sem retry, sem CDP externo nem store privada. **193 testes PASS/0 FAIL em 15 arquivos.** Recibo DOM ≠ ACK independente de servidor; `can_send=false` e campanhas continuam HOLD. Relatório: [WA_OPC011_CAUSAL_DOM_RECEIPT_RESEARCH_20261112.md](context/WA_OPC011_CAUSAL_DOM_RECEIPT_RESEARCH_20261112.md).
+
+
+
+## WA-OPC-011 — 12/11/2026: autoria histórica de texto homologada NO CHROMIUM; send HOLD
+
+Após o usuário reiniciar o Hermes, o AI Control foi verificado ativo. A função read-only `assess_historical_author_direction()` foi executada **contra duas fontes reais na mesma BrowserTask e execução nativa**: 5 mensagens do auto-chat, 8 mensagens históricas do autor da própria conta com indicador de entrega e 6 de outro autor sem indicador. Resultado **`HISTORICAL_AUTHOR_MATCH`**, `can_send=false`, `independently_verified=false`; duas outras conversas não possuíam amostras suficientes. Evidência agregada sem PII: `workstation/dogfood/artifacts/wa-opc011-canary-20261111/historical-author-live-confirmed-20261112.json` (ignorada pelo Git). Regressão desta etapa: **188 PASS / 0 FAIL** em 14 arquivos, execução real separada dos testes. Não foram alterados o executor, dados, credenciais ou permissões. **Gate seguinte:** conferir destinatário confiável no TaskRun contra conversa selecionada e, com aprovação humana individual, verificar novo ACK causal. Histórico não equivale a envio homologado. [Documento WA-OPC-011](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — 12/11/2026: 188 testes PASS; autoria histórica identificada, envio HOLD
+
+A execução anterior identificou o autor do auto-chat em **2** mensagens históricas com indicador de entrega, diferente do autor das **3** mensagens sem indicador em outra conversa. A função read-only `assess_historical_author_direction()` foi implementada e validada com testes RED→GREEN, sem liberar `can_send`. **Regressão fresca nesta execução:** 188 PASS / 0 FAIL em 14 arquivos, HEAD `f1d5ab2f030e940ed4571371b0de45a21a009c9e`, checkout compartilhado com 419 entradas preservadas. O **AI Control retornou `null` duas vezes**; a BrowserTask permanece listada, mas a validação E2E da nova função no Chromium **não foi executada nesta etapa**, conforme bloqueio de autoridade. Próximo gate: revalidar a comparação ao vivo sob ponte autenticada ativa e depois comprovar destino confiável e recibo causal de novo envio sob aprovação específica. Nenhuma modificação do executor, banco, commit, push ou restart. [Contrato](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — 12/11/2026: duas coortes históricas de autoria; prova de direção HOLD
+
+Usuário autorizou leitura histórica. No BrowserTask nativo `20261112_013246_3572a5`, uma conversa diferente do auto-chat apresentou 13 mensagens: 3 com indicador `delivered`, 10 sem indicador. Em cinco mensagens com `data-pre-plain-text` houve um autor por coorte, autores diferentes; **identidade do autor da própria conta ainda não demonstrada**, logo direção outbound não está atestada. AI Control passou a retornar `null` após uma chamada expirada; interações foram interrompidas, sem fallback/restart. Novo artefato agregado (gitignored): `workstation/dogfood/artifacts/wa-opc011-canary-20261111/historical-author-cohorts-20261112.json`. Código do executor intocado; 184 testes PASS/0 FAIL em 14 arquivos. **Próximo gate:** preflight autenticado `aiControl=true`, identificar autor da própria conta a partir do auto-chat/perfil previamente autorizado e comparar com a coorte histórica; sem novo envio. [Contexto](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — 12/11/2026: contacto UI confirmed, message direction still HOLD
+
+`whatsapp_native_schema_probe.py` now compares the full phone shown in the contact-info drawer with the composer destination, without exposing it, when both surfaces are open. Native canary: **one phone on each surface, exact agreement**, 9 message IDs + 9 read-status nodes; output `HOLD/RECIPIENT_DIRECTION_UNVERIFIED`, never `can_send`. Tests: 184 PASS / 0 FAIL (14 focused files, two new RED→GREEN cases). Next gate: distinguish outgoing from incoming using preexisting authorized samples *without* sending; next compare UI phone to a trusted recipient reference, not just the UI against itself. No executor or approval release. See [WA-OPC-011](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — 12/11/2026: IDs/status do DOM nativo verificados, envio HOLD
+
+Correção mínima implementada em `workstation/integrations/hermes/whatsapp_native_schema_probe.py`, com testes RED→GREEN, **182 PASS / 0 FAIL** na regressão de 14 arquivos. Verificação real no próprio self-chat `20261112_013246_3572a5`: **9 IDs ancestrais válidos, 9 indicadores associados, 9 rótulos "read"**; saída `HOLD/RECIPIENT_DIRECTION_UNVERIFIED` com `can_send=false` e zero envios comprovados. Resultado agregado gitignored em `workstation/dogfood/artifacts/wa-opc011-canary-20261111/result-20261112-readonly.json`. Não foram encontrados atributos de direção ou chat ID. Prioridade seguinte: **prova independente de direção + identidade do destino**; não construir/promoção do executor multietapa nem aprovar campanhas enquanto faltar o contrato causal. Detalhe: [WA-OPC-011](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — teste real preparado para o Hermes, fase de leitura (11/11/2026)
+
+Runbook `context/WA_OPC011_REAL_CANARY_TEST_20261111.md`; CLI `workstation/scripts/wa_opc011_canary_readonly.py`; teste `workstation/tests/test_wa_opc011_canary_cli.py`. 176 testes de regressão PASS; o CLI foi executado em BrowserTask real e retornou `HOLD/CANARY_CHAT_NOT_SELECTED`, sem enviar mensagens e sem afetar abas existentes. Diretório privado de resultados (gitignored) criado. **Próximo passo do usuário:** colar no Hermes o prompt para abrir exclusivamente auto-chat, extrair `sessionHost` real e executar CLI nativo read-only; registrar somente JSON agregado. **Envio multietapa/anexos e aprovação de lote continuam HOLD.** Não interpretar estrutura observada como prova de entrega.
+
+
+
+## WA-OPC-011 — nova sonda read-only, envio ainda HOLD (11/11/2026)
+
+`workstation/integrations/hermes/whatsapp_native_schema_probe.py` permite verificar, pelo BrowserTask nativo, a disponibilidade de atributos de identidade e ACK sem revelar dados nem produzir efeitos. Seus 6 testes novos RED→GREEN passaram; no WhatsApp real, porém, 4 leituras retornaram `CANARY_CHAT_NOT_SELECTED` (sem conversa aberta). A tarefa diagnóstica foi encerrada e a aba original preservada. **Próximo bloqueio:** inspeção de conversa-canário autorizada para confirmar DOM real e comprovante causal. Executor multietapa com imagem, aprovação, disparo em lote e testes com contatos reais continuam HOLD. Consulte `context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md`.
+
+
+## 2026-11-11 — WA-OPC-011 continuação: testes 166/166, gate nativo ainda HOLD
+
+A suíte antiga de lotes foi adaptada a **provas sintéticas causais**, passando de 7 falhas para 13/13 PASS; retomada com `sending/uncertain` agora retorna `RECONCILIATION_REQUIRED` antes de qualquer novo envio. Teste de isolamento de fonte de contatos corrigido sem encaminhar DB privado ao emissor. **12 arquivos de regressão, 166 PASS / 0 FAIL.** No BrowserTask nativo, WhatsApp Web abriu e snapshot bruto retornou 42 elementos; porém o inventário atual não projeta `elements[].attributes` nem mensagens não interativas. Inspeção isolada em tela inicial mostrou `data-testid`, mas nenhuma identidade/bolha/ACK com conversa fechada. A prova numa conversa-canário autorizada é o próximo bloqueio. **Não implementar/publicar executor multietapa+imagem nem emissor de aprovação com verificador não comprovado.** Sem envios, commit, PR ou restart; diagnóstico temporário limpo. Detalhes [WA-OPC-011](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+## 2026-11-11 — WA-OPC-011: skills de campanhas → capacidade nativa (P0/P1 parciais; E2E HOLD)
+
+[Fonte canônica e critérios](context/WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md). Reutilizados H-080 Progressive Operational Compilation e OPC-001 Prefabs, sem criar segundo Browser/SQLite. **Implementado em código:** planejamento nativo e somente leitura de campanhas multietapa em `prefab_execute(whatsapp_campaign_plan)`, auditoria do legado sem promover texto livre a prova, `step_code` explícito no espelhamento, `operation_id` estável, pausa em estados incertos, cooldown `next_allowed_at` persistido e correção do wrapper `persist`. As duas skills locais foram reduzidas e arquivadas; instalações futuras não dependem delas para o planejamento nativo. **Não implementado/sem homologação:** executor integral 4 etapas + foto/legenda, emissão confiável da autorização de lote, prova live do DOM WhatsApp, reinício e dois destinatários com intervalo real >=60s. A suíte antiga de batch tem mocks que não satisfazem a prova causal exigida; não reduzir o verificador para satisfazê-los. Próximo gate: ajustar contrato e fixture de causalidade, validar BrowserTask real em leitura e implementar aprovação/canário antes de qualquer envio em lote. Não há custo/tokens medidos nem mudança nos 160 registros históricos.
+
+
+## 2026-11-07 — Plano integrado Database / Trello / Cron
+
+Fonte única para a nova execução: [PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107](context/PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107.md). Ordem: (1) escrita local humana/agente homologada, (2) recuperação de cron diário atrasado, (3) Trello no Browser nativo, (4) sync bidirecional por campo, (5) job diário operacional. O intake abaixo permanece evidência histórica, não estado atualizado da implementação.
+
+## 2026-11-04 — intake ACIRV + VCOM / Hermes Work (BACKLOG, não implementado nesta revisão)
+
+**Fonte primária:** [Trello #944 — Hermes Work](https://trello.com/c/gZy747hA/944) com 2 itens incompletos; [#934 — bases para Database](https://trello.com/c/XeiqfGoN/934) aberto, duplicando o primeiro item do #944. Ambos na lista **Quarta**, sem vencimento, responsáveis, comentários, anexos ou evidência de aceite. **Contagem canônica: 2 entregas distintas; não 3.**
+
+1. **P1 — ACIRV → Database:** tornar uma base real e autorizada pesquisável/visualizável no painel existente `/browser?module=database`. Reusar o domínio Workstation Database/Kanban independente e persistência existente; preservar schema, proveniência, controle de acesso, originais e dados pessoais. Aceite MVP: consulta + visualização de uma fonte representativa, conferência de registros, persistência após recarga e ausência de duplicações. Detalhes: [documento Database](context/WORKSTATION_DASHBOARD_DATABASE_20261101.md).
+2. **P2 — Cron Jobs perdidos:** quando o Hermes voltar após o horário de um agendamento diário, executar o trabalho **na primeira oportunidade segura**, sem fazer dois disparos no mesmo dia local por job; tratar restart/queda e execução incerta com identidade persistida, sem repetir efeitos externos sem reconciliação. **Comportamento solicitado no Trello; defeito e solução técnica não reproduzidos/auditados.** Investigar o scheduler/event pipeline existente antes de propor código ou novo store. Aceite MVP: teste de agendamento perdido + reinício + não duplicação, depois uma prova real controlada.
+3. **P3 — Higiene do backlog:** consolidar ou vincular #934 com o checklist #944 e deixar critérios observáveis. Não alterar o Trello sem solicitação.
+
+**Dependências/adjacências (não são automaticamente escopo Hermes):** [#933 curadoria](https://trello.com/c/ln2RMJPt/933), [#821 Git/dados](https://trello.com/c/YEZuSElM/821), [#793 CRM](https://trello.com/c/CtCMnVJ8/793), [#883 ecossistema](https://trello.com/c/bCtUdJih/883), [#946 MCP Gemini/Cloudflare](https://trello.com/c/KPJFweX0/946), [#837 métricas](https://trello.com/c/YPctv2pW/837), [#838 dashboard](https://trello.com/c/z8b9ofAA/838). O #933 contém 6 subitens desmarcados no Trello; isso **não prova ausência dos arquivos reais**. #946 não está formalmente atribuído ao Hermes. Sem implementação, CI, teste nativo ou auditoria de código nesta atualização **somente documental**.
+
+
+## WhatsApp M3 (2026-10-25): local causal correction, HOLD
+M1/M2 retained. M3 now requires new outbound ID, verified recipient, matching body and ACK; pre-effect durable operation reservation, post-click UNCERTAIN, no replay. Synthetic RED 8 / GREEN 9/9. Existing regression suites, native DOM projection, CI/release remain unqualified. M4-M6 do not advance until M3 gates pass; preserve WIP batch, metrics and M6 attachment.
+
+
+## 2026-10-25 — WhatsApp WA-M1..M6 (M1/M2 implementadas e verificadas localmente; M3–M6 pendentes; NOT RELEASE)
+M1 adiciona referências a contato e campanha/matrícula usando fonte SQLite configurada por alias no perfil (`whatsapp.sources.<alias>.db_path` e `allowed_phone_sources`); resolução privada consulta a fonte em modo read-only, confere identidade/proveniência e não concede permissão de envio. A ferramenta pública recebe referência, não telefone nem caminho; respostas e persistência redigem telefone/corpo. M2 liga o handler WhatsApp à identidade TaskRun canônica do contexto Work confiável e passa `tool_call_id` como identidade de operação, sem aceitar IDs do modelo nem inferir execução atual por sessão. No Browser, recibos de mutações usam o mesmo `effectiveRunId` já usado por admissão/preflight quando o pedido omite `run_id`; isso evita recibo incompatível deixar a admissão pendente. Evidência: rodada combinada anterior teve 81 testes Python em quatro arquivos (M2 então 7/7); depois, a regressão de propagação de contexto foi adicionada e a suite M2 atual passou 8/8. Também passaram 1 teste de despacho `model_tools`, 42 testes nativos em quatro suites e Ruff focado sem findings. Nenhum envio real; CI de HEAD e qualificação de produto permanecem pendentes. M3: prova de mensagem outbound nova e persistência causal; M4: fila/aprovação/idempotência; M5: leitura incremental; M6: anexos/métricas. Base observacional de 23/10: 156 tool calls (101 console); não recriar state machine/detector existente. [Contrato](context/WHATSAPP_RELIABILITY_2026-10-24.md) · [6 prompts](context/WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md) · [patches referência](context/WHATSAPP_REFERENCE_PATCHES_2026-10-24.md). **HOLD:** sem envios reais; M1/M2 locais não qualificam M3–M6 nem release.
+
+
 ## 2026-10-24 — WhatsApp WA-M1..M6 (PLANEJADO; nenhuma qualificação desta entrada)
 P0: telefone íntegro apenas em executor trusted, redaction mantida; Browser TaskRun/reconciliação causal. P1: envio com prova específica + fila/aprovação/idempotência. P2: leitura incremental, anexos e testes E2E. Base real de 23/10: 156 tool calls (101 console); fonte original com 17 telefones completos, `read_file` mascarado. O main já contém state machine/detector de popup; **não recriar**. [Contrato](context/WHATSAPP_RELIABILITY_2026-10-24.md) · [6 prompts](context/WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md) · [patches referência](context/WHATSAPP_REFERENCE_PATCHES_2026-10-24.md). **HOLD:** sem envios reais sem autorização, gates upstream/coordenação e GREEN.
 
@@ -3426,3 +3527,39 @@ Added `creative_taskrun_attestation.py` using existing Kanban/CreativeRunContext
 ### HCW-P0A Electron selector registry (2026-10-12): new apps/desktop/el
 
 HCW-P0A Electron selector registry (2026-10-12): new apps/desktop/electron/creative-main-sender-scope.ts and .test.ts implement a MAIN-process-only in-memory sender object+mainFrame-verified registry with monotonic navigation epoch, explicit rehome/revoke, concurrent-session fencing, destruction check and defensive snapshots. TDD RED: missing module, Vitest exit 1. GREEN: 31/31 Electron focused tests across registry, existing attestation, canonical IPC, preload, exit 0. ESLint --max-warnings 0 exit 0 after targeted fixes. Global tsc still exit 1 ONLY known electron/git-review-ops.test.ts:124 TS2349. Registry deliberately NOT WIRED to main.ts: session/connection obtained from renderer messages/URL are selectors not authenticated authority. main.ts remains DENY-ALL. No P0A or H-C2 promotion. Backend HTTP readiness previously qualified 38/38 tests, no mutation grant.
+
+
+<!-- HERMES-WORK-PLAN-20261026:PLAN_ONLY -->
+
+## 2026-10-26 — Direção 80/20: eventos, upload Browser e execução verificável (PLANNED / NOT RELEASE)
+
+**Referência:** kit de implementação `PLANO_IMPLEMENTACAO.md` e `PROMPTS_IMPLEMENTADOR.md` (gerado fora do repositório). **Estado:** investigação de leitura e código de referência isolado; nenhum commit, merge, escrita direta no Hermes ou qualificação de release nesta etapa.
+
+### Sequência proposta, respeitando claims e gates
+
+1. **HW-IMP-01 (alta prioridade):** corrigir `browser_file_upload` existente. Atualmente CDP `DOM.setFileInputFiles` está no Browser Electron, mas a ação não aparece no `mutating` Set observado. Corrigir autorização/admission, `realpath`, escopo de arquivos, pós-condição/recibo, privacidade de caminhos e teste Electron real. Não disparar envios WhatsApp.
+2. **HW-IMP-02:** estender `TrelloClient` com leitura oficial de `/actions`, paginação real e journal idempotente, sem novo Kanban. Tabelas de eventos/checkpoints com migration na base canônica aprovada, fonte Trello permanece autoridade de cartões.
+3. **HW-IMP-03:** Bot narrativo diário fundado no journal Trello; primeiro entrega interna/dry-run, depois canais externos autorizados e qualificados.
+4. **HW-IMP-04:** adapter de eventos de negócio → `execute_job_for_event()` já existente, com outbox/idempotência e nenhuma atribuição automática de intenção a eventos genéricos.
+5. **HW-IMP-05:** qualificar ASR/TTS locais e seleção de modelo de Cron/Bots existente em um único pacote técnico. Não criar modelos/transcritores paralelos.
+6. **HW-IMP-06:** MVP de um monitor de página/elemento, configurável e observacional. O `MutationObserver` de cache/aprendizagem não é monitor durável. Respeitar browser lease, origem, logout e cleanup.
+7. **HW-IMP-07:** fechar WA-M3-01 com projeção nativa de evidência, sem envio real. M4–M6 continuam HOLD sem gate.
+8. **HW-IMP-08/09:** memória semântica por contato e demandas WhatsApp → triagem Kanban como duas entregas separadas, com privacidade, fonte e dedup.
+9. **HW-IMP-10:** replay supervisionado Modo Aprender com TaskRun/readback independente; CandidateLesson permanece inerte até sucesso comprovado.
+10. **HW-IMP-11/12 (opcionais):** benchmarks isolados Moli e EmbeddingGemma 2. Sem incorporação antecipada.
+
+### Gates
+
+- Todas as implementações: claim exclusivo de paths, preservação de WIP, testes RED/GREEN, regressão e journal com evidências reproduzíveis.
+- Browser: autoridade de sessão/TaskRun, operação idempotente, controle de mutação, Electron/Chromium real, sem falso sucesso.
+- WhatsApp: `WA-M3-01` mantém HOLD; `UNCERTAIN` não pode ser tratado como `FAILED` reutilizável.
+- Nenhum status `RELEASE_QUALIFIED` deriva de snippets ou testes em sandbox separado.
+
+<!-- HERMES-WORK-P01-20261027-MAINTAINER-WAIVER -->
+## 2026-10-27 — HW-IMP-01: LOCAL_IMPLEMENTED / RELEASE_HOLD
+O mantenedor autorizou explicitamente pular H-079 para desenvolvimento local, não release.
+Upload nativo CDP agora passa pelo gate mutating/guarded, escopo explícito de roots por TaskRun no config.yaml, readback local e receipt persistido. Testes focalizados GREEN, Electron CDP fixture offline PASS; regressão ampla contém 28 falhas em teste antigo com mock app.getAppPath ausente. Não promover até corrigir/verificar baseline e teste E2E do runtime real.
+
+
+## 2026-10-27 — Atualização de qualificação HW-IMP-01
+Local GREEN: 68/68 testes Vitest Electron (6 suites) e typecheck Desktop exit 0. Corrigido mock legado de app.getAppPath e webContents.ipc.on, que havia produzido 28 falhas na regressão anterior; não houve mudança de produto decorrente desses mocks. Grant de upload foi adicionalmente restrito por allowed_origins para impedir upload em domínio diferente. CDP real em fixture offline: um arquivo selecionado e um evento change; E2E da aplicação completa, CI/release permanecem pendentes. Contrato: workstation/context/BROWSER_NATIVE_FILE_UPLOAD_20261027.md.

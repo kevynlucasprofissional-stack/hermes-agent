@@ -1,5 +1,20 @@
 # Inteligência Centralizada — Hermes Workstation (Hermes Work)
 
+## 2026-11-11 — skill é fonte de aprendizagem, execução verificada é código
+
+A estratégia anterior H-080/OPC-001 já transforma procedimentos em capacidades nativas (registry, Prefab, TaskCompiler e owner-verifier). Na auditoria de WhatsApp, a sequência homogênea foi executada em centenas de microchamadas ao modelo, não compilada. O produto agora oferece planejamento nativo de campanhas `whatsapp_campaign_plan` sem SKILL.md e checkpoint de lote com cooldown persistido, ainda restrito a texto por item e sem aprovação de batch publicada. Skills locais foram reduzidas e arquivadas; conteúdos de clipboard/CDP não são mais autoridade. Somente depois do canário real e de prova causal por mensagem, promover uma capacidade de envio compilada; código com `prefab` não equivale a certificação. [Contrato e gates](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+## 2026-10-25 — WA-M3 negative controls
+Generic message ID plus empty composer can be stale/unrelated. Send proof requires pre-click outbound baseline, one new matching outbound candidate, verified chat identity, body match, per-message ACK; otherwise UNCERTAIN. Reserve existing DB operation before effect, block replays after restart. Absent native metadata fails closed. RED 8 / GREEN 9 focused synthetic tests do not prove native WhatsApp compatibility or authorize M4-M6.
+
+
+## 2026-10-25 — WA M2: identidade Work e reconciliação Browser (LOCAL; NOT RELEASE)
+O handler WhatsApp consulta a identidade TaskRun apenas do contexto canônico Work durante a execução; IDs do payload do modelo não conferem autoridade. `tool_call_id` protocolar é encaminhado como identidade da operação. Binding ausente, sessão incompatível ou operação ausente falha fechado antes de resolver contato ou navegar. No Browser, `executeControlRequest` normalizava `effectiveRunId` para preflight/admission (`run-${taskId}` ou `unbound`), mas seis recibos registravam o `runId` bruto vazio quando omitido. Como o ACK exige correspondência de `operationId/taskId/tabId/action/runId`, a admissão permanecia pendente e bloqueava mutações posteriores. Os seis recibos da função agora usam `effectiveRunId`; `recordActionReceipt` não tem callsite. A suite M2 atual passou 8/8, incluindo propagação real de contexto a worker; a rodada combinada anterior passou 81 testes Python em quatro arquivos quando M2 tinha sete casos. Também passaram 1 teste de despacho `model_tools`, 42 testes nativos e Ruff focado. Duas falhas antigas de isolamento genérico e uma de assinatura de arquivo no Windows foram classificadas fora do escopo e permaneceram sem alteração. Admissions históricas sem receipt compatível continuam exigindo reconciliação explícita. Sem envio real, CI de HEAD ou qualificação de release.
+
+## 2026-10-24 — WA M1: referências privadas e limites de autorização (LOCAL; NOT RELEASE)
+A camada upstream `redact_sensitive_text` permanece intacta. M1 resolve `recipient_ref` através de alias e DB SQLite read-only configurados no perfil; `allowed_phone_sources` limita proveniência para lookup. Telefone/corpo permanecem dentro do executor trusted e são redigidos da resposta/persistência/logs. **Lookup não é consentimento**: contato individual não tem consentimento inferido; campos de campanha também não concedem envio. A ferramenta é uma mutação desktop e atravessa o checkpoint pre-dispatch e Browser admission existentes; lease humano continua autoridade. `UNCERTAIN` não é `FAILED` nem autorização para retry. Verificação local: 122 testes focados e Ruff pinado; sem Browser nativo, CI de HEAD, envio real ou qualificação de release. M2–M6 pendentes. [Contrato WA-D1..WA-D6](WHATSAPP_RELIABILITY_2026-10-24.md); [prompts M1..M6](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md).
+
 ## 2026-10-24 — WA: privacidade lossless na execução autorizada
 A camada upstream `redact_sensitive_text` mascara E.164 nos retornos do modelo mesmo com origem íntegra. **Diferenciar plano de apresentação (masked PII) e executor trusted (source original por handle, com permissão)**. Não desativar proteção global; Browser admission e banco da campanha são authorities distintos; `UNCERTAIN` não é `FAILED` nem autorização para retry. A versão remota já tem detecção de popup e estados, mas ainda precisa de provas causais e evitar logs raw. [Contrato WA-D1..WA-D6](WHATSAPP_RELIABILITY_2026-10-24.md); [prompts M1..M6](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md). Status: DECISÃO, NÃO IMPLANTAÇÃO.
 
@@ -4716,3 +4731,29 @@ TaskRun admission source now exists in `workstation/creative_taskrun_attestation
 ### HCW-P0A Electron selector registry (2026-10-12): new apps/desktop/el
 
 HCW-P0A Electron selector registry (2026-10-12): new apps/desktop/electron/creative-main-sender-scope.ts and .test.ts implement a MAIN-process-only in-memory sender object+mainFrame-verified registry with monotonic navigation epoch, explicit rehome/revoke, concurrent-session fencing, destruction check and defensive snapshots. TDD RED: missing module, Vitest exit 1. GREEN: 31/31 Electron focused tests across registry, existing attestation, canonical IPC, preload, exit 0. ESLint --max-warnings 0 exit 0 after targeted fixes. Global tsc still exit 1 ONLY known electron/git-review-ops.test.ts:124 TS2349. Registry deliberately NOT WIRED to main.ts: session/connection obtained from renderer messages/URL are selectors not authenticated authority. main.ts remains DENY-ALL. No P0A or H-C2 promotion. Backend HTTP readiness previously qualified 38/38 tests, no mutation grant.
+
+
+<!-- HERMES-WORK-PLAN-20261026:PLAN_ONLY -->
+
+## 2026-10-26 — Proposta: Work como operador orientado a eventos, sem inteligência contínua de vigilância (DESIGN)
+
+A capacidade-alvo é **observar → normalizar eventos → persistir evidência → aplicar regra determinística → chamar Bot somente quando indispensável → verificar efeito**. Não deve haver um LLM observando cada mutação DOM.
+
+**Reutilização demonstrada em leitura:** `SystemEventPipeline` (`workstation/events.py`) fornece callbacks e ligação a `ExecutionJournal`, mas seus eventos recentes estão em memória de processo; `execute_job_for_event` (`tools/cronjob_tools.py`) já aciona um job Cron existente; TrelloClient oferece leitura de cartões/listas; Browser usa CDP e possui `MutationObserver` para cache/aprendizagem; WhatsApp tem tabelas factuais em SQLite e gates de envio. Nenhum desses achados prova a existência de um monitor persistente por aba, journal durável de ações Trello ou memória semântica por contato completa.
+
+**Separar autoridades:** Trello/WhatsApp são fontes de eventos e seus estados externos; o Kanban canônico permanece autoridade local de tarefas Work; journal de eventos não é segundo Kanban; Bot não pode inventar tarefa/atividade; *CandidateLesson* de demonstração não é capacidade verificada. Novas tabelas precisam de migration na conexão canônica explicitamente escolhida; não impor uma escolha PostgreSQL/SQLite em desacordo com o owner.
+
+**Eventos:** usar IDs estáveis de origem, timestamps e referências a objeto, dedup, checkpoint transacional e outbox idempotente para efeitos assíncronos. O payload de terceiros deve ser tratado como dados não confiáveis, limitado em tamanho e higienizado; nenhum segredo/telefone/corpo bruto desnecessário em logs ou prompts. O dispatcher não interpreta evento não correlacionado como ordem de criação de tarefa.
+
+**Browser file upload:** classificar como mutação potencial, porque `setFileInputFiles` pode gerar evento `change` e efeito de rede no site; exigir admission/owner/escopo de arquivos e confirmação independente. Nunca declarar mensagem entregue apenas porque o arquivo foi selecionado.
+
+**Execução incremental:** primeiro upload e Trello; em seguida evento→Bot, áudio local, monitor simples; só depois WhatsApp semântico/replay autonomizado, respeitando HOLD. A ordem muda apenas por claims ou prova de ROI, nunca por conveniência de contornar gates.
+
+<!-- HERMES-WORK-P01-20261027-MAINTAINER-WAIVER -->
+## 2026-10-27 — Upload nativo por CDP: limites de autoridade
+browser_file_upload é uma mutação: evento change pode iniciar upload de rede pelo site.
+A autorização vem apenas do config.yaml do perfil ativo, campo browser.workstation.upload_grants (task_id, session_id, run_id, expires_at, allowed_roots, max_bytes/max_files opcionais), nunca dos argumentos controlados pelo modelo. Escopo ausente falha fechado. Proteção contra agente com escrita direta em config.yaml não é demonstrada: risco residual. Resultado selected não equivale a envio remoto confirmado, e não autoriza WhatsApp.
+
+
+## 2026-10-27 — Complemento da política de upload
+O grant explícito de upload exige ALSO allowed_origins (origens HTTP(S) exatas) no config.yaml, além de task_id, session_id, run_id, expires_at e allowed_roots. A origem é revalidada após os awaits do CDP, antes de DOM.setFileInputFiles. Não equivale a prova de entrega. A permissão de modificar o arquivo config.yaml continua fora do boundary de upload e precisa ser protegida na implantação. Ver BROWSER_NATIVE_FILE_UPLOAD_20261027.md.

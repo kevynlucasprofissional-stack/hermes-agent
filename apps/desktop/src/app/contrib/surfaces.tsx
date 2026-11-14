@@ -38,7 +38,7 @@ import type { SidebarActions, WiringActions } from './types'
 // full-page views the workspace route table mounts live here; overlay views
 // (agents/settings/…) are the controller's and stay in wiring.tsx.
 const ArtifactsView = lazy(async () => ({ default: (await import('../artifacts')).ArtifactsView }))
-const BrowserView = lazy(async () => ({ default: (await import('../browser')).BrowserView }))
+const WorkstationHub = lazy(async () => ({ default: (await import('../workstation')).WorkstationHub }))
 const MessagingView = lazy(async () => ({ default: (await import('../messaging')).MessagingView }))
 const CapabilitiesView = lazy(async () => ({ default: (await import('../capabilities')).CapabilitiesView }))
 const CreativeWorkspaceView = lazy(async () => ({ default: (await import('../creative-workspace')).CreativeWorkspacePage }))
@@ -195,7 +195,7 @@ export const ChatRoutesSurface = memo(function ChatRoutesSurface({
       <Route element={page(<CapabilitiesView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="capabilities" />
       <Route element={page(<MessagingView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="messaging" />
       <Route element={page(<ArtifactsView setStatusbarItemGroup={setStatusbarItemGroup} />)} path="artifacts" />
-      <Route element={page(<BrowserView />)} path={BROWSER_ROUTE.slice(1)} />
+      <Route element={page(<WorkstationHub />)} path={BROWSER_ROUTE.slice(1)} />
       <Route element={page(<CreativeWorkspaceView />)} path="creative" />
       <Route element={null} path="agents" />
       <Route element={null} path="command-center" />

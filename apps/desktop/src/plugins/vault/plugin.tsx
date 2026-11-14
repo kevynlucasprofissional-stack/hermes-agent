@@ -1,14 +1,10 @@
-import type {
-  HermesPlugin,
-  PluginContext,
-  RouteContribution,
-  SidebarNavContribution
-} from '@hermes/plugin-sdk'
-import { ROUTES_AREA, SIDEBAR_NAV_AREA } from '@hermes/plugin-sdk'
+import type { HermesPlugin, PluginContext, RouteContribution } from '@hermes/plugin-sdk'
+import { ROUTES_AREA } from '@hermes/plugin-sdk'
+import { Navigate } from 'react-router'
 
 import { bindApi } from './api'
-import { VaultPage } from './vault-page'
 
+/** Keep existing Vault storage/API intact; surface its UI inside Workstation. */
 const plugin: HermesPlugin = {
   id: 'vault',
   name: 'Hermes Vault',
@@ -16,21 +12,12 @@ const plugin: HermesPlugin = {
   defaultEnabled: true,
   register(ctx: PluginContext) {
     bindApi(ctx)
-
-    ctx.registerMany([
-      {
-        id: 'page',
-        area: ROUTES_AREA,
-        data: { path: '/vault' } satisfies RouteContribution,
-        render: () => <VaultPage />
-      },
-      {
-        id: 'nav',
-        area: SIDEBAR_NAV_AREA,
-        order: 48,
-        data: { codicon: 'book', label: 'Vault', path: '/vault' } satisfies SidebarNavContribution
-      }
-    ])
+    ctx.register({
+      id: 'legacy-vault-route',
+      area: ROUTES_AREA,
+      data: { path: '/vault' } satisfies RouteContribution,
+      render: () => <Navigate replace to="/browser?module=vault" />
+    })
   }
 }
 

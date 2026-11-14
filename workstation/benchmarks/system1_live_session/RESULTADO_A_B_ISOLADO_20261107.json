@@ -1,0 +1,59 @@
+{
+  "source": "C:\\Users\\Kevyn Lucas\\AppData\\Local\\HermesWorkstation\\qualification\\system1-desktop-e2e\\e2e-20261107211148-057da9\\hermes-home\\workstation\\telemetry\\telemetry.sqlite",
+  "session_id": "20261107_181843_c29320",
+  "sample_count_per_variant": 1,
+  "model": "deepseek-flash",
+  "turn_duration_seconds_from_backend_log": {
+    "baseline": 9.6,
+    "deterministic_fastpath": 1.2
+  },
+  "variants": {
+    "baseline": {
+      "telemetry_window_utc": {
+        "start": "2026-11-07T21:31:00",
+        "end": "2026-11-07T21:31:10"
+      },
+      "provider_calls_success": 2,
+      "request_input_tokens": 52382,
+      "request_output_tokens": 590,
+      "model_duration_ms_sum": 7126.64,
+      "native_snapshot_observed_count": 2,
+      "native_snapshot_duration_ms": [
+        56.17,
+        58.45
+      ],
+      "routing_decisions": [
+        "CONTINUE_REASONING",
+        "CONTINUE_REASONING"
+      ],
+      "total_telemetry_events": 16
+    },
+    "deterministic_fastpath": {
+      "telemetry_window_utc": {
+        "start": "2026-11-07T21:39:57",
+        "end": "2026-11-07T21:39:59"
+      },
+      "provider_calls_success": 0,
+      "request_input_tokens": 0,
+      "request_output_tokens": 0,
+      "model_duration_ms_sum": 0,
+      "native_snapshot_observed_count": 2,
+      "native_snapshot_duration_ms": [
+        42.13,
+        16.09
+      ],
+      "routing_decisions": [
+        "SATISFIED"
+      ],
+      "total_telemetry_events": 8
+    }
+  },
+  "conclusion": {
+    "saved_provider_calls": 2,
+    "saved_request_input_tokens": 52382,
+    "saved_request_output_tokens": 590,
+    "turn_duration_reduction_percent": 87.5,
+    "proof": true,
+    "limitation": "one observed turn per variant; request tokens are not billed-token/cost estimates"
+  }
+}

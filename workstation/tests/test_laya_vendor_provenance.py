@@ -32,6 +32,24 @@ def test_laya_vendor_provenance_success():
     assert verify_laya_provenance(strict=True) is True
 
 
+def test_pm_snapshot_is_accepted_only_from_selected_environment(monkeypatch, tmp_path):
+    """A staged uv source is trusted only with the current PM generation."""
+    from workstation.system1.provenance import _approved_pm_snapshot_source
+
+    selected = tmp_path / "environments" / "active" / "venv"
+    origin = selected.parent / "workspace" / "workstation" / "third_party" / "laya"
+    installed = selected / "Lib" / "site-packages" / "laya" / "__init__.py"
+    monkeypatch.setattr("pm.environments.committed_venv", lambda _root: selected)
+    monkeypatch.setattr(
+        "pm.environments.site_packages", lambda venv: venv / "Lib" / "site-packages",
+    )
+    assert _approved_pm_snapshot_source(installed, origin)
+    assert not _approved_pm_snapshot_source(installed, tmp_path / "global" / "laya")
+    assert not _approved_pm_snapshot_source(tmp_path / "global" / "laya" / "__init__.py", origin)
+    monkeypatch.setattr("pm.environments.committed_venv", lambda _root: None)
+    assert not _approved_pm_snapshot_source(installed, origin)
+
+
 def test_laya_vendor_provenance_rejects_external_path():
     """Strict verification must fail-closed if laya resolves outside third_party."""
     with patch("workstation.system1.provenance.get_laya_provenance") as mock_prov:

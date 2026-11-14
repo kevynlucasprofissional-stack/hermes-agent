@@ -108,6 +108,24 @@ def _copy_core_inputs(source: Path, destination: Path) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(entry, target)
 
+    # Declared local uv path sources are build inputs even if the package's
+    # setuptools discovery patterns do not include their parent directory.
+    for value in metadata.get("tool", {}).get("uv", {}).get("sources", {}).values():
+        for spec in value if isinstance(value, list) else [value]:
+            if not isinstance(spec, dict) or "path" not in spec:
+                continue
+            relative = Path(spec["path"])
+            original = (source / relative).resolve()
+            if relative.is_absolute() or ".." in relative.parts or not original.is_relative_to(source.resolve()):
+                raise InstallError("venv", f"local path dependency escapes the core project: {relative}")
+            target = destination / relative
+            if target.exists():
+                continue  # Already copied as an included package root.
+            if not original.is_dir():
+                raise InstallError("venv", f"local path dependency is missing: {relative}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(original, target, ignore=ignore)
+
 
 def _generate_pyproject(plugin_dirs: list[Path] | Mapping[Path, Path], root: Path, *, source: Path) -> None:
     """Snapshot core and plugin build inputs into a fresh generation."""

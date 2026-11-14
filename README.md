@@ -261,3 +261,7 @@ for activation, daily use, dependency changes, and leaving the environment.
 MIT — see [LICENSE](LICENSE).
 
 Built by [Nous Research](https://nousresearch.com).
+
+## Local multi-agent collaboration (Hermes Workstation)
+
+The shared-checkout P0-A/P0-B/P1/P2 coordinator, task journal and MCP adapter are local Workstation tooling, not upstream functionality nor automatic protection for the existing Windows connector. Before concurrent edits, read [AGENTS.md](AGENTS.md), [CHATGPT.md](CHATGPT.md), the [collaboration protocol](workstation/context/AGENT_COLLABORATION_PROTOCOL.md) and the [MCP 2.0 qualification and ChatGPT connection guide](workstation/context/multi-agent-collaboration-2026-10-25/QUALIFICATION_AND_CHATGPT_CONNECTOR_20261025.md). No real Git integration or remote ChatGPT app registration is implied by local tests.

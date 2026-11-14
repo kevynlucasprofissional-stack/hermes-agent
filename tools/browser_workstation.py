@@ -160,7 +160,19 @@ _WORKSTATION_SCHEMA_TOOLS = frozenset({
     "browser_batch_actions",
     "browser_wait_for_ready",
     "browser_admissions_inspect",
-    "browser_admissions_reconcile",
+    "browser_admissions_recover_safe",
+    # Reconciliation requires authenticated human authority, never an LLM tool.
+    "whatsapp_send_message",
+    "whatsapp_batch_send",
+    "whatsapp_batch_status",
+    "whatsapp_batch_control",
+    "whatsapp_batch_preview",
+    "whatsapp_batch_approve",
+    "whatsapp_read_messages",
+    "whatsapp_send_attachment",
+    "whatsapp_metrics_summary",
+    "whatsapp_metrics_benchmark",
+    "browser_file_upload",
     # Extension management is a Desktop-session capability: the agent can
     # request it explicitly, but non-Desktop sessions never carry these
     # schemas. Runtime reachability/policy remain checked at dispatch.
@@ -171,24 +183,21 @@ _WORKSTATION_SCHEMA_TOOLS = frozenset({
 })
 
 
-def workstation_schema_tools_for_current_session() -> set[str]:
-    """Schemas structurally owned by a Desktop/Workstation session.
+def workstation_desktop_session() -> bool:
+    """Whether this request belongs to the Desktop browser authority."""
+    from gateway.session_context import get_session_env
 
-    Surface capability belongs to the session source, not to a 200 ms
-    controller health probe. Returning these names does *not* claim the
-    controller is reachable; workstation_routed_browser_handler() keeps
-    the authoritative health/recovery/fail-closed decision at dispatch.
-    """
-    if not workstation_browser_enabled():
-        return set()
-    try:
-        from gateway.session_context import get_session_env
-    except Exception:
-        return set()
     source = str(get_session_env("HERMES_SESSION_SOURCE", "") or "").strip().lower()
     platform = str(get_session_env("HERMES_SESSION_PLATFORM", "") or "").strip().lower()
-    surface = source or platform
-    if surface != "desktop":
+    return (source or platform) == "desktop"
+
+
+def workstation_schema_tools_for_current_session() -> set[str]:
+    """Expose native browser tools in Desktop, independent of transient health.
+
+    Runtime controller availability is enforced at dispatch, never here.
+    """
+    if not workstation_browser_enabled() or not workstation_desktop_session():
         return set()
     return set(_WORKSTATION_SCHEMA_TOOLS)
 
@@ -386,6 +395,7 @@ def _request_json(
     *,
     timeout: float,
     action: Optional[str] = None,
+    _allow_readonly_rediscovery: bool = True,
 ) -> dict[str, Any]:
     control = _read_control()
     base = str(control["url"]).rstrip("/")
@@ -457,6 +467,21 @@ def _request_json(
                 error_code="TIMEOUT", retryable=True,
                 recommended_action="RETRY_WITH_BACKOFF",
             ) from exc
+        # Re-resolve a replaced loopback descriptor ONLY for proven safe GETs.
+        # Never retry agent POSTs: the earlier request might have dispatched.
+        if (_allow_readonly_rediscovery and method.upper() == "GET"
+                and suffix in {"/health", "/resources"}):
+            try:
+                refreshed = _read_control()
+            except WorkstationBrowserUnavailable:
+                refreshed = None
+            if refreshed and (
+                refreshed["url"] != control["url"] or refreshed["token"] != control["token"]
+            ):
+                return _request_json(
+                    method, suffix, payload, timeout=timeout, action=action,
+                    _allow_readonly_rediscovery=False,
+                )
         raise WorkstationBrowserUnavailable(
             "Hermes Browser controller connection failed",
             details={"transport": type(reason).__name__ if reason is not None else type(exc).__name__},
@@ -731,7 +756,7 @@ def resolve_browser_type_text(
 _MUTATING_NATIVE_BROWSER_ACTIONS = frozenset({
     "browser_navigate", "browser_click", "browser_type", "browser_scroll",
     "browser_back", "browser_press", "browser_batch_actions",
-    "browser_extension_load", "browser_extension_remove", "browser_extension_open_options",
+    "browser_file_upload", "browser_extension_load", "browser_extension_remove", "browser_extension_open_options",
     "browser_creative_render", "browser_creative_studio_open",
 })
 
@@ -874,7 +899,7 @@ def _compute_fingerprint(result: dict[str, Any]) -> str | None:
 _MUTATING_ACTIONS = frozenset({
     "browser_click", "browser_type", "browser_fill",
     "browser_batch_actions", "browser_scroll", "browser_select_option",
-    "browser_navigate", "browser_press",
+    "browser_navigate", "browser_press", "browser_file_upload",
 })
 
 # Per-task mutation counter for cache invalidation.
@@ -892,6 +917,7 @@ def _dispatch(
     run_id: Optional[str] = None,
     operation_id: Optional[str] = None,
     model_facing: bool = False,
+    session_scope_only: bool = False,
 ) -> str:
     if action == "browser_navigate":
         _validate_navigation(args)
@@ -906,14 +932,26 @@ def _dispatch(
         timeout = float(os.getenv("HERMES_WORKSTATION_BROWSER_TIMEOUT", str(_DEFAULT_TIMEOUT_SECONDS)))
     except ValueError:
         timeout = _DEFAULT_TIMEOUT_SECONDS
-    # A Browser session is not a Kanban TaskRun. Do not infer authority from
-    # the only task matching a session, from the task's latest run, or from
-    # process-wide env vars that can survive a chat switch. Session-bound
-    # callers must supply the exact card/run identifiers at the call site.
-    if session_id:
+    # Session-bound Browser operations normally reuse an explicit Work TaskRun.
+    # A one-shot WhatsApp send may instead opt into a session-only scope: the
+    # host session + tool-call run ID are sufficient, without creating a Kanban card.
+    if session_id and session_scope_only:
+        rid = str(run_id or "").strip() or None
+        if not rid or task_id is not None or kanban_card_id is not None:
+            raise WorkstationBrowserError(
+                "Invalid session-scoped BrowserTask binding",
+                error_code="SESSION_CONTEXT_REQUIRED", retryable=False, state_changed=False,
+            )
+        card_id = None
+    elif session_id:
         rid = str(run_id or "").strip() or None
         card_id = str(kanban_card_id or (task_id if (task_id and rid) else "") or "").strip() or None
     else:
+        if session_scope_only:
+            raise WorkstationBrowserError(
+                "Session-scoped BrowserTask requires a host session",
+                error_code="SESSION_CONTEXT_REQUIRED", retryable=False, state_changed=False,
+            )
         # Legacy headless callers without a chat identity may still use the
         # existing process context. This is never applied to session calls.
         rid = str(run_id or os.environ.get("HERMES_KANBAN_RUN_ID") or "").strip() or None
@@ -926,7 +964,7 @@ def _dispatch(
 
     # A partial explicit binding has no canonical authorization. Do not
     # downgrade it to an unbound Browser session or forward a card-only hint.
-    if bool(card_id) != bool(rid):
+    if not session_scope_only and bool(card_id) != bool(rid):
         raise WorkstationBrowserError(
             'Incomplete TaskRun binding cannot control BrowserTask',
             error_code='STALE_RUN', retryable=False, state_changed=False,
@@ -1821,24 +1859,33 @@ def windows_app_launch(
 
 def whatsapp_send_message(
     *,
-    phone_digits: str,
     message: str,
+    recipient_ref: Optional[dict[str, Any]] = None,
+    target_name: Optional[str] = None,
+    expected_recipient_name: Optional[str] = None,
+    phone_digits: Optional[str] = None,
     contact_name_hint: Optional[str] = None,
-    verify_delivery: bool = True,
-    delivery_timeout_seconds: float = 10.0,
+    delivery_timeout_seconds: float = 5.0,
     task_id: Optional[str] = None,
     session_id: Optional[str] = None,
+    kanban_card_id: Optional[str] = None,
+    run_id: Optional[str] = None,
+    operation_id: Optional[str] = None,
+    batch_item_key: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Send a WhatsApp message via deep link and verify delivery (snapshot-first).
+    """Native WhatsApp single-send operation.
+    recipient_ref selects one trusted contact. The active Hermes session and
+    tool-call ID scope the BrowserTask; a Kanban card or TaskRun is not required
+    for this one-shot operation. The message is dispatched once and the native
+    chat is checked for one new outbound bubble with the exact recipient and text.
 
     Uses the consolidated primitive in workstation.integrations.hermes.whatsapp_browser_executor.
-    Formal states: PREPARED, DISPATCHING, OBSERVED, CONFIRMED, UNCERTAIN, FAILED, REVIEW_REQUIRED.
+    States: OBSERVED, UNCERTAIN, or FAILED before send.
 
     Returns
     -------
     dict
-        On success: ``{"sent": True, "state": "CONFIRMED", "message_data_id": ...,
-        "ack_label": ..., "header_verified": ..., "composer_empty_after": True}``.
+        On observed send: state OBSERVED with message_data_id, ack_label and header_verified.
         On failure / uncertain: ``{"sent": False, "state": ..., "error_code": ..., ...}``.
         Never raises.
     """
@@ -1846,6 +1893,286 @@ def whatsapp_send_message(
         whatsapp_send_message as _executor_send_message,
         WhatsAppSendError,
         STATE_FAILED,
+        sanitize_send_result,
+    )
+    from workstation.integrations.hermes.whatsapp_recipient_resolution import (
+        RecipientResolutionError,
+        resolve_recipient_reference,
+    )
+    from workstation.integrations.hermes.whatsapp_native_lookup import NativeNameLookupError
+    from workstation.integrations.hermes.whatsapp_verified_phone import (
+        VerifiedPhoneError, open_verified_phone_chat,
+    )
+    import hashlib
+
+    if (not isinstance(session_id, str) or not session_id.strip()
+            or not isinstance(operation_id, str) or not operation_id.strip()):
+        return {"sent": False, "state": STATE_FAILED,
+                "error_code": "SESSION_CONTEXT_REQUIRED", "failure_phase": "PRE_SEND"}
+    # Direct one-shot sends use the trusted Hermes session as BrowserTask owner
+    # and the runtime tool-call ID as a fresh run/operation scope.
+    if task_id is None and kanban_card_id is None:
+        run_id = run_id or operation_id
+    elif (not task_id or task_id != kanban_card_id or not run_id):
+        return {"sent": False, "state": STATE_FAILED,
+                "error_code": "INVALID_BROWSER_SCOPE", "failure_phase": "PRE_SEND"}
+
+    snapshot_index = 0
+    inspect_index = 0
+    click_index = 0
+    type_index = 0
+
+    def _step_id(action: str, index: int = 0) -> str:
+        identity = ("whatsapp_send_message", task_id, session_id, kanban_card_id, run_id, operation_id, action, index)
+        return hashlib.sha256(json.dumps(identity, separators=(",", ":")).encode()).hexdigest()
+
+    session_scope_only = task_id is None and kanban_card_id is None
+
+    def _browser_step(action: str, arguments: dict[str, Any], index: int = 0):
+        return _dispatch(
+            action, arguments, task_id=task_id, session_id=session_id,
+            kanban_card_id=kanban_card_id, run_id=run_id,
+            operation_id=_step_id(action, index), model_facing=False,
+            session_scope_only=session_scope_only,
+        )
+
+    def _nav(url: str):
+        raw = _browser_step("browser_navigate", {"url": url})
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _snap(full: bool = False):
+        nonlocal snapshot_index
+        raw = _browser_step("browser_snapshot", {"full": full}, snapshot_index)
+        snapshot_index += 1
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _inspect(*, selector: str, attributes: list[str]):
+        nonlocal inspect_index
+        raw = _browser_step("browser_extract_items", {
+            "mode": "inspect", "selector": selector,
+            "limit": 64, "attributes": attributes,
+        }, inspect_index)
+        inspect_index += 1
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _click(ref: str):
+        nonlocal click_index
+        raw = _browser_step("browser_click", {"ref": ref}, click_index)
+        click_index += 1
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _type(*, ref: str, text: str):
+        nonlocal type_index
+        raw = _browser_step(
+            "browser_type", {"ref": ref, "text": text, "clear": True, "mode": "insert_text"},
+            type_index,
+        )
+        type_index += 1
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _press(key: str):
+        raw = _browser_step("browser_press", {"key": key})
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _console(*, expression: str):
+        raw = _browser_step("browser_console", {"expression": expression})
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    failure_phase = "RESOLVE_RECIPIENT"
+    try:
+        recipient = None
+        self_alias_requested = False
+        opened_verified_title = None
+        if target_name is not None:
+            if (recipient_ref is not None or expected_recipient_name is not None
+                    or phone_digits is not None or contact_name_hint is not None):
+                raise RecipientResolutionError("AMBIGUOUS_RECIPIENT_REFERENCE")
+            from workstation.integrations.hermes.whatsapp_native_lookup import (
+                find_open_contact_by_name,
+            )
+            phone_digits = find_open_contact_by_name(
+                name=target_name, navigate=_nav, snapshot=_snap,
+                type_text=_type, click=_click, inspect=_inspect, press=_press,
+            )
+            contact_name_hint = target_name
+        elif recipient_ref is not None:
+            if phone_digits is not None or contact_name_hint is not None:
+                raise RecipientResolutionError("AMBIGUOUS_RECIPIENT_REFERENCE")
+            recipient = resolve_recipient_reference(recipient_ref)
+            # For model-facing sends, the literal user-requested name must
+            # match the trusted source. Never promote a fuzzy search result.
+            if expected_recipient_name is not None:
+                import unicodedata
+                def canonical_name(value: str) -> str:
+                    decomposed = unicodedata.normalize("NFKD", value)
+                    folded = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+                    return " ".join(folded.casefold().split())
+                normalized_request = canonical_name(expected_recipient_name) if isinstance(expected_recipient_name, str) else ""
+                normalized_source = canonical_name(str(recipient.display_name or ""))
+                # The user's own chat has a special verified label:
+                # "+<own number> (Voc?)". Treat literal "Voc?" as exact
+                # only for the known hermes_local/1 self-contact, and
+                # the native chat header binds the selected phone before typing.
+                if (normalized_request == "voce"
+                        and recipient_ref.get("source") == "hermes_local"
+                        and recipient_ref.get("contact_id") == 1):
+                    import re
+                    label_match = re.fullmatch(
+                        r"(.+?)\s*\(([^()]{2,12})\)",
+                        str(recipient.display_name or "").strip(), flags=re.IGNORECASE,
+                    )
+                    if (label_match is not None
+                            and canonical_name(label_match.group(2)) == "voce"
+                            and re.fullmatch(r"[+0-9\s().-]+", label_match.group(1))
+                            and "".join(ch for ch in label_match.group(1) if ch.isdigit())
+                                == recipient.phone_digits):
+                        self_alias_requested = True
+                if (not 3 <= len(expected_recipient_name or "") <= 128
+                        or (normalized_request != normalized_source and not self_alias_requested)):
+                    return {"sent": False, "state": STATE_FAILED,
+                            "error_code": "RECIPIENT_NAME_MISMATCH",
+                            "failure_phase": "PRE_SEND"}
+            phone_digits = recipient.phone_digits
+            contact_name_hint = recipient.display_name
+        elif phone_digits is None:
+            raise RecipientResolutionError("INVALID_RECIPIENT_REFERENCE")
+        else:
+            # Campaign phone comes from Alvos.json and its TaskRun, not a model-
+            # generated contact alias. Verify WhatsApp's actual recipient
+            # number in its native chat UI before composing.
+            opened_verified_title = open_verified_phone_chat(
+                phone=str(phone_digits), navigate=_nav, snapshot=_snap,
+                inspect=_inspect, click=_click,
+                console=_console,
+            )
+
+        # Session + tool-call identity is supplied by the host, not by model
+        # arguments. The native sender verifies the exact chat and new message.
+        session_context_verified = bool(session_id and operation_id)
+        if not session_context_verified:
+            return {"sent": False, "state": STATE_FAILED,
+                    "error_code": "SESSION_CONTEXT_REQUIRED", "failure_phase": "PRE_SEND"}
+
+        # A canonical WhatsApp TaskRun cannot silently change recipient
+        # after the first accepted reference, even if the model rewrites both
+        # recipient_ref and expected_recipient_name on a subsequent call.
+        if (recipient is not None or target_name is not None) and task_id and run_id:
+            from workstation.integrations.hermes.whatsapp_target_binding import (
+                TargetBindingError, bind_recipient_for_run,
+            )
+            from workstation.integrations.hermes.whatsapp_browser_executor import (
+                get_default_db_path,
+            )
+            target_db = get_default_db_path()
+            if target_db is None:
+                return {"sent": False, "state": STATE_FAILED,
+                        "error_code": "TARGET_BINDING_UNAVAILABLE",
+                        "failure_phase": "PRE_SEND"}
+            try:
+                same_target = bind_recipient_for_run(
+                    db_path=target_db, session_id=session_id,
+                    run_id=(str(run_id) + ":batch:" + batch_item_key
+                            if batch_item_key is not None else str(run_id)),
+                    phone_digits=phone_digits,
+                )
+            except TargetBindingError as exc:
+                return {"sent": False, "state": STATE_FAILED,
+                        "error_code": str(exc),
+                        "failure_phase": "PRE_SEND"}
+            if not same_target:
+                return {"sent": False, "state": STATE_FAILED,
+                        "error_code": "TARGET_CHANGED_REAUTH_REQUIRED",
+                        "failure_phase": "PRE_SEND"}
+
+        failure_phase = "EXECUTE_SEND"
+        result = _executor_send_message(
+            browser_navigate=_nav,
+            browser_snapshot=_snap,
+            browser_click=_click,
+            browser_inspect=_inspect,
+            browser_type=_type,
+            opened_chat_name=target_name or opened_verified_title,
+            session_context_verified=session_context_verified,
+            approval_fingerprint=None,
+            phone_digits=phone_digits,
+            message=message,
+            contact_name_hint=contact_name_hint,
+            verify_delivery=True,
+            delivery_timeout_seconds=delivery_timeout_seconds,
+            task_id=task_id,
+            session_id=session_id,
+            run_id=run_id,
+            operation_id=operation_id,
+            # M1 source DB is read-only provenance; use canonical control DB for send logs.
+        )
+        result = sanitize_send_result(result, phone_digits=phone_digits, message=message)
+        if recipient is not None:
+            result["recipient_ref"] = recipient.public_reference
+            if recipient.public_reference.get("source") == "hermes_local":
+                from workstation.integrations.hermes.whatsapp_contact_intake import (
+                    promote_verified_contact,
+                )
+                # Promote only after the native chat ID and new outbound
+                # message receipt were observed for this exact contact.
+                verified = promote_verified_contact(
+                    recipient.public_reference, phone_digits=phone_digits,
+                    receipt_state=result.get("state", ""),
+                )
+                result["contact_sync"] = (
+                    "NATIVE_VERIFIED" if verified else "PENDING_NATIVE_VERIFICATION"
+                )
+        return result
+    except RecipientResolutionError as exc:
+        return {"sent": False, "state": STATE_FAILED, "error_code": exc.error_code,
+                "failure_phase": "PRE_SEND"}
+    except (NativeNameLookupError, VerifiedPhoneError) as exc:
+        return {"sent": False, "state": STATE_FAILED,
+                "error_code": str(exc), "failure_phase": "RESOLVE_RECIPIENT"}
+    except WhatsAppSendError as exc:
+        return {
+            "sent": False,
+            "state": STATE_FAILED,
+            "error_code": exc.error_code,
+            "error": sanitize_send_result(str(exc), phone_digits=phone_digits or "", message=message),
+        }
+    except Exception as exc:
+        # Never return an exception message: native errors may contain
+        # recipient data or message content. Keep the safe stage/code only.
+        import re
+        native_code = getattr(exc, "error_code", None)
+        if not isinstance(native_code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{2,63}", native_code):
+            native_code = "DISPATCH_FAILED"
+        before_send = failure_phase != "EXECUTE_SEND"
+        return {
+            "sent": False,
+            "state": "UNCERTAIN" if not before_send else STATE_FAILED,
+            "error_code": native_code,
+            "failure_phase": failure_phase,
+            "error_type": type(exc).__name__,
+        }
+
+
+def whatsapp_batch_send(
+    *,
+    recipients: Optional[list[dict[str, Any]]] = None,
+    job_id: Optional[str] = None,
+    campaign_slug: Optional[str] = None,
+    step_code: Optional[str] = None,
+    require_authorization: bool = False,
+    approval_token: Optional[str] = None,
+    approval_threshold: int = 1,
+    require_approval: Optional[bool] = None,
+    rate_limit_delay_seconds: float = 3.0,
+    max_messages: Optional[int] = None,
+    max_consecutive_failures: int = 3,
+    delivery_timeout_seconds: float = 10.0,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> dict[str, Any]:
+    """Execute or resume a batch of WhatsApp messages with persistent checkpointing."""
+    from workstation.integrations.hermes.whatsapp_batch_executor import (
+        whatsapp_batch_send as _executor_batch_send,
     )
 
     def _nav(url: str):
@@ -1859,32 +2186,141 @@ def whatsapp_send_message(
         return _dispatch("browser_click", {"ref": ref}, task_id=task_id, session_id=session_id, model_facing=False)
 
     try:
-        return _executor_send_message(
+        return _executor_batch_send(
             browser_navigate=_nav,
             browser_snapshot=_snap,
             browser_click=_click,
-            phone_digits=phone_digits,
-            message=message,
-            contact_name_hint=contact_name_hint,
-            verify_delivery=verify_delivery,
+            recipients=recipients,
+            job_id=job_id,
+            campaign_slug=campaign_slug,
+            step_code=step_code,
+            require_authorization=require_authorization,
+            approval_token=approval_token,
+            approval_threshold=approval_threshold,
+            require_approval=require_approval,
+            rate_limit_delay_seconds=rate_limit_delay_seconds,
+            max_messages=max_messages,
+            max_consecutive_failures=max_consecutive_failures,
             delivery_timeout_seconds=delivery_timeout_seconds,
             task_id=task_id,
             session_id=session_id,
+            db_path=db_path,
         )
-    except WhatsAppSendError as exc:
-        return {
-            "sent": False,
-            "state": STATE_FAILED,
-            "error_code": exc.error_code,
-            "error": str(exc),
-        }
     except Exception as exc:
         return {
-            "sent": False,
-            "state": STATE_FAILED,
-            "error_code": "DISPATCH_FAILED",
             "error": str(exc),
+            "status": "FAILED",
         }
+
+
+def whatsapp_batch_preview(
+    *,
+    recipients: list[dict[str, Any]],
+    campaign_slug: Optional[str] = None,
+    step_code: Optional[str] = None,
+    message_template: Optional[str] = None,
+    require_authorization: bool = False,
+    sample_size: int = 3,
+    db_path: Optional[str] = None,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Dry-run inspection of batch recipients before sending (zero browser calls)."""
+    from workstation.integrations.hermes.whatsapp_batch_executor import (
+        whatsapp_batch_preview as _executor_batch_preview,
+    )
+    return _executor_batch_preview(
+        recipients=recipients,
+        campaign_slug=campaign_slug,
+        step_code=step_code,
+        message_template=message_template,
+        require_authorization=require_authorization,
+        sample_size=sample_size,
+        db_path=db_path,
+    )
+
+
+def whatsapp_batch_approve(
+    *,
+    manifest_hash: str,
+    campaign_slug: Optional[str] = None,
+    step_code: Optional[str] = None,
+    total_eligible: int = 0,
+    approved_by: str = "operator",
+    db_path: Optional[str] = None,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Issue a deterministic approval token bound to the batch manifest hash."""
+    from workstation.integrations.hermes.whatsapp_batch_executor import (
+        whatsapp_batch_approve as _executor_batch_approve,
+    )
+    return _executor_batch_approve(
+        manifest_hash=manifest_hash,
+        campaign_slug=campaign_slug,
+        step_code=step_code,
+        total_eligible=total_eligible,
+        approved_by=approved_by,
+        db_path=db_path,
+    )
+
+
+def whatsapp_batch_status(
+    *,
+    job_id: str,
+    db_path: Optional[str] = None,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Inspect progress, counters, and status of a batch execution."""
+    from workstation.integrations.hermes.whatsapp_batch_executor import (
+        whatsapp_batch_status as _executor_batch_status,
+    )
+    return _executor_batch_status(job_id=job_id, db_path=db_path)
+
+
+def whatsapp_batch_control(
+    *,
+    job_id: str,
+    action: str,
+    db_path: Optional[str] = None,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Control execution of a batch job: pause, cancel, or resume."""
+    from workstation.integrations.hermes.whatsapp_batch_executor import (
+        whatsapp_batch_cancel,
+        whatsapp_batch_pause,
+        whatsapp_batch_resume,
+    )
+
+    act = (action or "").strip().lower()
+    if act == "pause":
+        return whatsapp_batch_pause(job_id=job_id, db_path=db_path)
+    elif act == "cancel":
+        return whatsapp_batch_cancel(job_id=job_id, db_path=db_path)
+    elif act == "resume":
+        def _nav(url: str):
+            return _dispatch("browser_navigate", {"url": url}, task_id=task_id, session_id=session_id, model_facing=False)
+
+        def _snap(full: bool = False):
+            raw = _dispatch("browser_snapshot", {"full": full}, task_id=task_id, session_id=session_id, model_facing=False)
+            return json.loads(raw) if isinstance(raw, str) else raw
+
+        def _click(ref: str):
+            return _dispatch("browser_click", {"ref": ref}, task_id=task_id, session_id=session_id, model_facing=False)
+
+        return whatsapp_batch_resume(
+            job_id=job_id,
+            browser_navigate=_nav,
+            browser_snapshot=_snap,
+            browser_click=_click,
+            task_id=task_id,
+            session_id=session_id,
+            db_path=db_path,
+        )
+    else:
+        return {"error": f"Unknown batch control action '{action}'. Use 'pause', 'cancel', or 'resume'."}
 
 
 def whatsapp_search_contact(
@@ -1980,3 +2416,335 @@ def whatsapp_search_contact(
         "search_ref": search_ref,
         "result_count": len(results),
     }
+
+
+def whatsapp_read_messages_current(
+    *, limit: int, session_id: str, operation_id: str,
+) -> dict[str, Any]:
+    """Inspect only the already-open, session-owned WhatsApp chat."""
+    from workstation.integrations.hermes.whatsapp_native_read import read_current_chat
+    if not isinstance(session_id, str) or not session_id or not operation_id:
+        return {"success": False, "error_code": "SESSION_CONTEXT_REQUIRED"}
+    def native_console(*, expression: str) -> dict[str, Any]:
+        raw = _dispatch(
+            "browser_console", {"expression": expression},
+            session_id=session_id, run_id=operation_id,
+            operation_id=operation_id + "-current-read",
+            model_facing=False, session_scope_only=True,
+        )
+        return json.loads(raw) if isinstance(raw, str) else raw
+    try:
+        return read_current_chat(console=native_console, limit=limit)
+    except Exception:
+        return {"success": False, "error_code": "NATIVE_READ_UNAVAILABLE"}
+
+
+def whatsapp_read_messages_named(
+    *, target_name: str, limit: int = 20,
+    session_id: str, operation_id: str,
+) -> dict[str, Any]:
+    """Open the exact WhatsApp contact in the owned BrowserTask and read its DOM.
+
+    Read-only external effect: never types in a conversation, never clicks Send,
+    and never persists message text or recipient numbers.
+    """
+    from workstation.integrations.hermes.whatsapp_native_lookup import (
+        NativeNameLookupError, find_open_contact_by_name,
+    )
+    from workstation.integrations.hermes.whatsapp_native_read import read_current_chat
+    import hashlib
+
+    if not isinstance(session_id, str) or not session_id or not operation_id:
+        return {"success": False, "error_code": "SESSION_CONTEXT_REQUIRED"}
+    sequence: dict[str, int] = {}
+
+    def step(action: str, args: dict[str, Any]) -> dict[str, Any]:
+        i = sequence.get(action, 0)
+        sequence[action] = i + 1
+        identity = hashlib.sha256(
+            f"{session_id}|{operation_id}|{action}|{i}".encode()
+        ).hexdigest()
+        raw = _dispatch(
+            action, args, task_id=None, session_id=session_id,
+            run_id=operation_id, operation_id=identity,
+            model_facing=False, session_scope_only=True,
+        )
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    try:
+        resolved = find_open_contact_by_name(
+            name=target_name,
+            navigate=lambda **kw: step("browser_navigate", kw),
+            snapshot=lambda **kw: step("browser_snapshot", {"full": kw.get("full", False)}),
+            type_text=lambda **kw: step("browser_type", {
+                "ref": kw["ref"], "text": kw["text"], "clear": True, "mode": "insert_text"}),
+            click=lambda **kw: step("browser_click", kw),
+            inspect=lambda **kw: step("browser_extract_items", {
+                "mode": "inspect", "selector": kw["selector"], "limit": 64,
+                "attributes": kw["attributes"]}),
+            press=lambda **kw: step("browser_press", kw),
+        )
+        if not resolved:
+            return {"success": False, "error_code": "NATIVE_CONTACT_PHONE_UNAVAILABLE"}
+        result = read_current_chat(
+            console=lambda **kw: step("browser_console", kw), limit=limit,
+        )
+        if result.get("success"):
+            result["target_verified"] = True
+            result["target_name"] = target_name
+        return result
+    except NativeNameLookupError as exc:
+        return {"success": False, "error_code": str(exc)}
+    except Exception as exc:
+        return {"success": False, "error_code": "NATIVE_READ_UNAVAILABLE",
+                "error_type": type(exc).__name__}
+
+
+def whatsapp_read_messages(
+    *,
+    limit: int = 20,
+    contact_name_hint: Optional[str] = None,
+    contact_id: Optional[int] = None,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    db_path: Optional[str | Path] = None,
+    persist: bool = True,
+) -> dict[str, Any]:
+    """Read recent messages from the currently active WhatsApp Web conversation.
+
+    Snapshot-first, deduplicated, and integrated with contacts, conversations, and messages.
+    """
+    from workstation.integrations.hermes.whatsapp_browser_executor import (
+        whatsapp_read_messages as _executor_read_messages,
+    )
+
+    def _snap(full: bool = False):
+        raw = _dispatch("browser_snapshot", {"full": full}, task_id=task_id, session_id=session_id, model_facing=False)
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    try:
+        return _executor_read_messages(
+            browser_snapshot=_snap,
+            limit=limit,
+            contact_name_hint=contact_name_hint,
+            contact_id=contact_id,
+            db_path=db_path,
+            persist=persist,
+        )
+    except Exception as exc:
+        return {
+            "success": False,
+            "error_code": "DISPATCH_FAILED",
+            "error": str(exc),
+            "messages": [],
+            "count": 0,
+        }
+
+
+def whatsapp_campaign_check_optout(
+    *, phone_digits: str, task_id: str, session_id: str,
+    run_id: str, operation_id: str,
+) -> dict[str, Any]:
+    """Inspect recent mounted messages for explicit unsubscribe requests."""
+    from workstation.integrations.hermes.whatsapp_verified_phone import (
+        VerifiedPhoneError, open_verified_phone_chat,
+    )
+    from workstation.integrations.hermes.whatsapp_native_read import read_current_chat
+    import hashlib
+    import unicodedata
+
+    counts: dict[str, int] = {}
+    def step(action: str, args: dict[str, Any]) -> dict[str, Any]:
+        n=counts.get(action,0)
+        counts[action]=n+1
+        eid=hashlib.sha256(
+            f"{operation_id}|{task_id}|{run_id}|{session_id}|{action}|{n}".encode()
+        ).hexdigest()
+        raw=_dispatch(
+            action,args,task_id=task_id,kanban_card_id=task_id,
+            session_id=session_id,run_id=run_id,operation_id=eid,
+            model_facing=False,
+        )
+        return json.loads(raw) if isinstance(raw,str) else raw
+    try:
+        open_verified_phone_chat(
+            phone=phone_digits,
+            navigate=lambda **kw: step("browser_navigate",kw),
+            snapshot=lambda **kw: step("browser_snapshot",{"full":False}),
+            inspect=lambda **kw: step("browser_extract_items",{
+                "mode":"inspect","selector":kw["selector"],"limit":64,
+                "attributes":kw["attributes"]}),
+            click=lambda **kw: step("browser_click",kw),
+        )
+        recent=read_current_chat(
+            console=lambda **kw: step("browser_console",kw),limit=50,
+        )
+        if not recent.get("success"):
+            return {"state":"HOLD","error_code":"OPT_OUT_READ_UNAVAILABLE"}
+        def fold(value: str) -> str:
+            s=unicodedata.normalize("NFKD",value.lower())
+            return "".join(c for c in s if not unicodedata.combining(c)).strip()
+        stop_phrases={
+            "sair","stop","cancelar","descadastrar","pare",
+            "nao quero mais receber mensagens","me remova da lista",
+            "nao me envie mais mensagens","por favor nao entre em contato",
+        }
+        if any(fold(str(msg.get("text") or "")) in stop_phrases
+               for msg in recent["messages"] if msg.get("direction")!="outbound"):
+            return {"state":"OPT_OUT"}
+        return {"state":"CLEAR","messages_checked":recent["count"]}
+    except VerifiedPhoneError as exc:
+        return {"state":"HOLD","error_code":str(exc)}
+    except Exception:
+        return {"state":"HOLD","error_code":"OPT_OUT_CHECK_FAILED"}
+
+
+def whatsapp_send_image_verified(
+    *, phone_digits: str, caption: str, media_path: str,
+    task_id: str, session_id: str, run_id: str, operation_id: str,
+) -> dict[str, Any]:
+    """Send one verified image/caption inside an authorized campaign TaskRun."""
+    from workstation.integrations.hermes.whatsapp_native_media import native_send_image_once
+    from workstation.integrations.hermes.whatsapp_browser_executor import _validate_attachment_file
+
+    if not all(isinstance(v,str) and v for v in (
+        task_id, session_id, run_id, operation_id, caption, phone_digits, media_path,
+    )):
+        return {"state": "FAILED", "error_code": "MEDIA_CONTEXT_REQUIRED"}
+    try:
+        resolved,size,content_type = _validate_attachment_file(media_path)
+        if not content_type.startswith("image/"):
+            return {"state":"FAILED","error_code":"MEDIA_IMAGE_REQUIRED"}
+    except Exception:
+        return {"state":"FAILED","error_code":"MEDIA_FILE_INVALID"}
+    counts: dict[str,int] = {}
+
+    def step(action: str, args: dict[str,Any]) -> dict[str,Any]:
+        index=counts.get(action,0)
+        counts[action]=index+1
+        eid=hashlib.sha256(
+            f"{task_id}|{session_id}|{run_id}|{operation_id}|{action}|{index}".encode()
+        ).hexdigest()
+        raw=_dispatch(action,args,task_id=task_id,kanban_card_id=task_id,
+                      run_id=run_id,session_id=session_id,operation_id=eid,
+                      model_facing=False)
+        return json.loads(raw) if isinstance(raw,str) else raw
+
+    import hashlib
+    return native_send_image_once(
+        phone=phone_digits,caption=caption,media_path=str(resolved),
+        navigate=lambda **kw: step("browser_navigate",kw),
+        snapshot=lambda **kw: step("browser_snapshot",{"full":False}),
+        inspect=lambda **kw: step("browser_extract_items",{
+            "mode":"inspect","selector":kw["selector"],"limit":64,
+            "attributes":kw["attributes"]}),
+        click=lambda **kw: step("browser_click",kw),
+        type_text=lambda **kw: step("browser_type",{
+            "ref":kw["ref"],"text":kw["text"],"clear":True,"mode":"insert_text"}),
+        upload=lambda **kw: step("browser_file_upload",{
+            "files":kw["files"],"selector":'input[type="file"][accept*="image/"]'}),
+    )
+
+
+def whatsapp_send_attachment(
+    *,
+    phone_digits: str,
+    file_path: str,
+    caption: Optional[str] = None,
+    contact_name_hint: Optional[str] = None,
+    verify_delivery: bool = True,
+    delivery_timeout_seconds: float = 15.0,
+    task_id: Optional[str] = None,
+    session_id: Optional[str] = None,
+    db_path: Optional[str | Path] = None,
+    persist: bool = True,
+) -> dict[str, Any]:
+    """Send an attachment (image, document, audio, video) via WhatsApp Web.
+
+    Validates file existence, size (<50MB), allowed extension, and optional caption.
+    Uses native file upload, clicks send in preview, and verifies delivery proof.
+    """
+    from workstation.integrations.hermes.whatsapp_browser_executor import (
+        whatsapp_send_attachment as _executor_send_attachment,
+        WhatsAppSendError,
+        STATE_FAILED,
+    )
+
+    def _nav(url: str):
+        return _dispatch("browser_navigate", {"url": url}, task_id=task_id, session_id=session_id, model_facing=False)
+
+    def _snap(full: bool = False):
+        raw = _dispatch("browser_snapshot", {"full": full}, task_id=task_id, session_id=session_id, model_facing=False)
+        return json.loads(raw) if isinstance(raw, str) else raw
+
+    def _click(ref: str):
+        return _dispatch("browser_click", {"ref": ref}, task_id=task_id, session_id=session_id, model_facing=False)
+
+    def _type(ref: str, text: str):
+        return _dispatch("browser_type", {"ref": ref, "text": text}, task_id=task_id, session_id=session_id, model_facing=False)
+
+    def _upload(files: list[str]):
+        return _dispatch("browser_file_upload", {"files": files}, task_id=task_id, session_id=session_id, model_facing=False)
+
+    try:
+        return _executor_send_attachment(
+            browser_navigate=_nav,
+            browser_snapshot=_snap,
+            browser_click=_click,
+            browser_file_upload=_upload,
+            browser_type=_type,
+            phone_digits=phone_digits,
+            file_path=file_path,
+            caption=caption,
+            contact_name_hint=contact_name_hint,
+            verify_delivery=verify_delivery,
+            delivery_timeout_seconds=delivery_timeout_seconds,
+            task_id=task_id,
+            session_id=session_id,
+            db_path=db_path,
+            persist=persist,
+        )
+    except WhatsAppSendError as exc:
+        return {
+            "sent": False,
+            "state": STATE_FAILED,
+            "error_code": exc.error_code,
+            "error": str(exc),
+        }
+    except Exception as exc:
+        return {
+            "sent": False,
+            "state": STATE_FAILED,
+            "error_code": "DISPATCH_FAILED",
+            "error": str(exc),
+        }
+
+
+def whatsapp_metrics_summary(
+    *,
+    campaign_id: Optional[str] = None,
+    job_id: Optional[str] = None,
+    operation_name: Optional[str] = None,
+    db_path: Optional[str | Path] = None,
+) -> dict[str, Any]:
+    """Retrieve aggregate telemetry and reliability metrics for WhatsApp operations."""
+    from workstation.integrations.hermes.whatsapp_metrics import get_metrics_summary
+    return get_metrics_summary(
+        campaign_id=campaign_id,
+        job_id=job_id,
+        operation_name=operation_name,
+        db_path=db_path,
+    )
+
+
+def whatsapp_metrics_benchmark(
+    *,
+    campaign_id: Optional[str] = None,
+    db_path: Optional[str | Path] = None,
+) -> dict[str, Any]:
+    """Compare current WhatsApp execution metrics against the 23/10/2026 baseline session."""
+    from workstation.integrations.hermes.whatsapp_metrics import compare_against_baseline
+    return compare_against_baseline(
+        campaign_id=campaign_id,
+        db_path=db_path,
+    )

@@ -1,12 +1,18 @@
 # Hermes Agent - Development Guide
 
-## Shared checkout and branch for active multi-agent Hermes Work cycle (2026-10-13)
+## Historical multi-agent control — retired
 
-When agents work together on the active Hermes Workstation MVP, use ONLY the shared branch `feat/hermes-workstation-mvp-20261013` in checkout `C:\Github\hermes-agent`. **No independent branches/worktrees for routine sub-tasks; no concurrent Git index writes.** Before editing, read [the coordination protocol](workstation/context/AGENT_COLLABORATION_PROTOCOL.md) and [the live integration board](workstation/context/workstation-hub-mvp/TEAM_BOARD.md), then claim exclusive file ownership with `python workstation/scripts/multi_agent_coordination.py claim`. The named integrator alone stages/commits/pushes and maintains canonical context; agents update their local claim/next action and hand off on interruption. Claims are cooperative and local, not a security boundary. The Workstation upstream-first and safety gates remain in force.
+The project-local P0/P1/P2 multi-agent coordinator, admission layer and Claude hooks were retired by the maintainer on 2026-10-28. The old .hermes-collab directory and engineering journals are retained as HISTORICAL evidence, not an active ownership service. Do not run removed scripts. Before editing a shared checkout, inspect Git dirty/untracked work and coordinate directly with other active writers. Direct terminal/Desktop Commander/Claude access does not enforce cross-agent claims. The separate local-mcp-bridge is not automatically connected to this Hermes checkout and does not universally fence raw writes.
 
-### Enforcement automático (hooks PreToolUse / SessionStart)
-Hooks em `.claude/hooks/` bloqueiam escritas em caminhos reclamados por outro agente e alertam quando a sessão não está na branch do ciclo. **Antes de qualquer edição**, rode `python workstation/scripts/multi_agent_coordination.py status` e respeite claims ativos. Sessões novas devem verificar claims e branch antes de escrever. Se o script falhar, os hooks permitem a edição (fail-open). Detalhes: [`CLAUDE.md`](CLAUDE.md) § Multi-Session Collaboration Enforcement.
+## Canonical checkout and branch selection
 
+The shared Hermes Workstation cycle opened on 2026-10-13 is closed. `main` is the canonical branch for current work. The historical branch `feat/hermes-workstation-mvp-20261013` is not an active default: never switch to it because an older document or hook names it. Use another branch only when the current task or maintainer explicitly defines that branch. Before any authorized branch change, inspect claims and the full dirty/untracked state, preserve it, use a normal switch, and stop on conflicts; never force, reset, or stash automatically.
+
+For concurrent work, identify owners of current in-progress files and coordinate explicit handoffs before overlapping writes. The historical [collaboration protocol](workstation/context/agent_collaboration_protocol.md) is archival only; it is not an active lock or authorization system. Only a specifically authorized integrator may perform Git mutations.
+
+### Claude local collaboration hooks retired
+
+The old PreToolUse/SessionStart coordination hooks were unregistered. Other safety and approval mechanisms remain subject to their own rules; no universal filesystem protection is implied.
 
 For AI coding assistants and developers working on hermes-agent. This root file is a hub: what
 applies everywhere, then a routing table. Each area's `AGENTS.md` loads automatically when you work
@@ -16,11 +22,11 @@ and every root-to-area chain at 30k, so it loads whole on 128k+ models: long for
 **Never give up on the right solution.**
 
 ## Downstream Workstation context
-For Workstation runtime changes or upstream integration, read [the Workstation context README](workstation/context/README.md) and [the upstream-first development gates](workstation/context/DEVELOPMENT_GATES.md) before coding. Their baseline/seam gates are mandatory. No target runtime change before Stage A qualifies.
+For Workstation runtime changes or upstream integration, read [the Workstation context README](workstation/context/README.md) and [the development guidance](workstation/context/DEVELOPMENT_GATES.md) before coding. Stage A / H-079 upstream synchronization is **optional**, not an admission gate: bug fixes, features, refactors and testing may proceed without refreshing, merging or qualifying upstream. For the last recorded (possibly stale) upstream status, see [the synchronization report](workstation/UPSTREAM.md) and [the downstream delta](workstation/UPSTREAM_DELTA.md). Target-specific safety, regression checks, and release evidence remain applicable.
 
-For Stage A CI design or promotion, also read [the fork CI cost-control and qualification contract](workstation/context/CI_COST_CONTROL.md); do not restore broad inherited triggers as a substitute for exact-head evidence.
+When explicitly performing Stage A or promoting a release, also read [the fork CI cost-control and qualification contract](workstation/context/CI_COST_CONTROL.md); do not restore broad inherited triggers as a substitute for exact-head evidence.
 
-- One immutable pin per cycle. Final fetch records drift for the next cycle; only a confirmed candidate defect or required-check failure holds promotion. Moving upstream alone does not restart the cycle.
+- For an **opt-in upstream synchronization cycle**, use one immutable pin. Final fetch records drift for the next cycle; moving upstream alone does not restart the cycle. Do not treat missing Stage A evidence as a blocker to ordinary implementation.
 - For upstream conflicts/seams, also read UPSTREAM_MIGRATION_AS_DECOUPLING_2026-09-19.md and FIRST_PARTY_SEAM_POLICY.md; compose semantics, never blanket ours/theirs.
 
 ## Maintainer-authorized red-team harness

@@ -1,40 +1,30 @@
 # Hermes Workstation — Agent Instructions
 
+## Retired project-local multi-agent control
+
+The project-local P0/P1/P2 multi-agent coordinator, admission layer and Claude hooks were retired by the maintainer on 2026-10-28. The old .hermes-collab directory and engineering journals are retained as HISTORICAL evidence, not an active ownership service. Do not run removed scripts. Before editing a shared checkout, inspect Git dirty/untracked work and coordinate directly with other active writers. Direct terminal/Desktop Commander/Claude access does not enforce cross-agent claims. The separate local-mcp-bridge is not automatically connected to this Hermes checkout and does not universally fence raw writes.
+
 ## OPC-001 — Prefabricated operational capabilities
 
-For recurring browser/site procedures or Agent/Workstation capability discoverability, use `context/PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md` and `context/PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md` *after* the mandatory upstream-first and canonical context reading. Reuse existing `referências/Hermes-Work-Prefabs-Plug-and-Play-v0.1` code when available; never copy private dogfood JSON/HTML into commits. Runtime changes require exact-HEAD gates. Agent toolset discovery and pre-System-2 Workstation resolution need separate evidence; neither Laya nor saved HTML can grant permissions.
+For recurring browser/site procedures or Agent/Workstation capability discoverability, use `context/PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md` and `context/PREFAB_IMPLEMENTER_PROMPT_2026-10-10.md` *after* the relevant Workstation context reading. Reuse existing `referências/Hermes-Work-Prefabs-Plug-and-Play-v0.1` code when available; never copy private dogfood JSON/HTML into commits. Runtime changes require relevant behavior and regression evidence; exact-head upstream qualification applies only to an explicitly selected synchronization/release lane. Agent toolset discovery and pre-System-2 Workstation resolution need separate evidence; neither Laya nor saved HTML can grant permissions.
 
 
 This directory is the downstream Hermes Workstation product layer. Repository-wide rules in the root `AGENTS.md` remain authoritative.
 
-## Multi-agent shared-branch rule — ACTIVE 2026-10-13
+## Branch selection and multi-agent coordination
 
-For simultaneous agents on the current Hermes Workstation MVP, FIRST read `context/AGENT_COLLABORATION_PROTOCOL.md` and `context/workstation-hub-mvp/TEAM_BOARD.md`. All agents work in the same `C:\Github\hermes-agent` checkout on `feat/hermes-workstation-mvp-20261013`, claim disjoint files with `python workstation/scripts/multi_agent_coordination.py claim`, heartbeat progress, and release after integration. The designated integrator alone performs Git staging/commits/push and edits canonical board/policies. Never create another branch/worktree merely to fix an MVP sub-task. This changes coordination only: upstream-first Stage A, human leases, TaskRun/session authority, TDD and exact-head CI are still mandatory.
+The shared-branch cycle opened on 2026-10-13 is closed. `main` is the canonical branch for current Workstation work. Treat `feat/hermes-workstation-mvp-20261013` as historical; never switch to it because this or another old document names it. A future cycle may use a different branch only when the current task or maintainer explicitly defines it. Preserve the shared checkout, inspect all dirty/untracked work and active claims before an authorized branch change, use a normal switch, and stop if Git reports a conflict. Never force, reset, or stash automatically.
+
+For concurrent changes, inspect real current writers and coordinate explicit handoff before modifying overlapping files. Historical .hermes-collab records are retained for audit only; they are not executable protection. Preserve Browser/session authority, leases and security invariants unrelated to this retired system.
 
 
-## Primary operating gate: synchronize before downstream implementation
+## Optional Stage A / H-079 upstream synchronization
 
-Before editing Workstation runtime code or any upstream-owned integration point, execute
-the canonical
-[`UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md`](context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+Stage A is an **optional maintenance and synchronization workflow**, not an admission gate for local development. Agents may implement features, fix bugs, refactor and test even when upstream has moved, no new pin was selected, or Stage A/exact-head baseline qualification is pending or red. No task-scoped waiver is required merely to start coding.
 
-The mandatory engineering order is:
+For awareness, consult [the upstream synchronization status](UPSTREAM.md), [downstream delta](UPSTREAM_DELTA.md), and [the archived H-079 procedure](context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md). A dated report is useful context, not proof of live freshness. Do not require a fetch, merge, pin, CI run or synchronization report update before ordinary implementation; if status is unknown, state that rather than guessing.
 
-```text
-UPSTREAM PREFLIGHT
--> PIN
--> BASELINE SYNC
--> SEAM RECONCILIATION
--> BASELINE QUALIFICATION
--> TARGET CHANGE
--> TARGET QUALIFICATION
--> FINAL UPSTREAM DRIFT CHECK
-```
-
-Do not combine a stale-baseline feature implementation with later conflict resolution.
-Do not begin target coding while required exact-head Workstation baseline gates are red.
-A passing seam inventory does not close seams marked REMOVE; their actual authority path
-must be verified.
+When upstream synchronization is deliberately requested, keep its merge, seam reconciliation and qualification independently auditable. Do not claim a baseline or release is upstream-qualified without evidence. Continue preserving current work, Browser/session authority, security controls, scoped regression tests and all target-specific acceptance requirements. CI or release gates may still be required for the **particular deliverable**, independently of Stage A.
 
 Before editing anything under `workstation/` or any Workstation-owned integration point elsewhere in the repository, read [`context/README.md`](context/README.md) and follow its required reading order. Then inspect the current `main` code and tests for the subsystem being changed.
 

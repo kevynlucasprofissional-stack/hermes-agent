@@ -12,6 +12,7 @@ const electron = vi.hoisted(() => {
   class FakeWebContents {
     private destroyed = false
     private readonly listeners = new Map<string, Listener[]>()
+  readonly ipc = { on: (_channel: string, _listener: Listener) => undefined }
     private title = ''
     private url = 'about:blank'
     readonly navigationHistory = {
@@ -207,6 +208,7 @@ const electron = vi.hoisted(() => {
     FakeWebContentsView,
     app: {
       getPath: () => 'C:/tmp/hermes-runtime-resilience-app',
+      getAppPath: () => 'C:/tmp/hermes-runtime-resilience-app',
       whenReady: () => new Promise<never>(() => undefined),
       on: () => undefined
     },

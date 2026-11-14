@@ -1,5 +1,6 @@
-import { BrowserWindow, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
 
+import { pageWatchDisconnectForTab, pageWatchEnable, pageWatchPause, pageWatchUiState } from './workstation-browser-page-watch-service'
 import {
   getWorkstationBrowserRuntime,
   type WorkstationBrowserBounds
@@ -30,7 +31,102 @@ function learningControlRuntime(event: IpcMainInvokeEvent, tabId?: string) {
   return runtime
 }
 
+function pageWatchOwner(event: IpcMainInvokeEvent, tabId: string): void {
+  learningControlRuntime(event,tabId)
+
+  if (getWorkstationBrowserRuntime().state().activeTabId !== tabId) {
+    throw new Error('page_watch_wrong_active_tab')
+  }
+}
+
 export function registerWorkstationBrowserIpc(): void {
+  ipcMain.handle('hermes:workstation-browser:page-watch:status', (event, tabId) => {
+    const id=String(tabId ?? '')
+    pageWatchOwner(event,id)
+
+    return pageWatchUiState(id)
+  })
+  ipcMain.handle('hermes:workstation-browser:page-watch:enable', (event, tabId, selector) => {
+    const id=String(tabId ?? '')
+    pageWatchOwner(event,id)
+
+    return pageWatchEnable(id,String(selector ?? ''))
+  })
+  ipcMain.handle('hermes:workstation-browser:page-watch:pause', (event, tabId) => {
+    const id=String(tabId ?? '')
+    pageWatchOwner(event,id)
+
+    return pageWatchPause(id)
+  })
+  ipcMain.handle('hermes:workstation-browser:human-review:list-batches', event => {
+    const window = senderWindow(event)
+    const runtime = getWorkstationBrowserRuntime()
+    if (event.sender !== window.webContents ||
+        event.senderFrame !== window.webContents.mainFrame ||
+        !runtime.isLearningControlOwner(window)) {throw new Error('human_review_owner_mismatch')}
+    return runtime.listUncertainBatchReviews()
+  })
+  ipcMain.handle('hermes:workstation-browser:human-review:confirm-batch', async (event, operationId) => {
+    const window = senderWindow(event)
+    const runtime = getWorkstationBrowserRuntime()
+    if (event.sender !== window.webContents ||
+        event.senderFrame !== window.webContents.mainFrame ||
+        !runtime.isLearningControlOwner(window) || !window.isFocused()) {
+      throw new Error('human_review_owner_mismatch')
+    }
+    if (typeof operationId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(operationId)) {
+      throw new Error('human_review_invalid_operation')
+    }
+    return runtime.reviewUncertainBatch(operationId, async review => {
+      const result = await dialog.showMessageBox(window, {
+        type: 'warning',
+        title: 'Hermes Browser — uncertain batch review',
+        message: 'Did you independently inspect the target conversation and its actual result?',
+        detail: `Session: ${review.sessionId}\nOperation: ${review.operationId}\nUncertainty: ${review.reason}\n` +
+          (review.webContentsId === -1 ? 'The task was restored without loading its external page. ' : '') +
+          'Confirm ONLY after independently inspecting the target conversation. This releases the fence; it does NOT ' +
+          'send a message, replay the batch, or prove external delivery. Cancel if the outcome is unknown.',
+        buttons: ['Cancel — keep blocked', 'I inspected the result — release this fence'],
+        defaultId: 0, cancelId: 0, noLink: true
+      })
+      return result.response === 1
+    })
+  })
+  ipcMain.handle('hermes:workstation-browser:human-review:list-navigation', event => {
+    const window = senderWindow(event)
+    const runtime = getWorkstationBrowserRuntime()
+    if (event.sender !== window.webContents ||
+        event.senderFrame !== window.webContents.mainFrame ||
+        !runtime.isLearningControlOwner(window)) {
+      throw new Error('human_review_owner_mismatch')
+    }
+    return runtime.listVerifiedNavigationReviews()
+  })
+  ipcMain.handle('hermes:workstation-browser:human-review:confirm-navigation', async (event, operationId) => {
+    const window = senderWindow(event)
+    const runtime = getWorkstationBrowserRuntime()
+    if (event.sender !== window.webContents ||
+        event.senderFrame !== window.webContents.mainFrame ||
+        !runtime.isLearningControlOwner(window) || !window.isFocused()) {
+      throw new Error('human_review_owner_mismatch')
+    }
+    if (typeof operationId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(operationId)) {
+      throw new Error('human_review_invalid_operation')
+    }
+    return runtime.reviewVerifiedNavigation(operationId, async review => {
+      const result = await dialog.showMessageBox(window, {
+        type: 'warning',
+        title: 'Hermes Browser — verified local navigation',
+        message: 'Reconcile this locally verified navigation?',
+        detail: 'Durable owner receipt and live readback prove local navigation to ' +
+          review.safeUrl + '. No click, batch, message or external delivery is approved. Operation: ' +
+          review.operationId,
+        buttons: ['Cancel — keep blocked', 'Confirm verified local navigation'],
+        defaultId: 0, cancelId: 0, noLink: true
+      })
+      return result.response === 1
+    })
+  })
   ipcMain.handle('hermes:workstation-browser:status', () => getWorkstationBrowserRuntime().ensure())
   ipcMain.handle('hermes:workstation-browser:ensure', () => getWorkstationBrowserRuntime().ensure())
   ipcMain.handle('hermes:workstation-browser:resources', () => getWorkstationBrowserRuntime().resources())
@@ -46,9 +142,11 @@ export function registerWorkstationBrowserIpc(): void {
   ipcMain.handle('hermes:workstation-browser:activate-tab', (_event, tabId) =>
     getWorkstationBrowserRuntime().activateTab(String(tabId ?? ''))
   )
-  ipcMain.handle('hermes:workstation-browser:close-tab', (_event, tabId) =>
-    getWorkstationBrowserRuntime().closeTab(String(tabId ?? ''))
-  )
+  ipcMain.handle('hermes:workstation-browser:close-tab', (_event, tabId) => {
+    pageWatchDisconnectForTab(String(tabId ?? ''))
+
+    return getWorkstationBrowserRuntime().closeTab(String(tabId ?? ''))
+  })
   ipcMain.handle('hermes:workstation-browser:navigate', async (_event, target) =>
     getWorkstationBrowserRuntime().navigate(String(target ?? ''))
   )
@@ -124,12 +222,16 @@ export function registerWorkstationBrowserIpc(): void {
   )
   ipcMain.handle('hermes:workstation-browser:pause', () => getWorkstationBrowserRuntime().pause())
   ipcMain.handle('hermes:workstation-browser:resume', () => getWorkstationBrowserRuntime().resume())
-  ipcMain.handle('hermes:workstation-browser:take-control', (_event, taskId, sessionId) =>
-    getWorkstationBrowserRuntime().takeControl(
+  ipcMain.handle('hermes:workstation-browser:take-control', (_event, taskId, sessionId) => {
+    const tabId=getWorkstationBrowserRuntime().state().activeTabId
+
+    if (tabId) {pageWatchPause(tabId,'human_takeover')}
+
+    return getWorkstationBrowserRuntime().takeControl(
       typeof taskId === 'string' ? taskId : undefined,
       typeof sessionId === 'string' ? sessionId : undefined
     )
-  )
+  })
   ipcMain.handle('hermes:workstation-browser:release-control', (_event, taskId) =>
     getWorkstationBrowserRuntime().releaseControl(typeof taskId === 'string' ? taskId : undefined)
   )

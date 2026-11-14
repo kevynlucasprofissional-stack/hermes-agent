@@ -65,3 +65,21 @@ Para evitar recorrência, as seguintes mudanças são necessárias no runtime do
 - Código do dispatcher: `tools/browser_workstation.py` (função `_dispatch`, linha ~1040)
 - Skill relacionada: `/hermes-work-control`
 - Relatório da campanha WhatsApp (contexto): sessão anterior, 2026-10-22
+
+---
+
+## Atualização vinculada — 2026-10-28: admissão órfã de lote em sessão reutilizada
+
+**Status:** incidente com evidência persistida; correção de runtime não aplicada. Os totais abaixo são fotografias históricas, não números em tempo real.
+
+**Caso após reinício.** Sessão/BrowserTask/Run `20261027_102556_e828a7`, `kanbanCardId` vazio, status `parked`. Admissão pai `op_browser_batch_actions_b5c57ae46709`, ação `browser_batch_actions`, sem ACK ou terminal. Último comprovante `op_browser_batch_actions_b5c57ae46709:0`, ação `browser_click`, mesma tarefa, sessão, run e aba, URL sanitizada `https://web.whatsapp.com/`. Snapshot de 28/10 às 01:34:41Z: 258 admissões, 234 `runId=unbound`, 20 sem ACK/terminal; inspeção anterior encontrou 24 — há possibilidade de atualizações por outros processos.
+
+**Código observado.** `apps/desktop/electron/workstation-browser-session-state.ts`: `pendingBrowserMutation`/`findPendingBrowserMutation` bloqueiam mutações da mesma tripla `taskId/sessionId/runId`; `save` (linhas aprox. 997–1007) só marca ACK quando o comprovante tem o mesmo `operationId`, `action`, `taskId`, `tabId` e run compatível. `apps/desktop/electron/workstation-browser-runtime.ts`: `browser_batch_actions` registra comprovantes de subetapa `parent:index`, com ação `browser_<kind>`. Assim, o último comprovante filial não corresponde à admissão pai. A confirmação de uma etapa não certifica a execução global do lote; o fence existe para evitar repetir efeitos externos incertos.
+
+**Escopo do nexo causal.** O cenário da UI e a resposta prefab são compatíveis com falta de confirmação final. A identidade do handoff autenticado e a execução real das últimas tentativas não foram lidas/reproduzidas. `workstation/prefabs/integration.py`/`engine.py` exigem navegação seguida de snapshot independente. `workstation/integrations/hermes/scoped_execution.py` pode consultar Kanban, mas a sessão afetada não tinha `kanbanCardId`. Não atribuir o defeito ao Kanban upstream nem reverter seu código.
+
+**Solução sob validação.** Aproveitar `BrowserSessionStateFilePersistence.reconcilePendingAdmission` e os comandos nativos `browser_admissions_inspect`/`browser_admissions_reconcile`; não criar outra autoridade. Para lote `verified`, avaliar comprovante pai causal persistido após todas as etapas verificadas, mantendo as evidências filhas e separando ACK de pós-condição externa. Para `uncertain/rejected`, manter bloqueio até prova pré-efeito válida ou reconciliação humana fundamentada em readback. Nunca limpar o ledger às cegas, repetir envio WhatsApp, desabilitar ownership ou habilitar CDP automaticamente.
+
+**Baseline de testes durante o planejamento.** Em `apps/desktop`, `vitest run --project electron electron/workstation-browser-batch.test.ts electron/workstation-browser-runtime-batch.test.ts electron/workstation-browser-session-state.test.ts --reporter=dot`: 21 PASS / 12 FAIL (33). As 12 falhas são do `workstation-browser-runtime-batch.test.ts`, por mock Electron incompleto (`TypeError: app.getAppPath is not a function`, runtime linha 1502), antes de provar a função de lote. As outras duas suítes passaram. Testes usam mocks e diretórios temporários; nenhum envio WhatsApp real.
+
+**Governança.** Checkout no preflight `main@f1d5ab2f03`, 196 entradas dirty. Os docs canônicos `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, `DECISIONS.md`, `ROADMAP.md`, `engineering-journal/CURRENT.md` estavam modificados e reivindicados por `whatsapp-m3`; não sobrescrever. A dispensa histórica Stage A de WA-M3 não autoriza automaticamente patch de Browser nesta missão. Plano de implementação e prompts: `workstation/context/BROWSER_BATCH_RECONCILIATION_PLAN_20261028.md`.

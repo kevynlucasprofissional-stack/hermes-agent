@@ -428,13 +428,13 @@ export class LearningSessionRecorder {
 
     // Persist event in JSONL
     try {
-      const eventsPath = path.join(this.state.sessionDir, 'events.jsonl')
+      const eventsPath = path.join(recording.sessionDir, 'events.jsonl')
       fs.appendFileSync(eventsPath, JSON.stringify(safe) + '\n', 'utf-8')
     } catch {
       // Ignore write error
     }
 
-    this.state.eventsCount++
+    recording.eventsCount++
     this.recentGestures.push(safe)
 
     if (this.recentGestures.length > 50) {
@@ -445,7 +445,7 @@ export class LearningSessionRecorder {
     if (safe.kind === 'click' || safe.kind === 'shortcut') {
       const snapFilename = `snap_${safe.event_id}_${safe.time_ms}.png`
       const snapRelPath = path.join('snapshots', snapFilename).replace(/\\/g, '/')
-      const snapAbsPath = path.join(this.state.sessionDir, 'snapshots', snapFilename)
+      const snapAbsPath = path.join(recording.sessionDir, 'snapshots', snapFilename)
 
       if (this.lastFrameBuffer) {
         try {
@@ -458,7 +458,7 @@ export class LearningSessionRecorder {
         }
       } else if (this.captureScreenshot) {
         try {
-          const res = await this.captureScreenshot(this.state.tabId)
+          const res = await this.captureScreenshot(recording.tabId)
 
         if (this.state !== recording || recording.status !== 'learning'
           || recording.documentEpoch !== raw.documentEpoch) {

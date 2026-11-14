@@ -1,0 +1,8 @@
+{
+  "name": "workstation-board",
+  "label": "Workstation Kanban",
+  "description": "Independent human-first Workstation board with its own SQLite state",
+  "icon": "LayoutDashboard",
+  "version": "0.1.0",
+  "api": "plugin_api.py"
+}

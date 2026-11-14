@@ -1,5 +1,13 @@
 # Hermes Workstation upstream delta
 
+> **Policy status (2026-11-01):** The H-079 / Stage A mandatory
+> development admission described in historical HW-030 and other dated entries
+> below is **superseded**. Upstream synchronization is optional, not a blocker
+> for ordinary implementation. See [the synchronization status index](UPSTREAM.md)
+> and [current agent guidance](AGENTS.md). Preserve historical drift and
+> qualification records as evidence, not as live status or new obligations.
+
+
 ## Operational speed Stage A — upstream reconciliation (2026-10-10)
 
 Candidate only, **NOT QUALIFIED**. True merge of upstream pin

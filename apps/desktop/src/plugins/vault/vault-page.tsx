@@ -12,7 +12,7 @@ import {
   useQueryClient,
   useValue
 } from '@hermes/plugin-sdk'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   $selectedNoteTitle,
@@ -23,7 +23,9 @@ import {
   fetchVaultNotes,
   fetchVaultStatus,
   fetchVaultSuggestions,
-  saveVaultNote
+  saveVaultNote,
+  searchVault,
+  updateVaultNoteSource
 } from './api'
 import { VaultGraphView } from './graph-view'
 
@@ -32,12 +34,16 @@ export function VaultPage() {
   const selectedTitle = useValue($selectedNoteTitle)
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'editor' | 'preview' | 'graph'>('editor')
 
   // Local draft state for editing
   const [draftTitle, setDraftTitle] = useState('')
   const [draftContent, setDraftContent] = useState('')
+  const [savedContent, setSavedContent] = useState('')
+  const [draftRevision, setDraftRevision] = useState('')
+  const [loadedPath, setLoadedPath] = useState<string | null>(null)
   const [draftTags, setDraftTags] = useState('')
   const [isCreatingNew, setIsCreatingNew] = useState(false)
   const [vaultRootDraft, setVaultRootDraft] = useState('')
@@ -55,7 +61,19 @@ export function VaultPage() {
     refetchInterval: 10_000
   })
 
-  const notes = notesData?.notes ?? []
+  const notes = useMemo(() => notesData?.notes ?? [], [notesData?.notes])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 200)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const { data: searchData, isFetching: isSearching, isError: hasSearchError } = useQuery({
+    queryKey: ['vault', 'search', debouncedSearch],
+    queryFn: () => searchVault(debouncedSearch),
+    enabled: debouncedSearch.length > 0
+  })
 
   // Auto-select first note if none selected
   const activeTitle = selectedTitle || (notes[0]?.title ?? '')
@@ -81,14 +99,19 @@ export function VaultPage() {
     enabled: viewMode === 'editor' && wikilinkPrefix !== null
   })
 
-  // Synchronize draft state when active note changes
-  useMemo(() => {
-    if (activeNote && !isCreatingNew) {
+  // A background refetch must not erase edits that have not been saved.
+  useEffect(() => {
+    if (isCreatingNew) {
+      setLoadedPath(null)
+    } else if (activeNote && loadedPath !== activeNote.rel_path) {
+      setLoadedPath(activeNote.rel_path)
       setDraftTitle(activeNote.title)
       setDraftContent(activeNote.content)
+      setSavedContent(activeNote.content)
+      setDraftRevision(activeNote.revision)
       setDraftTags(activeNote.tags.join(', '))
     }
-  }, [activeNote, isCreatingNew])
+  }, [activeNote, isCreatingNew, loadedPath])
 
   // 3. Fetch Graph
   const { data: graphData } = useQuery({
@@ -102,21 +125,30 @@ export function VaultPage() {
   // 4. Mutations
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!isCreatingNew && activeNote) {
+        // Textareas normalize CRLF to LF; keep the note's original line ending convention.
+        const content = savedContent.includes('\r\n') ? draftContent.replace(/\r?\n/g, '\r\n') : draftContent
+
+        return updateVaultNoteSource(activeNote.rel_path, content, draftRevision)
+      }
+
       const tags = draftTags
         .split(',')
         .map(t => t.trim().replace(/^#/, ''))
         .filter(Boolean)
 
-      const res = await saveVaultNote({
+      return saveVaultNote({
         title: draftTitle.trim() || 'Sem Título',
         content: draftContent,
-        frontmatter: { ...(activeNote?.frontmatter ?? {}), tags }
+        frontmatter: { tags },
+        create_only: true
       })
-
-      return res
     },
     onSuccess: res => {
       setIsCreatingNew(false)
+      setDraftContent(res.note.content)
+      setSavedContent(res.note.content)
+      setDraftRevision(res.note.revision)
       $selectedNoteTitle.set(res.note.title)
       void qc.invalidateQueries({ queryKey: ['vault'] })
     }
@@ -142,19 +174,17 @@ export function VaultPage() {
     }
   })
 
-  // Filter notes
+  // Match by file path, not title: two folders can contain the same filename.
   const filteredNotes = useMemo(() => {
-    return notes.filter(n => {
-      const matchSearch =
-        !searchQuery ||
-        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        n.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matches = new Set(searchData?.results.map(result => result.rel_path) ?? [])
 
-      const matchTag = !selectedTag || n.tags.includes(selectedTag)
+    return notes.filter(note => {
+      const matchSearch = !debouncedSearch || matches.has(note.rel_path)
+      const matchTag = !selectedTag || note.tags.includes(selectedTag)
 
       return matchSearch && matchTag
     })
-  }, [notes, searchQuery, selectedTag])
+  }, [notes, debouncedSearch, searchData, selectedTag])
 
   // Extract all unique tags
   const allTags = useMemo(() => {
@@ -167,7 +197,12 @@ export function VaultPage() {
     return Array.from(s).sort()
   }, [notes])
 
+  const confirmDiscardDraft = () =>
+    (!isCreatingNew && draftContent === savedContent) ||
+    window.confirm('Você tem alterações não salvas. Descartá-las?')
+
   const handleStartNewNote = () => {
+    if (!confirmDiscardDraft()) {return}
     setIsCreatingNew(true)
     setDraftTitle('Nova Nota')
     setDraftContent('# Nova Nota\n\nComece a escrever e use [[Wikilinks]] para conectar ideias.')
@@ -176,6 +211,9 @@ export function VaultPage() {
   }
 
   const handleSelectNote = (title: string) => {
+    if (title === activeTitle && !isCreatingNew) {return}
+
+    if (!confirmDiscardDraft()) {return}
     setIsCreatingNew(false)
     $selectedNoteTitle.set(title)
   }
@@ -223,7 +261,11 @@ export function VaultPage() {
             {rootMutation.isError && <div className="text-[10px] text-(--ui-danger)">{String(rootMutation.error)}</div>}
             <Button
               disabled={!vaultRootDraft.trim() || rootMutation.isPending}
-              onClick={() => rootMutation.mutate(vaultRootDraft.trim())}
+              onClick={() => {
+                if (confirmDiscardDraft()) {
+                  rootMutation.mutate(vaultRootDraft.trim())
+                }
+              }}
               size="xs"
             >
               {rootMutation.isPending ? 'Alterando...' : 'Usar este Vault'}
@@ -239,6 +281,8 @@ export function VaultPage() {
             placeholder="Buscar notas..."
             value={searchQuery}
           />
+          {debouncedSearch && isSearching && <div className="pt-1 text-[10px] text-(--ui-text-tertiary)">Pesquisando conteúdo...</div>}
+          {debouncedSearch && hasSearchError && <div className="pt-1 text-[10px] text-(--ui-danger)">Falha na pesquisa.</div>}
         </div>
 
         {/* Tags horizontal scroll */}
@@ -270,6 +314,8 @@ export function VaultPage() {
             <div className="grid place-items-center py-8">
               <Loader type="lemniscate-bloom" />
             </div>
+          ) : debouncedSearch && isSearching ? (
+            <div className="py-8 text-center text-(--ui-text-tertiary)">Pesquisando...</div>
           ) : filteredNotes.length === 0 ? (
             <div className="py-8 text-center text-(--ui-text-tertiary)">Nenhuma nota encontrada.</div>
           ) : (
@@ -361,7 +407,7 @@ export function VaultPage() {
           <div className="flex items-center gap-2">
             {viewMode !== 'graph' && (
               <>
-                <Button disabled={saveMutation.isPending} onClick={() => void saveMutation.mutate()} size="xs">
+                <Button disabled={saveMutation.isPending || (!isCreatingNew && (!activeNote || loadedPath !== activeNote.rel_path || !draftRevision))} onClick={() => void saveMutation.mutate()} size="xs">
                   <Codicon name="save" size="0.875rem" /> {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
                 </Button>
                 {!isCreatingNew && activeTitle && (
@@ -382,6 +428,11 @@ export function VaultPage() {
           </div>
         </header>
 
+        {saveMutation.isError && (
+          <div className="border-b border-(--ui-danger) px-4 py-2 text-(--ui-danger)" role="alert">
+            Não foi possível salvar. O arquivo pode ter sido alterado externamente; confira antes de recarregar. {String(saveMutation.error)}
+          </div>
+        )}
         {/* Content Body */}
         {viewMode === 'graph' ? (
           <div className="flex-1 overflow-hidden">
@@ -402,6 +453,7 @@ export function VaultPage() {
               <Input
                 aria-label="Título da nota"
                 className="text-base font-bold"
+                disabled={!isCreatingNew}
                 onChange={e => setDraftTitle(e.target.value)}
                 placeholder="Título da nota..."
                 value={draftTitle}
@@ -409,12 +461,18 @@ export function VaultPage() {
               <Input
                 aria-label="Tags (separadas por vírgula)"
                 className="text-xs"
+                disabled={!isCreatingNew}
                 onChange={e => setDraftTags(e.target.value)}
                 placeholder="Tags (separadas por vírgula, ex: projeto, pesquisa)..."
                 value={draftTags}
               />
             </div>
 
+            {!isCreatingNew && (
+              <div className="mb-2 text-[10px] text-(--ui-text-tertiary)">
+                Edite tags e título no frontmatter Markdown. Renomear o arquivo ainda não é suportado.
+              </div>
+            )}
             {/* Note Body */}
             {viewMode === 'preview' ? (
               <ScrollArea className="flex-1 rounded-md border border-(--ui-stroke-secondary) bg-(--ui-bg-primary) p-4">

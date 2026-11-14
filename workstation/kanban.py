@@ -18,6 +18,41 @@ from dataclasses import asdict
 _log = logging.getLogger(__name__)
 
 
+def _advisory_observation_issues(observed_tools, *, trace_truncated: bool) -> list[str]:
+    """A read-only answer cannot be accepted if the complete tool lane is unknown."""
+    if trace_truncated or not isinstance(observed_tools, list):
+        return ["Read-only tool observation is incomplete"]
+    if not observed_tools:
+        return ["Read-only work has no observed source read"]
+    for item in observed_tools:
+        if (not isinstance(item, dict)
+                or item.get("effect") not in {"PURE_READ", "DISCOVERY"}
+                or item.get("status") != "completed"):
+            return ["Read-only task has an unverified, failed, or mutable tool operation"]
+    return []
+
+
+def _persist_advisory_result(artifacts, task_id: str, session_id: str, run_id: str, result: str):
+    """Prove a user-visible advisory result exists in the owner's durable store.
+
+    This proves delivery/persistence, not the factual correctness of the answer.
+    """
+    from workstation.contracts import EvidenceRef
+    payload = {"task_id": task_id, "session_id": session_id,
+               "run_id": run_id, "result": result}
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    stored = artifacts.store(task_id, f"advisory_result_{digest}.json", payload,
+                             schema="hermes.advisory_result.v1")
+    readback = artifacts.resolve_structured(stored.ref)
+    if readback.get("content") != payload or readback.get("sha256") != stored.sha256:
+        raise ValueError("Advisory result persisted readback does not match the turn")
+    evidence = EvidenceRef("advisory_result", stored.ref, sha256=stored.sha256,
+                           task_id=task_id, run_id=run_id, verifier="advisory_result_readback")
+    verifier = {"verifier": "advisory_result_readback", "passed": True,
+                "evidence_ref": stored.ref, "task_id": task_id, "run_id": run_id}
+    return evidence, verifier
+
+
 def _verified_native_navigation(artifacts, trace, task_id: str, session_id: str, run_id: str):
     """Verify one adaptive navigation against Electron's persisted BrowserTask state."""
     from workstation.contracts import EvidenceRef
@@ -159,12 +194,18 @@ def is_multistep_request(prompt: str) -> bool:
         )
         if len(verbs) >= 2:
             return True
-    # Explicit multi-action assignments, not noun/topic mentions.
-    actions = re.findall(
-        r"\b(investigue|corrija|implemente|teste|documente|crie|gere|"
-        r"atualize|construa|configure|desenvolva|revise|integre|escreva|"
-        r"fix|implement|build|generate|create|test|verify|deploy)\b", text
-    )
+    # Explicit multi-action assignments; prohibitions are constraints, not steps.
+    actions = [
+        match.group(1) for match in re.finditer(
+            r"\b(investigue|corrija|implemente|teste|documente|crie|gere|"
+            r"atualize|construa|configure|desenvolva|revise|integre|escreva|"
+            r"fix|implement|build|generate|create|test|verify|deploy)\b", text
+        )
+        if not re.search(
+            r"\b(?:do not|don't|never|n[aã]o)\s+$",
+            text[max(0, match.start() - 16):match.start()],
+        )
+    ]
     return len(set(actions)) >= 2 and bool(re.search(r"[,;]|\b(e|and|depois)\b", text))
 
 
@@ -400,11 +441,20 @@ class WorkstationKanbanBridge:
                 outcome.status = OutcomeStatus.UNCERTAIN
             elif outcome.status == OutcomeStatus.VERIFIED_COMPLETED:
                 outcome.status = OutcomeStatus.FAILED if "verifier_failed" in reasons else OutcomeStatus.BLOCKED
+            # 'needs_input' means an actual human decision is required.
+            # Missing machine evidence is a capability/verification defect, not
+            # an invitation to unblock and repeat a potentially mutable task.
+            block_kind = (
+                "needs_input" if outcome.uncertain_mutation
+                or outcome.status == OutcomeStatus.WAITING_FOR_HUMAN or report.approvals
+                else "transient" if outcome.status in {OutcomeStatus.FAILED, OutcomeStatus.UNCERTAIN}
+                else "capability"
+            )
             with self.get_connection() as conn:
                 kanban_db.block_task(
                     conn, task_id,
                     reason="; ".join(reasons),
-                    kind="needs_input",
+                    kind=block_kind,
                     expected_run_id=target_run_id,
                 )
             ExecutionJournal(task_id, report.session_id).record(
@@ -458,6 +508,18 @@ class WorkstationKanbanBridge:
                    evidence_refs=tuple(report.evidence),
                    dedupe_key=f"outcome:{task_id}:{target_run_id}",
                    payload={"verified": outcome.status == OutcomeStatus.VERIFIED_COMPLETED})
+        # A verified read-only recovery child may now finish its parent by
+        # fresh owner readback. This is post-commit and never repeats the write.
+        try:
+            from workstation.evidence_recovery import on_recovery_child_completed
+            on_recovery_child_completed(task_id=task_id, board=self.board)
+        except Exception:
+            _log.warning("Evidence recovery projection failed after child DONE", exc_info=True)
+        # A read-only advisory answer is not an operational procedure to mine.
+        # Keep its verified DONE synchronous and independent of the optional
+        # (and potentially expensive) Experience Compiler projection.
+        if contract.policy == "advisory":
+            return success
         from workstation.experience_compiler.corpus import ExperienceCorpus
         from workstation.experience_compiler.compiler import ExperienceCompiler
         from workstation.experience_compiler.lifecycle import ExperienceValidationPromotionCoordinator
@@ -512,9 +574,12 @@ class WorkstationKanbanBridge:
                         'experience operational candidate validation pending',
                         metadata={'capability_id': capability.id, 'reasons': list(cycle_result.reasons)},
                     )
-        except (OSError, ValueError, CapabilityValidationError) as error:
-            import logging
-            logging.getLogger(__name__).warning('Experience projection failed after accepted completion: %s', type(error).__name__)
+        except (OSError, ValueError, TypeError, CapabilityValidationError) as error:
+            # Experience mining is optional and runs AFTER canonical DONE.
+            # Legacy corpus/type failures cannot turn a committed task into
+            # an apparent failed turn or invite an unsafe retry.
+            _log.warning("Experience projection failed after accepted completion: %s",
+                         type(error).__name__, exc_info=True)
             learned = []
         if report.repeatability_hint and report.procedure_steps and corpus is not None and not corpus.refs:
             from workstation.memory import ProceduralMemory
@@ -545,6 +610,9 @@ class WorkstationKanbanBridge:
         turn_result: dict,
         *,
         expected_run_id: int | None = None,
+        observed_tools: list[dict] | None = None,
+        trace_truncated: bool = False,
+        native_browser_contract: Any | None = None,
     ) -> dict:
         """Verify persisted execution before submitting the turn's outcome candidate."""
         from workstation.artifacts import ArtifactStore
@@ -556,10 +624,40 @@ class WorkstationKanbanBridge:
             task = kanban_db.get_task(conn, task_id)
             if task is None or task.session_id != session_id:
                 raise ValueError("Outcome candidate must belong to the canonical task/session")
+            if task.status in {"blocked", "cancelled", "archived", "scheduled"}:
+                # Historical/parked work must be explicitly reconciled or
+                # unblocked; a later turn cannot silently close an old card.
+                return {"task_id": task_id, "status": "not_running", "acceptance_approved": False}
+            saved = conn.execute(
+                "SELECT contract_json FROM task_acceptance_contracts WHERE task_id=?", (task_id,)
+            ).fetchone()
+            contract = AcceptanceContract(**json.loads(saved[0])) if saved else AcceptanceContract()
+            advisory_issues = _advisory_observation_issues(
+                observed_tools, trace_truncated=trace_truncated,
+            )
+            if (contract.policy == "advisory" and task.status == "running"
+                    and (expected_run_id is None or task.current_run_id != expected_run_id)):
+                return {"task_id": task_id, "status": "run_unbound", "acceptance_approved": False}
             if task.status in {"triage", "todo", "ready"} and task.current_run_id is None:
-                # Admission creates durable responsibility, not fabricated execution.
-                # No candidate may auto-block or complete work that never ran.
-                return {"task_id": task_id, "status": "queued_unstarted", "acceptance_approved": False}
+                # A read-only, completed turn may itself be the first real work
+                # boundary. Claim this exact user/session objective only after
+                # the complete tool lane and final answer have been checked.
+                can_claim_advisory = (
+                    contract.policy == "advisory" and not advisory_issues
+                    and expected_run_id is None
+                    and turn_result.get("completed") is True
+                    and not turn_result.get("failed") and not turn_result.get("interrupted")
+                    and bool(str(turn_result.get("final_response") or "").strip())
+                )
+                if not can_claim_advisory:
+                    return {"task_id": task_id, "status": "queued_unstarted", "acceptance_approved": False}
+                try:
+                    expected_run_id = int(self.start_triaged_task(
+                        task_id, session_id=session_id, objective=task.body,
+                    ))
+                except (PermissionError, RuntimeError, ValueError):
+                    return {"task_id": task_id, "status": "queued_unstarted", "acceptance_approved": False}
+                task = kanban_db.get_task(conn, task_id)
             if task.status == "done":
                 run = kanban_db.latest_run(conn, task_id)
                 metadata = run.metadata if run and isinstance(run.metadata, dict) else {}
@@ -574,19 +672,68 @@ class WorkstationKanbanBridge:
                     if metadata.get("canonical_task_id") == task_id:
                         plans.append((row[0], row[1], metadata))
             if not plans:
-                trace = turn_result.get('_adaptive_trace') or []
-                if trace:
-                    try:
-                        ref, verifier = _verified_native_navigation(
-                            artifacts, trace, task_id, session_id,
-                            str(expected_run_id if expected_run_id is not None else task.current_run_id),
-                        )
-                        evidence.append(ref)
-                        verifiers.append(verifier)
-                    except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
-                        pending.append(f"Adaptive browser evidence is not verified: {exc}")
+                if contract.policy == "advisory":
+                    if advisory_issues:
+                        pending.extend(advisory_issues)
+                    elif (turn_result.get("completed") is not True
+                          or turn_result.get("failed") or turn_result.get("interrupted")
+                          or not str(turn_result.get("final_response") or "").strip()):
+                        pending.append("Advisory result was not completed")
+                    else:
+                        try:
+                            ref, verifier = _persist_advisory_result(
+                                artifacts, task_id, session_id,
+                                str(expected_run_id if expected_run_id is not None else task.current_run_id),
+                                str(turn_result["final_response"]),
+                            )
+                            evidence.append(ref)
+                            verifiers.append(verifier)
+                        except (OSError, ValueError, KeyError, TypeError) as exc:
+                            pending.append(f"Advisory result persistence is not verified: {exc}")
                 else:
-                    pending.append("No persisted execution verifies the acceptance contract")
+                    from workstation.external_readback import SUPPORTED as EXTERNAL_READBACK_TOOLS
+                    browser_effect = (isinstance(observed_tools, list)
+                        and any(isinstance(row, dict) and
+                                row.get("tool") in {"browser_click", "browser_type"}
+                                for row in observed_tools))
+                    directly_verifiable = (isinstance(observed_tools, list)
+                        and any(isinstance(row, dict) and
+                                row.get("tool") in ({"write_file"} | EXTERNAL_READBACK_TOOLS)
+                                for row in observed_tools))
+                    if browser_effect:
+                        from workstation.browser_operation_readback import verify_native_browser_receipts
+                        browser_evidence, browser_verifiers, browser_issues = verify_native_browser_receipts(
+                            observed_tools, task_id=task_id, session_id=session_id,
+                            run_id=str(expected_run_id if expected_run_id is not None else task.current_run_id),
+                            trace_truncated=trace_truncated, contract=native_browser_contract,
+                        )
+                        evidence.extend(browser_evidence)
+                        verifiers.extend(browser_verifiers)
+                        pending.extend(browser_issues)
+                    elif directly_verifiable:
+                        from workstation.direct_file_readback import verify_file_write_receipts
+                        file_evidence, file_verifiers, file_issues = verify_file_write_receipts(
+                            observed_tools, task_id=task_id, session_id=session_id,
+                            run_id=str(expected_run_id if expected_run_id is not None else task.current_run_id),
+                            trace_truncated=trace_truncated,
+                        )
+                        evidence.extend(file_evidence)
+                        verifiers.extend(file_verifiers)
+                        pending.extend(file_issues)
+                    else:
+                        trace = turn_result.get('_adaptive_trace') or []
+                        if trace:
+                            try:
+                                ref, verifier = _verified_native_navigation(
+                                    artifacts, trace, task_id, session_id,
+                                    str(expected_run_id if expected_run_id is not None else task.current_run_id),
+                                )
+                                evidence.append(ref)
+                                verifiers.append(verifier)
+                            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+                                pending.append(f"Adaptive browser evidence is not verified: {exc}")
+                        else:
+                            pending.append("No persisted execution verifies the acceptance contract")
             for plan_id, plan_status, metadata in plans:
                 if metadata.get("handoff", {}).get("status") == "waiting-for-human":
                     handoffs.append(metadata["handoff"]["handoff_id"])
@@ -628,12 +775,40 @@ class WorkstationKanbanBridge:
         if target_run_id is None and task is not None and task.current_run_id is not None:
             target_run_id = task.current_run_id
 
+        # Recoverable external uncertainty becomes an actionable, read-only
+        # dependent task. It is never a signal to redispatch the original write.
+        if (not verified and not stopped and not plans and not trace_truncated
+                and contract.policy == "evidence" and target_run_id is not None):
+            try:
+                from workstation.evidence_recovery import schedule_recovery
+                child_id = schedule_recovery(
+                    task_id=task_id, session_id=session_id,
+                    run_id=int(target_run_id), observed_tools=observed_tools,
+                    pending=pending, board=self.board,
+                )
+                if child_id:
+                    return {"task_id": task_id, "status": "recovery_queued",
+                            "acceptance_approved": False,
+                            "recovery_task_id": child_id, "pending_items": pending}
+            except Exception:
+                _log.warning("Could not schedule read-only evidence recovery", exc_info=True)
+
+        # A write/unknown-effect tool without a verified plan cannot be
+        # replayed or certified as an advisory completion.
+        uncertain_effect = bool(
+            not plans and not verified and isinstance(observed_tools, list)
+            and any(not isinstance(row, dict)
+                    or row.get("effect") not in {"PURE_READ", "DISCOVERY"}
+                    for row in observed_tools)
+        )
         report = BrowserTaskReport(task_id, session_id, task.body or task.title,
             str(turn_result.get("final_response") or "Execution has no verified final result"), verified,
             pending_items=pending, evidence=evidence, verifier_results=verifiers,
             deliverables=[e.uri for e in evidence], outcome_status=status,
-            run_id=str(target_run_id) if target_run_id is not None else None)
-        if len(verifiers) == 1 and verifiers[0].get('verifier') == 'native_browser_session_state':
+            run_id=str(target_run_id) if target_run_id is not None else None,
+            uncertain_mutation=uncertain_effect)
+        if len(verifiers) == 1 and verifiers[0].get('verifier') in {
+                'native_browser_session_state', 'native_browser_external_readback'}:
             report.operation_id = verifiers[0]['operation_id']
         report.repeatability_hint = turn_result.get('_adaptive_repeatability_hint', False)
         report.procedure_steps = turn_result.get('_adaptive_procedure_steps', [])

@@ -1,4 +1,74 @@
 # Current State
+
+## 2026-11-12 — WA-OPC-011: native UI identity consistent; send gate HOLD
+
+Read-only native WhatsApp probe on the approved self-chat now reports `ui_recipient_phone_consistent=true`: contact-info phone equals compose destination. Nine IDs and status nodes remain observed; `HOLD/RECIPIENT_DIRECTION_UNVERIFIED`, `can_send=false`. 184 focused/regression tests PASS. UI consistency from the same page is not a trusted campaign-recipient comparison and provides no outbound direction. Next gate: inspect authorized existing incoming vs outgoing messages without sending; no executor promotion. [Details](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — 2026-11-12: estrutura do auto-chat real observada; envio bloqueado
+
+A sonda nativa atual detectou no self-chat selecionado **9 ancestrais `conv-msg` com ID válido e 9 nós de estado associados** (categoria `read=9`), com `status=HOLD`, `reason=RECIPIENT_DIRECTION_UNVERIFIED`; nenhuma confirmação de envio. Regressão de 14 arquivos **182 PASS**. Implementação não toca executor de envio. Sem direção e destinatário confiáveis ou prova causal de mensagem nova, campanhas, anexos e aprovação permanecem HOLD. Evidência privada `workstation/dogfood/artifacts/wa-opc011-canary-20261111/result-20261112-readonly.json`.
+
+
+
+## WA-OPC-011 (11/11) — integração de leitura certificada parcialmente
+
+Sonda nativa de disponibilidade de metadados implementada, com seis testes unitários. Prova runtime via `electron-chromium`: origem acessível e resultado conservador `CANARY_CHAT_NOT_SELECTED`. Nenhuma conversa de canário foi aberta, nenhuma mensagem enviada e nenhum dado modificado. Envio multietapa com mídia e aprovação humana seguem HOLD, sem E2E.
+
+
+## 2026-11-11 — WA-OPC-011 continuação: fila corrigida, runtime WhatsApp não homologado
+
+A regressão do executor antigo foi corrigida com snapshots causais sintéticos, sem relaxamento dos verificadores; a retomada do lote com `sending`/`uncertain` retorna `RECONCILIATION_REQUIRED` e não despacha. Suite ampliada WhatsApp/Browser/Prefabs **166/166 PASS**. O BrowserTask nativo autenticado abriu o WhatsApp Web e retornou 42 elementos, mas o inventário não carrega `elements[].attributes` e uma inspeção na tela inicial **sem conversa aberta** não apresentou metadados de destinatário/bolha/ACK. Isso **não** qualifica envio de quatro etapas e imagem. Avaliar conversa-canário consentida antes de implementar compositor multimídia. Fonte e DB históricos não alterados. [Detalhe](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+## 2026-11-11 — WA-OPC-011: planejamento nativo e hardening de lote; sem disparo homologado
+
+`prefab_execute(action=whatsapp_campaign_plan)` suporta leitura privada de uma campanha multi-step via fonte autorizada sem SKILL.md e não concede envio. O batch Python existente recebeu operação idempotente por item, `step_code` correto, recusa prova livre, HOLD em incerteza e `next_allowed_at` no SQLite. Skills locais substituídas por contratos curtos com backup histórico. Testes focados novos 39 PASS; conjunto com suite legada 7 FAIL por mocks sem evidência causal. Não há execução multi-step+imagem completa, aprovação humana de batch, restart/canário/CI. Ver [contrato WA-OPC-011](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md) e [jornal](engineering-journal/CURRENT.md).
+
+
+## 2026-11-07 — Trello: leitura autenticada e reconciliação por campo (prévia segura)
+
+Trello lido pelo **Browser nativo do Hermes**, em BrowserTask independente `trello-native-read-20261107`, com System1/Instagram previamente `parked` sem lease: conta autenticada, quadro ACIRV + VCOM: SCRUM e cartões #934/#944 com listas, checklists e histórico visíveis. O cartão #944 coincide com a base local pelo ID `6aeb662086d13678d3a28f64`, shortlink `gZy747hA` e título. **Nenhuma mutação remota.**
+
+Implementados `workstation/trello_sync_reconcile.py` (decisão `equal/pull/push/conflict/defer` por campo; sem baseline, divergência fica conflito; nunca libera push), tabela aditiva `trello_sync_reviews` no `local-edits.sqlite` e quinto tool `workstation_db_trello_plan` no plugin do agente. Suíte ampliada: **62 testes Python aprovados**, py_compile e ESLint OK; despachante real em banco temporário provou baseline → candidato pull, 2 reviews e origem intacta. A descrição no Trello pode aparecer como *placeholder* (`Adicione uma descrição mais detalhada...`) — não interpretar como valor alterado sem leitura confiável. Não gravados reviews em produção; SQLite WAL ativo não foi convertido. **Sincronização de fato, push remoto e cron de sincronização seguem NÃO IMPLEMENTADOS.** Evidências em [jornal Trello Browser](engineering-journal/trello-browser-reconcile-20261107.md), [plano unificado](PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107.md).
+
+
+
+## 2026-11-07 — Database UI nativa: edição e leitura pelo agente comprovadas; Trello HOLD
+
+Prova real no Desktop via AI Control: Workstation → Database → Bases ACIRV → tabela `tarefas/people`, linha sintética `id=-20261107001`, alteração de `role=qa-original` para `qa-ui-verified`, revisão local 1, readback ao reabrir a view e consulta da mesma revisão via `model_tools.handle_function_call('workstation_db_query')`. QA removido com verificações de igualdade: 1 seed, 1 edição e 1 evento; `people=0`, `tasks=281`, FK=0, Trello 395 intocado. **E1 UI PASS**, mas reinício completo continua pendente devido a sessão ativa não resolvida. E2 Cron catch-up diário já existe, configuração `catch_up_missed=True` e 44 testes focados PASS; não houve novo agendador. E3 Browser Trello **HOLD**: Task Rail WORKING do System 1, depois tarefa bloqueada por evidências de resultado ausentes; Browser não qualificado como livre, nenhuma navegação ou efeito remoto. E4/E5 não implementados. Risco adicional: banco de edições criado em WAL pelo backend já carregado; versões de SQLite 3.50.4 e 3.53.4 ativas, não converter com conexões abertas. Evidências [jornal nativo](engineering-journal/database-ui-native-proof-20261107.md) e [plano unificado](PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107.md).
+
+
+## 2026-11-07 — Convergência Database / Trello / Cron
+
+Ver [plano unificado](PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107.md). A recuperação histórica anterior reporta 281 tarefas / 0 violações FK na cópia e 395 cartões em snapshots (não sync vivo). Implementada camada local de edição versionada e endpoints/ferramenta agente; 19 testes Python e E2E de dispatch/API temporários passaram. Interface Desktop real e ativação no backend existente NÃO homologadas nesta sessão. Cron catch-up, navegação Trello e sincronização bidirecional NÃO implementados.
+
+## 2026-11-04 — estado das solicitações Hermes Work (fonte Trello; intake documental)
+
+**Trello é fonte de backlog, não de verdade do runtime.** [#944](https://trello.com/c/gZy747hA/944) continua aberto com dois check-items INCOMPLETE: (a) transformar dados ACIRV em bases do Hermes; (b) disparar Cron Jobs diários após perda do horário, o mais cedo possível. [#934](https://trello.com/c/XeiqfGoN/934) permanece aberto e repete (a). Ambos em Quarta, sem prazo/responsável/evidência de conclusão. São **duas entregas, um pedido de Database duplicado**.
+- **Database:** há evidência anterior de MVP do dashboard, tabela, Kanban e API no [registro 01/11](WORKSTATION_DASHBOARD_DATABASE_20261101.md), mas não evidência nesta consulta de ingestão de bases institucionais; status de **integração ACIRV = pendente de comprovação**, não "dashboard inexistente".
+- **Cron:** requisito de recuperação de agendamento perdido foi coletado, não reproduzido nem verificado no scheduler atual. Status **análise/implementação/prova pendentes**; não registrar como defeito técnico comprovado.
+- **Dados:** checklist da [curadoria #933](https://trello.com/c/ln2RMJPt/933) com seis fontes desmarcadas; não se inferiu ausência dos artefatos no Git/HD. #821, #793, #883, #946, #837, #838 são trabalhos adjacentes, **sem dependência obrigatória deduzida**.
+- **Escopo desta sessão:** documentação atualizada apenas; sem alteração de código, dados, agendamento, Trello, Git staging/commit ou execução de testes de produto. `main` estava com alterações pré-existentes, preservadas. Critérios MVP e prioridade: [ROADMAP](../ROADMAP.md#2026-11-04--intake-acirv--vcom--hermes-work-backlog-não-implementado-nesta-revisão).
+
+
+## 2026-10-29 — Maintainer waiver: Stage A (today only, local implementation)
+The maintainer explicitly authorized skipping Stage A for **all development changes and implementations performed on 2026-10-29** in the Hermes Native Browser Reliability Master mission. Baseline at authorization: `main@f1d5ab2f030e940ed4571371b0de45a21a009c9e`, 231 dirty entries, staging empty. This includes P02 recovery, browser admisssion reconciliation security, identity enforcement, read-only controller recovery, BrowserTask focus/ownership and related tests; no upstream merge/pin required on this date for local work. **Not a release or CI qualification**, not authority to overwrite concurrent work, commit/push, manipulate real browser-session ledger, repeat uncertain effects, send WhatsApp messages or take desktop mouse/keyboard/focus. Target RED/GREEN, tests, native E2E and security fences remain mandatory.
+
+
+## 2026-10-28 — Dispensa geral Stage A (desenvolvimento local durante este dia)
+O mantenedor autorizou explicitamente dispensar Stage A em TODAS as implementações e ajustes de 28/10/2026, abrangendo recuperação urgente do Browser nativo, P02 e reconciliação. Preflight observado: main@f1d5ab2f030e940ed4571371b0de45a21a009c9e, 228 entradas dirty, stage vazio. Dispensa somente nesta data, não é qualificação técnica de CI ou release; preservar WIP concorrente, idempotência, ledger real, leases, proibição de envio WhatsApp e mouse/teclado, e testes RED/GREEN/E2E isolados.
+
+## 2026-10-28 — Browser semantic proof & reconciliation: scoped Stage A exception (local development only)
+Maintainer explicitly authorized skipping Stage A for this Browser reconciliation structural fix on 2026-10-28. Preflight: main@f1d5ab2f030e940ed4571371b0de45a21a009c9e, upstream/main observed 571a5911ae6aaa05ef3df53bf0f6720c4556c24a, merge-base/pin 3b63f7b0a4c7beb9eadbce2f15b9da75d01f5065; ahead 1349 / behind 6574 relative to upstream; exact-head CI and native E2E NOT qualified. This waives pin/sync/Stage A for local target development only, not authorization to promote, send messages, reconcile real admissions without evidence, remove leases, or overwrite concurrent work. Browser runtime & session-state WIP preserved; semantic proof RED and regression tests required before implementation.
+**BROW-N2 local result:** typed selection/panel-scroll readback; delayed verified child receipt; pending batch diagnostic under canonical lock; immutable reconciled terminal protected against stale writers. Tests: Electron 71/71, Python 35/35, Kanban UI 79/79, Electron TypeScript exit 0. See [BROW-N2 evidence report](BROWSER_SEMANTIC_RECONCILIATION_N2_20261028.md). Native WhatsApp E2E and authenticated operator reconciliation remain HOLD. No live ledger mutation.
+
+
+
+## 2026-10-25 — WhatsApp M3 scoped Stage A exception (development only)
+Maintainer waived H-079/Stage A for M3-M6 local development, not technical qualification/release. Preflight main f1d5ab2f030e940ed4571371b0de45a21a009c9e, origin/main bafa3c43f4ecf7953e377e29cca6515089e530fe, staging empty, WIP preserved. Site-ops-migration active claim unmodified; acquired chatgpt-whatsapp-m3 exact paths. Native M3 evidence gate HOLD, so M4-M6 remain pending.
+
 ## 2026-10-18 — Human Demonstration Learning Mode P03: Perguntas no Chat e Marcos Operacionais (D-047A)
 **IMPLEMENTED (P03) / REPLAY ON HOLD (M3)** na branch `feat/hermes-work-p03-chat-learning-logs-20261017`.
 - **Perguntas no Chat & Desobstrução do Canvas:** Migração das perguntas do modo Aprender da camada/overlay do navegador para o transcript do chat como cartões interativos (`ChatLearningQuestionCard`). O host do navegador (`learning-controls.tsx`) permanece limpo com controles essenciais (Aprender/Parar, intensidade ao vivo, status e Descartar; e banner discreto `LearningNoChatNotice` se desconectado), eliminando oclusão do `WebContentsView` e prevenindo telas pretas.
@@ -1620,3 +1690,28 @@ Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller
 A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
 GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
 Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.
+
+## 2026-11-07 — Continuação: E1 UI HOLD, Cron catch-up já presente
+
+- O editor Database para humanos e agentes ainda precisa de prova na UI nativa: `hermes-nav status` retornou `AI Control endpoint unavailable` (duas tentativas), sem ações no renderer e sem reciclagem de backend.
+- `cron.catch_up_missed=True` já é a configuração efetiva. Cenário diário em relógio fixo confirmado em `tests/cron/test_catchup_policy.py`; 44 testes Python passaram em conjunto; nenhum job Trello agendado no perfil consultado.
+- Novos storages deixaram de forçar WAL; backend tem Python com SQLite 3.53.4 e 3.50.4, esta última com alerta de bug WAL reset. Nenhum upgrade ou conversão ao vivo. Cron→Browser→Trello continua pendente, sem alteração externa.
+- Continuidade e provas completas: [plano unificado](PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107.md) e [jornal](engineering-journal/CURRENT.md).
+
+## 2026-11-07 — Handoff de E3 + primeira leitura E4 confiável
+
+E3 Browser Trello **PASS** para conta autenticada, board ACIRV + VCOM, cartão #944 e #934; nenhuma escrita remota. Tarefas anteriores do System1/Instagram continuam `parked`. E4 **parcial**: planejamento de título exige BrowserTask nativa, sem confiar em remote fields fornecidos pelo agente; `workstation_db_trello_pull` revalida URL/nome/lista/estado e aplica apenas `name` via CAS em overlay local. 63 testes Python PASS, `py_compile` PASS, dispatch real do agente com Browser real em DB temporária PASS. Dados reais íntegros: 281 tarefas, 395 cartões, ambos quick_check=ok. `local-edits.sqlite` WAL, zero edits em produção. Envio remoto, novos cartões, metadados e cron ainda HOLD. Reportar segundo [RELATORIO_TRELLO_DATABASE_20261107.md](RELATORIO_TRELLO_DATABASE_20261107.md).
+
+
+## 2026-11-07 - QA_PUSH_TWO_PHASE_20261107: title outbound HOLD
+Private QA board created. Native Browser QA1 modified a real Trello title, but one of two owner receipts missing; operation uncertain, never retried. QA2 one-step type received a receipt but did not persist after reload. QA3 exists but no push executed. The revised workstation/trello_sync_push.py persists TYPED before separate browser_press Enter and reload; not yet qualified live because AI Control is unavailable. 86 Python regression tests passed, 1 Starlette warning. No production cards or scheduler modified. Full report: RELATORIO_PUSH_TRELLO_QA_20261107.md.
+
+
+## 2026-11-08 - TR_ROUTE_QA3_20261108
+
+QA3 Hermes to Trello title VERIFIED by native Browser type+Enter receipts, durable intent, reload and independent Trello server read. New profile-scoped workstation_db_trello_route: admin to API, normal member to Browser, unknown to HOLD, uses existing TrelloClient. Local Hermes Trello API credential unavailable; API writes NOT qualified. Browser native guest board LEADS DE ASSOCIADOS read passed. 103 tests PASS; 281 tasks and 395 cards preserved; no Cron sync. See RELATORIO_TRELLO_HIBRIDO_20261108.md.
+
+
+## 2026-11-08 - API_REST_QA_P0_20261108
+
+API Trello titulo QA-only implementada: GET identidade + membership admin + cartao, baseline por campo, intents no local-edits.sqlite, PUT unico e GET pos-escrita. Tools workstation_db_trello_api_plan e workstation_db_trello_api_push; falta credential real no perfil Hermes, por isso dispatcher retornou HOLD sem escrita. 114 testes Python PASS/1 warning, originais 281 tasks/395 cards intactos. QA1/QA2 uncertain, QA3 verified intocados. Relatorio RELATORIO_TRELLO_API_20261108.md. Cron nao criado.

@@ -20,6 +20,7 @@ export interface VaultNote {
   rel_path: string
   title: string
   content: string
+  revision: string
   frontmatter: Record<string, unknown>
   tags: string[]
   links: VaultWikilink[]

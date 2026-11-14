@@ -1,0 +1,65 @@
+--- a/tools/browser_workstation.py
++++ b/tools/browser_workstation.py
+@@ -601,8 +601,21 @@
+     raw = str(args.get("url") or "").strip()
+     if not raw:
+         raise WorkstationBrowserError("browser_navigate requires a URL or search target")
+ 
++    # Explicit non-web schemes are not search terms: the existing normalizer
++    # otherwise turns a local file URL into an external DuckDuckGo query.
++    if urlsplit(raw).scheme.lower() in {
++        "file", "javascript", "data", "blob", "filesystem",
++    }:
++        raise WorkstationBrowserError(
++            "Navigation blocked: explicit non-web URL scheme",
++            error_code="FORBIDDEN_DESTINATION",
++            retryable=False,
++            state_changed=False,
++            recommended_action="CORRECT_ARGUMENTS",
++        )
++
+     # Preserve Hermes' browser security floor even though Workstation routing
+     # runs before the legacy browser_navigate implementation. Search text is
+     # checked before it can become a DuckDuckGo query, so recognizable secrets
+     # never leave the machine through a search URL.
+--- a/workstation/tests/test_browser_workstation_route.py
++++ b/workstation/tests/test_browser_workstation_route.py
+@@ -211,8 +211,38 @@
+ def test_navigation_blocks_cloud_metadata_floor():
+     args = {"url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/"}
+     with pytest.raises(bw.WorkstationBrowserError, match="cloud metadata"):
+         bw._validate_navigation(args)
++
++
++@pytest.mark.parametrize("url", [
++    "file:///C:/private.txt",
++    "javascript:alert(1)",
++    "data:text/html,unsafe",
++    "blob:https://example.org/opaque",
++    "filesystem:https://example.org/persistent/a",
++])
++def test_explicit_nonweb_url_rejected_before_controller(monkeypatch, url):
++    """Explicit non-web input must not reach controller or search transport."""
++    def forbidden_transport(*args, **kwargs):
++        pytest.fail("forbidden navigation reached controller transport")
++
++    monkeypatch.setattr(bw, "_request_json", forbidden_transport)
++    with pytest.raises(bw.WorkstationBrowserError) as exc:
++        bw._dispatch("browser_navigate", {"url": url}, model_facing=True)
++    assert exc.value.error_code == "FORBIDDEN_DESTINATION"
++    assert exc.value.state_changed is False
++
++
++@pytest.mark.parametrize("source, expected", [
++    ("about:blank", "about:blank"),
++    ("localhost:3000/health", "http://localhost:3000/health"),
++    ("search cats", "https://duckduckgo.com/?q=search+cats"),
++])
++def test_existing_search_and_local_navigation_are_unchanged(source, expected):
++    args = {"url": source}
++    bw._validate_navigation(args)
++    assert args["url"] == expected
+ 
+ 
+ def test_navigation_allows_and_normalizes_localhost():
+     args = {"url": "localhost:3000/health"}

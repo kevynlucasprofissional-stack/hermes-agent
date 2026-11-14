@@ -1,0 +1,205 @@
+{
+  "schema": "hermes.system1.live_session.snapshots.v1",
+  "captured_at": "2026-11-07T20:54:30Z/2026-11-07T20:57:01Z",
+  "captured_by": {
+    "agent": "hermes-desktop-live-session",
+    "session_id": "20261107_175035_62899b",
+    "browser_task_id": "20261107_175035_62899b",
+    "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+    "tool_path": "browser_navigate / browser_snapshot (native electron-chromium controller)",
+    "clicks_performed": 0
+  },
+  "note": "Payloads are verbatim browser_navigate / browser_snapshot tool results; no field was synthesized. 'after' is a second independent native read of the same page used as readback proof.",
+  "scenarios": {
+    "unique": {
+      "url": "http://127.0.0.1:18791/unique",
+      "intent": ["button", "Relatórios"],
+      "navigate_receipt": {
+        "operationId": "op_browser_navigate_4b70f6ae7dab",
+        "taskId": "20261107_175035_62899b",
+        "runId": "20261107_175035_62899b",
+        "browserTaskId": "20261107_175035_62899b",
+        "tabId": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "revision": 5,
+        "action": "browser_navigate",
+        "safeUrl": "http://127.0.0.1:18791/unique",
+        "executedAt": "2026-11-07T20:57:01.229Z"
+      },
+      "before": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/unique",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Relatórios", "disabled": false, "bounds": {"x": 298, "y": 206, "width": 84, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 398, "y": 206, "width": 110, "height": 39}},
+          {"ref": "@e3", "tag": "div", "role": "tab", "label": "Painel", "disabled": false, "bounds": {"x": 524, "y": 201, "width": 66, "height": 45}},
+          {"ref": "@e4", "tag": "a", "role": "a", "label": "Ajuda", "disabled": false, "bounds": {"x": 606, "y": 201, "width": 65, "height": 45}}
+        ]
+      },
+      "after": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/unique",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Relatórios", "disabled": false, "bounds": {"x": 298, "y": 206, "width": 84, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 398, "y": 206, "width": 110, "height": 39}},
+          {"ref": "@e3", "tag": "div", "role": "tab", "label": "Painel", "disabled": false, "bounds": {"x": 524, "y": 201, "width": 66, "height": 45}},
+          {"ref": "@e4", "tag": "a", "role": "a", "label": "Ajuda", "disabled": false, "bounds": {"x": 606, "y": 201, "width": 65, "height": 45}}
+        ]
+      }
+    },
+    "partial": {
+      "url": "http://127.0.0.1:18791/partial",
+      "intent": ["button", "Relatórios"],
+      "navigate_receipt": {
+        "operationId": "op_browser_navigate_c6d7f64b3aa2",
+        "taskId": "20261107_175035_62899b",
+        "runId": "20261107_175035_62899b",
+        "browserTaskId": "20261107_175035_62899b",
+        "tabId": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "revision": 2,
+        "action": "browser_navigate",
+        "safeUrl": "http://127.0.0.1:18791/partial",
+        "executedAt": "2026-11-07T20:56:11.588Z"
+      },
+      "before": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/partial",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Abrir relatórios", "disabled": false, "bounds": {"x": 298, "y": 206, "width": 111, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 425, "y": 206, "width": 110, "height": 39}},
+          {"ref": "@e3", "tag": "a", "role": "a", "label": "Ajuda", "disabled": false, "bounds": {"x": 551, "y": 201, "width": 65, "height": 45}}
+        ]
+      },
+      "after": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/partial",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Abrir relatórios", "disabled": false, "bounds": {"x": 298, "y": 206, "width": 111, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 425, "y": 206, "width": 110, "height": 39}},
+          {"ref": "@e3", "tag": "a", "role": "a", "label": "Ajuda", "disabled": false, "bounds": {"x": 551, "y": 201, "width": 65, "height": 45}}
+        ]
+      }
+    },
+    "duplicate": {
+      "url": "http://127.0.0.1:18791/duplicate",
+      "intent": ["button", "Relatórios"],
+      "navigate_receipt": {
+        "operationId": "op_browser_navigate_ee3f6742e631",
+        "taskId": "20261107_175035_62899b",
+        "runId": "20261107_175035_62899b",
+        "browserTaskId": "20261107_175035_62899b",
+        "tabId": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "revision": 3,
+        "action": "browser_navigate",
+        "safeUrl": "http://127.0.0.1:18791/duplicate",
+        "executedAt": "2026-11-07T20:56:52.009Z"
+      },
+      "before": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/duplicate",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Relatórios", "disabled": false, "bounds": {"x": 298, "y": 201, "width": 84, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Relatórios", "disabled": false, "bounds": {"x": 398, "y": 201, "width": 84, "height": 39}},
+          {"ref": "@e3", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 498, "y": 201, "width": 110, "height": 39}}
+        ]
+      },
+      "after": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/duplicate",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Relatórios", "disabled": false, "bounds": {"x": 298, "y": 201, "width": 84, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Relatórios", "disabled": false, "bounds": {"x": 398, "y": 201, "width": 84, "height": 39}},
+          {"ref": "@e3", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 498, "y": 201, "width": 110, "height": 39}}
+        ]
+      }
+    },
+    "missing": {
+      "url": "http://127.0.0.1:18791/missing",
+      "intent": ["button", "Relatórios"],
+      "navigate_receipt": {
+        "operationId": "op_browser_navigate_0a80775b3af7",
+        "taskId": "20261107_175035_62899b",
+        "runId": "20261107_175035_62899b",
+        "browserTaskId": "20261107_175035_62899b",
+        "tabId": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "revision": 4,
+        "action": "browser_navigate",
+        "safeUrl": "http://127.0.0.1:18791/missing",
+        "executedAt": "2026-11-07T20:56:55.791Z"
+      },
+      "before": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/missing",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Clientes", "disabled": false, "bounds": {"x": 298, "y": 206, "width": 72, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 386, "y": 206, "width": 110, "height": 39}},
+          {"ref": "@e3", "tag": "a", "role": "a", "label": "Ajuda", "disabled": false, "bounds": {"x": 512, "y": 201, "width": 65, "height": 45}}
+        ]
+      },
+      "after": {
+        "success": true,
+        "runtime": "electron-chromium",
+        "task_id": "20261107_175035_62899b",
+        "tab_id": "a986a8f6-1b75-49c1-8157-a324fb73464f",
+        "url": "http://127.0.0.1:18791/missing",
+        "revision": 0,
+        "readiness": "stable",
+        "truncated": false,
+        "wall_detected": false,
+        "elements": [
+          {"ref": "@e1", "tag": "button", "role": "button", "label": "Clientes", "disabled": false, "bounds": {"x": 298, "y": 206, "width": 72, "height": 39}},
+          {"ref": "@e2", "tag": "button", "role": "button", "label": "Configurações", "disabled": false, "bounds": {"x": 386, "y": 206, "width": 110, "height": 39}},
+          {"ref": "@e3", "tag": "a", "role": "a", "label": "Ajuda", "disabled": false, "bounds": {"x": 512, "y": 201, "width": 65, "height": 45}}
+        ]
+      }
+    }
+  }
+}

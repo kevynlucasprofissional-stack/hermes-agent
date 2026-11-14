@@ -141,6 +141,13 @@ async function getUnreadCount() {
 const args = process.argv.slice(2)
 const operation = args[0]
 
+// Direct CDP mutations bypass TaskRun admission and postcondition verification.
+// Fail closed before connecting to a target; the native Browser tool owns them.
+if (operation === 'open-chat' || operation === 'send-message') {
+  console.error(JSON.stringify({ success: false, error: 'NATIVE_WHATSAPP_EXECUTOR_REQUIRED' }))
+  process.exit(1)
+}
+
 try {
   const target = await client.findTarget(SITE_PATTERN)
   await client.connect(target)

@@ -344,14 +344,16 @@ class SearchMixin:
         ``merge_stderr`` mirrors the shell path's stderr handling: merged for content
         search (diagnostics feed the error message), discarded (``2>/dev/null``) for
         file lists and probes."""
-        from tools.environments.local import _kill_process_group_posix, _make_run_env
+        from tools.environments.local import _IS_WINDOWS, _kill_process_group_posix, _make_run_env
         cwd = getattr(self.env, "cwd", None) or self.cwd
         args = shlex.split(" ".join(argv))
         try:
-            proc = subprocess.Popen(
-                args, cwd=cwd, env=_make_run_env(self.env.env), stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT if merge_stderr else subprocess.DEVNULL,
-                start_new_session=True)
+            popen_kwargs: dict[str, Any] = dict(
+                cwd=cwd, env=_make_run_env(self.env.env), stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT if merge_stderr else subprocess.DEVNULL)
+            if not _IS_WINDOWS:
+                popen_kwargs["start_new_session"] = True
+            proc = subprocess.Popen(args, **popen_kwargs)
         except OSError as exc:
             return ExecuteResult(stdout=f"rg: {exc}", exit_code=2)
 
@@ -382,7 +384,13 @@ class SearchMixin:
                 exit_code = 124
                 break
         if proc.poll() is None:
-            _kill_process_group_posix(proc)  # native lane is POSIX-only (gate above)
+            if _IS_WINDOWS:
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
+            else:
+                _kill_process_group_posix(proc)
         proc.wait()
         drainer.join()
         proc.stdout.close()
@@ -401,8 +409,12 @@ class SearchMixin:
         """Run an rg command (shell-quoted words) and keep the first ``fetch_limit``
         lines: natively on a local POSIX host, else through the backend shell as
         ``<prefix><words> | head -n N``. ``native_ok=False`` keeps a form the native
- lane cannot express (the multi-root ``cd`` prefix); ``shell_prefix`` is shell-only."""
+        lane cannot express (the multi-root ``cd`` prefix); ``shell_prefix`` is shell-only."""
         if native_ok and self._native_read_enabled():
+            return self._run_rg_native(words, fetch_limit, timeout, merge_stderr=merge_stderr)
+        from tools.environments.local import LocalEnvironment, _IS_WINDOWS
+        if (native_ok and _IS_WINDOWS and isinstance(self.env, LocalEnvironment)
+                and not shell_prefix):
             return self._run_rg_native(words, fetch_limit, timeout, merge_stderr=merge_stderr)
         stderr = "" if merge_stderr else " 2>/dev/null"
         return self._exec(f"{shell_prefix}{' '.join(words)}{stderr} | head -n {fetch_limit}", timeout=timeout)
@@ -500,6 +512,14 @@ class SearchMixin:
         if self._native_read_enabled():
             full = path if os.path.isabs(path) else os.path.join(getattr(self.env, "cwd", None) or self.cwd, path)
             return ExecuteResult(stdout="exists" if os.path.exists(full) else "not_found")
+        from tools.environments.local import LocalEnvironment, _IS_WINDOWS
+        if _IS_WINDOWS and isinstance(self.env, LocalEnvironment):
+            full = path if os.path.isabs(path) else os.path.join(getattr(self.env, "cwd", None) or self.cwd, path)
+            try:
+                exists = os.path.exists(full)
+            except OSError:
+                exists = False
+            return ExecuteResult(stdout="exists" if exists else "not_found")
         return self._exec(f"test -e {self._escape_shell_arg(path)} && echo exists || echo not_found")
 
     def _dispatch_search(self, pattern: str, path: str, target: str,

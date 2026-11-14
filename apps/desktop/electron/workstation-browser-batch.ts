@@ -3,10 +3,17 @@
  * The caller MUST bind check/perform/verify/checkpoint to existing Hermes
  * BrowserTask/TaskRun/Policy/BrowserOwnerReceipt owners.
  */
+/** A remote send is only confirmed by a new, scoped message in the destination conversation. */
+export type BrowserLocalPostcondition = { kind: 'selected' } | {
+  kind: 'chatgpt_message_recorded'
+  conversationUrl: string
+  text: string
+}
+
 export type BrowserBatchStep =
-  | { kind: 'click'; ref: string; anchor?: { type?: string; value?: string } }
+  | { kind: 'click'; ref: string; anchor?: { type?: string; value?: string }; postcondition?: BrowserLocalPostcondition }
   | { kind: 'type'; ref: string; text: string; clear?: boolean; append?: boolean; anchor?: { type?: string; value?: string } }
-  | { kind: 'press'; key: string }
+  | { kind: 'press'; key: string; ref?: string; postcondition?: BrowserLocalPostcondition }
   | { kind: 'scroll'; direction: 'up' | 'down' }
 
 export interface BrowserBatchContext {
@@ -71,7 +78,7 @@ export function isBrowserBatchStep(value: unknown): value is BrowserBatchStep {
 
   switch (value.kind) {
     case 'click':
-      return boundedString(value.ref, 256) && validAnchor(value.anchor)
+      return boundedString(value.ref, 256) && validAnchor(value.anchor) && validLocalPostcondition(value.postcondition)
 
     case 'type':
       return (
@@ -84,7 +91,10 @@ export function isBrowserBatchStep(value: unknown): value is BrowserBatchStep {
       )
 
     case 'press':
-      return boundedString(value.key, 128)
+      return boundedString(value.key, 128) &&
+        (value.ref === undefined || boundedString(value.ref, 256)) &&
+        validLocalPostcondition(value.postcondition) &&
+        (value.postcondition === undefined || boundedString(value.ref, 256))
 
     case 'scroll':
       return value.direction === 'up' || value.direction === 'down'
@@ -92,6 +102,16 @@ export function isBrowserBatchStep(value: unknown): value is BrowserBatchStep {
     default:
       return false
   }
+}
+
+function validLocalPostcondition(value: unknown): boolean {
+  if (value === undefined) {return true}
+  if (!isRecord(value)) {return false}
+  if (value.kind === 'selected') {return Object.keys(value).length === 1}
+  return value.kind === 'chatgpt_message_recorded' && Object.keys(value).length === 3 &&
+    typeof value.conversationUrl === 'string' &&
+    /^https:\/\/chatgpt\.com\/c\/[a-z0-9-]{20,80}$/.test(value.conversationUrl) &&
+    boundedString(value.text, 20_000)
 }
 
 function validContext(value: unknown): value is BrowserBatchContext {

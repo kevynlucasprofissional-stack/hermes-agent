@@ -1734,6 +1734,10 @@ _CHAT_PASSTHROUGH = (
 
 def cmd_chat(args):
     """Run interactive chat CLI."""
+    # Resolve cold SDK imports before setup/prefetch or agent-build workers start.
+    from agent.process_bootstrap import prewarm_openai_sdk
+
+    prewarm_openai_sdk()
     _apply_safe_mode(args)
     _apply_user_config_bypass(args)
     _guard_noninteractive_user_config(args)

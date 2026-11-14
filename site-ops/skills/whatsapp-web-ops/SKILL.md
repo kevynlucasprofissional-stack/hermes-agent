@@ -1,7 +1,7 @@
 ---
 name: whatsapp-web-ops
-description: Native WhatsApp Web operations via CDP with auto-healing site map
-version: 1.0.0
+description: Native WhatsApp Web operations through the Hermes Browser; minimal path for individual sends.
+version: 1.1.1
 native: true
 auto_update: true
 site_map: site-ops/maps/whatsapp-web.json
@@ -9,110 +9,26 @@ operations_script: site-ops/scripts/site-ops/whatsapp-web.mjs
 deep_map_script: site-ops/scripts/site-deep-map.mjs
 ---
 
-# WhatsApp Web Operations — Native Skill
+# WhatsApp Web — operações nativas
 
-This is a **native Hermes skill** stored in the source code, not in user-local data.
-Any fork or fresh installation of Hermes has this capability available by default.
+## Envio individual
 
-## Architecture
+Use diretamente a ferramenta registrada whatsapp_send_message com a referência exata do destinatário, o nome literal solicitado e o texto literal.
 
-This skill uses a **three-layer architecture** for maximum efficiency and resilience:
+- Não leia o mapa do site antes de um envio normal.
+- Não execute varredura de autoria, painel de contato, health check manual, inspeção de abas ou preflight duplicado.
+- A ferramenta usa o TaskRun existente, quando já houver; caso contrário, usa a sessão Hermes e o ID da chamada. Confirma o ID da conversa, clica em Enviar uma vez e lê a nova mensagem.
+- Não exige criar cartão Kanban nem obter aprovação adicional.
+- FAILED antes do envio significa que nenhum clique foi executado; corrija o defeito técnico.
+- UNCERTAIN após o clique nunca deve ser repetido automaticamente.
 
-| Layer | File | Purpose | Mutability |
-|-------|------|---------|------------|
-| **Deterministic Ops** | `site-ops/scripts/site-ops/whatsapp-web.mjs` | Fast CLI operations (open-chat, send-message, get-unread) | Stable; updated when selectors change |
-| **Site Map** | `site-ops/maps/whatsapp-web.json` | Baseline element catalog with selectors | Versioned in repo; overridden locally on heal |
-| **Playbook** | This file (`SKILL.md`) | Instructions for LLM on when/how to use ops + map | Updated when new capabilities are discovered |
+## Leitura e diagnóstico
 
-### Why three layers?
+- A operação legada get-unread-count continua somente leitura.
+- Use o mapa e o deep-map apenas quando a ferramenta nativa falhar por seletor ausente ou incompatível, não como etapa de rotina.
+- Não use scripts de disparo, clipboard, CDP externo ou sessão concorrente para enviar mensagens.
+- Não altere campanhas ou lotes ao executar um envio individual.
 
-- **Script alone** breaks when WhatsApp changes its UI (selectors become stale).
-- **Map alone** requires LLM inference for every action (slow, expensive).
-- **Skill/playbook alone** is just instructions without execution capability.
-- **Combined**: Script executes fast using map selectors → Map provides stable baseline → Skill tells LLM when to use script vs. re-map → Auto-healing updates map when script fails.
+## Arquitetura
 
-## Auto-Healing Protocol
-
-When ANY operation fails due to selector mismatch or missing element:
-
-1. **Detect**: Script throws error with selector that failed
-2. **Re-map**: Run `node site-ops/scripts/site-deep-map.mjs init "web.whatsapp.com" && node site-ops/scripts/site-deep-map.mjs scan "web.whatsapp.com"`
-3. **Compare**: Diff new map against baseline (`site-ops/maps/whatsapp-web.json`)
-4. **Update local override**: Save new map to `.claude/site-maps/whatsapp-web.local.json` (user-local, not committed)
-5. **Retry**: Re-run the failed operation with updated selectors
-6. **Report**: If retry succeeds, log what changed. If it still fails, ask user for guidance.
-
-### When to update the BASELINE map (committed to repo)
-
-Only when:
-- Multiple users report the same selector failure
-- WhatsApp announces a major UI redesign
-- You've verified the new selectors work across multiple sessions
-- A human approves the baseline update
-
-Never auto-update the repo baseline from a single healing event.
-
-## Available Operations
-
-```bash
-# Open chat with a contact (searches + clicks first result)
-node site-ops/scripts/site-ops/whatsapp-web.mjs open-chat "Contact Name"
-
-# Send message in currently open chat
-node site-ops/scripts/site-ops/whatsapp-web.mjs send-message "Hello world"
-
-# Get total unread message count
-node site-ops/scripts/site-ops/whatsapp-web.mjs get-unread-count
-```
-
-All operations connect directly to WhatsApp Web's CDP target (not the Hermes renderer),
-bypassing the Hermes AI layer entirely for speed.
-
-## Consulting the Site Map
-
-Before attempting any WhatsApp Web automation:
-
-1. **Check if map exists**: Read `site-ops/maps/whatsapp-web.json`
-2. **Find your target element**: Search `screens.main.elements[]` by `ariaLabel`, `text`, `role`, or `testId`
-3. **Use the selector**: Prefer `data-testid` > `aria-label` > `role` > text-based selectors
-4. **If element not found**: Trigger auto-healing protocol above
-
-### Example: finding the search input
-
-```javascript
-const map = require('./site-ops/maps/whatsapp-web.json')
-const searchInput = map.screens.main.elements.find(e =>
-  e.ariaLabel?.includes('Search') || e.placeholder?.includes('Search')
-)
-// Use searchInput.selector in your CDP expression
-```
-
-## Self-Improvement Triggers
-
-The LLM should proactively improve this skill when:
-
-| Signal | Action |
-|--------|--------|
-| Operation fails twice with same selector | Trigger auto-healing + log failure pattern |
-| New interactive element discovered during re-map | Add to map + document in this SKILL.md |
-| User manually corrects an operation | Update selector priority or add fallback |
-| WhatsApp adds new feature (e.g., Communities, Channels) | Create new operation in script + update map |
-| Map hasn't been validated in 30+ days | Suggest validation run to user |
-
-## Integration with /hermes-work-control
-
-This skill is referenced by `/hermes-work-control` as a native site capability.
-When the user asks to interact with WhatsApp Web, `/hermes-work-control` should:
-
-1. Check if WhatsApp Web is open in Hermes browser (`node site-ops/scripts/site-deep-map.mjs status "web.whatsapp.com"`)
-2. If not open, ask Hermes AI to open it via chat injection
-3. Once open, delegate to this skill's operations script
-4. Never use raw CDP eval for WhatsApp operations — always go through the deterministic layer
-
-## Files
-
-- `site-ops/skills/whatsapp-web-ops/SKILL.md` — This playbook
-- `site-ops/maps/whatsapp-web.json` — Baseline site map (versioned)
-- `site-ops/scripts/site-ops/whatsapp-web.mjs` — Deterministic operations CLI
-- `site-ops/scripts/site-deep-map.mjs` — Deep mapping tool for re-scanning
-- `.claude/site-maps/whatsapp-web.local.json` — Local override (auto-healed, not committed)
+O Hermes Browser nativo é a única via de interação. O resultado do clique inclui um snapshot atualizado; a ferramenta de WhatsApp verifica o estado específico da mensagem. A admissão do Browser continua protegendo contra repetição de operações cujo efeito permaneça incerto.

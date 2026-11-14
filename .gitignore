@@ -327,6 +327,7 @@ native/fts5_cjk/*.so
 /pm/.lock.json.lock
 
 apps/desktop/.dist-build*
+apps/desktop/.dist-previous*
 
 # Local ephemeral multi-agent ownership/heartbeat/locks (not tracked; no large worktrees)
 /.hermes-collab/

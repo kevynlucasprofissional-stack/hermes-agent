@@ -1,5 +1,40 @@
 # Upstream strategy
 
+## Status de sincronização e consulta (atualizado em 2026-11-01)
+
+**Stage A / H-079 é opcional para desenvolvimento.** O agente pode implementar,
+corrigir, refatorar e testar sem executar fetch/merge do upstream ou qualificar
+Stage A. A ausência de relatório recente não bloqueia trabalho.
+
+**Última evidência datada identificada neste repositório:** o registro de
+2026-10-28 em [CURRENT_STATE.md](context/CURRENT_STATE.md) informa
+`main@f1d5ab2f030e940ed4571371b0de45a21a009c9e`,
+`upstream/main@571a5911ae6aaa05ef3df53bf0f6720c4556c24a`,
+pin/merge-base `3b63f7b0a4c7beb9eadbce2f15b9da75d01f5065`,
+1349 commits downstream-only e 6574 upstream-only. **Esse retrato é
+histórico, não a situação Git atual; nenhum fetch/merge foi feito nesta
+atualização de política.**
+
+Para uma consulta local opcional e somente de leitura (a ref remota pode
+estar desatualizada):
+
+```powershell
+git status --short --branch
+git rev-parse HEAD
+git rev-parse refs/remotes/upstream/main
+git merge-base HEAD refs/remotes/upstream/main
+git rev-list --left-right --count HEAD...refs/remotes/upstream/main
+```
+
+Somente quando a sincronização for solicitada, execute
+`git fetch upstream --prune` e siga a
+[rotina H-079 opt-in](context/UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md).
+O [delta do fork](UPSTREAM_DELTA.md) preserva histórico e modificações.
+Stage A pendente/vermelho não impede implementação; testes e critérios
+de segurança e release pertinentes ao trabalho continuam válidos.
+
+
+
 
 ## 2026-10-02 — Secondary upstream: Laya
 

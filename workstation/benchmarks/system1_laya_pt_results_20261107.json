@@ -1,0 +1,115 @@
+{
+  "model": "multilingual",
+  "language": "pt",
+  "inference_backend": "cpu",
+  "offline": true,
+  "n": 9,
+  "correct": 8,
+  "false_accept": 0,
+  "fallback": 4,
+  "cold_ms": 10151.44,
+  "warm_p50_ms": 272.38,
+  "warm_max_ms": 310.45,
+  "threshold": 0.54,
+  "cases": [
+    {
+      "case": "relatorios",
+      "target": "Relatórios",
+      "expected": "@e1",
+      "raw_choice": "@e1",
+      "confidence": 0.9965,
+      "decision_after_hermes_guard": "@e1",
+      "duration_ms": 10151.44,
+      "ok": true,
+      "abstained": false
+    },
+    {
+      "case": "configuracoes",
+      "target": "Configurações",
+      "expected": "@e2",
+      "raw_choice": "@e2",
+      "confidence": 0.6124,
+      "decision_after_hermes_guard": "@e2",
+      "duration_ms": 233.61,
+      "ok": true,
+      "abstained": false
+    },
+    {
+      "case": "painel",
+      "target": "Painel",
+      "expected": "@e2",
+      "raw_choice": "@e2",
+      "confidence": 0.6591,
+      "decision_after_hermes_guard": "@e2",
+      "duration_ms": 303.2,
+      "ok": true,
+      "abstained": false
+    },
+    {
+      "case": "editorial",
+      "target": "Calendário editorial",
+      "expected": "@e1",
+      "raw_choice": "@e1",
+      "confidence": 0.4119,
+      "decision_after_hermes_guard": null,
+      "duration_ms": 264.36,
+      "ok": false,
+      "abstained": true
+    },
+    {
+      "case": "clientes",
+      "target": "Clientes",
+      "expected": "@e3",
+      "raw_choice": "@e3",
+      "confidence": 0.9412,
+      "decision_after_hermes_guard": "@e3",
+      "duration_ms": 310.45,
+      "ok": true,
+      "abstained": false
+    },
+    {
+      "case": "relatorios_parcial",
+      "target": "Relatórios",
+      "expected": "@e1",
+      "raw_choice": "@e1",
+      "confidence": 0.9888,
+      "decision_after_hermes_guard": "@e1",
+      "duration_ms": 280.41,
+      "ok": true,
+      "abstained": false
+    },
+    {
+      "case": "relatorios_ausente",
+      "target": "Relatórios",
+      "expected": null,
+      "raw_choice": "@e1",
+      "confidence": 0.6041,
+      "decision_after_hermes_guard": null,
+      "duration_ms": 262.33,
+      "ok": true,
+      "abstained": true
+    },
+    {
+      "case": "duplicado",
+      "target": "Relatórios",
+      "expected": null,
+      "raw_choice": "@e2",
+      "confidence": 0.9012,
+      "decision_after_hermes_guard": null,
+      "duration_ms": 303.51,
+      "ok": true,
+      "abstained": true
+    },
+    {
+      "case": "acao_inexistente",
+      "target": "Editar",
+      "expected": null,
+      "raw_choice": "NO_MATCH",
+      "confidence": 0.4283,
+      "decision_after_hermes_guard": null,
+      "duration_ms": 239.52,
+      "ok": true,
+      "abstained": true
+    }
+  ]
+}

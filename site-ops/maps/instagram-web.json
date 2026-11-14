@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "site": "https://www.instagram.com/",
+  "generatedAt": "2026-11-02T21:55:00-03:00",
+  "account_context": {
+    "perfil_mapeado": "acirvoficial",
+    "posts_no_perfil": 3858,
+    "seguidores": 11201,
+    "sessao": "perfil ACIRV logado no browser interno (Electron/CDP 9222)",
+    "observacao": "Todas as rotas abaixo foram exercitadas com sessao logada. Rota sem sessao devolve HTML de login, nao JSON."
+  },
+  "screens": {
+    "profile": {
+      "url": "https://www.instagram.com/acirvoficial/",
+      "purpose": "Inventario do feed (conjunto de shortcodes por periodo)",
+      "selectors": {
+        "grid_links": "a[href*=\"/p/\"], a[href*=\"/reel/\"]",
+        "shortcode_regex": "\\/(?:p|reel)\\/([A-Za-z0-9_-]{11})",
+        "header_stats": "document.body.innerText (linha com \"N posts\")"
+      },
+      "scroll": {
+        "container": "document.scrollingElement (window)",
+        "step_px": 500,
+        "wait_ms": 300,
+        "stop_rule": "shortcode mais antigo < data alvo OU estagnacao de 5 passos em (itens + scrollHeight)",
+        "why": "scrollTo(0, document.body.scrollHeight) de uma vez pula lotes: o grid e virtualizado e nao renderiza as linhas intermediarias"
+      },
+      "pitfalls": [
+        "O grid NAO e fonte de contagem ate ser validado: uma varredura de 191 itens devolveu 32 posts de outubro (correto, confirmado em duas varreduras independentes) mas apenas 46 de agosto contra 62 conhecidos — a varredura longa perde linhas.",
+        "Contagem de periodo = conjunto de shortcodes; nunca o total de itens renderizados.",
+        "Data vem do shortcode -> media_id (decoder abaixo), nunca do rotulo do export."
+      ]
+    },
+    "shortcode_decode": {
+      "purpose": "Obter data de publicacao sem abrir o post",
+      "algorithm": "alfabeto base64url (A-Za-z0-9-_), n = n*64 + idx para cada char, media_id = (n >> 23) + 1314221100000, data = new Date(media_id)",
+      "validated_pairs": [
+        {"shortcode": "DcvigiDmx09", "media_id": 3976548765163789629},
+        {"shortcode": "Dd9wUlcG1eI", "media_id": 3998564564996937608},
+        {"shortcode": "DfIMkx9m_QW", "media_id": 4019517971534443542}
+      ],
+      "accuracy": "Diferenca maxima observada contra taken_at real da API: 2 minutos (arredondamento do deslocamento). Tratar taken_at como autoridade quando disponivel.",
+      "offset_epoch_ms": 1314221100000
+    },
+    "post_insights": {
+      "url": "https://www.instagram.com/insights/media/<media_id>/",
+      "purpose": "Metricas post a post (visualizacoes, alcance, interacoes, origem do trafego)",
+      "reads": "document.body.innerText apos ~5 s de renderizacao",
+      "fields_seen": [
+        "Visualizacoes",
+        "Seguidores / nao seguidores (%)",
+        "Origem: De outra pessoa, Na pagina inicial, No perfil",
+        "Contas Meta alcancadas",
+        "Interacoes + interacoes com posts",
+        "Curtidas, compartilhamentos, comentarios, salvamentos",
+        "Contas com engajamento",
+        "Atividade do perfil, visitas, toques em links, toques no endereco, novos seguidores",
+        "Facebook: visualizacoes, reacoes, comentarios"
+      ],
+      "pitfall": "Em alguns posts o snapshot abre com um bloco 'Curtidas / 1' antes de 'Visualizacoes'. Registrar o texto bruto e nao assumir que o primeiro numero e visualizacao.",
+      "capture_method": "Navegacao COMPLETA por post (browser_navigate para /insights/media/<media_id>/) + espera inline no browser_console ate location.pathname conter o id E body.innerText passar de 400 chars com /Visualiza/i; encadear o proximo post com history.replaceState({},'', '/insights/media/<proximo_id>/') + location.reload(). Encadear por pushState/popstate deixa o body stale e grava a metrica do post ANTERIOR.",
+      "verified": "32/32 posts de outubro/2026 em 02/11/2026: cada leitura com valor distinto (nenhuma pagina repetida) e origem das views somando o total do post."
+    },
+    "account_insights_30d": {
+      "url": "https://www.instagram.com/accounts/insights/?timeframe=30",
+      "purpose": "Agregado da conta na janela movel de 30 dias",
+      "fields": [
+        "visualizacoes (IG + Facebook)",
+        "visualizadores",
+        "interacoes / contas com engajamento",
+        "atividade do perfil / visitas / toques em links externos",
+        "total de seguidores",
+        "split seguidores vs nao seguidores (views e interacoes)",
+        "views e interacoes por tipo (stories, reels, posts)",
+        "top 4 dias por views e por interacoes",
+        "horarios mais ativos por dia da semana"
+      ],
+      "pitfall": "A janela de 30 dias NAO fecha o mes: em 02/11/2026 ela cobre 04/10 -> 02/11. Registrar janela_estimada junto do payload e nunca somar este agregado com metricas post a post."
+    },
+    "content_insights": {
+      "url": "https://www.instagram.com/accounts/insights/content/?media_type=<all|posts|stories|reels>&metric=views&sort_by=highest&timeframe=30&view_type=card",
+      "purpose": "Ranking de itens por views no periodo; serve de cross-check de contagem de stories/posts recentes",
+      "limitation": "Lista so os itens de melhor desempenho da janela; nao substitui o inventario. Em 02/11/2026 a visao de stories mostrou 19 itens contra 16 dias com stories no arquivo."
+    },
+    "archived_stories": {
+      "url_panel": "https://www.instagram.com/archive/stories/",
+      "url_day": "https://www.instagram.com/stories/archive/<archiveDayId>/",
+      "purpose": "Contagem e metricas de stories expirados",
+      "what_works": [
+        "O painel renderiza rotulos de dia (ex.: 30 out, 29 out ...) e o dia clicado expoe o archiveDayId na URL (/stories/archive/<id>/)",
+        "Clicar no dia abre o viewer com os stories daquele dia"
+      ],
+      "what_does_not_work": [
+        "GET /api/v1/archive/reel/day_shells/ com __a=1 e parametros completos devolve {\"error\":1357004} com __ar:1 — o token e de uso unico e o replay e recusado.",
+        "POST /api/v1/feed/reels_media/ com reel_ids=[\"archiveDay:<id>\"] devolve 1357004 (CSRF) ou o shell HTML de 500 KB quando falta o header de AJAX correto; nenhuma combinacao testada (x-ig-www-claim, x-asbd-id, x-instagram-ajax, x-requested-with) passou.",
+        "Hooking window.fetch depois do load nao captura as chamadas do app: o modulo de rede guarda a referencia original. Hooking de Response.prototype.json/text funciona, mas so para chamadas futuras — e o app serve dias ja visitados do cache."
+      ],
+      "next_attempt": "Abrir o viewer de um dia nunca visitado com hook em Response.prototype armado ANTES do primeiro clique (page recarregada) e ler o corpo da resposta do GraphQL do viewer; alternativa e capturar o day_shells no load via CDP Network.getResponseBody, que exige um cliente WebSocket (porta 9222 nao respondeu por HTTP em 02/11/2026)."
+    },
+    "media_info_api": {
+      "url": "https://www.instagram.com/api/v1/media/<media_id>/info/",
+      "headers": {"x-ig-app-id": "936619743392459"},
+      "purpose": "Legenda (obrigatoria em toda rodada) + taken_at + media_type + product_type",
+      "returns": "items[0].caption.text, items[0].taken_at, items[0].media_type (1=foto, 2=video/reel, 8=carrossel), items[0].product_type (feed/clips/carousel_container), like_count, comment_count",
+      "reliability": {
+        "legenda": "autoritativa",
+        "like_count/comment_count": "confiavel em posts proprios; em colaboracao pode vir stub 3 — usar apenas como raw e sinalizar",
+        "caption": "null = post sem legenda por natureza (confirmar com caption_edges vazio)"
+      },
+      "rate_limit": "429 aparece depois de ~50 chamadas rapidas; /api/v1/users/web_profile_info/ e /api/v1/feed/user/<x>/username/ foram bloqueados com 404/429 na mesma sessao."
+    }
+  },
+  "capture_pipeline": {
+    "sink": {
+      "script": "~/.hermes/skills/productivity/instagram-post-metrics-reporting/scripts/sink_save.py",
+      "start": "python sink_save.py 8791",
+      "destino": "C:/Github/ACIRV-Notebook/Hermes/instagram-insights/captura/<mes>-<ano>",
+      "rotas": ["/health", "/salvar?nome=<arquivo>&d=<base64>", "/salvar_lote"],
+      "por_que": "download nativo do Electron ja travou rodadas; a navegacao de topo para o sink grava direto no disco"
+    },
+    "audit": {
+      "comando": "python ferramentas/publicacoes_feed.py auditar --periodo AAAA-MM",
+      "referencia_por_periodo": {"2026-10": "grid_out (captura/outubro-2026/_grid_feed.json)", "default": "grid (captura/setembro-2026/_grid_inventario2.json)"},
+      "sem_legenda_por_natureza": ["DcCPbyLGzGd", "Dez7NIBtL71"]
+    }
+  },
+  "operations": {
+    "read_only": [
+      "inventariar feed por periodo (profile + shortcode decode)",
+      "capturar painel de 30 dias (account_insights_30d)",
+      "capturar metricas post a post (post_insights)",
+      "capturar legendas em lote (media_info_api)",
+      "listar dias com stories arquivados (archived_stories url_day)"
+    ],
+    "forbidden_without_authorization": [
+      "publicar, comentar, curtir, seguir",
+      "alterar perfil ou responder stories",
+      "executar browser_exec / JS fora de browser_console autorizado"
+    ]
+  }
+}

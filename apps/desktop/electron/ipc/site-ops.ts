@@ -101,6 +101,12 @@ export function registerSiteOpsIpc(): void {
       return { success: false, error: `Unsupported site: ${site}` }
     }
 
+    // Legacy CDP scripts have no TaskRun admission, recipient identity proof, or
+    // post-dispatch verifier. Never dispatch mutations through this IPC.
+    if (operation === 'send-message' || operation === 'open-chat') {
+      return { success: false, error: 'NATIVE_WHATSAPP_EXECUTOR_REQUIRED: use the authorized whatsapp_send_message Browser tool' }
+    }
+
     try {
       const scriptPath = getScriptPath(site, operation)
       const procId = generateProcessId()

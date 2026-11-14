@@ -1,0 +1,25 @@
+--- a/apps/desktop/electron/workstation-browser-runtime.ts
++++ b/apps/desktop/electron/workstation-browser-runtime.ts
+@@ -4205,10 +4205,22 @@
+     if (!restored.browserTaskId) {return false}
+     const persisted = this.sessionStatePersistence().load()
+ 
+     if (!persisted) {return true}
+ 
++    // Read-only snapshots must not implicitly reload a persisted URL when an
++    // uncertain effect of this BrowserTask/Tab/Run still needs reconciliation.
++    const owner = persisted.browserTasks.tasks.find(task => task.taskId === restored.browserTaskId)
++    const hasUnresolvedMutation = Object.values(persisted.operationAdmissions ?? {}).some(operation =>
++      operation.taskId === restored.browserTaskId &&
++      operation.tabId === restored.id &&
++      (!owner?.runId || operation.runId === owner.runId) &&
++      (!owner?.sessionHost || operation.sessionId === owner.sessionHost) &&
++      operation.acknowledged !== true && !operation.terminal
++    )
++    if (hasUnresolvedMutation) {return true}
++
+     const navigations = Object.values(persisted.operationAdmissions ?? {}).filter(
+       operation => operation.action === 'browser_navigate' &&
+         operation.tabId === restored.id &&
+         operation.taskId === restored.browserTaskId
+     )

@@ -1,5 +1,9 @@
 # Hermes Workstation
 
+## Historical collaboration implementation
+
+The Workstation-local P0/P1/P2 collaboration modules and associated Claude hooks were retired. Historical claims, reports and engineering context are preserved for recovery, but are not an active coordination backend. The separate local-mcp-bridge is developed independently and does not automatically protect this checkout. For shared work, coordinate actual file writers directly.
+
 <!-- creative-workstation-intake:2026-10-08 -->
 ## Proposed: Hermes Creative Workstation (documentation-only)
 
