@@ -178,6 +178,10 @@ _DESKTOP_MCP_DISCOVERY_DELAY_S = 1.0
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    # Complete OpenAI SDK imports before creating startup/background workers.
+    from agent.process_bootstrap import prewarm_openai_sdk
+
+    prewarm_openai_sdk()
     app.state.event_channels = {}  # dict[str, set]
     app.state.event_lock = asyncio.Lock()
     app.state.pty_active_session_files = {}  # dict[str, Path]

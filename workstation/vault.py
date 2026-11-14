@@ -11,12 +11,28 @@ from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-import yaml
+from io import StringIO
+
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from hermes_constants import get_config_path, get_hermes_home
 from utils import atomic_roundtrip_yaml_update
 
 _log = logging.getLogger(__name__)
+
+
+def _safe_yaml_load(value: str) -> Any:
+    return YAML(typ="safe", pure=True).load(value)
+
+
+def _safe_yaml_dump(value: dict) -> str:
+    writer = YAML(typ="safe", pure=True)
+    writer.default_flow_style = False
+    writer.allow_unicode = True
+    out = StringIO()
+    writer.dump(value, out)
+    return out.getvalue()
 VAULT_ROOT_CONFIG_KEY = "workstation.vault.root"
 
 # Regular expressions for wikilinks and tags
@@ -77,7 +93,7 @@ def parse_frontmatter_and_content(raw_text: str) -> Tuple[Dict[str, Any], str]:
         yaml_content = parts[1]
         body = parts[2].lstrip("\r\n")
         try:
-            parsed = yaml.safe_load(yaml_content)
+            parsed = _safe_yaml_load(yaml_content)
             if isinstance(parsed, dict):
                 return parsed, body
         except Exception as e:
@@ -497,7 +513,7 @@ class VaultManager:
         # Format full markdown document
         body = embedded_body.strip()
         if fm:
-            fm_str = yaml.safe_dump(fm, sort_keys=False, allow_unicode=True).strip()
+            fm_str = _safe_yaml_dump(fm).strip()
             full_text = f"---\n{fm_str}\n---\n\n{body}\n"
         else:
             full_text = f"{body}\n"
@@ -674,7 +690,7 @@ def configured_vault_dir() -> Path:
     config_path = get_config_path()
     configured: Optional[str] = None
     try:
-        raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        raw = _safe_yaml_load(config_path.read_text(encoding="utf-8")) or {}
         if isinstance(raw, dict):
             workstation = raw.get("workstation")
             vault = workstation.get("vault") if isinstance(workstation, dict) else None
@@ -683,7 +699,7 @@ def configured_vault_dir() -> Path:
                 configured = value.strip()
     except FileNotFoundError:
         pass
-    except (OSError, yaml.YAMLError) as exc:
+    except (OSError, YAMLError) as exc:
         raise RuntimeError(f"Cannot read Vault root from {config_path}: {exc}") from exc
 
     if configured is None:

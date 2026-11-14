@@ -1,0 +1,95 @@
+{
+  "kind": "design_reference_not_registered",
+  "protocol": "MCP facade for single local .hermes-collab authority",
+  "checkout": "C:\\Github\\hermes-agent",
+  "assumptions": [
+    "one checkout, one branch current",
+    "claims remain exclusive until explicit release",
+    "unrestricted local shell tools bypass managed adapter"
+  ],
+  "tools": [
+    {
+      "name": "collab_status",
+      "effect": "read",
+      "input": [],
+      "result": [
+        "branch",
+        "head",
+        "claims",
+        "tasks",
+        "blockers"
+      ]
+    },
+    {
+      "name": "collab_claim",
+      "effect": "mutation_local_state",
+      "input": [
+        "session_lease",
+        "lane",
+        "task",
+        "paths"
+      ],
+      "guarantee": "atomic disjoint claim or DENY"
+    },
+    {
+      "name": "collab_check_write",
+      "effect": "read",
+      "input": [
+        "session_lease",
+        "path",
+        "strict"
+      ],
+      "guarantee": "deny missing, invalid or overlapping claim"
+    },
+    {
+      "name": "collab_update",
+      "effect": "mutation_local_state",
+      "input": [
+        "session_lease",
+        "lane",
+        "status",
+        "next_action"
+      ],
+      "guarantee": "never releases claim"
+    },
+    {
+      "name": "collab_handoff",
+      "effect": "mutation_local_state",
+      "input": [
+        "session_lease",
+        "task_id",
+        "next_action",
+        "artifact_path"
+      ],
+      "guarantee": "handoff persists without automatic stealing"
+    },
+    {
+      "name": "collab_release",
+      "effect": "mutation_local_state",
+      "input": [
+        "session_lease",
+        "lane"
+      ],
+      "guarantee": "owner-only release after integrator/maintainer authorization where required"
+    },
+    {
+      "name": "collab_git_request",
+      "effect": "request_only",
+      "input": [
+        "session_lease",
+        "operation",
+        "paths",
+        "expected_branch",
+        "expected_head"
+      ],
+      "guarantee": "does not itself authorize or execute Git writes"
+    }
+  ],
+  "security": {
+    "identity": "lease possession bound to session; never trust model-supplied agent ID alone",
+    "git": "separate exclusive integrator grant",
+    "scope": "enforcement only through managed calls",
+    "transport": "choose installed MCP SDK after host verification",
+    "approval": "explicit user connection required for external clients"
+  }
+}

@@ -24,8 +24,11 @@ import { $rightRailActiveTabId, selectRightRailTab } from '@/store/layout'
 import { $previewTabs, closeRightRail, openWorkstationBrowserPreview } from '@/store/preview'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 
+import type { PageWatchUiState } from '../../../electron/workstation-browser-page-watch-service'
+
 import { LearningControls } from './learning-controls'
 import { isNativeViewOccluded, useNativeViewOcclusion } from './native-view-occlusion'
+import { PageWatchPanel } from './page-watch-panel'
 import { TaskJournalDrawer } from './task-journal-drawer'
 import { TaskRail } from './task-rail'
 import type {
@@ -509,6 +512,28 @@ export function BrowserView() {
   })
 
   const [learningState, setLearningState] = useState<LearningSessionState | null>(null)
+  const [watchSelector, setWatchSelector] = useState('#items')
+  const [watchState, setWatchState] = useState<PageWatchUiState | null>(null)
+  const [watchError, setWatchError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!bridge?.pageWatchStatus || !state.activeTabId) {setWatchState(null);
+
+return}
+
+    const tabId=state.activeTabId
+    let alive=true
+
+    const refresh=()=>bridge.pageWatchStatus?.(tabId).then(next=>{
+      if(alive){setWatchState(next)}
+    }).catch(error=>{
+      if(alive){setWatchError(String(error))}
+    })
+
+    void refresh()
+    const timer=setInterval(()=>{void refresh()},1500)
+
+    return ()=>{alive=false;clearInterval(timer)}
+  },[bridge,state.activeTabId])
 
   useEffect(() => {
     if (!bridge?.onLearningState) {return}
@@ -891,6 +916,32 @@ export function BrowserView() {
               state={state}
               transferToChat={transferToChat}
             />
+            <div className="px-2 py-1 border-t border-(--ui-stroke-tertiary)">
+              <input aria-label="Seletor do monitoramento" className="w-40 rounded border p-1 text-xs"
+                onChange={event=>setWatchSelector(event.target.value)} placeholder="#items"
+                value={watchSelector} />
+              <PageWatchPanel
+                activeTabId={state.activeTabId}
+                config={watchState?.config ?? (activeTab ? {
+                  id:'preview',tab_id:activeTab.id,session_id:'browser-local',
+                  origin: (()=>{try{return new URL(activeTab.url).origin}catch{return ''}})(),
+                  selector:watchSelector,rule:'child_count',route_id:'local-only',enabled:true
+                } : null)}
+                gateQualified={watchState?.gateQualified ?? false}
+                onEnable={()=>{
+                  if(!state.activeTabId || !bridge.pageWatchEnable){return}
+                  void bridge.pageWatchEnable(state.activeTabId,watchSelector)
+                    .then(setWatchState).catch(error=>setWatchError(String(error)))
+                }}
+                onPause={()=>{
+                  if(!state.activeTabId || !bridge.pageWatchPause){return}
+                  void bridge.pageWatchPause(state.activeTabId)
+                    .then(setWatchState).catch(error=>setWatchError(String(error)))
+                }}
+                status={watchState?.status ?? null}
+              />
+              {watchError && <p className="text-xs text-red-400" role="alert">{watchError}</p>}
+            </div>
             <LearningControls
               activeTabId={state.activeTabId}
               bridge={bridge}

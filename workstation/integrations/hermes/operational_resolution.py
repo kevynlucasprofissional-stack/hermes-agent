@@ -53,6 +53,7 @@ from typing import Any, Optional
 from agent.operational_resolution import OperationalOutcome, OperationalResolution
 from workstation.integrations.hermes.effect_authority import trusted_effect_authority_from_agent
 from workstation.prefabs.integration import maybe_resolve_navigation
+from workstation.system1.browser_read_fastpath import maybe_resolve_browser_find
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +278,32 @@ def workstation_operational_resolution(context: Any) -> Optional[OperationalReso
     agent = getattr(context, "agent", None)
     if agent is None or getattr(agent, "_interrupt_requested", False):
         return None
+
+    # Read-only element location is an explicit, verified browser request.
+    browser_read = maybe_resolve_browser_find(context)
+    if browser_read is not None:
+        return browser_read
+
+    # Interactive System-1 is QA-loopback-only. Model ranking cannot authorize
+    # a click or typing; native admission and independent readback still apply.
+    from workstation.system1.browser_interaction_fastpath import (
+        maybe_execute_qa_interaction, parse_interaction,
+    )
+    try:
+        qa_interaction = maybe_execute_qa_interaction(context)
+    except Exception:
+        logger.exception("QA System-1 interaction outcome uncertain")
+        if parse_interaction(getattr(context, "user_message", None)) is not None:
+            # Even a post-dispatch context-manager failure cannot become a
+            # second attempt by System-2 in the same human turn.
+            return OperationalResolution(
+                outcome=OperationalOutcome.HANDOFF, provider="system1_browser_qa",
+                reason="qa_dispatch_exception_uncertain",
+                final_response="Operação QA com resultado incerto. Nenhuma repetição automática.",
+            )
+        qa_interaction = None
+    if qa_interaction is not None:
+        return qa_interaction
 
     # Prefab Fast Path: resolve exact-match navigation/read intents before System-2
     # This runs before any durable task lookup, for zero-LLM known destinations.

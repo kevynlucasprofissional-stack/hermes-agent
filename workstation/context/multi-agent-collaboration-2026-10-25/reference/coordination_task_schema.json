@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hermes local collaboration task snapshot — P1 reference (not operational)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "session_id",
+    "agent_id",
+    "lane",
+    "title",
+    "status",
+    "branch_at_admission",
+    "claim_lanes",
+    "dependencies",
+    "blocked_by",
+    "tests_summary",
+    "next_action",
+    "started_at",
+    "updated_at",
+    "revision"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 2
+    },
+    "lane": {
+      "type": "string",
+      "minLength": 2
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "status": {
+      "enum": [
+        "PLANNED",
+        "ACTIVE",
+        "IN_PROGRESS",
+        "BLOCKED",
+        "READY_FOR_INTEGRATION",
+        "REVIEWING",
+        "DONE",
+        "STALE_SUSPECTED"
+      ]
+    },
+    "branch_at_admission": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claim_lanes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "blocked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "tests_summary": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "next_action": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "handoff_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "head_at_admission": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "heartbeat_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  }
+}

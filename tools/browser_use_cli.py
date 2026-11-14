@@ -697,20 +697,26 @@ def browser_exec(code: str, session: str = "", timeout_s: int = _DEFAULT_TIMEOUT
     from agent.redact import redact_sensitive_text
     from tools.registry import tool_error, tool_result
 
-    # P0B affinity gate: a task bound to the native Workstation Browser must never
-    # be rerouted to browser_exec (external Chrome/CDP/Browser Use). Fail closed
-    # with RECONCILIATION_REQUIRED so the agent cannot spawn a second browser
-    # authority after a controller error or context compaction.
-    try:
-        from tools.browser_workstation import workstation_browser_enabled, workstation_route_is_bound
-        if workstation_browser_enabled() and workstation_route_is_bound(task_id=task_id, session_id=session_id):
-            return tool_error(
-                "RECONCILIATION_REQUIRED: this task is bound to the Hermes Workstation native browser. "
-                "browser_exec (external Chrome/CDP) is not allowed. Recover via the native browser route "
-                "or request human handoff. Do not spawn a parallel browser."
-            )
-    except Exception:
-        pass  # defensive: if workstation module is unavailable, fall through to normal path
+    # Block external browser processes from the FIRST Desktop action, before
+    # a BrowserTask has been bound. Also preserve affinity across other surfaces.
+    # Import/route failures must not silently authorize a second browser.
+    from tools.browser_workstation import (
+        workstation_browser_enabled,
+        workstation_route_is_bound,
+        workstation_desktop_session,
+    )
+    if workstation_desktop_session():
+        return tool_error(
+            "WORKSTATION_NATIVE_BROWSER_REQUIRED: Desktop sessions must use the Hermes "
+            "Workstation native browser_* tools. browser_exec would start a separate "
+            "browser/session and is not allowed, even before the first BrowserTask."
+        )
+    if workstation_browser_enabled() and workstation_route_is_bound(task_id=task_id, session_id=session_id):
+        return tool_error(
+            "RECONCILIATION_REQUIRED: this task is bound to the Hermes Workstation native browser. "
+            "browser_exec (external Chrome/CDP) is not allowed. Recover via the native browser route "
+            "or request human handoff. Do not spawn a parallel browser."
+        )
 
     if not code or not code.strip():
         return tool_error("No code provided. Pass Python that uses the pre-imported helpers, e.g. new_tab(\"https://example.com\") then print(page_info()).")
@@ -924,7 +930,7 @@ registry.register(
     handler=lambda args, **kw: browser_exec(
         code=args.get("code", ""), session=args.get("session", "") or "",
         timeout_s=args.get("timeout_s", _DEFAULT_TIMEOUT_S), task_id=kw.get("task_id"),
-        local=bool(args.get("local", False)),
+        local=bool(args.get("local", False)), session_id=kw.get("session_id"),
     ),
     check_fn=is_browser_use_cli_mode,
     dynamic_schema_overrides=_dynamic_schema_overrides,

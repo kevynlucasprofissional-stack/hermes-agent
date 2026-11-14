@@ -39,3 +39,42 @@ def test_default_and_uncomputable_still_catch_up(tmp_path, monkeypatch, uncomput
         if uncomputable:
             monkeypatch.setattr(jobs, "compute_next_run", lambda *args: None)
         assert [row["id"] for row in jobs.get_due_jobs()] == [job["id"]]
+
+
+def test_daily_outage_catchup_claims_once_and_reanchors_next_day(tmp_path, monkeypatch):
+    """Real jobs store: a missed daily slot is due ASAP, claimed once, then next day."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    (tmp_path / "config.yaml").write_text(
+        "timezone: America/Sao_Paulo\ncron:\n  catch_up_missed: true\n", encoding="utf-8"
+    )
+    now = datetime(2026, 11, 7, 17, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))
+    monkeypatch.setattr(jobs, "_hermes_now", lambda: now)
+
+    with jobs.use_cron_store(tmp_path / "cron"):
+        job = jobs.create_job(
+            prompt="Missed daily sync", schedule="0 9 * * *", model="fixture", deliver="local"
+        )
+        records = jobs.load_jobs()
+        records[0]["next_run_at"] = datetime(
+            2026, 11, 6, 9, 0, tzinfo=ZoneInfo("America/Sao_Paulo")
+        ).isoformat()
+        jobs.save_jobs(records)
+
+        due = jobs.get_due_jobs()
+        assert [item["id"] for item in due] == [job["id"]]
+        assert due[0]["last_dispatch"]["kind"] == "catch_up"
+        assert due[0]["last_dispatch"]["scheduled_at"].startswith("2026-11-06T09:00:00")
+
+        assert jobs.claim_job_for_fire(job["id"]) is True
+        assert jobs.claim_job_for_fire(job["id"]) is False
+        assert jobs.get_due_jobs() == []
+        next_run = jobs.load_jobs()[0]["next_run_at"]
+        assert next_run.startswith("2026-11-08T09:00:00")
+
+    # File-backed state persists across scheduler/store reconstruction.
+    with jobs.use_cron_store(tmp_path / "cron"):
+        assert jobs.get_due_jobs() == []
+        assert jobs.load_jobs()[0]["next_run_at"] == next_run

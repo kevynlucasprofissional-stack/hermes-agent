@@ -2,6 +2,11 @@
 
 Project-specific guidance for Claude Code sessions working in this repository.
 
+### Retired multi-agent control
+
+The project-local P0/P1/P2 multi-agent coordinator, admission layer and Claude hooks were retired by the maintainer on 2026-10-28. The old .hermes-collab directory and engineering journals are retained as HISTORICAL evidence, not an active ownership service. Do not run removed scripts. Before editing a shared checkout, inspect Git dirty/untracked work and coordinate directly with other active writers. Direct terminal/Desktop Commander/Claude access does not enforce cross-agent claims. The separate local-mcp-bridge is not automatically connected to this Hermes checkout and does not universally fence raw writes.
+Claude Code works through its existing direct machine and Hermes Workstation access; no local-mcp-bridge installation or plugin enrollment is required for this project.
+
 ## AI Control & Dogfooding (Desktop)
 
 When developing or testing the Hermes Desktop app (`apps/desktop`) with the
@@ -38,14 +43,9 @@ Nota: /humanizer-pt-br e /skill-discovery já estão configurados respectivament
 
 Estas skills complementam mas não substituem as regras do [AGENTS.md](AGENTS.md), que é a fonte primária de regras específicas do hermes-agent.
 
-## Multi-Session Collaboration Enforcement
+## Shared checkout coordination
 
-Hooks automáticos impedem que sessões independentes sobrescrevam trabalho alheio no checkout compartilhado. **Antes de qualquer edição**, o hook `PreToolUse` consulta `python workstation/scripts/multi_agent_coordination.py check-path <path>` e bloqueia escritas em caminhos reclamados por outro agente. O hook `SessionStart` alerta quando a branch atual não é `feat/hermes-workstation-mvp-20261013`.
-
-- Os hooks estão em `.claude/hooks/check-claim-edit.sh`, `check-claim-bash.sh` e `check-branch.sh`, registrados em `.claude/settings.local.json`.
-- Se o script de coordenação falhar, os hooks falham abertos (permitem a edição) para não bloquear trabalho solo.
-- Sessões novas devem verificar claims (`python workstation/scripts/multi_agent_coordination.py status`) e branch antes de escrever.
-- Detalhes completos: [`workstation/context/AGENT_COLLABORATION_PROTOCOL.md`](workstation/context/AGENT_COLLABORATION_PROTOCOL.md).
+The project-local Claude collaboration hooks were removed. Do not assume direct CLI/filesystem tools provide ownership isolation. Obtain an explicit handoff before touching another active writer's work.
 
 ## Repository Conventions
 

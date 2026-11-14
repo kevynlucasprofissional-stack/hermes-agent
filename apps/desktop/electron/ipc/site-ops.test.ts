@@ -83,3 +83,22 @@ test('semantic failure on a zero-exit child does not claim completion', async ()
   const result = await mock.handlers['hermes:site-ops:deep-map']({}, 'scan', 'web.whatsapp.com') as { success: boolean }
   assert.equal(result.success, false)
 })
+
+test.each(['send-message', 'open-chat'])('blocks legacy mutating %s without dispatch', async operation => {
+  const result = await mock.handlers['hermes:site-ops:execute'](
+    {}, { site: 'whatsapp-web', operation, args: ['synthetic only'] }
+  ) as { success: boolean; error?: string }
+  assert.equal(result.success, false)
+  assert.match(result.error ?? '', /NATIVE_WHATSAPP_EXECUTOR_REQUIRED/)
+  assert.equal(mock.spawns.length, 0)
+})
+
+test('retains read-only unread count access on the legacy IPC', async () => {
+  mock.result = { code: 0, stdout: '{"unreadCount":3}', stderr: '' }
+  const result = await mock.handlers['hermes:site-ops:execute'](
+    {}, { site: 'whatsapp-web', operation: 'get-unread-count' }
+  ) as { success: boolean; data: { unreadCount: number } }
+  assert.equal(result.success, true)
+  assert.equal(result.data.unreadCount, 3)
+  assert.equal(mock.spawns.length, 1)
+})

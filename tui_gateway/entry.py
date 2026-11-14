@@ -271,6 +271,10 @@ def _write_or_exit(payload: dict, reason: str) -> None:
 
 
 def main():
+    # Complete SDK imports before any startup callback can create a worker.
+    from agent.process_bootstrap import prewarm_openai_sdk
+
+    prewarm_openai_sdk()
     # stdout is this process's JSON-RPC client channel: peer-less global broadcasts belong on it.
     server._stdio_is_rpc_channel = True
     try:

@@ -45,10 +45,22 @@ export async function saveVaultNote(payload: {
   tags?: string[]
   frontmatter?: Record<string, unknown>
   subfolder?: string
+  create_only?: boolean
 }): Promise<{ status: string; note: VaultNote }> {
   return req<{ status: string; note: VaultNote }>('/notes', {
     method: 'POST',
     body: payload
+  })
+}
+
+export async function updateVaultNoteSource(
+  relPath: string,
+  content: string,
+  expectedRevision: string
+): Promise<{ status: string; note: VaultNote }> {
+  return req<{ status: string; note: VaultNote }>(`/notes/${encodeURIComponent(relPath)}`, {
+    method: 'PUT',
+    body: { content, expected_revision: expectedRevision }
   })
 }
 

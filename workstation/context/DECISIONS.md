@@ -1,4 +1,37 @@
 # Architectural Decisions
+
+## Maintainer decision — 2026-11-01: Stage A / H-079 optional (supersedes D-030's development gate)
+
+**Current and authoritative rule:** Upstream synchronization is recommended maintenance,
+**not** an admission requirement for a bug fix, feature, refactor or test. An agent may
+work even with upstream drift, no exact pin, pending/red Stage A CI or missing current
+sync report; it needs no exceptional waiver merely to implement a change.
+
+**Reason for replacement:** upstream maintenance and task implementation are separable;
+the blanket prerequisite prevents unrelated, otherwise safe work without proving that
+the target change depends on an upstream merge. **Migration/compatibility:** preserve
+D-030 and H-079's historical qualification evidence; when a sync is explicitly chosen,
+retain exact pin/merge/seam audit and separate sync/feature reviewability. The new rule
+does not mark any prior baseline qualified, change the runtime, authorize Git
+promotion, waive security/ownership checks, or waive release-specific acceptance.
+
+**Discoverability:** [UPSTREAM.md](../UPSTREAM.md) is the entry point for dated
+upstream status and optional live-check commands; [UPSTREAM_DELTA.md](../UPSTREAM_DELTA.md)
+records downstream divergence. Treat stale/unknown status as such.
+
+**Verification of this decision:** this is a documentation/policy change; inspect
+the active agent guides for removal of Stage A admission language and retain
+behavioral/security/release tests appropriate to each subsequent implementation.
+No runtime behavior is claimed or tested by this policy update.
+
+
+## WA-M3 (2026-10-25): strict causal evidence (LOCAL, NOT RELEASE)
+A send is not confirmed from msg-meta or composer-empty. Require new scoped outbound ID, verified recipient, matching body and per-message ACK. Use existing SQLite log with unique operation_id and message digest, not parallel DB/ledger. Replay and click ambiguities stay UNCERTAIN. Native Browser evidence projection is not qualified; batch sending and release remain HOLD. H-079 waiver applies only to local implementation.
+
+
+## WA-D1..WA-D6 — WhatsApp seguro e causal (2026-10-24; estado atualizado 2026-10-25)
+**DECISÃO; M1/M2 IMPLEMENTADAS E TESTADAS LOCALMENTE; NOT RELEASE.** Resolver número integral apenas em executor trusted via referência configurada; manter `agent/redact.py` e PII mascarada para modelo/logs. Alias de fonte vem do perfil: `whatsapp.sources.<alias>.db_path` absoluto e `allowed_phone_sources` explícito. A configuração permite lookup de identidade/proveniência, não envio. Contatos individuais não têm consentimento inferido; campos de campanha nunca concedem permissão isoladamente. M1 preserva o executor de efeitos, a API interna legada e Browser/human admission; queries da fonte são read-only. Persistência/resultados públicos não incluem telefone/corpo. M2 usa contexto TaskRun canônico ligado à execução, encaminha `tool_call_id` protocolar e exige lineage válido na ferramenta; nenhum ID do modelo ou run recente confere autoridade. Recibos de mutações em `executeControlRequest` usam o `effectiveRunId` já aplicado à admissão quando o request omite `run_id`, preservando o fence de compatibilidade do Browser. A suite M2 atual passou 8/8; a rodada combinada anterior passou 81 testes Python quando M2 tinha sete casos. Um teste de despacho, 42 testes nativos e Ruff focado também passaram; sem envio real nem qualificação de produto. M3–M6 seguem pendentes. [Racional completo](WHATSAPP_RELIABILITY_2026-10-24.md) e [missões](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md).
+
 ## D-050 — Preflight Criativo Mínimo e Hierarquia de Controle do PhotoCraft (2026-10-18)
 **STATUS: IMPLEMENTADO E TESTADO UNITARIAMENTE (P05); NOT RELEASE.**
 1. **Preflight de Parâmetros Essenciais:** O módulo `workstation/creative_preflight.py` identifica tarefas de design que carecem de dimensões/formato e formula exatamente uma pergunta bounded via ferramenta `clarify`. Comandos pontuais ("Abra o PhotoCraft", "Fecha o documento") e pedidos com dimensões explícitas ("1080×1440") bypassam o preflight. Respostas são persistidas na TaskRun atual (`task_context`), nunca em memória permanente. Defaults reversíveis são permitidos; escolhas silenciosas de dimensão que inviabilizam o trabalho são proibidas.
@@ -1161,7 +1194,7 @@ Principles enforced:
 - **Fail-Closed Seam Policy**: `audit_hermes_seams.py --strict` acts as an automated regression
   gate enforcing zero unclassified core seams.
 
-## D-030 — Upstream-first qualified baseline before downstream implementation
+## D-030 — Upstream-first qualified baseline before downstream implementation (HISTORICAL, superseded 2026-11-01)
 
 **Decision:** upstream synchronization is now a mandatory admission gate for downstream
 runtime work, not a periodic maintenance activity.
@@ -1363,3 +1396,26 @@ Native regression at bb1888976e: existing headless-load contract passed with fou
 **Decision:** Retain D-043's Hermes-owned engine-neutral CreativeDocument while permitting independently editable native EffectCraft `.ecproj` and HyperFrames HTML/JS subcompositions to be linked by stable IDs, SHA-256 source digests and immutable Hermes revisions. The first integration route is HyperFrames RGBA PNG footage imported into EffectCraft, then future on-demand frames if native testing justifies it. Hermes remains owner of policy, canonical rational time, source revisions, task authority and export verification; neither engine becomes a second user-project authority.
 
 **Execution state:** The chosen product direction is approved by the maintainer; **implementation NOT QUALIFIED**. Development-only H-C2 source archiving and partial H-C3 time mapping live on branch `feat/hcw-hybrid-01-20261011`. The real H-C1 EffectCraft + HyperFrames media import/export remains BLOCKED by unqualified external engine execution. H-079 baseline and exact-head CI gates remain active. Details: `../creative-workstation/evidence/HCW-HYBRID-01.md`.
+
+
+<!-- HERMES-WORK-PLAN-20261026:PLAN_ONLY -->
+
+## D-20261026-PROPOSED — Evolução incremental Hermes Work 80/20 (AGUARDANDO INTEGRAÇÃO)
+
+1. **Preferir adapters existentes:** Browser upload CDP, Cron event trigger, Trello REST, Kanban bridge, ASR/TTS e Modo Aprender existentes. Proibido duplicar scheduler/Kanban/LLM watcher.
+2. **Separar observação e intenção:** eventos não correlacionados não autorizam criar tarefas automaticamente; evento de negócio exige identidade estável, trilha imutável, dedup e outbox.
+3. **Menor intervenção com maior impacto:** primeiro hardening de upload e vertical Trello (captura → relato), depois monitoramento e inteligência WhatsApp.
+4. **No release sem prova nativa:** `WA-M3-01` e M3 Learning são HOLD; nenhuma decisão deste planejamento revoga os gates.
+5. **Arquitetura de dados:** journal de mudanças é evidência/projeção na store explicitamente autorizada, nunca substituto do estado canônico. Trello permanece fonte oficial de cartão; Kanban local é fonte de TaskRun.
+6. **Privacidade e prompt injection:** conteúdos de terceiros são dados não confiáveis, nunca instruções; minimização, retenção, provenance, segredos fora de logs e Git; nenhuma comunicação externa automatizada inicialmente.
+7. **Governança:** nenhum agente sem projeto Hermes e claim de paths pode editar os arquivos locais, mesmo que outro MCP permita escrita irrestrita.
+
+**Status:** PROPOSED / plan-only; aceitar no registro canônico apenas após revisão de owner e integrador.
+
+<!-- HERMES-WORK-P01-20261027-MAINTAINER-WAIVER -->
+## D-20261027-P01 — Waiver pontual e CDP seguro
+Mantenedor autorizou pular H-079 exclusivamente para trabalhar no estado local atual. Não alterou o gate de release, leases humanos, incerteza ou autoridade da TaskRun. A solução usa Chromium/Electron existente, valida realpath/arquivos/roots com grant expresso do operador por TaskRun no config.yaml, admission/receipt persistentes e resposta sem caminhos absolutos. Nenhum subsistema paralelo ou envio WhatsApp.
+
+
+## D-20261027-P01B — Origem autorizada de upload
+Grant explícito para browser_file_upload inclui allowed_origins de HTTP(S) exatos. CDP compara a origem efetiva da aba antes e após awaits, nega mudanças de domínio, e não transforma seleção de arquivo em prova de entrega remota. H-079 autorizado apenas para implementação local; CI e release permanecem independentes.

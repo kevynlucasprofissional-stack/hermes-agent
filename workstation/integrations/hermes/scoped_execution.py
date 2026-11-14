@@ -13,7 +13,7 @@ from workstation.task_compiler import (
 )
 
 
-def workstation_durable_dispatch(agent: Any):
+def workstation_durable_dispatch(agent: Any, *, raw_browser_snapshot: bool = False):
     """Build the deterministic durable dispatcher bound to one agent's session scope.
 
     This is the only way an operational capability may reach a real primitive:
@@ -27,7 +27,11 @@ def workstation_durable_dispatch(agent: Any):
     def _durable_dispatch(name: str, args: dict, task_id: str, call_id: str):
         if getattr(agent, "_interrupt_requested", False) or getattr(agent, "_tool_guardrail_halt_decision", None):
             raise InterruptedError("Durable work interrupted")
-        if name not in getattr(agent, "valid_tool_names", set()):
+        # Only explicitly requested, read-only native snapshots bypass the
+        # model-facing projection (which removes the structured elements list).
+        # Native admission, lease checks and observers stay in the existing path.
+        if (name not in getattr(agent, "valid_tool_names", set())
+                or (raw_browser_snapshot and name == "browser_snapshot")):
             from tools.browser_workstation import _WORKSTATION_SCHEMA_TOOLS
             if name in _WORKSTATION_SCHEMA_TOOLS:
                 import time

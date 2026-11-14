@@ -418,3 +418,121 @@ test('composite state persists and normalizes kanbanCardId and runId identity li
   assert.equal(loaded.browserTasks.tasks[0]?.kanbanCardId, 'card-abc-123')
   assert.equal(loaded.browserTasks.tasks[0]?.runId, 'run-xyz-789')
 })
+
+test('BROW-N2 RED: uncertain batch outcome is durable, sanitized and still fences replay', () => {
+  const { stateFile } = tempFiles()
+  const persistence = new BrowserSessionStateFilePersistence(stateFile)
+  const admission = {
+    operationId: 'op-batch-uncertain-n2', taskId: 'task-n2', sessionId: 'session-n2',
+    runId: 'run-n2', tabId: 'tab-n2', action: 'browser_batch_actions',
+    argumentsDigest: 'a'.repeat(64)
+  }
+  assert.equal(persistence.admitBrowserMutation(admission), 'admitted')
+  persistence.recordBatchUncertainty({
+    operationId: admission.operationId, reason: 'selection_postcondition_not_observed',
+    stoppedAt: 0, completedSteps: 1, verifiedSteps: 0
+  })
+  const fresh = new BrowserSessionStateFilePersistence(stateFile)
+  const pending = fresh.listPendingAdmissions('task-n2')
+  assert.equal(pending.length, 1)
+  assert.equal(pending[0].uncertainty?.reason, 'selection_postcondition_not_observed')
+  assert.equal(pending[0].uncertainty?.completedSteps, 1)
+  assert.equal(fresh.pendingBrowserMutation('task-n2','session-n2','run-n2'), admission.operationId)
+  const stale = new BrowserSessionStateFilePersistence(stateFile)
+  stale.saveSession([], null)
+  assert.equal(new BrowserSessionStateFilePersistence(stateFile).listPendingAdmissions('task-n2')[0].uncertainty?.reason,
+    'selection_postcondition_not_observed', 'stale projection must not erase diagnostic metadata')
+  assert.throws(() => fresh.recordBatchUncertainty({
+    operationId: admission.operationId, reason: 'phone=+55_SECRET',
+    stoppedAt: 0, completedSteps: 1, verifiedSteps: 0
+  }), /invalid_batch_uncertainty/)
+})
+
+test('BROW-N2 RED: stale writer cannot erase an operator reconciliation terminal', () => {
+  const { stateFile } = tempFiles()
+  const owner = new BrowserSessionStateFilePersistence(stateFile)
+  const admission = {
+    operationId: 'op-immutable-terminal-n2', taskId:'task-terminal-n2',
+    sessionId:'session-terminal-n2', runId:'run-terminal-n2',
+    tabId:'tab-terminal-n2', action:'browser_batch_actions',
+    argumentsDigest:'b'.repeat(64)
+  }
+  assert.equal(owner.admitBrowserMutation(admission),'admitted')
+  owner.recordBatchUncertainty({operationId:admission.operationId,reason:'readback_unavailable',
+    stoppedAt:0,completedSteps:1,verifiedSteps:0})
+  const stale = new BrowserSessionStateFilePersistence(stateFile)
+  stale.load()
+  owner.reconcilePendingAdmission({operationId:admission.operationId,
+    reason:'OPERATOR_RECONCILED',evidence:'OPERATOR_REVIEW',
+    evidenceDetails:'SYNTHETIC_REVIEW_ONLY',resolvedBy:'synthetic-operator'})
+  stale.saveSession([],null)
+  const loaded = new BrowserSessionStateFilePersistence(stateFile).load()
+  assert.equal(loaded?.operationAdmissions?.[admission.operationId]?.terminal?.kind,'RECONCILED')
+  assert.equal(loaded?.operationAdmissions?.[admission.operationId]?.uncertainty?.reason,'readback_unavailable')
+  assert.equal(new BrowserSessionStateFilePersistence(stateFile).listPendingAdmissions('task-terminal-n2').length,0)
+})
+
+test('P0 automatic safe recovery of legacy invalid browser batch is durable, scoped and idempotent', () => {
+  const {stateFile} = tempFiles()
+  const store = new BrowserSessionStateFilePersistence(stateFile)
+  const taskId = 'task-legacy-invalid'
+  const sessionId = 'session-legacy-invalid'
+  const runId = 'run-legacy-invalid'
+  const tabId = 'tab-legacy-invalid'
+  const initial = snapshot([tab(tabId,{browserTaskId:taskId})],browserTaskSnapshot([taskId]))
+  initial.browserTasks.tasks[0].sessionHost=sessionId
+  initial.browserTasks.tasks[0].runId=runId
+  ;(store as unknown as {save:(state:BrowserSessionStateSnapshot)=>unknown}).save(initial)
+  const operationId='op-invalid-legacy-batch'
+  assert.equal(store.admitBrowserMutation({operationId,taskId,sessionId,runId,tabId,
+    action:'browser_batch_actions',argumentsDigest:'1'.repeat(64)}),'admitted')
+  store.recordBatchUncertainty({operationId,reason:'invalid_step',
+    stoppedAt:0,completedSteps:0,verifiedSteps:0})
+  const restarted = new BrowserSessionStateFilePersistence(stateFile)
+  assert.equal(restarted.pendingBrowserMutation('other-task',sessionId,runId),null)
+  assert.equal(restarted.listPendingAdmissions(taskId).length,1)
+  assert.equal(restarted.pendingBrowserMutation(taskId,sessionId,runId),null)
+  const terminal = new BrowserSessionStateFilePersistence(stateFile).load()?.operationAdmissions?.[operationId]?.terminal
+  assert.equal(terminal?.kind,'NOT_DISPATCHED')
+  assert.equal(terminal?.reason,'EVIDENCE_RECONCILED')
+  assert.equal(terminal?.resolvedBy,'browser-preflight-auto-recovery')
+  assert.equal(restarted.pendingBrowserMutation(taskId,sessionId,runId),null)
+  assert.equal(restarted.listPendingAdmissions(taskId).length,0)
+  // Immutable terminal is preserved even if an older projection is re-saved.
+  store.saveSession([],null)
+  assert.equal(new BrowserSessionStateFilePersistence(stateFile).load()?.operationAdmissions?.[operationId]?.terminal?.kind,
+    'NOT_DISPATCHED')
+})
+
+test('P0 automatic recovery refuses any possibility of a dispatched browser effect', () => {
+  for(const [reason,completed,verified,withReceipt] of [
+    ['click_postcondition_not_observed',1,0,false],
+    ['effect_state_unknown',0,0,false],
+    ['invalid_step',1,0,false],
+    ['invalid_step',0,0,true]
+  ] as const) {
+    const {stateFile}=tempFiles()
+    const store=new BrowserSessionStateFilePersistence(stateFile)
+    const taskId='task-safety'
+    const sessionId='session-safety'
+    const runId='run-safety'
+    const tabId='tab-safety'
+    const initial=snapshot([tab(tabId,{browserTaskId:taskId})],browserTaskSnapshot([taskId]))
+    initial.browserTasks.tasks[0].sessionHost=sessionId
+    initial.browserTasks.tasks[0].runId=runId
+    const operationId='op-safety-batch'
+    if(withReceipt) {
+      initial.browserTasks.tasks[0].lastReceipt={
+        operationId:operationId+':0',taskId,runId,browserTaskId:taskId,tabId,revision:1,
+        action:'browser_click',safeUrl:null,executedAt:new Date().toISOString()
+      }
+    }
+    ;(store as unknown as {save:(state:BrowserSessionStateSnapshot)=>unknown}).save(initial)
+    assert.equal(store.admitBrowserMutation({operationId,taskId,sessionId,runId,tabId,
+      action:'browser_batch_actions',argumentsDigest:'2'.repeat(64)}),'admitted')
+    store.recordBatchUncertainty({operationId,reason,stoppedAt:0,completedSteps:completed,verifiedSteps:verified})
+    assert.equal(new BrowserSessionStateFilePersistence(stateFile).pendingBrowserMutation(taskId,sessionId,runId),
+      operationId,reason+' has effect risk and must not auto-recover')
+    assert.equal(store.load()?.operationAdmissions?.[operationId]?.terminal,undefined)
+  }
+})

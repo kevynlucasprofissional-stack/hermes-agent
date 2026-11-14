@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-10-24T21:35:00Z",
+  "liveTab": {
+    "title": "(14) WhatsApp",
+    "url": "https://web.whatsapp.com/",
+    "element_count": 38
+  },
+  "critical_checks": {
+    "nav_primary_section": {
+      "expected": [
+        "Conversas",
+        "Ligações",
+        "Status",
+        "Canais",
+        "Comunidades",
+        "Meta AI"
+      ],
+      "found": [
+        "Conversas",
+        "Ligações",
+        "Status",
+        "Canais",
+        "Comunidades",
+        "Meta AI"
+      ],
+      "status": "PASS"
+    },
+    "search_input": {
+      "found": true,
+      "ref": "@e12",
+      "role": "textbox",
+      "label": "Pesquisar nas conversas não lidas",
+      "status": "PASS"
+    },
+    "unread_filter": {
+      "found": true,
+      "ref": "@e12",
+      "label": "Pesquisar nas conversas não lidas",
+      "status": "PASS"
+    },
+    "conversation_panel": {
+      "active_header": null,
+      "composer_found": false,
+      "composer_ref": null,
+      "send_or_voice_btn": "Enviar documento",
+      "send_ref": "@e34",
+      "status": "ACTIVE_CHAT_DETECTED"
+    }
+  },
+  "deep_map_match": {
+    "tested_sample": 40,
+    "matched": 11,
+    "match_rate_pct": 27.5
+  },
+  "sample_selector_audit": [
+    {
+      "selector": "[data-testid=\"wa-web-main-screen\"]",
+      "testId": "wa-web-main-screen",
+      "ariaLabel": null,
+      "matched": false
+    },
+    {
+      "selector": "[data-testid=\"chatlist-header\"]",
+      "testId": "chatlist-header",
+      "ariaLabel": null,
+      "matched": false
+    },
+    {
+      "selector": "[data-testid=\"navbar-primary-section\"]",
+      "testId": "navbar-primary-section",
+      "ariaLabel": null,
+      "matched": false
+    },
+    {
+      "selector": "button[aria-label=\"Conversas\"]",
+      "testId": null,
+      "ariaLabel": "Conversas",
+      "matched": true
+    },
+    {
+      "selector": "button[aria-label=\"Ligações\"]",
+      "testId": null,
+      "ariaLabel": "Ligações",
+      "matched": true
+    },
+    {
+      "selector": "button[aria-label=\"Status\"]",
+      "testId": null,
+      "ariaLabel": "Status",
+      "matched": true
+    },
+    {
+      "selector": "button[aria-label=\"Canais\"]",
+      "testId": null,
+      "ariaLabel": "Canais",
+      "matched": true
+    },
+    {
+      "selector": "button[aria-label=\"Comunidades\"]",
+      "testId": null,
+      "ariaLabel": "Comunidades",
+      "matched": true
+    },
+    {
+      "selector": "button[aria-label=\"Meta AI\"]",
+      "testId": null,
+      "ariaLabel": "Meta AI",
+      "matched": true
+    },
+    {
+      "selector": "[data-testid=\"navbar-footer-section\"]",
+      "testId": "navbar-footer-section",
+      "ariaLabel": null,
+      "matched": false
+    }
+  ]
+}

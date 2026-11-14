@@ -147,6 +147,65 @@ describe('WorkstationBrowserPane cold attach', () => {
     await waitFor(() => expect(attach).toHaveBeenCalledTimes(2))
   })
 
+  it('does not mislabel an unrelated learning handoff as an uncertain Browser operation', async () => {
+    const { screen } = await import('@testing-library/react')
+    const api = vi.fn(async () => ({
+      handoffs: [{
+        handoff_id: 'handoff-learning-1', task_id: 't-learning-unrelated',
+        session_id: 'session-b', run_id: '67',
+        status: 'waiting-for-human', reason: 'uncertain_mutation_requires_review',
+        requested_at: '2026-11-01T18:53:38Z'
+      }]
+    }))
+    const bridge = {
+      ensure: vi.fn(async () => restoredState),
+      attach: vi.fn(async () => ({...restoredState, attached: true, viewportHost: 'chat'})),
+      setBounds: vi.fn(async () => restoredState),
+      detach: vi.fn(async () => restoredState),
+      setVisible: vi.fn(async () => restoredState),
+      onState: vi.fn(() => () => undefined)
+    } as unknown as WorkstationBrowserBridge
+    Object.defineProperty(window, 'hermesDesktop', {
+      configurable: true, value: { workstationBrowser: bridge, api }
+    })
+    render(<WorkstationBrowserPane />)
+    await waitFor(() => expect(api).toHaveBeenCalled())
+    await waitFor(() => expect(bridge.ensure).toHaveBeenCalled())
+    expect(screen.queryByRole('button', {name: 'Acknowledge uncertain Browser operation'})).toBeNull()
+  })
+  it('shows one summary for seven genuine pending reviews and preserves separate human actions', async () => {
+    const { fireEvent, screen } = await import('@testing-library/react')
+    const api = vi.fn(async (_request: {path: string; method?: string}) => ({
+      handoffs: Array.from({length: 7}, (_, i) => ({
+        handoff_id: 'handoff-real-' + i, task_id: 'task-b',
+        session_id: 'session-b', run_id: '', status: 'waiting-for-human',
+        reason: 'uncertain_mutation_requires_review',
+        requested_at: '2026-11-01T20:00:0' + i + 'Z'
+      }))
+    }))
+    const bridge = {
+      ensure: vi.fn(async () => restoredState),
+      attach: vi.fn(async () => ({ ...restoredState, attached: true, viewportHost: 'chat' })),
+      setBounds: vi.fn(async () => restoredState),
+      detach: vi.fn(async () => restoredState),
+      setVisible: vi.fn(async () => restoredState),
+      onState: vi.fn(() => () => undefined)
+    } as unknown as WorkstationBrowserBridge
+    Object.defineProperty(window, 'hermesDesktop', {
+      configurable: true, value: {workstationBrowser: bridge, api}
+    })
+    render(<WorkstationBrowserPane />)
+    const show = await screen.findByRole('button', {name: 'Show pending Browser reviews'})
+    expect(screen.getByText(/7 Browser reviews pending/)).toBeTruthy()
+    expect(screen.queryAllByRole('button', {name: 'Acknowledge uncertain Browser operation'})).toHaveLength(0)
+    fireEvent.click(show)
+    await waitFor(() => expect(screen.queryAllByRole('button', {
+      name: 'Acknowledge uncertain Browser operation'
+    })).toHaveLength(7))
+    fireEvent.click(screen.getByRole('button', {name: 'Hide pending Browser reviews'}))
+    expect(screen.queryAllByRole('button', {name: 'Acknowledge uncertain Browser operation'})).toHaveLength(0)
+    expect(api.mock.calls.every(([req]) => req.method !== 'POST')).toBe(true)
+  })
   it('shows session-scoped native human review and acknowledges it only once', async () => {
     const { fireEvent, screen } = await import('@testing-library/react')
 

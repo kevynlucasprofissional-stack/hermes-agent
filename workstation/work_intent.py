@@ -1,6 +1,7 @@
 """One transient operational decision, reusing canonical classifiers."""
 from dataclasses import dataclass, field
 import hashlib
+import re
 
 from workstation.contracts import AcceptanceContract, MessageEnvelope, RiskLevel
 
@@ -86,6 +87,37 @@ def current_command_objective(envelope: MessageEnvelope, task_id: str, run_id: s
             "inputs": inputs}
 
 
+# Deliberately narrow: ambiguous work remains evidence-gated. This only selects
+# an advisory contract for multi-step research with no requested mutation.
+_READ_ONLY_ACTION = re.compile(
+    r"\b(?:leia|pesquise|investigue|analise|compare|verifique|revise|resuma|"
+    r"descreva|liste|examine|consulte|read|research|investigate|analyze|"
+    r"analyse|compare|verify|review|summarize)\b", re.IGNORECASE,
+)
+_WRITE_ACTION = re.compile(
+    r"\b(?:crie|criar|gere|gerar|escreva|salve|salvar|atualize|altere|"
+    r"modifique|mova|remova|exclua|apague|configure|instale|publique|envie|"
+    r"implemente|corrija|rode|execute|faça|adicionar|adicione|marque|marcar|"
+    r"conclua|concluir|mude|mudar|suba|postar|anexe|anexar|enviar|deletar|"
+    r"excluir|limpar|instalar|aplique|aplicar|gravar|alterar|corrigir|"
+    r"escrever|create|generate|write|save|update|edit|modify|delete|"
+    r"remove|publish|send|implement|fix|run|deploy|upload|download|"
+    r"apply|commit|push|merge)\b", re.IGNORECASE,
+)
+
+
+def _read_only_advisory_request(envelope: MessageEnvelope, structured: dict, durable: bool) -> bool:
+    """Classify unambiguously informational multi-step work; never authorize writes."""
+    if not durable or not envelope.can_create_work:
+        return False
+    if any(structured.get(key) for key in ("steps", "items", "operation_intent", "capability_id")):
+        return False
+    content = envelope.content.strip()
+    if content.casefold().startswith("review the conversation above"):
+        return False  # background skill maintenance is not user-facing research
+    return len(_READ_ONLY_ACTION.findall(content)) >= 2 and not _WRITE_ACTION.search(content)
+
+
 @dataclass(slots=True)
 class WorkIntent:
     execution_class: str
@@ -126,9 +158,12 @@ def work_intent(envelope: MessageEnvelope, structured: dict | None = None) -> Wo
             creative_preflight_payload = None
     requires_task = bool(envelope.can_create_work and durable)
     admission_kind = "durable_task" if requires_task else "point_action" if command is not None else "conversation"
+    acceptance = AcceptanceContract(
+        policy="advisory" if _read_only_advisory_request(envelope, structured or {}, durable) else "evidence"
+    )
     intent = WorkIntent(kind, requires_task, browser, False, "durable" if durable else "turn",
                         RiskLevel.MEDIUM if durable else RiskLevel.LOW,
-                        AcceptanceContract(), repeatability_hint=durable,
+                        acceptance, repeatability_hint=durable,
                         constraints=(structured or {}).get("constraints", {}),
                         admission_kind=admission_kind)
     if creative_preflight_payload is not None:

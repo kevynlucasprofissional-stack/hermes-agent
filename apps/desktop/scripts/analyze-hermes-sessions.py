@@ -9,7 +9,7 @@ reports_dir = Path("workstation/dogfood/dados/Relatório de sessões de IA")
 
 print("--- ANALISANDO RELATÓRIOS TÉCNICOS ESPECÍFICOS DE WHATSAPP ---")
 if reports_dir.exists():
-    for rpath in reports_dir.glob("*WhatsApp*.md"):
+    for rpath in reports_dir.rglob("*WhatsApp*.md"):
         print(f"\nRelatório: {rpath.name}")
         with open(rpath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
@@ -32,7 +32,7 @@ recent_files = [
 ]
 
 for fname in recent_files:
-    fpath = sessions_dir / fname
+    fpath = sessions_dir / "01-WhatsApp-e-Campanhas" / fname
     if not fpath.exists():
         continue
     with open(fpath, "r", encoding="utf-8", errors="ignore") as f:

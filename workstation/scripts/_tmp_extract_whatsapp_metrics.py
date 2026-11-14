@@ -2,7 +2,7 @@ import json
 import os
 from collections import Counter
 
-base = r"C:\Github\hermes-agent\workstation\dogfood\dados\Sessões Hermes"
+base = r"C:\Github\hermes-agent\workstation\dogfood\dados\Sessões Hermes\01-WhatsApp-e-Campanhas"
 files = [
     "automatizar-envio-de-mensagem-no-whatsapp-web-20261021.json",
     "enviar-mensagem-teste-para-kevyn-acirv-no-whatsa-20261021.json",

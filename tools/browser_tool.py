@@ -735,6 +735,17 @@ BROWSER_TOOL_SCHEMAS = [
                             "anchor": {
                                 "type": "object",
                                 "description": "Optional semantic anchor."
+                            },
+                            "postcondition": {
+                                "type": "object",
+                                "description": "Verify a local selection or a NEW user message shown in the exact ChatGPT conversation after click/focused Enter. A DOM ACK is not proof of long-term server persistence; uncertain sends are never retried automatically.",
+                                "properties": {
+                                    "kind": {"type": "string", "enum": ["selected", "chatgpt_message_recorded"]},
+                                    "conversationUrl": {"type": "string", "description": "Exact existing https://chatgpt.com/c/... URL of authorized conversation."},
+                                    "text": {"type": "string", "description": "Exact expected plaintext of the newly sent user message."},
+                                },
+                                "required": ["kind"],
+                                "additionalProperties": False
                             }
                         },
                         "required": ["kind"]
@@ -743,6 +754,16 @@ BROWSER_TOOL_SCHEMAS = [
             },
             "required": ["steps"]
         }
+    },
+    {
+        "name": "browser_admissions_inspect",
+        "description": "Read only: inspect pending native BrowserTask admissions. Never approves or repeats actions.",
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+    {
+        "name": "browser_admissions_recover_safe",
+        "description": "Recover only proven pre-dispatch zero-effect rejected browser batches for the current task/session/run. Never approves or retries an uncertain external effect.",
+        "parameters": {"type": "object", "properties": {}, "required": []},
     },
     {
         "name": "browser_inventory_unread",
@@ -1734,3 +1755,502 @@ for _name, _emoji, _check_fn, _defaults, *_extra in _BROWSER_TOOL_TABLE:
                               ToolEffect.MUTATION if _name in {"browser_console", "browser_read_http"} else
                               ToolEffect.PURE_READ),
                       effect_resolver=_BROWSER_EFFECT_RESOLVERS.get(_name))
+
+
+def _check_whatsapp_workstation_requirements() -> bool:
+    from tools.browser_workstation import workstation_browser_enabled
+
+    return workstation_browser_enabled()
+
+
+def _handle_whatsapp_send_message(args: dict, **kwargs) -> str:
+    from tools.browser_workstation import whatsapp_send_message
+    from workstation.task_compiler import current_work_execution_identity
+
+    if not isinstance(args, dict) or set(args) - {
+        "recipient_ref", "target_name", "message", "expected_recipient_name",
+    }:
+        return json.dumps({"sent": False, "state": "FAILED",
+                           "error_code": "INVALID_RECIPIENT_REFERENCE",
+                           "failure_phase": "PRE_SEND"})
+    named = isinstance(args.get("target_name"), str)
+    if (named == isinstance(args.get("recipient_ref"), dict)
+            or (named and ("recipient_ref" in args or "expected_recipient_name" in args))
+            or (not named and "target_name" in args)
+            or (named and not 3 <= len(args["target_name"].strip()) <= 100)):
+        return json.dumps({"sent": False, "state": "FAILED",
+                           "error_code": "AMBIGUOUS_RECIPIENT_REFERENCE",
+                           "failure_phase": "PRE_SEND"})
+    if not named and (not isinstance(args.get("expected_recipient_name"), str)
+            or not 3 <= len(args["expected_recipient_name"].strip()) <= 128):
+        return json.dumps({"sent": False, "state": "FAILED",
+                           "error_code": "RECIPIENT_NAME_REQUIRED",
+                           "failure_phase": "PRE_SEND"})
+    session_id = kwargs.get("session_id")
+    call_id = kwargs.get("tool_call_id")
+    if not isinstance(session_id, str) or not session_id.strip() or not call_id:
+        return json.dumps({"sent": False, "state": "FAILED",
+                           "error_code": "SESSION_CONTEXT_REQUIRED",
+                           "failure_phase": "PRE_SEND"})
+    identity = current_work_execution_identity()
+    if identity is None or identity["session_id"] != session_id:
+        return json.dumps({"sent": False, "state": "REVIEW_REQUIRED",
+                           "error_code": "TASKRUN_AUTHORITY_REQUIRED",
+                           "failure_phase": "VERIFY_TASKRUN"})
+    canonical_task = identity["kanban_card_id"]
+    canonical_run = identity["run_id"]
+    result = whatsapp_send_message(
+        recipient_ref=args.get("recipient_ref"),
+        target_name=args.get("target_name"),
+        expected_recipient_name=args.get("expected_recipient_name"),
+        message=args.get("message", ""),
+        delivery_timeout_seconds=5.0,
+        task_id=canonical_task,
+        session_id=session_id,
+        kanban_card_id=canonical_task,
+        run_id=canonical_run,
+        operation_id=str(call_id),
+    )
+    return json.dumps(result, ensure_ascii=False)
+
+
+registry.register(
+    name="whatsapp_send_message",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_send_message",
+        "description": (
+            "Send one user-authorized WhatsApp text through the current Hermes Browser session. "
+            "The host automatically claims a canonical TaskRun when needed, without user setup. "
+            "No manual Kanban card or second approval is required. "
+            "For a person named by the user, prefer target_name: search the real WhatsApp Web exact contact name; "
+            "this works even when absent from ACIRV contacts. Alternatively provide recipient_ref and exact expected_recipient_name. "
+            "Never substitute a similar name, a group, or the self-chat. "
+            "The native sender verifies chat identity, clicks Send once, and reads the new outbound message. "
+            "No sender-history scan. Never retry an UNCERTAIN send. "
+            "OBSERVED is a WhatsApp DOM receipt, not an independent server ACK. "
+            "Never supply raw numbers or database paths."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "recipient_ref": {
+                    "type": "object",
+                    "properties": {
+                        "source": {"type": "string", "minLength": 1},
+                        "contact_id": {"type": "integer", "minimum": 1},
+                        "campaign_id": {"type": "integer", "minimum": 1},
+                        "enrollment_id": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["source"],
+                    "additionalProperties": False,
+                    "description": "Contact ID, or campaign ID plus enrollment ID; source is a configured alias.",
+                },
+                "expected_recipient_name": {"type": "string", "minLength": 3, "maxLength": 128,
+                    "description": "For recipient_ref route only: the exact trusted contact label."},
+                "target_name": {"type": "string", "minLength": 3, "maxLength": 100,
+                    "description": "Exact WhatsApp name literally requested by the user; prefer for name-only requests."},
+                "message": {"type": "string", "minLength": 1},
+            },
+            "required": ["message"],
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_send_message,
+    check_fn=_check_whatsapp_workstation_requirements,
+    emoji="💬",
+    effect=ToolEffect.MUTATION,
+)
+
+
+
+
+def _handle_whatsapp_send_batch(args: dict, **kwargs) -> str:
+    """One legitimate TaskRun, one fixed manifest, multiple native sends."""
+    from workstation.task_compiler import current_work_execution_identity
+    from workstation.integrations.hermes.whatsapp_browser_executor import get_default_db_path
+    from workstation.integrations.hermes.whatsapp_native_batch import execute_native_batch
+    from tools.browser_workstation import whatsapp_send_message
+
+    session_id = kwargs.get("session_id")
+    identity = current_work_execution_identity()
+    db_path = get_default_db_path()
+    if (not isinstance(args, dict) or set(args) != {"items"}
+            or not isinstance(session_id, str) or not session_id
+            or identity is None or identity["session_id"] != session_id
+            or not db_path):
+        return json.dumps({"state": "REVIEW_REQUIRED",
+                           "error_code": "TASKRUN_AUTHORITY_REQUIRED"})
+    result = execute_native_batch(
+        items=args["items"], task_id=identity["kanban_card_id"],
+        run_id=identity["run_id"], session_id=session_id,
+        sender=whatsapp_send_message, db_path=db_path,
+    )
+    return json.dumps(result, ensure_ascii=False)
+
+
+registry.register(
+    name="whatsapp_send_batch",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_send_batch",
+        "description": (
+            "Send a short batch of 2–5 individually authorized WhatsApp text messages "
+            "in one canonical TaskRun. Every exact target name and full message body "
+            "must appear in the current user request; no implied targets or inferred bodies. "
+            "Each message uses the same authenticated native sender as whatsapp_send_message. "
+            "Durable per-item checkpoints and one-click receipts, no automatic retry. "
+            "A DOM OBSERVED receipt is not a server-confirmed delivery. "
+            "Campaigns with database enrollment, attachments, or more than 5 recipients "
+            "are not covered by this short-batch operation."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array", "minItems": 2, "maxItems": 5,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "target_name": {
+                                "type": "string", "minLength": 3, "maxLength": 100},
+                            "recipient_ref": {
+                                "type": "object",
+                                "properties": {
+                                    "source": {"type": "string", "minLength": 1},
+                                    "contact_id": {"type": "integer", "minimum": 1},
+                                    "campaign_id": {"type": "integer", "minimum": 1},
+                                    "enrollment_id": {"type": "integer", "minimum": 1},
+                                },
+                                "required": ["source"],
+                                "additionalProperties": False,
+                            },
+                            "expected_recipient_name": {
+                                "type": "string", "minLength": 3, "maxLength": 128},
+                            "message": {"type": "string", "minLength": 1, "maxLength": 2000},
+                        },
+                        "required": ["message"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["items"],
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_send_batch,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.MUTATION,
+)
+
+
+
+
+def _handle_whatsapp_batch_status(args: dict, **kwargs) -> str:
+    from workstation.integrations.hermes.whatsapp_native_batch import read_native_batch_status
+    from workstation.integrations.hermes.whatsapp_browser_executor import get_default_db_path
+
+    job_id = args.get("job_id") if isinstance(args, dict) else None
+    if not kwargs.get("session_id") or not isinstance(args, dict) or set(args) != {"job_id"}:
+        return json.dumps({"success": False, "error_code": "SESSION_CONTEXT_REQUIRED"})
+    path = get_default_db_path()
+    if not path:
+        return json.dumps({"success": False, "error_code": "BATCH_STATUS_UNAVAILABLE"})
+    return json.dumps(read_native_batch_status(job_id=job_id, db_path=path),
+                      ensure_ascii=False)
+
+
+registry.register(
+    name="whatsapp_batch_status",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_batch_status",
+        "description": (
+            "Read the persisted statuses, DOM receipts and pause state of a "
+            "previous authorized short WhatsApp batch by its job_id. "
+            "This is a read-only local checkpoint query, not a send or a retry."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "job_id": {"type": "string", "pattern": "^wa_hyb_[0-9a-f]{24}$"},
+            },
+            "required": ["job_id"],
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_batch_status,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.PURE_READ,
+)
+
+
+
+def _handle_whatsapp_campaign_preview(args: dict, **kwargs) -> str:
+    from workstation.integrations.hermes.whatsapp_campaign_manifest import (
+        CampaignManifestError, load_campaign,
+    )
+    from workstation.integrations.hermes.whatsapp_campaign_runner import campaign_status
+
+    if (not isinstance(args, dict) or set(args) != {"source_dir"}
+            or not isinstance(args.get("source_dir"), str)
+            or not kwargs.get("session_id")):
+        return json.dumps({"success":False,"error_code":"CAMPAIGN_ARGUMENTS_INVALID"})
+    try:
+        manifest = load_campaign(args["source_dir"])
+        status = campaign_status(manifest)
+        status.update({
+            "source_digest": manifest.digest[:16],
+            "contacts_count": len(manifest.contacts),
+            "media_steps": sum(s.kind=="image" for p in manifest.contacts for s in p.steps),
+            "optouts_in_source":manifest.skipped,
+            "warnings":list(manifest.warnings),
+            "total_steps":sum(len(p.steps) for p in manifest.contacts),
+        })
+        return json.dumps(status,ensure_ascii=False)
+    except CampaignManifestError as exc:
+        return json.dumps({"success":False,"error_code":str(exc)})
+    except Exception:
+        return json.dumps({"success":False,"error_code":"CAMPAIGN_PREVIEW_FAILED"})
+
+
+registry.register(
+    name="whatsapp_campaign_preview",
+    toolset="desktop_ui",
+    schema={
+        "name":"whatsapp_campaign_preview",
+        "description":(
+            "Read an explicitly supplied local campaign folder with Alvos.json and "
+            "Mensagem.txt. Validate contacts, exact personalized steps, media files, "
+            "existing resume checkpoints and opt-outs. Does not send or open browser."
+        ),
+        "parameters":{"type":"object","properties":{
+            "source_dir":{"type":"string","minLength":5,"maxLength":512},
+        },"required":["source_dir"],"additionalProperties":False},
+    },
+    handler=_handle_whatsapp_campaign_preview,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.PURE_READ,
+)
+
+
+def _handle_whatsapp_campaign_execute(args: dict, **kwargs) -> str:
+    from workstation.task_compiler import current_work_execution_identity
+    from workstation.integrations.hermes.whatsapp_campaign_runner import execute_campaign
+    from tools.browser_workstation import (
+        whatsapp_send_message, whatsapp_send_image_verified,
+        whatsapp_campaign_check_optout,
+    )
+
+    session_id=kwargs.get("session_id")
+    identity=current_work_execution_identity()
+    if (not isinstance(args,dict) or set(args)-{"source_dir","max_contacts"}
+            or not isinstance(args.get("source_dir"),str)
+            or not isinstance(session_id,str) or not session_id
+            or identity is None or identity.get("session_id") != session_id):
+        return json.dumps({"state":"REVIEW_REQUIRED","error_code":"TASKRUN_AUTHORITY_REQUIRED"})
+    try:
+        result=execute_campaign(
+            source_dir=args["source_dir"],task_id=identity["kanban_card_id"],
+            run_id=str(identity["run_id"]),session_id=session_id,
+            send_text=whatsapp_send_message,
+            send_image=whatsapp_send_image_verified,
+            opt_out_check=whatsapp_campaign_check_optout,
+            max_contacts=args.get("max_contacts",1),
+        )
+        return json.dumps(result,ensure_ascii=False)
+    except Exception as exc:
+        from workstation.integrations.hermes.whatsapp_campaign_manifest import CampaignManifestError
+        return json.dumps({"state":"HOLD","error_code":(
+            str(exc) if isinstance(exc,CampaignManifestError)
+            else "CAMPAIGN_EXECUTION_FAILED"
+        )},ensure_ascii=False)
+
+
+registry.register(
+    name="whatsapp_campaign_execute",
+    toolset="desktop_ui",
+    schema={
+        "name":"whatsapp_campaign_execute",
+        "description":(
+            "Execute an explicitly requested file-backed WhatsApp campaign with "
+            "5 ordered steps/contact, including real image attachments. "
+            "One canonical TaskRun; exact contact numbers from Alvos.json; "
+            "verified native WhatsApp chat; opt-out check and durable per-step "
+            "checkpoints. Use max_contacts=1 for first real validation. "
+            "On uncertainty HOLD without retries or advancing. Subsequent "
+            "calls resume only proven pending steps, never uncertain ones. "
+            "The folder path must occur literally in the current user request."
+        ),
+        "parameters":{"type":"object","properties":{
+            "source_dir":{"type":"string","minLength":5,"maxLength":512},
+            "max_contacts":{"type":"integer","minimum":1,"maximum":200,"default":1},
+        },"required":["source_dir"],"additionalProperties":False},
+    },
+    handler=_handle_whatsapp_campaign_execute,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.MUTATION,
+)
+
+
+# Model-facing WhatsApp observations: never expose private execution helpers directly.
+def _handle_whatsapp_read_messages(args: dict, **kwargs) -> str:
+    from tools.whatsapp_catalog_adapter import read_messages_for_model
+
+    return read_messages_for_model(
+        args, session_id=kwargs.get("session_id"), tool_call_id=kwargs.get("tool_call_id"),
+    )
+
+
+def _handle_whatsapp_batch_preview(args: dict, **kwargs) -> str:
+    from tools.whatsapp_catalog_adapter import preview_campaign_for_model
+
+    return preview_campaign_for_model(
+        args, session_id=kwargs.get("session_id"), tool_call_id=kwargs.get("tool_call_id"),
+    )
+
+
+registry.register(
+    name="whatsapp_read_messages",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_read_messages",
+        "description": (
+            "Read up to 50 messages from a specified exact WhatsApp contact by target_name, "
+            "or from the currently open conversation if target_name omitted. "
+            "No database persistence or send. "
+            "Requires the caller's authenticated desktop session. "
+            "Results are bounded and sensitive values redacted."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20},
+                "target_name": {"type": "string", "minLength": 3, "maxLength": 100,
+                                "description": "Exact WhatsApp contact name requested by the user."},
+            },
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_read_messages,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.PURE_READ,
+)
+
+registry.register(
+    name="whatsapp_batch_preview",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_batch_preview",
+        "description": (
+            "Inspect campaign/step eligibility without sending or approving anything. "
+            "Use only a configured WhatsApp source alias and an existing campaign and step. "
+            "No phone numbers, recipient arrays, database paths, message templates "
+            "or approval values are accepted. Returns privacy-safe counts only."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "minLength": 1, "maxLength": 96},
+                "campaign_slug": {"type": "string", "minLength": 1, "maxLength": 96},
+                "step_code": {"type": "string", "minLength": 1, "maxLength": 96},
+            },
+            "required": ["source", "campaign_slug", "step_code"],
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_batch_preview,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.PURE_READ,
+)
+
+
+# WA-OPC-011: bounded recipient discovery; disclosure of a reference is never approval.
+def _handle_whatsapp_find_contacts(args: dict, **kwargs) -> str:
+    from tools.whatsapp_catalog_adapter import find_contacts_for_model
+
+    return find_contacts_for_model(
+        args, session_id=kwargs.get("session_id"), tool_call_id=kwargs.get("tool_call_id")
+    )
+
+
+registry.register(
+    name="whatsapp_find_contacts",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_find_contacts",
+        "description": (
+            "Find a contact by name in a configured trusted WhatsApp source, without sending. "
+            "Returns at most five source/contact references, with no phone numbers. "
+            "For individual sends, pass the exact requested name alongside the returned reference. "
+            "No extra approval prompt is needed; if contacts are ambiguous, do not guess."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "minLength": 1, "maxLength": 96},
+                "query": {"type": "string", "minLength": 3, "maxLength": 64},
+            },
+            "required": ["source", "query"],
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_find_contacts,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.PURE_READ,
+)
+
+
+# WA-MVP-02A: user-directed new recipient intake, not WhatsApp send authority.
+def _handle_whatsapp_register_contact(args: dict, **kwargs) -> str:
+    from workstation.task_compiler import current_work_execution_identity
+    from workstation.integrations.hermes.whatsapp_contact_intake import (
+        ContactIntakeError, register_requested_contact,
+    )
+
+    identity = current_work_execution_identity()
+    if (not identity or identity.get("session_id") != kwargs.get("session_id")
+            or not identity.get("kanban_card_id") or not identity.get("run_id")
+            or not kwargs.get("tool_call_id")):
+        return json.dumps({"success": False, "error_code": "TASKRUN_AUTHORITY_REQUIRED"})
+    if (not isinstance(args, dict) or set(args) - {"phone", "display_name"}
+            or not isinstance(args.get("phone"), str)
+            or not isinstance(args.get("display_name", "Contato solicitado"), str)):
+        return json.dumps({"success": False, "error_code": "INVALID_CONTACT_REQUEST"})
+    try:
+        result = register_requested_contact(
+            phone=args["phone"], display_name=args.get("display_name", "Contato solicitado"),
+        )
+    except ContactIntakeError as exc:
+        return json.dumps({"success": False, "error_code": str(exc)})
+    return json.dumps({"success": True, **result}, ensure_ascii=False)
+
+
+registry.register(
+    name="whatsapp_register_contact",
+    toolset="desktop_ui",
+    schema={
+        "name": "whatsapp_register_contact",
+        "description": (
+            "Register an explicitly requested NEW WhatsApp recipient using an international "
+            "phone number or phone-only wa.me / WhatsApp send deeplink. The unsaved contact "
+            "is staged in the existing Hermes WhatsApp contacts database, with provenance "
+            "user_requested_unverified. Returns an opaque recipient_ref for later "
+            "whatsapp_send_message. Registration does NOT verify the number, authorize a "
+            "send or bypass native BrowserTask recipient verification and one-send idempotency. "
+            "No automatic send or campaign."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "phone": {"type": "string", "minLength": 8, "maxLength": 200},
+                "display_name": {"type": "string", "minLength": 1, "maxLength": 100},
+            },
+            "required": ["phone"],
+            "additionalProperties": False,
+        },
+    },
+    handler=_handle_whatsapp_register_contact,
+    check_fn=_check_whatsapp_workstation_requirements,
+    effect=ToolEffect.MUTATION,
+)

@@ -1,0 +1,195 @@
+{
+  "schema": "hermes.system1.live_session.evidence.v1",
+  "collected_at": "2026-11-07T21:01:38Z",
+  "session_id": "20261107_175035_62899b",
+  "task_id": "t_1863c0f1",
+  "fastpath_flag": null,
+  "hermes_python_env": "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+  "backend_interpreter_probe": {
+    "interpreter": "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+    "python": "3.14.0",
+    "laya_importable": false,
+    "laya_version": null
+  },
+  "provider_registration": {
+    "registered": false,
+    "provider": null
+  },
+  "kanban_task": {
+    "id": "t_1863c0f1",
+    "title": "Execute a homologação real do System 1 Browser MVP no repositório `C:\\Github\\her",
+    "status": "blocked",
+    "session_id": "20261107_175035_62899b",
+    "current_run_id": null,
+    "created_by": "workstation",
+    "completion_contract": "local-only",
+    "created_at": 1794084639
+  },
+  "telemetry": {
+    "window_since": "2026-11-07T21:00:45.000000+00:00",
+    "event_groups": [
+      {
+        "event_type": "PROVIDER_CALLED",
+        "n": 7,
+        "provider_calls": 7,
+        "tool_calls": 0,
+        "input_tokens": 700432,
+        "output_tokens": 4526,
+        "duration_ms": 36737.48659998819
+      },
+      {
+        "event_type": "PROVIDER_USAGE_RECORDED",
+        "n": 7,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 6416,
+        "output_tokens": 4526,
+        "duration_ms": 0
+      },
+      {
+        "event_type": "ROUTING_DECIDED",
+        "n": 7,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 0.5500999832293019
+      },
+      {
+        "event_type": "TOOL_COMPLETED",
+        "n": 7,
+        "provider_calls": 0,
+        "tool_calls": 7,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 13040.58051109314
+      },
+      {
+        "event_type": "BROWSER_OPERATION_OBSERVED",
+        "n": 4,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 150.18910000799224
+      },
+      {
+        "event_type": "TURN_STARTED",
+        "n": 1,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 0
+      }
+    ],
+    "system1_completed": [],
+    "provider_calls": [
+      {
+        "occurred_at": "2026-11-07T21:00:52.501267+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:1",
+        "provider_calls": 1,
+        "duration_ms": 6806.314299989026,
+        "input_tokens": 95747,
+        "output_tokens": 654,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T21:00:56.971972+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:2",
+        "provider_calls": 1,
+        "duration_ms": 4069.4779999903403,
+        "input_tokens": 97032,
+        "output_tokens": 486,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T21:01:05.472263+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:3",
+        "provider_calls": 1,
+        "duration_ms": 6269.847999996273,
+        "input_tokens": 98726,
+        "output_tokens": 978,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T21:01:11.131317+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:4",
+        "provider_calls": 1,
+        "duration_ms": 4606.679000004078,
+        "input_tokens": 99905,
+        "output_tokens": 513,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T21:01:20.225591+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:5",
+        "provider_calls": 1,
+        "duration_ms": 7033.576600006199,
+        "input_tokens": 100884,
+        "output_tokens": 1125,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T21:01:31.163983+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:6",
+        "provider_calls": 1,
+        "duration_ms": 4673.305699994671,
+        "input_tokens": 103452,
+        "output_tokens": 559,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T21:01:37.296516+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:20f25ce4:api:7",
+        "provider_calls": 1,
+        "duration_ms": 3278.2850000075996,
+        "input_tokens": 104686,
+        "output_tokens": 211,
+        "status": "success"
+      }
+    ],
+    "browser_operations": [
+      {
+        "occurred_at": "2026-11-07T21:00:52.607105+00:00",
+        "operation_id": "op_browser_snapshot_2a39ffb4f819",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T21:00:52.640326+00:00",
+        "operation_id": "op_browser_snapshot_2a39ffb4f819",
+        "status": "OBSERVED",
+        "duration_ms": 33.215400006156415,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":4,\"main_cpu_us\":0,\"main_rss_bytes\":130510848,\"readiness\":\"stable\",\"renderer_memory_bytes\":96604160,\"renderer_pid\":42268,\"snapshot_chars\":399,\"snapshot_duration_ms\":2.768,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T21:00:57.159012+00:00",
+        "operation_id": "op_browser_snapshot_8272e48c9cef",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T21:00:57.276020+00:00",
+        "operation_id": "op_browser_snapshot_8272e48c9cef",
+        "status": "OBSERVED",
+        "duration_ms": 116.97370000183582,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":4,\"main_cpu_us\":0,\"main_rss_bytes\":131117056,\"readiness\":\"stable\",\"renderer_memory_bytes\":96616448,\"renderer_pid\":42268,\"snapshot_chars\":399,\"snapshot_duration_ms\":2.571,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      }
+    ]
+  },
+  "note": "turno da frase exata: baseline System 2 (flag off)"
+}

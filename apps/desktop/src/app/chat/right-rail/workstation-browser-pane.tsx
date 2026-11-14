@@ -6,6 +6,8 @@ import { isNativeViewOccluded, useNativeViewOcclusion } from '@/app/browser/nati
 import { TaskJournalDrawer } from '@/app/browser/task-journal-drawer'
 import type {
   LearningSessionState,
+  UncertainBatchReview,
+  VerifiedNavigationReview,
   WorkstationBrowserBounds,
   WorkstationBrowserState,
   WorkstationBrowserTabState
@@ -104,8 +106,11 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
   const [busy, setBusy] = useState(false)
   const [showJournal, setShowJournal] = useState(false)
   const [nativeReviews, setNativeReviews] = useState<NativeHumanReview[]>([])
+  const [expandNativeReviews, setExpandNativeReviews] = useState(false)
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewNotice, setReviewNotice] = useState('')
+  const [localNavigationReviews, setLocalNavigationReviews] = useState<VerifiedNavigationReview[]>([])
+  const [uncertainBatchReviews, setUncertainBatchReviews] = useState<UncertainBatchReview[]>([])
   const [learningState, setLearningState] = useState<LearningSessionState | null>(null)
 
   useEffect(() => {
@@ -141,6 +146,14 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
 
     return conversationAliases(activeSessionKey, sessions)
   }, [activeSessionKey, sessions])
+
+  const browserNativeReviews = useMemo(() => nativeReviews.filter(review =>
+    state.tasks?.some(task =>
+      task.taskId === review.task_id && task.sessionHost === review.session_id
+    )
+  ), [nativeReviews, state.tasks])
+
+  useEffect(() => {setExpandNativeReviews(false)}, [activeSessionKey])
 
   // Only the authenticated LOCAL backend may expose the canonical reviews of
   // the selected session. Never mix gateway/connection reviews with this native Browser.
@@ -217,6 +230,83 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
       setReviewBusy(false)
     }
   }, [activeSessionAliases, reviewBusy])
+
+  useEffect(() => {
+    if (!bridge?.listUncertainBatchReviews) {return}
+    let disposed = false
+    const refresh = async () => {
+      try {
+        const reviews = await bridge.listUncertainBatchReviews!()
+        if (!disposed) {setUncertainBatchReviews(reviews.filter(review =>
+          activeSessionAliases.includes(review.sessionId)))}
+      } catch {
+        if (!disposed) {setUncertainBatchReviews([])}
+      }
+    }
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 5000)
+    return () => {disposed = true; window.clearInterval(timer)}
+  }, [bridge, activeSessionAliases])
+
+  const confirmUncertainBatch = useCallback(async (operationId: string) => {
+    if (!bridge?.confirmUncertainBatch || reviewBusy) {return}
+    setReviewBusy(true)
+    setReviewNotice('')
+    try {
+      const result = await bridge.confirmUncertainBatch(operationId)
+      setReviewNotice(result.status === 'reconciled'
+        ? 'Batch fence released after native review. Check the target before attempting any new action.'
+        : 'Review cancelled. The batch remains blocked.')
+      if (result.status === 'reconciled') {
+        setUncertainBatchReviews(current => current.filter(item => item.operationId !== operationId))
+      }
+    } catch {
+      setReviewNotice('Batch review failed or ownership changed; the operation remains blocked.')
+    } finally {
+      setReviewBusy(false)
+    }
+  }, [bridge, reviewBusy])
+
+  // Read-only discovery; the only positive decision is a native OS dialog
+  // in the main process, never an acknowledgement supplied by a chat agent.
+  useEffect(() => {
+    if (!bridge?.listVerifiedNavigationReviews) {return}
+    let disposed = false
+    const refresh = async () => {
+      try {
+        const reviews = await bridge.listVerifiedNavigationReviews!()
+        if (!disposed) {
+          setLocalNavigationReviews(reviews.filter(review =>
+            activeSessionAliases.includes(review.sessionId)
+          ))
+        }
+      } catch {
+        if (!disposed) {setLocalNavigationReviews([])}
+      }
+    }
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 5000)
+    return () => {disposed = true; window.clearInterval(timer)}
+  }, [bridge, activeSessionAliases])
+
+  const confirmLocalNavigation = useCallback(async (operationId: string) => {
+    if (!bridge?.confirmVerifiedNavigation || reviewBusy) {return}
+    setReviewBusy(true)
+    setReviewNotice('')
+    try {
+      const result = await bridge.confirmVerifiedNavigation(operationId)
+      setReviewNotice(result.status === 'reconciled'
+        ? 'Verified local navigation reconciled. This does not approve any other effect.'
+        : 'Review cancelled. The admission remains blocked.')
+      if (result.status === 'reconciled') {
+        setLocalNavigationReviews(current => current.filter(item => item.operationId !== operationId))
+      }
+    } catch {
+      setReviewNotice('Insufficient local proof or changed ownership: operation remains blocked.')
+    } finally {
+      setReviewBusy(false)
+    }
+  }, [bridge, reviewBusy])
 
   const preferredTaskId = useMemo(() => {
     if (activeSessionAliases.length === 0 || !state.tasks || state.tasks.length === 0) {
@@ -590,7 +680,20 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
         </div>
       )}
 
-      {nativeReviews.map(review => (
+      {browserNativeReviews.length > 1 && (
+        <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200" role="status">
+          <span>{browserNativeReviews.length} Browser reviews pending for this session. No mutation is retried or approved automatically.</span>
+          <Button
+            aria-label={expandNativeReviews ? 'Hide pending Browser reviews' : 'Show pending Browser reviews'}
+            onClick={() => setExpandNativeReviews(current => !current)}
+            size="xs"
+            variant="secondary"
+          >
+            {expandNativeReviews ? 'Hide details' : 'Review individually'}
+          </Button>
+        </div>
+      )}
+      {(browserNativeReviews.length > 1 && !expandNativeReviews ? [] : browserNativeReviews).map(review => (
         <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200" key={review.handoff_id}>
           <span>Uncertain Browser operation for this session. Review the effect; approval never retries the mutation.</span>
           <Button
@@ -601,6 +704,30 @@ export function WorkstationBrowserPane({ sessionId, onPopOut, className }: Works
             variant="secondary"
           >
             I reviewed ? require readback
+          </Button>
+        </div>
+      ))}
+      {uncertainBatchReviews.map(review => (
+        <div className="flex items-center justify-between gap-2 border-b border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200" key={review.operationId}>
+          <span>Uncertain browser batch ({review.reason}). Check the target conversation before releasing the fence. No action is resent.</span>
+          <Button aria-label="Review uncertain browser batch in native dialog"
+            disabled={reviewBusy} onClick={() => void confirmUncertainBatch(review.operationId)}
+            size="xs" variant="secondary">
+            Review batch
+          </Button>
+        </div>
+      ))}
+      {localNavigationReviews.map(review => (
+        <div className="flex items-center justify-between gap-2 border-b border-sky-500/20 bg-sky-500/10 px-3 py-2 text-xs text-sky-200" key={review.operationId}>
+          <span>Local synthetic navigation with durable receipt and live readback. External effects remain unverified.</span>
+          <Button
+            aria-label="Confirm verified local navigation in native dialog"
+            disabled={reviewBusy}
+            onClick={() => void confirmLocalNavigation(review.operationId)}
+            size="xs"
+            variant="secondary"
+          >
+            Review locally
           </Button>
         </div>
       ))}

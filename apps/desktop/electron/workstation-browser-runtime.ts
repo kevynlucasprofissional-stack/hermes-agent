@@ -22,22 +22,20 @@
  * BrowserPool (MIT). See workstation/THIRD_PARTY_NOTICES.md.
  */
 
-import crypto from 'node:crypto'
+import crypto, { randomUUID as learningActivationId } from 'node:crypto'
 import fs from 'node:fs'
 import http, { type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import os from 'node:os'
-import path from 'node:path'
+import path, { join as learningPreloadPath } from 'node:path'
 
 import { app, BrowserWindow, session, type Session, type WebContents, WebContentsView } from 'electron'
-import { randomUUID as learningActivationId } from 'node:crypto'
-import { join as learningPreloadPath } from 'node:path'
 
 import {
   type BrowserBatchAdapter,
   type BrowserBatchContext,
-  executeAuthorizedBatch
+  executeAuthorizedBatch, isBrowserBatchStep
 } from './workstation-browser-batch'
-import { type BatchObservation, batchObservationScript, hasVerifiedBatchEffect } from './workstation-browser-batch-proof'
+import { type BatchObservation, batchObservationScript, batchLocalChangeWaitScript, batchChatgptMessageWaitScript, hasVerifiedBatchEffect, shouldAwaitBatchLocalChange } from './workstation-browser-batch-proof'
 import {
   type DomRevisionEvidence,
   domRevisionProbeScript,
@@ -50,7 +48,14 @@ import {
   normalizeExtractedItem
 } from './workstation-browser-extract-cache'
 import { validateExtractedItems } from './workstation-browser-extract-cache'
+import { browserFileInputExpression, resolveBrowserUploadGrant, validateBrowserUploadFiles, validateBrowserUploadOrigin } from './workstation-browser-file-upload'
+import {
+  sameNavigationReview, verifiedNavigationCandidate,
+  sameUncertainBatchReview, uncertainBatchReviewCandidate,
+  type VerifiedNavigationReview, type UncertainBatchReview
+} from './workstation-browser-human-review'
 import { registerWorkstationBrowserIpc } from './workstation-browser-ipc'
+import { MinimizedBrowserCompositor } from './workstation-browser-minimized-compositor'
 import {
   buildWorkstationResourceSnapshot,
   WORKSTATION_EVENT_SCHEMA_VERSION,
@@ -495,6 +500,12 @@ function workstationBasePath(): string {
     return path.resolve(process.env.HERMES_WORKSTATION_HOME.trim())
   }
 
+  // A Vitest Electron worker must never publish its test controller into the
+  // live operator's Browser runtime, even if an individual suite clears HOME.
+  if (process.env.VITEST === 'true' || process.env.VITEST_WORKER_ID) {
+    return path.join(os.tmpdir(), 'HermesWorkstation-vitest', String(process.pid))
+  }
+
   if (process.platform === 'win32') {
     const base = process.env.LOCALAPPDATA?.trim() || path.dirname(app.getPath('userData'))
 
@@ -799,6 +810,13 @@ function inventoryScript(maxText: number, maxElements: number): string {
       var value = type === 'password' && rawValue ? '[REDACTED]' : rawValue;
       var testid = String(el.getAttribute('data-testid') || el.getAttribute('data-test') || el.getAttribute('data-qa') || '').trim();
       var name = String(el.getAttribute('name') || '').trim();
+      // The WhatsApp send icon is often a non-interactive descendant. Give
+      // its actual footer button a semantic marker and an actionable ref.
+      var sendControl = !!(el.closest('footer') && (tag === 'button' || role === 'button') && (
+        ['send', 'compose-btn-send'].includes(testid) ||
+        ['enviar', 'send', 'enviar mensagem', 'send message'].includes(String(el.getAttribute('aria-label') || '').trim().toLowerCase()) ||
+        el.querySelector('[data-testid="send"], [data-testid="wds-ic-send-filled"], [data-icon="send"]')
+      ));
       var label = String(
         el.getAttribute('aria-label') ||
         el.getAttribute('alt') ||
@@ -824,6 +842,7 @@ function inventoryScript(maxText: number, maxElements: number): string {
         value: value ? value.slice(0, 240) : undefined,
         disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
         testid: testid || undefined,
+        sendControl: sendControl || undefined,
         name: name || undefined,
         bounds: bounds
       });
@@ -1203,6 +1222,16 @@ export class WorkstationBrowserRuntime {
   private taskTabs = new Map<string, string>()
   private activeTabId: string | null = null
   private ownerWindow: BrowserWindow | null = null
+  private readonly minimizedCompositor = new MinimizedBrowserCompositor(
+    () => [...this.entries.values()].map(entry => entry.view),
+    (from, to) => {if (this.ownerWindow === from) {this.ownerWindow = to}},
+    error => {this.recordError(error)},
+    view => {
+      const entry = [...this.entries.values()].find(candidate => candidate.view === view)
+      const task = entry?.ownerTaskId ? this.taskLifecycle().task(entry.ownerTaskId) : null
+      return task?.status === 'parked'
+    }
+  )
   private viewportGeometryWindow: BrowserWindow | null = null
   private viewportGeometryListener: (() => void) | null = null
   private attached = false
@@ -1217,6 +1246,8 @@ export class WorkstationBrowserRuntime {
   private cacheBytes: number | null = null
   private cacheTimer: NodeJS.Timeout | null = null
   private control: ControlHandle | null = null
+  private controlDescriptorTimer: NodeJS.Timeout | null = null
+  private controlRelistening = false
   private downloads: WorkstationDownloadItem[] = []
   private browserTasks: BrowserTaskLifecycle<BrowserEntry, BrowserTaskShowContext> | null = null
   private browserTasksRestored = false
@@ -1449,6 +1480,124 @@ export class WorkstationBrowserRuntime {
     return this.taskLifecycle().listTasks()
   }
 
+  private navigationReviewEvidence(operationId: string) {
+    const snapshot = this.sessionStatePersistence().load()
+    const admission = snapshot?.operationAdmissions?.[operationId]
+    const entry = admission ? this.entries.get(admission.tabId) : null
+    const task = admission ? this.taskLifecycle().task(admission.taskId) : null
+    if (!admission || !entry || entry.crashed || entry.ownerTaskId !== admission.taskId ||
+        !task || task.sessionHost !== admission.sessionId || task.runId !== admission.runId) {return null}
+    const wc = entry.view.webContents
+    if (wc.isDestroyed() || !wc.getURL()) {return null}
+
+    return verifiedNavigationCandidate(snapshot, operationId, {
+      url: wc.getURL(), webContentsId: wc.id
+    })
+  }
+
+  private uncertainBatchReviewEvidence(operationId: string) {
+    const snapshot = this.sessionStatePersistence().load()
+    const admission = snapshot?.operationAdmissions?.[operationId]
+    const entry = admission ? this.entries.get(admission.tabId) : null
+    const task = admission ? this.taskLifecycle().task(admission.taskId) : null
+    if (!admission || !task || task.sessionHost !== admission.sessionId || task.runId !== admission.runId ||
+        (entry && (entry.crashed || entry.ownerTaskId !== admission.taskId))) {return null}
+    const wc = entry?.view.webContents
+    const readback = wc && !wc.isDestroyed() && wc.getURL()
+      ? {url: wc.getURL(), webContentsId: wc.id} : null
+    // A restored task may have no live page. Do not load its unresolved URL.
+    return uncertainBatchReviewCandidate(snapshot, operationId, readback &&
+      snapshot?.tabs.find(tab => tab.id === admission.tabId)?.recoveryState === 'live' ? readback : null)
+  }
+
+  listUncertainBatchReviews(): UncertainBatchReview[] {
+    const snapshot = this.sessionStatePersistence().load()
+    return Object.keys(snapshot?.operationAdmissions ?? {}).flatMap(operationId => {
+      const proof = this.uncertainBatchReviewEvidence(operationId)
+      return proof ? [proof.review] : []
+    }).slice(0, 16)
+  }
+
+  /** Human-only release of an uncertain batch fence. Never retry the batch or claim delivery. */
+  async reviewUncertainBatch(
+    operationId: string,
+    approve: (review: UncertainBatchReview) => Promise<boolean>
+  ): Promise<{status: 'cancelled' | 'reconciled'; operation_id: string}> {
+    const before = this.uncertainBatchReviewEvidence(operationId)
+    if (!before) {throw new Error('human_batch_review_evidence_insufficient')}
+    if (!await approve(before.review)) {return {status: 'cancelled', operation_id: operationId}}
+    const after = this.uncertainBatchReviewEvidence(operationId)
+    if (!after || !sameUncertainBatchReview(before.review, after.review)) {
+      throw new Error('human_batch_review_evidence_changed')
+    }
+    this.sessionStatePersistence().reconcilePendingAdmission({
+      operationId,
+      reason: 'OPERATOR_RECONCILED',
+      evidence: 'OPERATOR_REVIEW',
+      evidenceDetails: 'native-human-confirmed-independent-review-of-uncertain-batch',
+      resolvedBy: 'desktop-human-native-dialog',
+      requirePending: true,
+      requireNoHumanLease: true,
+      expectedTaskRevision: before.review.taskRevision,
+      expectedAdmission: before.admission
+    })
+    return {status: 'reconciled', operation_id: operationId}
+  }
+
+  listVerifiedNavigationReviews(): VerifiedNavigationReview[] {
+    const snapshot = this.sessionStatePersistence().load()
+    return Object.keys(snapshot?.operationAdmissions ?? {}).flatMap(operationId => {
+      const proof = this.navigationReviewEvidence(operationId)
+      return proof ? [proof.review] : []
+    }).slice(0, 16)
+  }
+
+  /**
+   * Deliberately NOT available on agent HTTP or Browser tools. The callback
+   * must be implemented by a trusted Electron main-process native dialog.
+   * Only local synthetic navigation with a durable matching owner receipt
+   * and independent live WebContents URL qualifies.
+   */
+  async reviewVerifiedNavigation(
+    operationId: string,
+    approve: (review: VerifiedNavigationReview) => Promise<boolean>
+  ): Promise<{status: 'cancelled' | 'reconciled'; operation_id: string}> {
+    const before = this.navigationReviewEvidence(operationId)
+    if (!before) {throw new Error('human_navigation_readback_insufficient')}
+
+    const confirmed = await approve(before.review)
+    if (!confirmed) {return {status: 'cancelled', operation_id: operationId}}
+
+    // A user can change the document while the native confirmation is open.
+    // Re-read current ledger, task ownership, URL and WebContents identity.
+    const after = this.navigationReviewEvidence(operationId)
+    if (!after || !sameNavigationReview(before.review, after.review)) {
+      throw new Error('human_navigation_evidence_changed')
+    }
+
+    this.sessionStatePersistence().reconcilePendingAdmission({
+      operationId,
+      reason: 'EVIDENCE_RECONCILED',
+      evidence: 'RECEIPT_PROVEN',
+      evidenceDetails: 'native-human-approved-local-navigation-receipt',
+      resolvedBy: 'desktop-human-native-dialog',
+      requirePending: true,
+      expectedTaskRevision: before.review.taskRevision,
+      requireNoHumanLease: true,
+      expectedAdmission: before.admission,
+      expectedNavigationReceipt: {
+        operationId: before.review.operationId,
+        taskId: before.review.taskId,
+        runId: before.review.runId,
+        tabId: before.review.tabId,
+        safeUrl: before.review.safeUrl,
+        action: 'browser_navigate'
+      }
+    })
+
+    return {status: 'reconciled', operation_id: operationId}
+  }
+
   createTab(target = 'about:blank', activate = true, ownerTaskId: string | null = null): WorkstationBrowserState {
     this.ensureSession()
 
@@ -1628,10 +1777,15 @@ export class WorkstationBrowserRuntime {
 
         this.applyFrameRate(entry, true)
 
-        try {
-          entry.view.webContents.focus()
-        } catch {
-          // View may have crashed between checks.
+        // The Browser remains controllable through its own WebContents even
+        // when the operator is using another application. Never steal OS focus
+        // while updating a background viewport; humans can focus it normally.
+        if (this.ownerWindow.isFocused()) {
+          try {
+            entry.view.webContents.focus()
+          } catch {
+            // View may have crashed between checks.
+          }
         }
       } else {
         this.removeChildView(entry)
@@ -1736,6 +1890,13 @@ export class WorkstationBrowserRuntime {
       this.viewVisible = true
     }
 
+    this.minimizedCompositor.register(window)
+    const humanWindow = window
+    // Reserve a real compositor before validBounds() observes a minimized
+    // BrowserWindow with getContentBounds() == 0x0.
+    this.minimizedCompositor.ensureMinimized(humanWindow, rawBounds)
+    window = this.minimizedCompositor.effectiveWindow(humanWindow)
+
     this.preferredTaskId = preferredTaskId || null
     this.viewportOwnerId = ownerId || preferredTaskId || null
 
@@ -1816,13 +1977,14 @@ export class WorkstationBrowserRuntime {
     }
 
     this.ownerWindow = window
-    this.bindViewportGeometry(window)
+    this.bindViewportGeometry(humanWindow)
     this.bounds = bounds
     this.viewportHost = host
 
     if (this.viewVisible) {
       this.ensureChildView(window, entry.view)
       entry.view.setBounds(bounds)
+      this.minimizedCompositor.rememberView(humanWindow, entry.view, rawBounds)
 
       try {
         entry.view.setVisible(true)
@@ -1832,10 +1994,15 @@ export class WorkstationBrowserRuntime {
 
       this.applyFrameRate(entry, true)
 
-      try {
-        entry.view.webContents.focus()
-      } catch {
-        // View may have crashed between checks.
+      // Attaching the renderer must not bring Hermes to the foreground when
+      // the operator is working elsewhere. Internal Chromium commands target
+      // the WebContents directly and do not require foreground OS focus.
+      if (window.isFocused()) {
+        try {
+          entry.view.webContents.focus()
+        } catch {
+          // View may have crashed between checks.
+        }
       }
     } else {
       this.removeChildView(entry)
@@ -1850,6 +2017,7 @@ export class WorkstationBrowserRuntime {
     }
 
     this.attached = true
+    this.minimizedCompositor.ensureMinimized(humanWindow)
     this.emitState()
 
     return this.state()
@@ -1861,7 +2029,13 @@ export class WorkstationBrowserRuntime {
     expectedHost?: string,
     expectedOwnerId?: string
   ): WorkstationBrowserState {
-    const bounds = this.validBounds(window, rawBounds)
+    const renderWindow = this.minimizedCompositor.effectiveWindow(window)
+    if (window.isMinimized() && renderWindow === window) {
+      // Do not corrupt persistent viewport geometry with the minimized
+      // BrowserWindow's transient 0x0 content bounds.
+      return this.state()
+    }
+    const bounds = this.validBounds(renderWindow, rawBounds)
 
     if (!bounds) {
       return this.state()
@@ -1873,7 +2047,7 @@ export class WorkstationBrowserRuntime {
     // background pane can move the one live native view over its own rectangle.
     if (
       this.attached &&
-      this.ownerWindow === window &&
+      this.ownerWindow === renderWindow &&
       expectedHost !== undefined &&
       expectedHost !== this.viewportHost
     ) {
@@ -1882,7 +2056,7 @@ export class WorkstationBrowserRuntime {
 
     if (
       this.attached &&
-      this.ownerWindow === window &&
+      this.ownerWindow === renderWindow &&
       expectedOwnerId !== undefined &&
       this.viewportOwnerId !== null &&
       expectedOwnerId !== this.viewportOwnerId
@@ -1892,11 +2066,12 @@ export class WorkstationBrowserRuntime {
 
     this.bounds = bounds
 
-    if (this.attached && this.ownerWindow === window) {
+    if (this.attached && this.ownerWindow === renderWindow) {
       const entry = this.activeEntry()
 
       if (entry) {
         entry.view.setBounds(bounds)
+        this.minimizedCompositor.rememberView(window, entry.view, rawBounds)
       }
     }
 
@@ -1904,7 +2079,8 @@ export class WorkstationBrowserRuntime {
   }
 
   detach(window?: BrowserWindow | null, expectedHost?: string, expectedOwnerId?: string): WorkstationBrowserState {
-    if (window && this.ownerWindow && window !== this.ownerWindow) {
+    const rendered = window ? this.minimizedCompositor.effectiveWindow(window) : null
+    if (rendered && this.ownerWindow && rendered !== this.ownerWindow) {
       return this.state()
     }
 
@@ -2630,8 +2806,89 @@ export class WorkstationBrowserRuntime {
     return this.state()
   }
 
+  private relistenClosedControlServer(owned: ControlHandle): void {
+    if (this.control !== owned || this.controlRelistening || owned.server.listening) {return}
+
+    this.controlRelistening = true
+    const onError = (error: Error): void => {
+      owned.server.off('error', onError)
+      this.controlRelistening = false
+      console.error('[workstation-browser] controller relisten failed', error)
+    }
+
+    owned.server.once('error', onError)
+    try {
+      owned.server.listen(0, '127.0.0.1', () => {
+        owned.server.off('error', onError)
+        const address = owned.server.address()
+        if (this.control !== owned || !address || typeof address === 'string') {
+          if (owned.server.listening) {owned.server.close()}
+          this.controlRelistening = false
+          return
+        }
+        owned.url = `http://127.0.0.1:${address.port}`
+        this.controlRelistening = false
+        this.refreshOwnedControlDescriptor()
+        this.emitState()
+      })
+    } catch (error) {
+      onError(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
+  private refreshOwnedControlDescriptor(): void {
+    const owned = this.control
+
+    if (!owned) {return}
+    if (!owned.server.listening) {
+      this.relistenClosedControlServer(owned)
+      return
+    }
+
+    let published: Record<string, unknown> | null = null
+
+    try {
+      const parsed: unknown = JSON.parse(fs.readFileSync(owned.controlPath, 'utf8'))
+      published = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown> : null
+    } catch {
+      // A missing or malformed discovery file must not orphan a live controller.
+    }
+
+    if (published?.pid === process.pid && published?.url === owned.url && published?.token === owned.token) {
+      return
+    }
+
+    const competingPid = published?.pid
+
+    if (typeof competingPid === 'number' && Number.isInteger(competingPid) && competingPid > 0 && competingPid !== process.pid) {
+      try {
+        process.kill(competingPid, 0)
+        // Another live instance owns its descriptor; do not hijack it.
+        return
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {return}
+      }
+    }
+
+    try {
+      atomicWritePrivateJson(owned.controlPath, {
+        version: CONTROL_FILE_VERSION,
+        pid: process.pid,
+        url: owned.url,
+        token: owned.token,
+        runtime: 'electron-chromium',
+        profile_path: workstationBrowserProfilePath(),
+        created_at: new Date().toISOString()
+      })
+    } catch {
+      // The server remains running; retry discovery without inventing a new token.
+    }
+  }
+
   async startControlServer(): Promise<void> {
     if (this.control) {
+      this.refreshOwnedControlDescriptor()
       return
     }
 
@@ -2734,6 +2991,9 @@ export class WorkstationBrowserRuntime {
     }
 
     this.control = control
+    // Unexpected listener errors must not crash Electron; the descriptor
+    // watchdog will relisten if the server is no longer accepting requests.
+    server.on('error', error => console.error('[workstation-browser] controller server error', error))
     atomicWritePrivateJson(controlPath, {
       version: CONTROL_FILE_VERSION,
       pid: process.pid,
@@ -2743,12 +3003,20 @@ export class WorkstationBrowserRuntime {
       profile_path: workstationBrowserProfilePath(),
       created_at: new Date().toISOString()
     })
+    this.controlDescriptorTimer = setInterval(() => this.refreshOwnedControlDescriptor(), 1_000)
+    this.controlDescriptorTimer.unref?.()
     this.emitState()
   }
 
   async stopControlServer(): Promise<void> {
     const control = this.control
     this.control = null
+    this.controlRelistening = false
+
+    if (this.controlDescriptorTimer) {
+      clearInterval(this.controlDescriptorTimer)
+      this.controlDescriptorTimer = null
+    }
 
     if (!control) {
       return
@@ -2773,6 +3041,7 @@ export class WorkstationBrowserRuntime {
     this.browserSessionPersistenceSuppressed = true
     this.detachActiveView(false)
     this.unbindViewportGeometry()
+    this.minimizedCompositor.dispose()
 
     for (const entry of this.entries.values()) {
       this.removeChildView(entry)
@@ -2838,27 +3107,31 @@ export class WorkstationBrowserRuntime {
       return { success: true, pending_count: admissions.length, pending_admissions: admissions }
     }
 
-    if (action === 'browser_admissions_reconcile') {
-      const targetOpId = typeof args.operation_id === 'string' ? args.operation_id.trim() : ''
-
-      if (!targetOpId) {
-        throw workstationControllerFault('INVALID_ARGUMENT', 'operation_id_required')
+    if (action === 'browser_admissions_recover_safe') {
+      // Agent self-service is intentionally restricted to parser-rejected,
+      // zero-dispatch batches. It cannot approve or repeat an external effect.
+      if (taskId === 'default' || !sessionHost || !runId) {
+        throw workstationControllerFault('INVALID_ARGUMENT', 'browser_owner_identity_required')
       }
-
-      const reason = typeof args.reason === 'string' ? args.reason : 'OPERATOR_RECONCILED'
-      const evidence = typeof args.evidence === 'string' ? args.evidence : 'OPERATOR_REVIEW'
-      const evidenceDetails = typeof args.evidence_details === 'string' ? args.evidence_details : undefined
-      const resolvedBy = typeof args.resolved_by === 'string' ? args.resolved_by : 'agent'
-
-      const result = this.sessionStatePersistence().reconcilePendingAdmission({
-        operationId: targetOpId,
-        reason: reason as any,
-        evidence: evidence as any,
-        evidenceDetails,
-        resolvedBy
-      })
-
-      return { success: true, operation_id: targetOpId, reconciled: result.reconciled }
+      const store = this.sessionStatePersistence()
+      const before = store.listPendingAdmissions(taskId).filter(record =>
+        record.sessionId === sessionHost && record.runId === runId)
+      const blocking = store.pendingBrowserMutation(taskId, sessionHost, runId)
+      const after = store.load()?.operationAdmissions ?? {}
+      return {
+        status: blocking ? 'reconciliation_required' : 'ready',
+        ...(blocking ? {blocked_operation_id: blocking} : {}),
+        safely_recovered: before.filter(record =>
+          after[record.operationId]?.terminal?.kind === 'NOT_DISPATCHED' &&
+          after[record.operationId]?.terminal?.resolvedBy === 'browser-preflight-auto-recovery'
+        ).map(record => record.operationId)
+      }
+    }
+    if (action === 'browser_admissions_reconcile') {
+      // This endpoint is agent-callable, including through the local HTTP bridge.
+      // Request arguments are not proof of a human approval or causal readback.
+      // Only a separately authenticated human review path may reconcile.
+      throw workstationControllerFault('INVALID_ARGUMENT', 'agent_reconciliation_forbidden')
     }
 
     // Extension operations deliberately remain on the authenticated
@@ -2896,12 +3169,18 @@ export class WorkstationBrowserRuntime {
       'browser_back',
       'browser_press',
       'browser_batch_actions',
+      'browser_file_upload',
       'browser_extension_open_options',
       'browser_creative_render',
       'browser_creative_studio_open'
     ])
 
     if (mutating.has(action)) {
+      // Mutations must never create a shared "unbound" admission. Legacy
+      // non-Kanban callers remain valid with an explicit task_id.
+      if (taskId === 'default' && (!sessionHost || !runId)) {
+        throw workstationControllerFault('INVALID_ARGUMENT', 'browser_owner_identity_required')
+      }
       this.assertAgentControl(taskId)
 
       // Preflight BEFORE binding a task or lazily restoring its tab: the
@@ -3027,7 +3306,7 @@ export class WorkstationBrowserRuntime {
       const rawReceipt: BrowserOwnerReceipt = {
         operationId: opId,
         taskId,
-        runId: runId ?? '',
+        runId: effectiveRunId,
         browserTaskId: taskId,
         tabId: entry.id,
         revision: 0,
@@ -3151,7 +3430,7 @@ export class WorkstationBrowserRuntime {
         const rawReceipt: BrowserOwnerReceipt = {
           operationId: opId,
           taskId,
-          runId: runId ?? '',
+          runId: effectiveRunId,
           browserTaskId: taskId,
           tabId: entry.id,
           revision: 0,
@@ -3180,6 +3459,21 @@ export class WorkstationBrowserRuntime {
       }
     }
 
+    // Invalid steps have no page effect and must not poison durable admissions.
+    if (action === 'browser_batch_actions') {
+      const steps = args.steps
+      const invalidSize = !Array.isArray(steps) || steps.length === 0 || steps.length > 20
+      const invalidIndex = invalidSize ? 0 : steps.findIndex(step => !isBrowserBatchStep(step))
+      if (invalidSize || invalidIndex >= 0) {
+        return {
+          status: 'rejected',
+          reason: invalidSize ? 'invalid_batch_identity_or_size' : 'invalid_step',
+          operation_id: controllerOperationId,
+          completed_steps: 0, verified_steps: 0,
+          stopped_at: invalidIndex, receipts: []
+        }
+      }
+    }
     let entry = this.entryForTask(taskId, false, sessionHost, kanbanCardId, runId)
 
     if (!entry) {
@@ -3233,9 +3527,33 @@ export class WorkstationBrowserRuntime {
       return { ...verified, options_url: optionsUrl }
     }
 
+    // An upload is a page mutation, and a file input can automatically submit on change.
+    // Scope originates only in the operator's profile config, never from tool arguments.
+    const uploadFilesForController = action === 'browser_file_upload'
+      ? validateBrowserUploadFiles(
+          Array.isArray(args.files) ? args.files : (args.file ? [args.file] : []),
+          resolveBrowserUploadGrant(
+            process.env.HERMES_HOME || path.join(os.homedir(), '.hermes'),
+            taskId, sessionHost ?? '', runId ?? ''
+          )
+        )
+      : null
+    const uploadInputExpression = action === 'browser_file_upload'
+      ? browserFileInputExpression(
+          typeof args.selector === 'string' ? args.selector : 'input[type="file"]'
+        )
+      : null
+    if (action === 'browser_file_upload') {
+      validateBrowserUploadOrigin(
+        resolveBrowserUploadGrant(process.env.HERMES_HOME || path.join(os.homedir(), '.hermes'),
+          taskId, sessionHost ?? '', runId ?? ''),
+        entry.view.webContents.getURL()
+      )
+    }
+
     const guardedControllerActions = new Set([
       'browser_click', 'browser_type', 'browser_scroll', 'browser_back',
-      'browser_press', 'browser_batch_actions'
+      'browser_press', 'browser_batch_actions', 'browser_file_upload'
     ])
 
     if (guardedControllerActions.has(action)) {
@@ -3297,14 +3615,14 @@ export class WorkstationBrowserRuntime {
           throw error
         }
 
-        await delay(220)
+        await delay(100)
 
         const opId = controllerOperationId
 
         const rawReceipt: BrowserOwnerReceipt = {
           operationId: opId,
           taskId,
-          runId: runId ?? '',
+          runId: effectiveRunId,
           browserTaskId: taskId,
           tabId: entry.id,
           revision: entry.mutationRevision,
@@ -3364,14 +3682,14 @@ export class WorkstationBrowserRuntime {
           throw error
         }
 
-        await delay(160)
+        await delay(80)
 
         const opId = controllerOperationId
 
         const rawReceipt: BrowserOwnerReceipt = {
           operationId: opId,
           taskId,
-          runId: runId ?? '',
+          runId: effectiveRunId,
           browserTaskId: taskId,
           tabId: entry.id,
           revision: entry.mutationRevision,
@@ -3403,6 +3721,84 @@ export class WorkstationBrowserRuntime {
         }
       }
 
+      case 'browser_file_upload': {
+        if (!uploadFilesForController || !uploadInputExpression) {
+          throw new Error('upload_scope_required')
+        }
+        // The mutation was durably admitted above; CDP selection can trigger a page upload.
+        this.assertAgentControl(taskId)
+        await this.ensureDebugger(entry.view.webContents)
+        await this.cdp(entry.view.webContents, 'DOM.enable', {})
+        const evalRes = (await this.cdp(entry.view.webContents, 'Runtime.evaluate', {
+          expression: uploadInputExpression,
+          returnByValue: false
+        })) as { result?: { objectId?: string } }
+        const objectId = evalRes?.result?.objectId
+        if (!objectId) {
+          // No file-input selection occurred. Record this as a pre-effect terminal.
+          this.sessionStatePersistence().recordPreEffectTerminal({
+            operationId: controllerOperationId,
+            reason: 'AMBIGUOUS_ANCHOR',
+            evidence: 'TARGET_RESOLUTION_PRE_PAGE_EFFECT'
+          })
+          throw new Error('file_input_not_found_or_ambiguous')
+        }
+
+        this.assertAgentControl(taskId)
+        validateBrowserUploadOrigin(
+          resolveBrowserUploadGrant(process.env.HERMES_HOME || path.join(os.homedir(), '.hermes'),
+            taskId, sessionHost ?? '', runId ?? ''),
+          entry.view.webContents.getURL()
+        )
+        // Refresh realpaths, sizes and the operator grant after the async target lookup.
+        const currentFiles = validateBrowserUploadFiles(
+          Array.isArray(args.files) ? args.files : (args.file ? [args.file] : []),
+          resolveBrowserUploadGrant(
+            process.env.HERMES_HOME || path.join(os.homedir(), '.hermes'),
+            taskId, sessionHost ?? '', runId ?? ''
+          )
+        )
+        try {
+          await this.cdp(entry.view.webContents, 'DOM.setFileInputFiles', {
+            files: currentFiles.map(file => file.absolutePath),
+            objectId
+          })
+        } catch {
+          // CDP may have caused an effect even if the response was lost.
+          throw new Error('upload_cdp_effect_uncertain')
+        }
+        let selected = false
+        try {
+          const readback = (await this.cdp(entry.view.webContents, 'Runtime.callFunctionOn', {
+            objectId,
+            functionDeclaration: 'function() { return this.files ? this.files.length : -1 }',
+            returnByValue: true
+          })) as { result?: { value?: unknown } }
+          selected = readback?.result?.value === currentFiles.length
+        } catch {
+          // A post-selection readback failure cannot safely cause an automatic retry.
+        }
+        if (!selected) {
+          return { status: 'uncertain', reason: 'upload_selection_unverified',
+            operation_id: controllerOperationId }
+        }
+        const rawReceipt: BrowserOwnerReceipt = {
+          operationId: controllerOperationId, taskId, runId: effectiveRunId,
+          browserTaskId: taskId, tabId: entry.id,
+          revision: entry.mutationRevision, action, safeUrl: entry.safeUrl,
+          executedAt: new Date().toISOString()
+        }
+        const updated = this.taskLifecycle().recordReceipt(taskId, rawReceipt)
+        const receipt = updated.lastReceipt
+        if (receipt) {
+          this.lastReceipts.set(taskId, receipt)
+        }
+        this.persistBrowserSessionState()
+        // Selection in Chromium is not proof of any network upload or message delivery.
+        return { success: true, status: 'selected', file_count: currentFiles.length,
+          operation_id: controllerOperationId, receipt }
+      }
+
       case 'browser_read_http':
         return this.readHttpForEntry(entry, args)
 
@@ -3420,7 +3816,7 @@ export class WorkstationBrowserRuntime {
         const rawReceipt: BrowserOwnerReceipt = {
           operationId: opId,
           taskId,
-          runId: runId ?? '',
+          runId: effectiveRunId,
           browserTaskId: taskId,
           tabId: entry.id,
           revision: entry.mutationRevision,
@@ -3465,7 +3861,7 @@ export class WorkstationBrowserRuntime {
         const rawReceipt: BrowserOwnerReceipt = {
           operationId: opId,
           taskId,
-          runId: runId ?? '',
+          runId: effectiveRunId,
           browserTaskId: taskId,
           tabId: entry.id,
           revision: entry.mutationRevision,
@@ -3519,17 +3915,19 @@ export class WorkstationBrowserRuntime {
 
         const batchContext: BrowserBatchContext = {
           taskId,
-          runId: runId || `${taskId}-run` || 'default-run',
+          runId: effectiveRunId,
           tabId: entry.id,
-          operationId: operationId ?? `op_batch_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+          operationId: controllerOperationId
         }
 
         const startDocumentEpoch = entry.documentEpoch
         const startUrl = entry.view.webContents.getURL()
 
-        const readback = async (ref: string | null): Promise<BatchObservation | null> => {
+        const readback = async (
+          ref: string | null, anchor?: {type?: string; value?: string}
+        ): Promise<BatchObservation | null> => {
           try {
-            const observation = await entry.view.webContents.executeJavaScript(batchObservationScript(ref), true)
+            const observation = await entry.view.webContents.executeJavaScript(batchObservationScript(ref, anchor), true)
 
             if (!observation || typeof observation !== 'object') {return null}
             const record = observation as BatchObservation
@@ -3562,9 +3960,27 @@ export class WorkstationBrowserRuntime {
             if (entry.documentEpoch !== startDocumentEpoch || entry.view.webContents.getURL() !== startUrl) {
               throw workstationControllerFault('STALE_REF', 'batch_document_changed')
             }
+            const post = 'postcondition' in step ? step.postcondition : undefined
+            if (post?.kind === 'chatgpt_message_recorded') {
+              const beforeSend = await readback('ref' in step ? (step.ref ?? null) : null)
+              const boundComposerKey = step.kind === 'press' && step.key === 'Enter' &&
+                Boolean(step.ref) && beforeSend?.found === true &&
+                beforeSend.editable === true && beforeSend.focused === true &&
+                beforeSend.chatgptComposerTarget === true
+              const boundSendClick = step.kind === 'click' &&
+                beforeSend?.found === true && beforeSend.chatgptSendTarget === true
+              if (startUrl !== post.conversationUrl || !beforeSend ||
+                  beforeSend.chatgptComposerText !== post.text.trim().replace(/\r\n/g, '\n') ||
+                  !Array.isArray(beforeSend.chatgptUserMessages) ||
+                  (!boundComposerKey && !boundSendClick)) {
+                throw workstationControllerFault('INVALID_ARGUMENT', 'chatgpt_send_precondition_failed')
+              }
+            }
           },
           perform: async (step, context, _index) => {
-            const before = await readback('ref' in step ? step.ref : null)
+            const selectionAnchor = step.kind === 'click' && step.postcondition?.kind === 'selected'
+              ? step.anchor : undefined
+            const before = await readback('ref' in step ? (step.ref ?? null) : null, selectionAnchor)
 
             switch (step.kind) {
               case 'click': {
@@ -3633,6 +4049,9 @@ export class WorkstationBrowserRuntime {
               }
 
               case 'press': {
+                if (step.postcondition?.kind === 'selected' && (!before?.found || before.focused !== true)) {
+                  throw workstationControllerFault('NO_BOUND_TAB', 'key_target_not_focused')
+                }
                 await this.pressKey(entry, step.key)
                 await delay(80)
 
@@ -3652,9 +4071,34 @@ export class WorkstationBrowserRuntime {
               return { verified: false, receiptRef: null, uncertaintyReason: 'renderer_crashed' }
             }
 
-            const after = await readback('ref' in step ? step.ref : null)
+            const ref = 'ref' in step ? (step.ref ?? null) : null
+            const selectionAnchor = step.kind === 'click' && step.postcondition?.kind === 'selected'
+              ? step.anchor : undefined
             const before = (result as { before?: BatchObservation | null } | null)?.before ?? null
-            const proof = hasVerifiedBatchEffect(step, before, after)
+            let after = await readback(ref, selectionAnchor)
+            let proof = hasVerifiedBatchEffect(step, before, after)
+            const sendPost = 'postcondition' in step && step.postcondition?.kind === 'chatgpt_message_recorded'
+              ? step.postcondition : null
+            const canWaitForSend = Boolean(sendPost && before?.chatgptUserMessages &&
+              before.chatgptComposerText === sendPost.text.trim().replace(/\r\n/g, '\n'))
+            if (!proof.verified && (canWaitForSend || shouldAwaitBatchLocalChange(step, before, after)) &&
+                entry.ownerTaskId === context.taskId && entry.documentEpoch === startDocumentEpoch &&
+                entry.view.webContents.getURL() === startUrl) {
+              // Events wake a deterministic readback; they are never delivery receipts.
+              try {
+                const script = sendPost && before?.chatgptUserMessages
+                  ? batchChatgptMessageWaitScript(sendPost, before.chatgptUserMessages.map(message => message.id))
+                  : batchLocalChangeWaitScript(ref, step.kind)
+                await Promise.race([
+                  entry.view.webContents.executeJavaScript(script, true),
+                  delay(sendPost ? 9_000 : 650)
+                ])
+                after = await readback(ref, selectionAnchor)
+                proof = hasVerifiedBatchEffect(step, before, after)
+              } catch {
+                // Navigation or crash keeps the original uncertainty.
+              }
+            }
             let authorityRetained = true
 
             try {
@@ -3669,6 +4113,13 @@ export class WorkstationBrowserRuntime {
               entry.id === context.tabId && entry.documentEpoch === startDocumentEpoch &&
               entry.view.webContents.getURL() === startUrl &&
               Boolean(taskOwner) && (!taskOwner?.runId || taskOwner.runId === context.runId)
+
+            // Dispatch acknowledgment is not semantic proof. Do not issue an owner
+            // receipt until independent readback and task authority both agree.
+            if (!proof.verified || !sameOwner) {
+              return { verified: false, receiptRef: null,
+                uncertaintyReason: !sameOwner ? 'batch_owner_or_document_changed' : proof.reason }
+            }
 
             const stepOpId = `${context.operationId}:${index}`
 
@@ -3694,23 +4145,78 @@ export class WorkstationBrowserRuntime {
                 this.lastReceipts.set(context.taskId, receipt)
               }
             } catch {
-              // Best effort lifecycle receipt update
+              // Receipt persistence failure leaves the batch uncertain.
             }
 
             const receiptRef = receipt ? `${receipt.operationId}:${receipt.tabId}:${receipt.revision}` : null
 
             return {
-              verified: Boolean(receiptRef) && proof.verified && sameOwner,
+              verified: Boolean(receiptRef),
               receiptRef,
-              uncertaintyReason: !sameOwner ? 'batch_owner_or_document_changed' : proof.verified ? undefined : proof.reason
+              uncertaintyReason: receiptRef ? undefined : 'owner_receipt_persistence_failed'
             }
           },
           checkpoint: async (_context, _index, _evidence) => {
-            this.persistBrowserSessionState()
+            // A best-effort in-memory checkpoint cannot verify a batch step.
+            this.persistBrowserSessionState(true)
           }
         }
 
-        const batchResult = await executeAuthorizedBatch(rawSteps, batchContext, adapter)
+        let batchResult = await executeAuthorizedBatch(rawSteps, batchContext, adapter)
+
+        if (batchResult.status === 'verified') {
+          try {
+            this.assertAgentControl(taskId)
+            const owner = this.taskLifecycle().task(taskId)
+            if (entry.ownerTaskId !== taskId || entry.id !== batchContext.tabId ||
+                entry.documentEpoch !== startDocumentEpoch ||
+                entry.view.webContents.isDestroyed() || entry.crashed ||
+                entry.view.webContents.getURL() !== startUrl ||
+                !owner || (owner.runId && owner.runId !== batchContext.runId) ||
+                (owner.sessionHost && owner.sessionHost !== effectiveSessionHost) ||
+                batchResult.verifiedSteps !== (Array.isArray(rawSteps) ? rawSteps.length : -1) ||
+                batchResult.receipts.some(ref => !ref)) {
+              throw new Error('batch_parent_owner_or_evidence_changed')
+            }
+
+            const parentReceipt = this.sessionStatePersistence().completeVerifiedBatch({
+              receipt: {
+                operationId: batchContext.operationId,
+                taskId,
+                runId: batchContext.runId,
+                browserTaskId: taskId,
+                tabId: entry.id,
+                revision: 0,
+                action: 'browser_batch_actions',
+                safeUrl: entry.safeUrl,
+                executedAt: new Date().toISOString()
+              },
+              sessionId: effectiveSessionHost,
+              stepReceiptRefs: batchResult.receipts as string[]
+            })
+            const updatedTask = this.taskLifecycle().recordReceipt(taskId, parentReceipt)
+            if (updatedTask.lastReceipt) {this.lastReceipts.set(taskId, updatedTask.lastReceipt)}
+          } catch (error) {
+            // Keep an internal diagnostic without exposing evidence or replay authority.
+            this.lastError = `Browser batch parent ACK: ${error instanceof Error ? error.message : String(error)}`
+            batchResult = { ...batchResult, status: 'uncertain', reason: 'batch_parent_confirmation_not_durable' }
+          }
+        }
+
+        if (batchResult.status !== 'verified') {
+          // Diagnostics describe an uncertain effect; they never release the admission.
+          try {
+            this.sessionStatePersistence().recordBatchUncertainty({
+              operationId: batchContext.operationId,
+              reason: batchResult.reason ?? 'unverified_effect',
+              stoppedAt: batchResult.stoppedAt,
+              completedSteps: batchResult.completedSteps,
+              verifiedSteps: batchResult.verifiedSteps
+            })
+          } catch {
+            this.lastError = 'browser_batch_uncertainty_diagnostics_unavailable'
+          }
+        }
         const snap = await this.snapshotForEntry(entry, false)
 
         return {
@@ -4063,6 +4569,18 @@ export class WorkstationBrowserRuntime {
     const persisted = this.sessionStatePersistence().load()
 
     if (!persisted) {return true}
+
+    // Restoring a URL is an implicit navigation. A prior ACKed navigation
+    // cannot authorize that effect while any later mutation on the same
+    // task/tab has an unresolved outcome. Do not require legacy run/session
+    // IDs here: missing or mismatched lineage must be conservative.
+    const unresolved = Object.values(persisted.operationAdmissions ?? {}).some(
+      operation => operation.taskId === restored.browserTaskId &&
+        operation.tabId === restored.id &&
+        operation.acknowledged !== true &&
+        !operation.terminal
+    )
+    if (unresolved) {return true}
 
     const navigations = Object.values(persisted.operationAdmissions ?? {}).filter(
       operation => operation.action === 'browser_navigate' &&
@@ -4443,37 +4961,60 @@ export class WorkstationBrowserRuntime {
   }
 
   private async cdpClick(wc: WebContents, x: number, y: number, revalidate?: () => void): Promise<void> {
+    // A WebContentsView in an unfocused/offscreen owner window can accept
+    // dispatchMouseEvent without delivering any click. Chromium's per-target
+    // focus emulation enables hit testing WITHOUT focusing the OS window or
+    // foregrounding the Hermes UI. Keep it scoped to this dispatched input.
     revalidate?.()
-    await this.cdp(wc, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
-    revalidate?.()
-    const release = { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }
-    let pressAttempted = false
-    let releaseCompleted = false
-
+    await this.cdp(wc, 'Emulation.setFocusEmulationEnabled', { enabled: true })
+    let focusCleanupError: unknown = null
     try {
-      // Once a press is attempted, even a rejected CDP promise can mean that
-      // Chromium received the press. Never retry press or classify as a safe
-      // pre-dispatch failure.
-      pressAttempted = true
-      await this.cdp(wc, 'Input.dispatchMouseEvent', {
-        type: 'mousePressed', x, y, button: 'left', clickCount: 1
-      })
       revalidate?.()
-      await this.cdp(wc, 'Input.dispatchMouseEvent', release)
-      releaseCompleted = true
+      await this.cdp(wc, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
       revalidate?.()
-    } catch (error) {
-      if (pressAttempted && !releaseCompleted && (typeof wc.isDestroyed !== 'function' || !wc.isDestroyed())) {
-        try {
-          // Best-effort release of a potentially held pointer; this may itself
-          // trigger page handlers. Outcome remains UNCERTAIN even if it succeeds.
-          await this.cdp(wc, 'Input.dispatchMouseEvent', release)
-        } catch {
-          // Renderer or CDP may be gone. Keep original uncertain classification.
-        }
-      }
+      const release = { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }
+      let pressAttempted = false
+      let releaseCompleted = false
 
-      throw new Error('browser_input_state_uncertain', { cause: error })
+      try {
+        // Once a press is attempted, even a rejected CDP promise can mean that
+        // Chromium received the press. Never retry press or classify as a safe
+        // pre-dispatch failure.
+        pressAttempted = true
+        await this.cdp(wc, 'Input.dispatchMouseEvent', {
+          type: 'mousePressed', x, y, button: 'left', clickCount: 1
+        })
+        revalidate?.()
+        await this.cdp(wc, 'Input.dispatchMouseEvent', release)
+        releaseCompleted = true
+        revalidate?.()
+      } catch (error) {
+        if (pressAttempted && !releaseCompleted && (typeof wc.isDestroyed !== 'function' || !wc.isDestroyed())) {
+          try {
+            // Best-effort release may itself trigger page handlers.
+            await this.cdp(wc, 'Input.dispatchMouseEvent', release)
+          } catch {
+            // Retain the original uncertain result.
+          }
+        }
+
+        throw new Error('browser_input_state_uncertain', { cause: error })
+      }
+    } finally {
+      // Revert emulation even on exceptions; do not leave a page pretending
+      // to be focused when an operator subsequently takes the human lease.
+      try {
+        if (typeof wc.isDestroyed !== 'function' || !wc.isDestroyed()) {
+          await this.cdp(wc, 'Emulation.setFocusEmulationEnabled', { enabled: false })
+        }
+      } catch (error) {
+        // Preserve the original throw when input was already uncertain;
+        // if dispatch completed, cleanup failure must still block the ACK.
+        focusCleanupError = error
+      }
+    }
+    if (focusCleanupError) {
+      throw new Error('browser_input_focus_cleanup_uncertain', { cause: focusCleanupError })
     }
   }
 
@@ -4489,11 +5030,10 @@ export class WorkstationBrowserRuntime {
     const expectedUrl = wc.getURL()
     const point = await this.resolvePoint(entry, ref, true, anchor)
 
-    // A human may take over or a document may be replaced during read-only
-    // resolution. No mouse event may be emitted until this is rechecked.
+    // Keep ownership and document checks around the native click. The caller
+    // receives the fresh post-click snapshot and verifies its own outcome.
     if (!entry.ownerTaskId) {throw new Error('browser_task_owner_required')}
     this.assertAgentControl(entry.ownerTaskId)
-
     if (entry.documentEpoch !== expectedEpoch || wc.getURL() !== expectedUrl || wc.isDestroyed()) {
       throw new Error('browser_document_changed')
     }
@@ -4501,7 +5041,6 @@ export class WorkstationBrowserRuntime {
     await this.cdpClick(wc, point.x, point.y, () => {
       if (!entry.ownerTaskId) {throw new Error('browser_task_owner_required')}
       this.assertAgentControl(entry.ownerTaskId)
-
       if (entry.documentEpoch !== expectedEpoch || wc.getURL() !== expectedUrl || wc.isDestroyed()) {
         throw new Error('browser_document_changed')
       }
@@ -4526,7 +5065,42 @@ export class WorkstationBrowserRuntime {
     const wc = entry.view.webContents
     const expectedEpoch = entry.documentEpoch
     const expectedUrl = wc.getURL()
-    const point = await this.resolvePoint(entry, ref, true, options.anchor)
+    // SPA overlays and responsive reflow can briefly cover an otherwise valid
+    // text field. Retry only pre-input hit testing; never retry inserted text.
+    // Click targets continue to fail immediately on obstruction.
+    let point: { x: number; y: number; target?: ElementTargetMetadata } | null = null
+    const actionableDeadline = Date.now() + 4000
+    while (!point) {
+      if (!entry.ownerTaskId) {throw new Error('browser_task_owner_required')}
+      this.assertAgentControl(entry.ownerTaskId)
+      if (entry.documentEpoch !== expectedEpoch || wc.getURL() !== expectedUrl || wc.isDestroyed()) {
+        throw new Error('browser_document_changed')
+      }
+      try {
+        point = await this.resolvePoint(entry, ref, true, options.anchor)
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error)
+        if (!['target_obscured', 'target_outside_viewport', 'element_not_visible'].includes(reason)
+            || Date.now() >= actionableDeadline) {throw error}
+        // WhatsApp can transiently scale its whole .two viewport above y=0
+        // on compact BrowserTask tabs. Normalize only its offscreen search
+        // input before any typing; this is local CSS, not a click/send.
+        if (reason === 'target_outside_viewport' &&
+            expectedUrl.startsWith('https://web.whatsapp.com/')) {
+          await wc.executeJavaScript(`(function () {
+            var input = document.querySelector('input[aria-label="Pesquisar ou começar uma nova conversa"]');
+            var root = document.querySelector('div.two');
+            if (!input || !root) return false;
+            var r = input.getBoundingClientRect();
+            if (r.bottom > 0 && r.top < innerHeight) return false;
+            if (getComputedStyle(root).transform === 'none') return false;
+            root.style.setProperty('transform', 'none', 'important');
+            return true;
+          })()`, true)
+        }
+        await delay(160)
+      }
+    }
 
     if (!entry.ownerTaskId) {throw new Error('browser_task_owner_required')}
     this.assertAgentControl(entry.ownerTaskId)
@@ -5886,8 +6460,9 @@ export class WorkstationBrowserRuntime {
     return tabs
   }
 
-  private persistBrowserSessionState(): void {
+  private persistBrowserSessionState(requireDurable = false): void {
     if (this.browserSessionPersistenceSuppressed || !this.browserSessionStateRestored || !this.browserSessionState) {
+      if (requireDurable) {throw new Error('browser_batch_checkpoint_state_unavailable')}
       return
     }
 
@@ -5903,9 +6478,14 @@ export class WorkstationBrowserRuntime {
         logicalActiveTabId ??
         (this.activeTabId && tabs.some(tab => tab.id === this.activeTabId) ? this.activeTabId : null)
 
-      this.browserSessionState.saveSession(tabs, activeTabId, Object.fromEntries(this.lastReceipts))
+      if (requireDurable) {
+        this.browserSessionState.saveSessionDurably(tabs, activeTabId, Object.fromEntries(this.lastReceipts))
+      } else {
+        this.browserSessionState.saveSession(tabs, activeTabId, Object.fromEntries(this.lastReceipts))
+      }
     } catch (error) {
       this.lastError = `BrowserSessionState persistence failed: ${error instanceof Error ? error.message : String(error)}`
+      if (requireDurable) {throw error}
     }
   }
 
@@ -5995,28 +6575,23 @@ export class WorkstationBrowserRuntime {
   }
 
   private ensureChildView(window: BrowserWindow, view: WebContentsView): void {
-    if (window.contentView.children.includes(view)) {
-      return
+    if (window.contentView.children.includes(view)) {return}
+    for (const other of BrowserWindow.getAllWindows()) {
+      if (other !== window && !other.isDestroyed() && other.contentView.children.includes(view)) {
+        other.contentView.removeChildView(view)
+      }
     }
-
     window.contentView.addChildView(view)
   }
 
   private removeChildView(entry: BrowserEntry): void {
-    const window = this.ownerWindow
-
-    if (!window || window.isDestroyed()) {
-      return
-    }
-
-    if (!window.contentView.children.includes(entry.view)) {
-      return
-    }
-
-    try {
-      window.contentView.removeChildView(entry.view)
-    } catch {
-      // View may already be detached/destroyed.
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.isDestroyed() || !window.contentView.children.includes(entry.view)) {continue}
+      try {
+        window.contentView.removeChildView(entry.view)
+      } catch {
+        // View may already be detached or destroyed.
+      }
     }
   }
 
@@ -6038,7 +6613,10 @@ export class WorkstationBrowserRuntime {
       return
     }
 
-    const window = this.ownerWindow ?? BrowserWindow.getAllWindows().find(candidate => !candidate.isDestroyed()) ?? null
+    const window = this.minimizedCompositor.owningHostFor(
+      entry.view,
+      this.ownerWindow ?? BrowserWindow.getAllWindows().find(candidate => !candidate.isDestroyed()) ?? null
+    )
 
     if (!window || window.isDestroyed()) {
       this.applyFrameRate(entry, false)
@@ -6046,7 +6624,7 @@ export class WorkstationBrowserRuntime {
       return
     }
 
-    this.ownerWindow = window
+    if (!this.ownerWindow) {this.ownerWindow = window}
     this.ensureChildView(window, entry.view)
     const content = window.getContentBounds()
     const width = Math.max(1, this.bounds?.width ?? DEFAULT_BROWSER_WIDTH)

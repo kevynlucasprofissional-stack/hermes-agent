@@ -282,3 +282,29 @@ def test_nested_dist_travels_but_root_dist_stays_out(tmp_path):
 
     assert (destination / "plugins/kanban/dashboard/dist/index.js").read_text(encoding="utf-8") == "ENTRY\n"
     assert not (destination / "dist").exists(), "root build output never enters the snapshot"
+
+
+def test_core_local_path_dependency_is_included_when_outside_package_roots(tmp_path):
+    """A declared uv path source must travel with the core's staged workspace."""
+    core = tmp_path / "core"
+    vendor = core / "workstation" / "third_party" / "laya"
+    (vendor / "laya").mkdir(parents=True)
+    (vendor / "laya" / "__init__.py").write_text("VALUE = 'bundled'\n", encoding="utf-8")
+    (vendor / "pyproject.toml").write_text(
+        '[project]\nname="laya"\nversion="0.3.23"\nrequires-python=">=3.11"\n',
+        encoding="utf-8",
+    )
+    (vendor / ".venv").mkdir()
+    (vendor / ".venv" / "unsafe.txt").write_text("not a build input", encoding="utf-8")
+    (core / "pyproject.toml").write_text(
+        '[project]\nname="core"\nversion="1"\nrequires-python=">=3.11"\n'
+        '[tool.setuptools.packages.find]\ninclude=["pm"]\n'
+        '[tool.uv.sources]\nlaya={path="workstation/third_party/laya",editable=false}\n',
+        encoding="utf-8",
+    )
+
+    destination = tmp_path / "stage"
+    workspace._copy_core_inputs(core, destination)
+
+    assert (destination / "workstation/third_party/laya/laya/__init__.py").read_text() == "VALUE = 'bundled'\n"
+    assert not (destination / "workstation/third_party/laya/.venv").exists()

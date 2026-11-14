@@ -12,7 +12,7 @@ import re
 from typing import Any
 
 from tools.effects import WRITE_EFFECTS, tool_contract, tool_effect, unwrap_call
-from workstation.batch_detection import call_key, structural_signature
+from workstation.batch_detection import call_key, structural_signature, is_workstation_mutation
 from workstation.recipes import digest, sanitize
 from workstation.routing import canonical_route_for_tool
 
@@ -235,7 +235,7 @@ def decisions_for_calls(agent, calls):
         decision = CompilationDecision.ALLOW_ADAPTIVE
         key = call_key(name, args)
 
-        if effect in WRITE_EFFECTS and key not in evidence and getattr(agent, 'session_id', None):
+        if is_workstation_mutation(name, args) and key not in evidence and getattr(agent, 'session_id', None):
             from workstation.artifacts import ArtifactStore
             owner = getattr(agent, '_conversation_root_id', lambda: None)() or agent.session_id
             store = ArtifactStore()
@@ -245,9 +245,9 @@ def decisions_for_calls(agent, calls):
                 if record.get('status') == 'uncertain':
                     evidence[key] = record
 
-        if effect in WRITE_EFFECTS and evidence.get(key, {}).get('status') == 'uncertain':
+        if is_workstation_mutation(name, args) and evidence.get(key, {}).get('status') == 'uncertain':
             decision = CompilationDecision.REQUIRE_HUMAN
-        elif name != 'work_execute' and 'work_execute' in getattr(agent, 'valid_tool_names', ()) and effect in WRITE_EFFECTS:
+        elif name != 'work_execute' and 'work_execute' in getattr(agent, 'valid_tool_names', ()) and is_workstation_mutation(name, args):
             signature = structural_signature(name, args)
             route = canonical_route_for_tool(name)
             sem_family = semantic_target_family(name, args, contract=contract, agent=agent)

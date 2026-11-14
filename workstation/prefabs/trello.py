@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -25,6 +26,14 @@ _ID = re.compile(r"^[a-zA-Z0-9_]{3,32}$")
 
 class TrelloAccessError(RuntimeError):
     pass
+
+
+class TrelloRateLimitError(TrelloAccessError):
+    """429 only: GET may be retried; no credentials or response body are exposed."""
+
+    def __init__(self, retry_after: float | None = None) -> None:
+        super().__init__("Trello API rate limited (429)")
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)
@@ -129,10 +138,60 @@ class TrelloClient:
                 if len(raw) > 1_000_000:
                     raise TrelloAccessError("Trello response exceeds safety bound")
                 return json.loads(raw)
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
+        except urllib.error.HTTPError as exc:
+            if exc.code == 429:
+                raw_delay = exc.headers.get("Retry-After") if exc.headers else None
+                try:
+                    delay = float(raw_delay) if raw_delay is not None else None
+                except (ValueError, TypeError):
+                    delay = None
+                raise TrelloRateLimitError(delay) from None
+            raise TrelloAccessError(f"Trello API HTTP {exc.code}") from None
+        except (urllib.error.URLError, TimeoutError) as exc:
             raise TrelloAccessError(f"Trello API request failed: {type(exc).__name__}") from None
         except (UnicodeError, json.JSONDecodeError) as exc:
             raise TrelloAccessError("Trello returned invalid JSON") from exc
+
+    def board_actions(self, board: str, *, before: str | None = None,
+                      since: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        """Fetch ONE newest-first page of board actions using the official GET endpoint.
+
+        Pagination/commit ownership belongs to poll_board_actions, not this method.
+        Raw action text remains ephemeral; the journal whitelists only metadata.
+        """
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError("Invalid Trello action limit (1..1000)")
+        board_id = _board_id(board)
+        query: dict[str, str] = {
+            "fields": "id,type,date,data,idMemberCreator", "limit": str(limit)
+        }
+        for name, cursor in (("before", before), ("since", since)):
+            if cursor is None:
+                continue
+            if not isinstance(cursor, str) or not (
+                re.fullmatch(r"[a-fA-F0-9]{24}", cursor)
+                or re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z", cursor)
+            ):
+                raise ValueError("Invalid Trello action cursor")
+            query[name] = cursor
+
+        for retry in range(3):
+            try:
+                rows = self._request("GET", f"/1/boards/{board_id}/actions", query)
+                break
+            except TrelloRateLimitError as exc:
+                if retry == 2:
+                    raise
+                delay = exc.retry_after if exc.retry_after is not None else 0.5 * (2 ** retry)
+                time.sleep(min(5.0, max(0.0, delay)))
+        if not isinstance(rows, list) or len(rows) > limit:
+            raise TrelloAccessError("Unexpected Trello action page")
+        for row in rows:
+            if not isinstance(row, dict) or not all(
+                isinstance(row.get(k), str) and row[k] for k in ("id", "type", "date")
+            ):
+                raise TrelloAccessError("Invalid Trello action metadata")
+        return rows
 
     def board_lists(self, board: str) -> list[dict[str, Any]]:
         rows = self._request("GET", f"/1/boards/{_board_id(board)}/lists",

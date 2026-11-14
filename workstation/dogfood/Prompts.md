@@ -1,3 +1,7 @@
+## Prompt curto para criar promtps
+
+Prepara um prompt para eu te enviar e você fazer tudo o que descrevi aqui, quero um prompt preciso, profundo, que instruirá a IA perfeitamente a realizar o que deve ser feito, onde deve ser feito, de que forma, e tomando quais cuidados, coloque também critérios de aceite e configure para gerar prompts de continuidade "resume prompts" até os critérios de aceite serem alcançados.
+
 ## Prompt para criar prompt para IA
 De acordo com os anexos, faça o seguinte na branch feat/d049-browser-80-20-impl-20261018 , coloque instruções no primeiro prompt para sincronizar com a branch remota para as instruções que você vai fazer no repositório remoto usando o GitHub sejam acessíveis nas minhas pastas locais, no meu computador, e também me entregue me entregue um passo a passo, uma série de prompts que é o ponto ótimo entre economia de prompts e profundidade de qualidade de implementação, fazendo com que um prompt possa focar em um grupo de problemas simples que fazem sentido serem resolvidos juntos ou focar em um único problema complexo que requer atenção máxima da IA implementadora.
 
@@ -86,6 +90,10 @@ Ok, ajustes feitos. Faz uma análise profunda da qualidade do trabalho realizado
 ## Para reescrever o texto
 Mantém a essência do texto, mantém a idéia central e em algum nível tenta manter também o tom de voz, mas torne o texto bem escrito, fácil de entender e sem redundâncias:
 
+## Para reescrever o texto (Mais exato)
+
+Sua tarefa é: Mantém a essência do texto, mantém a idéia central e em algum nível tenta manter também o tom de voz, mas torne o texto bem escrito, fácil de entender e sem redundâncias Segue o material para realizar sua tarefa:
+
 # Outros
 
 Prompt 01
@@ -121,3 +129,6 @@ Vou te dar um repositório e você vai comparar o repositório com o atual brows
 Além disso, eu gostaria que nesses repositórios que vou ir indicando, que você separasse um momento para procurar oportunidades específicar de melhorar economia de tokens, velocidade do Browser, e objetividade da IA em utilizar ele (Não precisar ficar pesquisando ou criando ferramentas para conseguir usar o Browser com velocidade, qualidade e facilidade). Quero que faça isso estudando o código fonte do Hermes Work e o do repositório que indiquei para a comparação, estudo e pesquisa.
 
 Segue o repositório:
+
+## [[Prompt sincronizar main remoto Linux]]
+

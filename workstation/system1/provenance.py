@@ -13,6 +13,18 @@ EXPECTED_SUBTREE_DIR = REPO_ROOT / "workstation" / "third_party" / "laya"
 LOCK_PATH = REPO_ROOT / "workstation" / "components.lock.json"
 
 
+def _approved_pm_snapshot_source(imported_file: Path, origin: Path) -> bool:
+    """Accept only the selected PM generation's snapshot of the vendored Laya."""
+    from pm.environments import committed_venv, site_packages
+
+    selected = committed_venv(REPO_ROOT)
+    if selected is None:
+        return False
+    snapshot = selected.parent / "workspace" / "workstation" / "third_party" / "laya"
+    installed = site_packages(selected) / "laya" / "__init__.py"
+    return origin.resolve() == snapshot.resolve() and imported_file.resolve() == installed.resolve()
+
+
 def _read_locked_laya_metadata() -> Dict[str, Any]:
     """Read locked metadata for Laya from components.lock.json."""
     if not LOCK_PATH.is_file():
@@ -91,8 +103,9 @@ def get_laya_provenance(
             and hashlib.sha256((root / name).read_bytes().replace(b"\r\n", b"\n")).hexdigest() == digest
             for name, digest in manifest["files"].items()
         )
-    # Non-editable uv path sources install a wheel into site-packages. Require
-    # local-install provenance AND byte identity, never a matching version alone.
+    # PM installs a wheel from its immutable, selected workspace snapshot rather
+    # than the checkout path. Trust only that exact PM selection and matching bytes.
+    pm_snapshot_origin: Path | None = None
     if not is_vendored:
         try:
             from urllib.parse import urlparse, unquote
@@ -100,12 +113,18 @@ def get_laya_provenance(
             distribution = metadata.distribution("laya")
             direct = json.loads(distribution.read_text("direct_url.json") or "{}")
             url = urlparse(direct.get("url", ""))
-            is_vendored = (url.scheme == "file"
-                and Path(url2pathname(unquote(url.path))).resolve() == EXPECTED_SUBTREE_DIR.resolve()
-                and Path(distribution.locate_file("laya/__init__.py")).resolve() == source_path)
-        except (metadata.PackageNotFoundError, ValueError, TypeError):
+            if url.scheme == "file" and Path(distribution.locate_file("laya/__init__.py")).resolve() == source_path:
+                origin = Path(url2pathname(unquote(url.path))).resolve()
+                if origin == EXPECTED_SUBTREE_DIR.resolve():
+                    is_vendored = True
+                elif _approved_pm_snapshot_source(source_path, origin):
+                    pm_snapshot_origin = origin
+                    is_vendored = True
+        except (metadata.PackageNotFoundError, ValueError, TypeError, OSError):
             is_vendored = False
-    verified = matches(EXPECTED_SUBTREE_DIR) and matches(package_root) and manifest["revision"] == locked_sha
+    verified = (matches(EXPECTED_SUBTREE_DIR) and matches(package_root)
+                and (pm_snapshot_origin is None or matches(pm_snapshot_origin))
+                and manifest["revision"] == locked_sha)
 
     return LayaProvenance(
         provider="laya",

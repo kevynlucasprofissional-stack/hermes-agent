@@ -1,0 +1,94 @@
+--- a/workstation/scripts/multi_agent_coordination.py
++++ b/workstation/scripts/multi_agent_coordination.py
+@@ -98,6 +98,8 @@
+     with registry_guard(folder):
+         dest = folder / f"{lane}.claim"
+         for active in read_claims(folder):
++            if not isinstance(active, dict) or not isinstance(active.get("lane"), str) or not isinstance(active.get("agent"), str) or not isinstance(active.get("paths"), list) or not active["paths"] or not all(isinstance(p, str) for p in active["paths"]):
++                raise RuntimeError("Incomplete or invalid claim: manual recovery required")
+             if active["lane"] == lane:
+                 raise RuntimeError(f"Lane {lane} is already claimed (do not steal)")
+             for path in normalized:
+@@ -144,26 +146,47 @@
+         return {"released": lane, "agent": agent}
+ 
+ 
+-def check_path(repo: Path, path: str, agent: str | None = None) -> dict:
+-    """Check if a path is claimed by another agent. Returns {allowed, owner, lane}."""
++def check_path(
++    repo: Path, path: str, agent: str | None = None, require_claim: bool = False
++) -> dict:
++    """Cooperative ownership admission; claim lifecycle is independent of status.
++
++    Legacy mode (require_claim=False) permits unclaimed paths for staged rollout.
++    Strict mode rejects unclaimed writes. Claims remain held until explicit release.
++    Agent names are NOT authenticated identities; a later phase adds session tokens.
++    """
+     try:
+         normalized = normalize_path(path)
+-    except ValueError:
+-        # Invalid path → fail open (allow) but warn
+-        return {"allowed": True, "owner": None, "lane": None, "warning": f"Invalid path format: {path!r}"}
+-    folder = state_root(repo)
+-    if not folder.exists():
+-        return {"allowed": True, "owner": None, "lane": None}
+-    for active in read_claims(folder):
+-        if active.get("status") != "ACTIVE":
+-            continue
+-        for claimed_path in active.get("paths", []):
+-            if overlaps(normalized, claimed_path):
+-                owner = active.get("agent")
+-                # Allow if the requesting agent owns the claim
+-                if agent and owner == agent:
+-                    return {"allowed": True, "owner": owner, "lane": active.get("lane")}
+-                return {"allowed": False, "owner": owner, "lane": active.get("lane"), "path": claimed_path}
++    except ValueError as exc:
++        return {"allowed": False, "reason": "INVALID_PATH", "error": str(exc)}
++    try:
++        records = read_claims(state_root(repo))
++        for active in records:
++            if not isinstance(active, dict) or not isinstance(active.get("lane"), str) or not isinstance(active.get("agent"), str) or not isinstance(active.get("paths"), list) or not active["paths"] or not all(isinstance(p, str) for p in active["paths"]):
++                raise RuntimeError("Incomplete or invalid claim")
++            for claimed_path in active["paths"]:
++                normalize_path(claimed_path)
++    except (OSError, ValueError, RuntimeError) as exc:
++        return {"allowed": False, "reason": "REGISTRY_UNAVAILABLE", "error": str(exc)}
++    matched = [
++        (active, claimed_path)
++        for active in records
++        for claimed_path in active["paths"]
++        if overlaps(normalized, claimed_path)
++    ]
++    if len(matched) > 1:
++        return {"allowed": False, "reason": "CONFLICTING_CLAIMS"}
++    if matched:
++        active, claimed_path = matched[0]
++        owner = active["agent"]
++        if agent and owner == agent:
++            return {"allowed": True, "owner": owner, "lane": active.get("lane")}
++        return {
++            "allowed": False, "reason": "OWNED_BY_OTHER_AGENT",
++            "owner": owner, "lane": active.get("lane"), "path": claimed_path,
++        }
++    if require_claim:
++        return {"allowed": False, "reason": "CLAIM_REQUIRED", "owner": None, "lane": None}
+     return {"allowed": True, "owner": None, "lane": None}
+ 
+ 
+@@ -188,6 +211,7 @@
+     cp = sub.add_parser("check-path", help="Check if a path is claimed (for hooks)")
+     cp.add_argument("path", help="Repo-relative path to check")
+     cp.add_argument("--agent", default=None, help="Requesting agent ID (allowed if owner)")
++    cp.add_argument("--require-claim", action="store_true", help="Deny unclaimed paths (strict admission)")
+     args = parser.parse_args(argv)
+     try:
+         if args.command == "claim":
+@@ -197,7 +221,7 @@
+         elif args.command == "release":
+             output = release(args.root, args.agent, args.lane)
+         elif args.command == "check-path":
+-            output = check_path(args.root, args.path, args.agent)
++            output = check_path(args.root, args.path, args.agent, args.require_claim)
+         else:
+             output = {"claims": read_claims(state_root(args.root))}
+         print(json.dumps(output, ensure_ascii=False, indent=2))

@@ -16,6 +16,7 @@ const electron = vi.hoisted(() => {
     private url = 'about:blank'
     frameRate = 60
     focused = false
+    readonly ipc = { on: () => undefined }
     readonly navigationHistory = {
       canGoBack: () => false,
       canGoForward: () => false,
@@ -112,7 +113,20 @@ const electron = vi.hoisted(() => {
   }
 
   class FakeBrowserWindow {
+    private readonly handlers = new Map<string, Set<() => void>>()
+    on(event: string, callback: () => void): this {
+      const listeners = this.handlers.get(event) ?? new Set<() => void>()
+      listeners.add(callback)
+      this.handlers.set(event, listeners)
+      return this
+    }
+    off(event: string, callback: () => void): this {
+      this.handlers.get(event)?.delete(callback)
+      return this
+    }
+    isMinimized(): boolean {return false}
     destroyed = false
+    isFocused(): boolean {return true}
     readonly contentView = {
       children: [] as FakeWebContentsView[],
       addChildView: (view: FakeWebContentsView) => {
@@ -155,6 +169,7 @@ const electron = vi.hoisted(() => {
     BrowserWindow: FakeBrowserWindow,
     WebContentsView: FakeWebContentsView,
     app: {
+      getAppPath: () => process.cwd(),
       getPath: () => os.tmpdir(),
       isReady: () => true,
       whenReady: async () => undefined,

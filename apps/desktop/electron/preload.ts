@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     onStatus: callback => {
       const listener = (_event, active) => callback(active === true)
       ipcRenderer.on('hermes:ai-control:state', listener)
+
       return () => ipcRenderer.removeListener('hermes:ai-control:state', listener)
     }
   },
@@ -39,6 +40,13 @@ contextBridge.exposeInMainWorld('hermesDesktop', {
     apply: payload => ipcRenderer.invoke('hermes:creative:canonical:apply', payload)
   },
   workstationBrowser: {
+    pageWatchStatus: (tabId: string) => ipcRenderer.invoke('hermes:workstation-browser:page-watch:status', tabId),
+    pageWatchEnable: (tabId: string, selector: string) => ipcRenderer.invoke('hermes:workstation-browser:page-watch:enable', tabId, selector),
+    pageWatchPause: (tabId: string) => ipcRenderer.invoke('hermes:workstation-browser:page-watch:pause', tabId),
+    listUncertainBatchReviews: () => ipcRenderer.invoke('hermes:workstation-browser:human-review:list-batches'),
+    confirmUncertainBatch: (operationId: string) => ipcRenderer.invoke('hermes:workstation-browser:human-review:confirm-batch', operationId),
+    listVerifiedNavigationReviews: () => ipcRenderer.invoke('hermes:workstation-browser:human-review:list-navigation'),
+    confirmVerifiedNavigation: (operationId: string) => ipcRenderer.invoke('hermes:workstation-browser:human-review:confirm-navigation', operationId),
     status: () => ipcRenderer.invoke('hermes:workstation-browser:status'),
     ensure: () => ipcRenderer.invoke('hermes:workstation-browser:ensure'),
     resources: () => ipcRenderer.invoke('hermes:workstation-browser:resources'),

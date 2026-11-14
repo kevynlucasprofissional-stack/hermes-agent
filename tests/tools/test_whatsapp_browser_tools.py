@@ -320,39 +320,72 @@ class TestWhatsappSendMessageIntegration:
     """Integration tests for whatsapp_send_message with mocked dispatch."""
 
     @patch("tools.browser_workstation._dispatch")
-    def test_send_delivered(self, mock_dispatch):
-        """Full send flow: navigate → header check → click → delivery proof."""
-        mock_dispatch.side_effect = _make_dispatch_side_effect(
-            [CONVERSATION_OPEN_SNAPSHOT, DELIVERY_PROOF_SNAPSHOT]
-        )
+    def test_send_delivered(self, mock_dispatch, monkeypatch, tmp_path):
+        """Verify through the real wrapper, using synthetic scoped native observations."""
+        import sqlite3
+        from workstation.integrations.hermes import whatsapp_browser_executor as executor
+        db = tmp_path / "whatsapp_control.db"
+        sqlite3.connect(db).close()
+        monkeypatch.setattr(executor, "get_default_db_path", lambda: db)
+        chat = {
+            "attributes": {"data-testid": "conversation-info-header",
+                           "data-chat-id": "5564999999999@c.us"},
+            "text": "João Silva",
+        }
+        ready = {"elements": [
+            chat,
+            {"attributes": {"data-testid": "send", "aria-label": "Enviar"}, "ref": "@e51"},
+        ]}
+        sent = {"elements": [
+            chat,
+            {"attributes": {"data-testid": "ptt-in-button"}},
+            {"attributes": {"data-testid": "msg-container",
+                            "data-id": "true_5564999999999@c.us_DEF456",
+                            "data-direction": "outbound",
+                            "data-recipient-id": "5564999999999@c.us",
+                            "data-ack": "sent"},
+             "text": "Olá, tudo bem?"},
+        ]}
+        mock_dispatch.side_effect = _make_dispatch_side_effect([ready, sent])
         from tools.browser_workstation import whatsapp_send_message
         result = whatsapp_send_message(
-            phone_digits="5564999999999",
-            message="Olá, tudo bem?",
-            contact_name_hint="João Silva",
-            verify_delivery=True,
+            phone_digits="5564999999999", message="Olá, tudo bem?",
+            task_id="browser-task-1", session_id="session-A", kanban_card_id="card-1",
+            run_id="run-1", operation_id="call-test",
+            contact_name_hint="João Silva", verify_delivery=True,
             delivery_timeout_seconds=2.0,
         )
         assert result["sent"] is True
-        assert result["state"] == "DELIVERED"
-        assert "DEF456" in result.get("message_data_id", "")
-        assert result.get("ack_label") == "Entregue"
+        assert result["state"] == "CONFIRMED"
+        assert result.get("message_data_id", "").startswith("sha256:")
+        assert result.get("ack_label") == "sent"
         assert result.get("header_verified") == "João Silva"
 
     @patch("tools.browser_workstation._dispatch")
-    def test_send_header_mismatch(self, mock_dispatch):
-        """Header mismatch aborts send before clicking."""
-        mock_dispatch.side_effect = _make_dispatch_side_effect(
-            [HEADER_MISMATCH_SNAPSHOT]
-        )
+    def test_send_header_mismatch(self, mock_dispatch, monkeypatch, tmp_path):
+        """A known phone but wrong displayed recipient prevents click."""
+        import sqlite3
+        from workstation.integrations.hermes import whatsapp_browser_executor as executor
+        db = tmp_path / "whatsapp_control.db"
+        sqlite3.connect(db).close()
+        monkeypatch.setattr(executor, "get_default_db_path", lambda: db)
+        mismatch = {"elements": [
+            {"attributes": {"data-testid": "conversation-info-header",
+                            "data-chat-id": "5564999999999@c.us"},
+             "text": "Maria Souza"},
+            {"attributes": {"data-testid": "send"}, "ref": "@e51"},
+        ]}
+        mock_dispatch.side_effect = _make_dispatch_side_effect([mismatch])
         from tools.browser_workstation import whatsapp_send_message
         result = whatsapp_send_message(
-            phone_digits="5564999999999",
-            message="Teste",
+            phone_digits="5564999999999", message="Teste",
             contact_name_hint="João Silva",
+            task_id="browser-task-1", session_id="session-A", kanban_card_id="card-1",
+            run_id="run-1", operation_id="call-test",
         )
         assert result["sent"] is False
         assert result["error_code"] == "HEADER_MISMATCH"
+        assert not any(call.args[0] == "browser_click" for call in mock_dispatch.call_args_list)
 
     @patch("tools.browser_workstation._dispatch")
     def test_send_masked_phone_rejected(self, mock_dispatch):
@@ -361,6 +394,8 @@ class TestWhatsappSendMessageIntegration:
         result = whatsapp_send_message(
             phone_digits="+556****7992",
             message="Teste",
+            task_id="browser-task-1", session_id="session-A", kanban_card_id="card-1",
+            run_id="run-1", operation_id="call-test",
         )
         assert result["sent"] is False
         assert result["error_code"] == "MASKED_PHONE"
@@ -373,6 +408,8 @@ class TestWhatsappSendMessageIntegration:
         result = whatsapp_send_message(
             phone_digits="5564999999999",
             message="Olá, {NOME}!",
+            task_id="browser-task-1", session_id="session-A", kanban_card_id="card-1",
+            run_id="run-1", operation_id="call-test",
         )
         assert result["sent"] is False
         assert result["error_code"] == "TEMPLATE_PLACEHOLDER_LEAK"

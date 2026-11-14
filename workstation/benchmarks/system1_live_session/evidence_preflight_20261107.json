@@ -1,0 +1,747 @@
+{
+  "schema": "hermes.system1.live_session.evidence.v1",
+  "collected_at": "2026-11-07T20:59:21Z",
+  "session_id": "20261107_175035_62899b",
+  "task_id": "t_1863c0f1",
+  "fastpath_flag": null,
+  "hermes_python_env": "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+  "backend_interpreter_probe": {
+    "interpreter": "C:\\Github\\hermes-agent\\.venv\\Scripts\\python.exe",
+    "python": "3.14.0",
+    "laya_importable": false,
+    "laya_version": null
+  },
+  "provider_registration": {
+    "registered": false,
+    "provider": null
+  },
+  "kanban_task": {
+    "id": "t_1863c0f1",
+    "title": "Execute a homologação real do System 1 Browser MVP no repositório `C:\\Github\\her",
+    "status": "running",
+    "session_id": "20261107_175035_62899b",
+    "current_run_id": 77,
+    "created_by": "workstation",
+    "completion_contract": "local-only",
+    "created_at": 1794084639
+  },
+  "telemetry": {
+    "window_since": null,
+    "event_groups": [
+      {
+        "event_type": "TOOL_COMPLETED",
+        "n": 70,
+        "provider_calls": 0,
+        "tool_calls": 70,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 217678.94673347473
+      },
+      {
+        "event_type": "PROVIDER_CALLED",
+        "n": 51,
+        "provider_calls": 51,
+        "tool_calls": 0,
+        "input_tokens": 3258851,
+        "output_tokens": 31283,
+        "duration_ms": 246711.98160000495
+      },
+      {
+        "event_type": "PROVIDER_USAGE_RECORDED",
+        "n": 51,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 198883,
+        "output_tokens": 31283,
+        "duration_ms": 0
+      },
+      {
+        "event_type": "ROUTING_DECIDED",
+        "n": 51,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 428.0685999401612
+      },
+      {
+        "event_type": "BROWSER_OPERATION_OBSERVED",
+        "n": 18,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 1135.013799997978
+      },
+      {
+        "event_type": "TURN_STARTED",
+        "n": 1,
+        "provider_calls": 0,
+        "tool_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "duration_ms": 0
+      }
+    ],
+    "system1_completed": [],
+    "provider_calls": [
+      {
+        "occurred_at": "2026-11-07T20:50:44.644686+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:1",
+        "provider_calls": 1,
+        "duration_ms": 2396.9479000079446,
+        "input_tokens": 35584,
+        "output_tokens": 145,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:50:54.268189+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:2",
+        "provider_calls": 1,
+        "duration_ms": 2579.987999997684,
+        "input_tokens": 39105,
+        "output_tokens": 265,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:50:59.781638+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:3",
+        "provider_calls": 1,
+        "duration_ms": 2528.627299994696,
+        "input_tokens": 40205,
+        "output_tokens": 202,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:51:05.212187+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:4",
+        "provider_calls": 1,
+        "duration_ms": 3256.07730000047,
+        "input_tokens": 45296,
+        "output_tokens": 353,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:11.413013+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:5",
+        "provider_calls": 1,
+        "duration_ms": 2651.954899993143,
+        "input_tokens": 46245,
+        "output_tokens": 237,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:17.021196+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:6",
+        "provider_calls": 1,
+        "duration_ms": 2656.3647000002675,
+        "input_tokens": 47427,
+        "output_tokens": 137,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:22.528143+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:7",
+        "provider_calls": 1,
+        "duration_ms": 3754.078700003447,
+        "input_tokens": 44288,
+        "output_tokens": 354,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:25.971691+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:8",
+        "provider_calls": 1,
+        "duration_ms": 2447.422799988999,
+        "input_tokens": 44850,
+        "output_tokens": 210,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:36.182085+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:9",
+        "provider_calls": 1,
+        "duration_ms": 7985.365300002741,
+        "input_tokens": 48341,
+        "output_tokens": 1077,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:41.899634+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:10",
+        "provider_calls": 1,
+        "duration_ms": 3514.6277000021655,
+        "input_tokens": 46033,
+        "output_tokens": 434,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:52:48.019134+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:11",
+        "provider_calls": 1,
+        "duration_ms": 4937.198700004956,
+        "input_tokens": 47058,
+        "output_tokens": 579,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:53:00.290305+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:12",
+        "provider_calls": 1,
+        "duration_ms": 11214.279900013935,
+        "input_tokens": 51368,
+        "output_tokens": 1659,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:53:23.508074+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:13",
+        "provider_calls": 1,
+        "duration_ms": 3358.4943000023486,
+        "input_tokens": 54667,
+        "output_tokens": 436,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:53:36.407860+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:14",
+        "provider_calls": 1,
+        "duration_ms": 5175.416700003552,
+        "input_tokens": 56749,
+        "output_tokens": 713,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:53:44.137499+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:15",
+        "provider_calls": 1,
+        "duration_ms": 3297.294200005126,
+        "input_tokens": 52679,
+        "output_tokens": 383,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:53:58.283106+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:16",
+        "provider_calls": 1,
+        "duration_ms": 10669.43639999954,
+        "input_tokens": 54030,
+        "output_tokens": 1472,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:03.722348+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:17",
+        "provider_calls": 1,
+        "duration_ms": 3888.8888000074076,
+        "input_tokens": 56368,
+        "output_tokens": 515,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:15.746423+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:18",
+        "provider_calls": 1,
+        "duration_ms": 9847.74159999506,
+        "input_tokens": 53379,
+        "output_tokens": 1349,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:26.572901+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:19",
+        "provider_calls": 1,
+        "duration_ms": 9671.613900005468,
+        "input_tokens": 56147,
+        "output_tokens": 1357,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:30.353489+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:20",
+        "provider_calls": 1,
+        "duration_ms": 2158.5176999942632,
+        "input_tokens": 57898,
+        "output_tokens": 150,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:37.002016+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:21",
+        "provider_calls": 1,
+        "duration_ms": 5972.821799994563,
+        "input_tokens": 58900,
+        "output_tokens": 682,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:41.858655+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:22",
+        "provider_calls": 1,
+        "duration_ms": 4290.6924999988405,
+        "input_tokens": 60494,
+        "output_tokens": 587,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:49.719804+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:23",
+        "provider_calls": 1,
+        "duration_ms": 4327.748299998348,
+        "input_tokens": 62711,
+        "output_tokens": 511,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:57.457858+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:24",
+        "provider_calls": 1,
+        "duration_ms": 6445.641400001477,
+        "input_tokens": 66793,
+        "output_tokens": 712,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:10.900202+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:25",
+        "provider_calls": 1,
+        "duration_ms": 12907.169699989026,
+        "input_tokens": 69492,
+        "output_tokens": 1766,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:16.268200+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:26",
+        "provider_calls": 1,
+        "duration_ms": 2676.1342999961926,
+        "input_tokens": 71937,
+        "output_tokens": 182,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:19.970941+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:27",
+        "provider_calls": 1,
+        "duration_ms": 2622.7768000098877,
+        "input_tokens": 75749,
+        "output_tokens": 203,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:23.728191+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:28",
+        "provider_calls": 1,
+        "duration_ms": 2552.038599998923,
+        "input_tokens": 72051,
+        "output_tokens": 189,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:28.762665+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:29",
+        "provider_calls": 1,
+        "duration_ms": 2869.9196000088705,
+        "input_tokens": 72530,
+        "output_tokens": 294,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:38.413049+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:30",
+        "provider_calls": 1,
+        "duration_ms": 6512.605199997779,
+        "input_tokens": 73163,
+        "output_tokens": 759,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:41.170410+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:31",
+        "provider_calls": 1,
+        "duration_ms": 2082.3909000027925,
+        "input_tokens": 69375,
+        "output_tokens": 64,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:46.994249+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:32",
+        "provider_calls": 1,
+        "duration_ms": 5279.400900006294,
+        "input_tokens": 71079,
+        "output_tokens": 604,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:55:54.489850+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:33",
+        "provider_calls": 1,
+        "duration_ms": 6884.478599997237,
+        "input_tokens": 72441,
+        "output_tokens": 804,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:11.166373+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:34",
+        "provider_calls": 1,
+        "duration_ms": 3692.082699999446,
+        "input_tokens": 66073,
+        "output_tokens": 246,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:48.719546+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:35",
+        "provider_calls": 1,
+        "duration_ms": 3365.7400000083726,
+        "input_tokens": 68618,
+        "output_tokens": 207,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:51.850938+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:36",
+        "provider_calls": 1,
+        "duration_ms": 2807.605899986811,
+        "input_tokens": 69391,
+        "output_tokens": 112,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:53.787397+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:37",
+        "provider_calls": 1,
+        "duration_ms": 1632.5093999912497,
+        "input_tokens": 70294,
+        "output_tokens": 25,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:55.666294+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:38",
+        "provider_calls": 1,
+        "duration_ms": 1693.4723000013037,
+        "input_tokens": 70886,
+        "output_tokens": 53,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:57.995343+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:39",
+        "provider_calls": 1,
+        "duration_ms": 2068.541600005119,
+        "input_tokens": 71718,
+        "output_tokens": 25,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:01.014118+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:40",
+        "provider_calls": 1,
+        "duration_ms": 2839.7657000023173,
+        "input_tokens": 72301,
+        "output_tokens": 197,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:04.241437+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:41",
+        "provider_calls": 1,
+        "duration_ms": 2735.9798999968916,
+        "input_tokens": 73356,
+        "output_tokens": 226,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:20.330293+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:42",
+        "provider_calls": 1,
+        "duration_ms": 14441.508000003523,
+        "input_tokens": 73778,
+        "output_tokens": 4067,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:30.398105+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:43",
+        "provider_calls": 1,
+        "duration_ms": 7122.073899998213,
+        "input_tokens": 77967,
+        "output_tokens": 1367,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:35.579422+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:44",
+        "provider_calls": 1,
+        "duration_ms": 3061.512499989476,
+        "input_tokens": 79458,
+        "output_tokens": 249,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:58:13.463065+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:45",
+        "provider_calls": 1,
+        "duration_ms": 6347.934300007182,
+        "input_tokens": 80110,
+        "output_tokens": 1101,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:58:19.944916+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:46",
+        "provider_calls": 1,
+        "duration_ms": 3158.4199000062654,
+        "input_tokens": 82284,
+        "output_tokens": 446,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:58:47.702714+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:47",
+        "provider_calls": 1,
+        "duration_ms": 3425.917300002766,
+        "input_tokens": 83098,
+        "output_tokens": 281,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:58:54.104971+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:48",
+        "provider_calls": 1,
+        "duration_ms": 5009.250699993572,
+        "input_tokens": 83754,
+        "output_tokens": 540,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:59:09.930854+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:49",
+        "provider_calls": 1,
+        "duration_ms": 14608.927399996901,
+        "input_tokens": 85205,
+        "output_tokens": 2471,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:59:15.237507+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:50",
+        "provider_calls": 1,
+        "duration_ms": 3460.2841999876546,
+        "input_tokens": 87800,
+        "output_tokens": 206,
+        "status": "success"
+      },
+      {
+        "occurred_at": "2026-11-07T20:59:20.282103+00:00",
+        "turn_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097",
+        "call_id": "20261107_175035_62899b:20261107_175035_62899b:9bfa5097:api:51",
+        "provider_calls": 1,
+        "duration_ms": 1826.300500004436,
+        "input_tokens": 88328,
+        "output_tokens": 80,
+        "status": "success"
+      }
+    ],
+    "browser_operations": [
+      {
+        "occurred_at": "2026-11-07T20:54:30.465631+00:00",
+        "operation_id": "op_browser_navigate_b6402cd593f8",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:30.860034+00:00",
+        "operation_id": "op_browser_navigate_b6402cd593f8",
+        "status": "ACKNOWLEDGED",
+        "duration_ms": 396.8181999953231,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":4,\"main_cpu_us\":16000,\"main_rss_bytes\":169832448,\"readiness\":\"stable\",\"renderer_memory_bytes\":111894528,\"renderer_pid\":42268,\"snapshot_chars\":399,\"snapshot_duration_ms\":10.604,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:37.044605+00:00",
+        "operation_id": "op_browser_snapshot_ee092592200c",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:54:37.076765+00:00",
+        "operation_id": "op_browser_snapshot_ee092592200c",
+        "status": "OBSERVED",
+        "duration_ms": 32.18179999385029,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":4,\"main_cpu_us\":0,\"main_rss_bytes\":168300544,\"readiness\":\"stable\",\"renderer_memory_bytes\":111878144,\"renderer_pid\":42268,\"snapshot_chars\":399,\"snapshot_duration_ms\":1.277,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:11.354718+00:00",
+        "operation_id": "op_browser_navigate_c6d7f64b3aa2",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:11.604843+00:00",
+        "operation_id": "op_browser_navigate_c6d7f64b3aa2",
+        "status": "ACKNOWLEDGED",
+        "duration_ms": 250.1258999982383,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":3,\"main_cpu_us\":0,\"main_rss_bytes\":159420416,\"readiness\":\"stable\",\"renderer_memory_bytes\":111185920,\"renderer_pid\":42268,\"snapshot_chars\":411,\"snapshot_duration_ms\":2.648,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:48.775812+00:00",
+        "operation_id": "op_browser_snapshot_da293a60eb62",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:48.812275+00:00",
+        "operation_id": "op_browser_snapshot_da293a60eb62",
+        "status": "OBSERVED",
+        "duration_ms": 36.46160000062082,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":3,\"main_cpu_us\":0,\"main_rss_bytes\":165367808,\"readiness\":\"stable\",\"renderer_memory_bytes\":111714304,\"renderer_pid\":42268,\"snapshot_chars\":411,\"snapshot_duration_ms\":1.451,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:51.919896+00:00",
+        "operation_id": "op_browser_navigate_ee3f6742e631",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:52.028599+00:00",
+        "operation_id": "op_browser_navigate_ee3f6742e631",
+        "status": "ACKNOWLEDGED",
+        "duration_ms": 108.72990000643767,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":3,\"main_cpu_us\":0,\"main_rss_bytes\":162783232,\"readiness\":\"stable\",\"renderer_memory_bytes\":111923200,\"renderer_pid\":42268,\"snapshot_chars\":398,\"snapshot_duration_ms\":3.177,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:53.830651+00:00",
+        "operation_id": "op_browser_snapshot_f549999bc62b",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:53.863240+00:00",
+        "operation_id": "op_browser_snapshot_f549999bc62b",
+        "status": "OBSERVED",
+        "duration_ms": 32.57589999702759,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":3,\"main_cpu_us\":0,\"main_rss_bytes\":162881536,\"readiness\":\"stable\",\"renderer_memory_bytes\":111992832,\"renderer_pid\":42268,\"snapshot_chars\":398,\"snapshot_duration_ms\":1.46,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:55.723956+00:00",
+        "operation_id": "op_browser_navigate_0a80775b3af7",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:55.809195+00:00",
+        "operation_id": "op_browser_navigate_0a80775b3af7",
+        "status": "ACKNOWLEDGED",
+        "duration_ms": 85.25319999898784,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":3,\"main_cpu_us\":0,\"main_rss_bytes\":166060032,\"readiness\":\"stable\",\"renderer_memory_bytes\":112984064,\"renderer_pid\":42268,\"snapshot_chars\":373,\"snapshot_duration_ms\":3.655,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:58.039238+00:00",
+        "operation_id": "op_browser_snapshot_2ad77bf38427",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:56:58.069747+00:00",
+        "operation_id": "op_browser_snapshot_2ad77bf38427",
+        "status": "OBSERVED",
+        "duration_ms": 30.5071000038879,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_snapshot\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":3,\"main_cpu_us\":0,\"main_rss_bytes\":166297600,\"readiness\":\"stable\",\"renderer_memory_bytes\":112979968,\"renderer_pid\":42268,\"snapshot_chars\":373,\"snapshot_duration_ms\":1.691,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:01.082394+00:00",
+        "operation_id": "op_browser_navigate_4b70f6ae7dab",
+        "status": "REQUEST_ATTEMPTED",
+        "duration_ms": null,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\"}"
+      },
+      {
+        "occurred_at": "2026-11-07T20:57:01.244764+00:00",
+        "operation_id": "op_browser_navigate_4b70f6ae7dab",
+        "status": "ACKNOWLEDGED",
+        "duration_ms": 162.3602000036044,
+        "route": "native_browser",
+        "payload_json": "{\"action\":\"browser_navigate\",\"cdp_calls\":0,\"delta_chars\":0,\"element_count\":4,\"main_cpu_us\":0,\"main_rss_bytes\":164532224,\"readiness\":\"stable\",\"renderer_memory_bytes\":113868800,\"renderer_pid\":42268,\"snapshot_chars\":399,\"snapshot_duration_ms\":2.413,\"snapshot_source\":\"dom\",\"truncated\":false,\"wall_detected\":false}"
+      }
+    ]
+  },
+  "note": null
+}

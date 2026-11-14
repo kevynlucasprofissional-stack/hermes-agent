@@ -46,6 +46,19 @@ _canonical_caller_run: ContextVar[Any] = ContextVar("workstation_caller_run", de
 _safe_item_boundary: ContextVar[Any] = ContextVar("workstation_safe_item_boundary", default=None)
 
 
+def current_work_execution_identity() -> dict[str, str] | None:
+    """Return the exact Work binding held by this execution scope, never infer one."""
+    context = _dispatch_context.get()
+    run_id = _canonical_caller_run.get()
+    if context is None or not (context[1] and context[8] and run_id):
+        return None
+    return {
+        "session_id": str(context[1]),
+        "kanban_card_id": str(context[8]),
+        "run_id": str(run_id),
+    }
+
+
 def batch_intent(prompt: Any) -> bool:
     """Repeatability hint for optimization; never grants or denies mutation authority."""
     if not isinstance(prompt, str):
@@ -124,7 +137,7 @@ def suggest_compilation_checkpoint(agent: Any, calls: list, *, task_id: str, run
     store = artifacts or ArtifactStore()
     owner = str(task_id or run_id or "unknown")
     for idx in suggested_indices:
-        name, args = unwrap_call(calls[idx])
+        name, _args = unwrap_call(calls[idx])
         key = f"{name}:{idx}"
         summary = {
             "call_index": idx,

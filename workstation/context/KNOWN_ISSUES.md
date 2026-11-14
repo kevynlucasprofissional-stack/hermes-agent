@@ -1,5 +1,43 @@
 # Workstation Known Issues
 
+## WA-OPC-011 — 2026-11-12: direction and trusted target binding missing (HOLD)
+
+Actual native UI confirmed a full phone number in each of two surfaces (contact-info drawer and composer), and they agreed. Read-only probe returns `ui_recipient_phone_consistent=true`, 9 valid message IDs/status associations, but no trusted target binding, outbound direction or new causal receipt. A message-status `read` label **cannot** replace these checks. The current self-chat alone cannot validate a direction discriminator. Next reproduce with explicitly authorized, preexisting mixed-direction samples; do not send, use WhatsApp internal private stores, relax the verifier, or promote a batch. See [WA-OPC-011](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 — 2026-11-12: direção/destinatário não comprovados (HOLD)
+
+A sonda read-only foi corrigida e homologada para **estrutura de mensagem e presença de status** no DOM real: 9 IDs ancestrais e 9 status descendentes na conversa consigo mesmo. A direção e o chat ID completo **não** foram encontrados em atributos acessíveis observados, mesmo com pesquisas estruturais adicionais. Estado `read` pode representar mensagem histórica e **não é recibo de novo envio**. Guardar `can_send=false` e `matching_outbound_shapes=0` até existir fonte independente autorizada para identidade, direção e delta pré/pós. Não relaxar `whatsapp_browser_executor.py`, usar store privada, CDP externo ou enviadores legados. Evidência/testes no [registro WA-OPC-011](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+
+## WA-OPC-011 (11/11) — canário não selecionado (HOLD)
+
+A sonda de metadata nativa está em `workstation/integrations/hermes/whatsapp_native_schema_probe.py`. A validação real encontrou o Chromium integrado e origem correta, mas retornou `CANARY_CHAT_NOT_SELECTED` quatro vezes. Sem conversa aberta, não há observação de `data-chat-id`, bolha outbound e ACK. A sonda NÃO prova entrega, NÃO libera envio, e preserva a autoridade do BrowserTask. Próximo passo é selecionar previamente uma conversa-canário autorizada em contexto controlado, inspecionar somente leitura e não interpretar dados históricos como recibos novos.
+
+
+## WA-OPC-011-NATIVE-METADATA (2026-11-11): ausência de projeção causal no snapshot (HOLD)
+
+Corrigida a retomada que avançava a fila após `UNCERTAIN`; 166 testes focados PASS. Na navegação real `electron-chromium` / WhatsApp inicial, o `browser_snapshot` devolveu 42 elementos mas nenhum `elements[].attributes`; o payload de inventário inclui apenas controles interativos, não bolhas de mensagens. O recurso `browser_extract_items(mode=inspect)` existe no owner e pôde ler `data-testid`, mas os cinco atributos necessários à prova de conversa/mensagem não estavam presentes na tela inicial sem chat aberto. Isso não demonstra ausência em chat aberto. Próxima prova: conversa-canário autorizada sem envio e sem produzir leitura indevida; testar atributos reais e extração causal antes de codificar envio multietapa. Sem aprovação humana de lote, o envio continua HOLD. [Detalhes](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+## WA-OPC-011 (2026-11-11): batch nativo ainda não comprova fluxo multimídia completo (OPEN/HOLD)
+
+A execução anterior consumiu 796 chamadas (444 browser_console) e registrou 160 etapas como sent sem recibo estruturado; não reescrever a história. O batch Python existente era de mensagem única, tinha referência `persist` indefinida no wrapper, espelhava a primeira etapa por padrão, não persistia cooldown de 60s e podia concluir sem tratar item sending. Essas falhas receberam correções no checkout e testes novos. **Risco aberto:** snapshot nativo do WhatsApp ainda não homologou atributos de identidade/mensagem/ACK; `whatsapp_batch_approve` não fornece emissor de aprovação e não há executor multietapa com foto. Os mocks da suite batch antiga não produzem prova admissível (7 FAIL na rodada ampliada). Interromper em incerteza; não usar scripts legados `mark_sent.py`, CDP externo ou clipboard. Gate: fixture causal compatível + prova read-only nativa, depois canário autorizado. [Detalhes](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md).
+
+
+## WA-M3-01 (2026-10-25): native snapshot proof not qualified (OPEN/HOLD)
+Synthetic M3 RED 8 / GREEN 9/9, but the native Browser snapshot currently has no demonstrated projection for explicit data-chat-id, data-recipient-id, data-direction and data-ack attributes. The strict executor will fail closed without those observations. Next: minimal authorized read-only native metadata projection, verify no-send real browser readback and negative controls. Do not relax proof to homonymous display name or generic msg-meta. M4-M6, CI and full native regression qualification remain pending.
+
+
+### WA-KI-20261024 — JSON integral, retorno read_file com telefone mascarado [M1/M2 MITIGADAS LOCALMENTE; M3–M6 OPEN; NOT RELEASE]
+- **Fingerprint:** números completos na fonte, mas `+...****...` apresentado ao agente; `agent/redact.py` aplica máscara em `tools/file_tools.py` — não remover proteção upstream global.
+- **Outros riscos constatados em main 24/10:** fallback de DB ACIRV; `whatsapp_send_logs` com PII, bolha antiga confundida com confirmação, click ambíguo classificado FAILED, `site-ops` com envio CDP não reconciliado. M2 reproduziu run normalizado na admissão versus run vazio no recibo quando `run_id` é omitido; os recibos em `executeControlRequest` agora usam o mesmo `effectiveRunId`. Isso não prova ACK remoto nem entrega.
+- **Mitigação M1 implementada no checkout:** a ferramenta usa referência configurada e mantém telefone/corpo fora de resposta/log/persistência; fonte deve ser explicitamente cadastrada em `whatsapp.sources.<alias>` com `db_path` absoluto e `allowed_phone_sources`. Consultas usam SQLite read-only. Isto não substitui aprovação humana nem autorização de envio; sem fonte/proveniência/identidade válidas, falha fechado. A coluna do telefone precisa estar integral e em formato estrito; valores mascarados ou formatos não aceitos são recusados.
+- **Risco residual:** M1/M2 têm testes focados com fonte SQLite temporária e Browser fake; a suite M2 atual passou 8/8, a rodada combinada anterior passou 81 testes Python quando M2 tinha sete casos, e as suites nativas admission/session-state passaram 42 testes. `UNCERTAIN` e admissions históricas sem recibo compatível seguem bloqueadas até reconciliação explícita. M3–M6 permanecem pendentes; sem prova de entrega, CI de HEAD, envio real ou qualificação de release. [Contrato](WHATSAPP_RELIABILITY_2026-10-24.md), [prompts](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md).
+
+
 ### KI-046 — Agente inicia tarefas de design sem parâmetros determinantes [FIXED_UNIT_TESTED]
 - **Detectado:** 2026-10-18, Windows 11. **Estado:** FIXED_UNIT_TESTED (P05 / D-050).
 - **Fingerprint observável:** Usuário solicita "Crie um convite de aniversário" e o agente abre o PhotoCraft ou cria documento com dimensões arbitrárias sem perguntar formato/destino, inviabilizando o trabalho ou exigindo retrabalho.
@@ -1011,3 +1049,23 @@ Real Trello/HyperFrames/repetition baseline BLOCKED: installed native controller
 A new real local adoption regression exposed a remaining lifetime gap: revoking the qualification after the first reused item did not stop the three later items in the same checkpoint. Valid RED: four items executed instead of one (29.1s runner; initial fixture-error attempt is not counted as security evidence). Runtime now re-queries qualified offers at every item boundary, records denial and halts the checkpoint. The independently verified first item remains completed; no blind rollback/retry.
 GREEN: complete online safety file, 38 passed, zero failed, 149.0s. Config/expiry/scope changes apply at item boundaries; this is not an atomic distributed revocation guarantee for an effect already in progress. No Trello write or production trust provisioning.
 Native regression at bb1888976e: existing headless-load contract passed with four real Electron/Chromium BrowserTasks (8.5s test; 1.6m including bootstrap under concurrent tests). Inference and pages are fixtures: native lifecycle/IPC evidence only, not E1 completion or measured product latency/cost. Broader Workstation regression still running; CI remains skipped by maintainer.
+
+
+<!-- HERMES-WORK-PLAN-20261026:PLAN_ONLY -->
+
+## HW-20261026-PLAN — Gaps levantados por inspeção de leitura (NOT RELEASE)
+
+- **HW-UPLOAD-01 / REVIEW REQUIRED:** `browser_file_upload` executa `DOM.setFileInputFiles` enquanto não apareceu no Set de ações `mutating` observado em `executeControlRequest`. Necessário confirmar todos os guards e ajustar admission/receipt com testes Electron; também validar origem/arquivo real e não expor caminho absoluto.
+- **HW-TRELLO-ACTIVITY-01 / NOT IMPLEMENTED:** cliente REST `TrelloClient` possui leitura de cartões/listas, mas journal paginado de `/actions` e checkpoint transacional não foram identificados; não alegar histórico completo.
+- **HW-PAGE-MONITOR-01 / NOT IMPLEMENTED:** `MutationObserver` atual atende cache/learning; não equivale a monitor persistente por aba com regras/teardown/restart.
+- **HW-EVENT-OUTBOX-01 / NOT IMPLEMENTED:** `SystemEventPipeline` mantém janela recente in-memory; despacho Cron por eventos existe, mas outbox com identidade persistente de eventos de negócio não foi verificada.
+- **HW-WA-SEMANTIC-01 / NOT IMPLEMENTED:** tabelas factuais de mensagens não equivalem a memória semântica e extração de demanda por contato.
+- **PRÉ-EXISTENTES INALTERADOS:** `WA-M3-01` e HLM-M3 replay continuam HOLD. Helpers isolados testados em sandbox não alteram status de release.
+
+<!-- HERMES-WORK-P01-20261027-MAINTAINER-WAIVER -->
+## HW-UPLOAD-01 — 2026-10-27, LOCAL FIX / QUALIFICATION HOLD
+Mitigações locais: browser_file_upload incluído nos gates de mutação e admission; escopo por TaskRun no config.yaml, validação realpath/arquivo regular/tamanho/raiz, DOM único e input file, readback CDP e receipt. Falta qualificação E2E do próprio runtime em Electron real e revisão de autoridade contra eventual edição indevida da configuração. Suite grande registra 28 falhas de mock app.getAppPath, a investigar sem atribuir causalidade. Falha original em symlink Windows no setup EPERM, teste junction alternativo passou. WA-M3-01 e HLM-M3 continuam HOLD, sem release.
+
+
+## HW-UPLOAD-01 — 2026-10-27, LOCAL GREEN / RELEASE HOLD
+Upload CDP com grants por tarefa, sessão, run, roots e origem web; 68/68 testes Electron PASS, typecheck Desktop PASS, CDP real em página offline PASS. Não há qualificação E2E do Hermes Desktop nem CI de release. Riscos residuais: configuração local ainda editável por outros processos autorizados, race de filesystem e eventual efeito de rede do site. WA-M3-01 e HLM-M3 continuam HOLD.

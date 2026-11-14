@@ -110,6 +110,9 @@ def workstation_turn_admission(
     agent._work_compilation_candidates = {}
     agent._work_procedure_trace = []
     agent._work_procedure_trace_truncated = False
+    # Per-turn, before-dispatch ledger. An unfinished/unknown tool cannot be
+    # mistaken for a read-only result when the turn is accepted.
+    agent._work_tool_observations = []
 
     # Prefab Fast Path: extract exact-match navigation/read intents from human-origin turns
     # Only for authenticated human turns with CREATE_WORK or UPDATE_WORK authority

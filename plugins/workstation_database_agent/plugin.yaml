@@ -1,0 +1,16 @@
+name: workstation_database_agent
+version: 0.1.0
+description: "Hermes Workstation Database: consult imported ACIRV/Trello datasets and persist structured agent-generated operational records, scoped by profile."
+author: "Hermes Workstation local"
+kind: standalone
+provides_tools:
+  - workstation_db_catalog
+  - workstation_db_query
+  - workstation_db_save
+  - workstation_db_update
+  - workstation_db_trello_plan
+  - workstation_db_trello_pull
+  - workstation_db_trello_push
+  - workstation_db_trello_route
+  - workstation_db_trello_api_plan
+  - workstation_db_trello_api_push

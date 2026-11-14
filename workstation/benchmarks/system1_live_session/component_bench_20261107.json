@@ -1,0 +1,237 @@
+{
+  "schema": "hermes.system1.live_session.component_bench.v1",
+  "kind": "component-level (NOT an end-to-end human-origin turn)",
+  "ran_at": "2026-11-07T20:58:41Z",
+  "python": "3.14.7",
+  "executable": "C:\\Users\\Kevyn Lucas\\AppData\\Local\\HermesWorkstation\\qualification\\system1-laya-project\\gen-79019aa16c2f405ba254edbba3c575d7\\venv\\Scripts\\python.exe",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "fastpath_env": null,
+  "provider": "loaded",
+  "laya_version": "0.3.23",
+  "laya_source_sha": "4aa6761be8173de4ce6d92c31b3e40b6eaf59a7c",
+  "model": "multilingual",
+  "device": "cpu",
+  "calibration_id": "calib-v1-20261002",
+  "results": {
+    "unique": [
+      {
+        "pass": 1,
+        "url": "http://127.0.0.1:18791/unique",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "verified",
+        "ref": "@e1",
+        "reason": "exact_match",
+        "provider": "deterministic",
+        "total_ms": 0.12,
+        "readback_calls": 1,
+        "system1_calls": 0,
+        "system1_call_ms": [],
+        "system1_detail": [],
+        "navigate_operation_id": "op_browser_navigate_4b70f6ae7dab",
+        "navigate_revision": 5
+      },
+      {
+        "pass": 2,
+        "url": "http://127.0.0.1:18791/unique",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "verified",
+        "ref": "@e1",
+        "reason": "exact_match",
+        "provider": "deterministic",
+        "total_ms": 0.07,
+        "readback_calls": 1,
+        "system1_calls": 0,
+        "system1_call_ms": [],
+        "system1_detail": [],
+        "navigate_operation_id": "op_browser_navigate_4b70f6ae7dab",
+        "navigate_revision": 5
+      }
+    ],
+    "partial": [
+      {
+        "pass": 1,
+        "url": "http://127.0.0.1:18791/partial",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "verified",
+        "ref": "@e1",
+        "reason": "system1_proposal",
+        "provider": "laya",
+        "total_ms": 19386.87,
+        "readback_calls": 1,
+        "system1_calls": 1,
+        "system1_call_ms": [
+          19386.56
+        ],
+        "system1_detail": [
+          {
+            "ms": 19386.56,
+            "provider": "laya",
+            "answers": {
+              "preferred_candidate": "@e1"
+            },
+            "confidence": {
+              "preferred_candidate": 0.8804
+            },
+            "abstentions": [],
+            "fallback_recommended": false
+          }
+        ],
+        "navigate_operation_id": "op_browser_navigate_c6d7f64b3aa2",
+        "navigate_revision": 2
+      },
+      {
+        "pass": 2,
+        "url": "http://127.0.0.1:18791/partial",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "verified",
+        "ref": "@e1",
+        "reason": "system1_proposal",
+        "provider": "laya",
+        "total_ms": 217.77,
+        "readback_calls": 1,
+        "system1_calls": 1,
+        "system1_call_ms": [
+          217.54
+        ],
+        "system1_detail": [
+          {
+            "ms": 217.54,
+            "provider": "laya",
+            "answers": {
+              "preferred_candidate": "@e1"
+            },
+            "confidence": {
+              "preferred_candidate": 0.8804
+            },
+            "abstentions": [],
+            "fallback_recommended": false
+          }
+        ],
+        "navigate_operation_id": "op_browser_navigate_c6d7f64b3aa2",
+        "navigate_revision": 2
+      }
+    ],
+    "duplicate": [
+      {
+        "pass": 1,
+        "url": "http://127.0.0.1:18791/duplicate",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "fallback",
+        "ref": "",
+        "reason": "ambiguous_label",
+        "provider": "",
+        "total_ms": 0.03,
+        "readback_calls": 0,
+        "system1_calls": 0,
+        "system1_call_ms": [],
+        "system1_detail": [],
+        "navigate_operation_id": "op_browser_navigate_ee3f6742e631",
+        "navigate_revision": 3
+      },
+      {
+        "pass": 2,
+        "url": "http://127.0.0.1:18791/duplicate",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "fallback",
+        "ref": "",
+        "reason": "ambiguous_label",
+        "provider": "",
+        "total_ms": 0.03,
+        "readback_calls": 0,
+        "system1_calls": 0,
+        "system1_call_ms": [],
+        "system1_detail": [],
+        "navigate_operation_id": "op_browser_navigate_ee3f6742e631",
+        "navigate_revision": 3
+      }
+    ],
+    "missing": [
+      {
+        "pass": 1,
+        "url": "http://127.0.0.1:18791/missing",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "fallback",
+        "ref": "",
+        "reason": "model_target_unsubstantiated",
+        "provider": "",
+        "total_ms": 205.75,
+        "readback_calls": 0,
+        "system1_calls": 1,
+        "system1_call_ms": [
+          205.52
+        ],
+        "system1_detail": [
+          {
+            "ms": 205.52,
+            "provider": "laya",
+            "answers": {
+              "preferred_candidate": "@e1"
+            },
+            "confidence": {
+              "preferred_candidate": 0.6251
+            },
+            "abstentions": [],
+            "fallback_recommended": false
+          }
+        ],
+        "navigate_operation_id": "op_browser_navigate_0a80775b3af7",
+        "navigate_revision": 4
+      },
+      {
+        "pass": 2,
+        "url": "http://127.0.0.1:18791/missing",
+        "intent": [
+          "button",
+          "Relatórios"
+        ],
+        "status": "fallback",
+        "ref": "",
+        "reason": "model_target_unsubstantiated",
+        "provider": "",
+        "total_ms": 210.31,
+        "readback_calls": 0,
+        "system1_calls": 1,
+        "system1_call_ms": [
+          210.11
+        ],
+        "system1_detail": [
+          {
+            "ms": 210.11,
+            "provider": "laya",
+            "answers": {
+              "preferred_candidate": "@e1"
+            },
+            "confidence": {
+              "preferred_candidate": 0.6251
+            },
+            "abstentions": [],
+            "fallback_recommended": false
+          }
+        ],
+        "navigate_operation_id": "op_browser_navigate_0a80775b3af7",
+        "navigate_revision": 4
+      }
+    ]
+  }
+}

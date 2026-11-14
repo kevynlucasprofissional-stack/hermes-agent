@@ -30,3 +30,18 @@ def test_multistage_explicit_requests_are_durable(prompt):
     intent = work_intent(MessageEnvelope(MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK,
                                           "session", prompt))
     assert intent.requires_task
+
+def test_readonly_browser_navigation_with_negated_constraints_is_not_durable():
+    """Prohibiting writes cannot manufacture a durable write assignment."""
+    prompt = (
+        "Open ONLY the local QA page http://127.0.0.1:63050/ using native "
+        "browser_navigate. This is a READ-ONLY navigation test. "
+        "Do not type in any field, do not click Save, do not post data, "
+        "do not create tasks or modify any remote or local information. "
+        "Briefly state the page title after navigation."
+    )
+    intent = work_intent(MessageEnvelope(
+        MessageOrigin.HUMAN, IntentAuthority.CREATE_WORK, "qa-navigation", prompt,
+    ))
+    assert not is_multistep_request(prompt)
+    assert not intent.requires_task

@@ -42,7 +42,22 @@ async function run() {
     '<input id="field" placeholder="offline">' +
     '<iframe title="child" srcdoc="<button>Child</button>"></iframe>'
   await contents.loadURL('data:text/html;charset=UTF-8,' + encodeURIComponent(html))
+  // WhatsApp puts the send icon inside the actionable footer button. The icon
+  // itself is not returned by the interactive-element inventory.
+  await contents.executeJavaScript(`document.body.insertAdjacentHTML('beforeend',
+    '<footer id="chat-footer"><button id="native-send-button"><span data-icon="send"></span></button></footer><span data-testid="send" id="unrelated-noninteractive-send"></span>')`)
   const before = await runtime.snapshotForEntry(runtime.entries.get(tab.id), true)
+  const sendButtons = before.elements.filter(e => e.sendControl === true)
+  assert.equal(sendButtons.length, 1, 'nested send icon resolves to one actionable footer control')
+  assert.equal(sendButtons[0].tag, 'button')
+  assert.equal(sendButtons[0].ref.length > 0, true)
+  assert.equal(before.elements.filter(e => e.testid === 'send').length, 0,
+    'noninteractive send icons must not be clickable refs')
+  await contents.executeJavaScript(`document.getElementById('native-send-button').addEventListener('click',
+    e => { e.currentTarget.dataset.clicked = 'yes' })`)
+  await runtime.clickRef(runtime.entries.get(tab.id), sendButtons[0].ref)
+  assert.equal(await contents.executeJavaScript(`document.getElementById('native-send-button').dataset.clicked`),
+    'yes', 'resolved footer button is actually clicked in isolated Chromium')
   assert.equal(before.success, true, 'real Chromium inventory')
   assert.ok(before.__telemetry.renderer_memory_bytes > 0, 'renderer memory is measured independently of MAIN')
   assert.ok(before.__telemetry.renderer_pid > 0, 'renderer operating-system PID is identified')
@@ -89,6 +104,27 @@ async function run() {
   await runtime.clickRef(runtime.entries.get(tab.id), button.ref)
   const localReadback = await contents.executeJavaScript('document.querySelector("#status").textContent')
   assert.equal(localReadback, 'clicked', 'real renderer proves DOM effect')
+  // A short-lived SPA overlay must not permanently abort text entry before
+  // any text input has been dispatched. Clicks remain strict above.
+  const typeSnapshot = await runtime.snapshotForEntry(runtime.entries.get(tab.id), true)
+  const field = typeSnapshot.elements.find(e => e.tag === 'input' && e.label === 'offline')
+  assert.ok(field, 'editable input ref exists in the real Chromium DOM')
+  await contents.executeJavaScript(`(function () {
+    const overlay=document.createElement('div');overlay.id='transient-type-overlay';
+    Object.assign(overlay.style,{position:'fixed',inset:'0',zIndex:'99999',background:'transparent'});
+    document.body.append(overlay);
+    setTimeout(()=>overlay.remove(),350);
+  })()`)
+  await runtime.typeRef(runtime.entries.get(tab.id), field.ref, 'transient-ready', {clear:true})
+  assert.equal(await contents.executeJavaScript('document.querySelector("#field").value'), 'transient-ready')
+  await contents.executeJavaScript(`(function () {
+    const overlay=document.createElement('div');overlay.id='persistent-type-overlay';
+    Object.assign(overlay.style,{position:'fixed',inset:'0',zIndex:'99999',background:'transparent'});
+    document.body.append(overlay);
+  })()`)
+  await assert.rejects(runtime.typeRef(runtime.entries.get(tab.id), field.ref, 'MUST-NOT-ENTER', {clear:true}), /target_obscured/)
+  assert.equal(await contents.executeJavaScript('document.querySelector("#field").value'), 'transient-ready', 'persistent obstruction blocks text before effect')
+  await contents.executeJavaScript('document.querySelector("#persistent-type-overlay").remove()')
   runtime.takeControl(taskId, 'offline-session')
   assert.throws(() => runtime.assertAgentControl(taskId), /USER_CONTROL_ACTIVE|human|control/i)
   const frameCount = await contents.executeJavaScript('document.querySelectorAll("iframe").length')

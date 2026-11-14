@@ -279,12 +279,14 @@ def _tool_defs_cache_key(
         cfg_fp = file_signature(cfg_stat)
     except (FileNotFoundError, OSError, ImportError):
         cfg_fp = None
+    from tools.browser_workstation import workstation_desktop_session
+
     return (
         registry.current_scope_key(), frozenset(enabled_toolsets) if enabled_toolsets is not None else None,
         frozenset(disabled_toolsets) if disabled_toolsets else None, registry._generation, cfg_fp,
         bool(os.environ.get("HERMES_KANBAN_TASK")), bool(skip_tool_search_assembly),
         _is_delegated_child_context(), _is_dispatcher_owned_worker(), profile_scope,
-        force_available_tools,
+        force_available_tools, workstation_desktop_session(),
     )
 
 
@@ -402,9 +404,12 @@ def _rewrite_browser_cdp(td: dict[str, Any], available: set) -> Optional[dict[st
 
 
 def _rewrite_browser_exec(td: dict[str, Any], available: set) -> Optional[dict[str, Any]]:
-    """browser_exec runs arbitrary host Python: a session without the terminal surface
-    must not regain host execution via the browser toolset. Session-level gate rather
-    than a check_fn because check_fns are TTL-cached process-wide across sessions."""
+    """Desktop sessions have one browser authority; browser_exec is a separate daemon.
+    Apply the gate per session, not in the process-cached tool check_fn."""
+    from tools.browser_workstation import workstation_desktop_session
+
+    if workstation_desktop_session():
+        return None
     return td if "terminal" in available else None
 
 
@@ -849,7 +854,9 @@ def _execute_tool(function_name: str, function_args: dict[str, Any], original_ar
                   *, user_task: Optional[str], enabled_tools: Optional[list[str]], skip_tool_execution_middleware: bool) -> Any:
     """Run the registry handler (through tool-execution middleware unless skipped)
     with the approval observability context bound for the duration."""
-    dispatch_kwargs: dict[str, Any] = {"task_id": ids.task_id, "session_id": ids.session_id}
+    dispatch_kwargs: dict[str, Any] = {
+        "task_id": ids.task_id, "session_id": ids.session_id, "tool_call_id": ids.tool_call_id,
+    }
     if function_name == "execute_code":
         # Prefer the caller's list so subagents can't overwrite the parent's
         # tool set via the process-global.

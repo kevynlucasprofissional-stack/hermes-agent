@@ -275,7 +275,7 @@ export function PreviewPane(props: PreviewPaneProps) {
   if (isWorkstation) {
     return (
       <aside className="relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-transparent text-muted-foreground">
-        <WorkstationBrowserPane onPopOut={navigate ? () => navigate(BROWSER_ROUTE) : undefined} sessionId={props.sessionId} />
+        <WorkstationBrowserPane onPopOut={navigate ? () => navigate(`${BROWSER_ROUTE}?module=browser`) : undefined} sessionId={props.sessionId} />
       </aside>
     )
   }

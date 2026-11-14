@@ -145,3 +145,124 @@ def test_consumed_review_returns_readback_guidance_without_another_handoff(tmp_p
     final = HumanHandoffManager(manager.path)
     assert final.get(handoff["handoff_id"]).status == "consumed"
     assert len(final._handoffs) == 1
+
+
+def test_pending_review_coalesces_distinct_operations_only_within_same_run(tmp_path):
+    path = tmp_path / "human_handoffs.json"
+    mgr = HumanHandoffManager(path)
+    first = mgr.request(
+        task_id="browser-task", session_id="session", reason="uncertain_mutation_requires_review",
+        scope={"operation_key": "first-operation", "run_id": "run-1"},
+        coalesce_waiting_run=True,
+    )
+    second = HumanHandoffManager(path).request(
+        task_id="browser-task", session_id="session", reason="uncertain_mutation_requires_review",
+        scope={"operation_key": "different-operation", "run_id": "run-1"},
+        coalesce_waiting_run=True,
+    )
+    assert second.handoff_id == first.handoff_id
+    assert len(HumanHandoffManager(path)._handoffs) == 1
+    another_run = mgr.request(
+        task_id="browser-task", session_id="session", reason="uncertain_mutation_requires_review",
+        scope={"operation_key": "other-run", "run_id": "run-2"},
+        coalesce_waiting_run=True,
+    )
+    assert another_run.handoff_id != first.handoff_id
+    assert mgr.resume(first.handoff_id, returned_by="human")
+    # A different operation must NEVER inherit the first one's review.
+    after_approval = HumanHandoffManager(path).request(
+        task_id="browser-task", session_id="session", reason="uncertain_mutation_requires_review",
+        scope={"operation_key": "different-operation", "run_id": "run-1"},
+        coalesce_waiting_run=True,
+    )
+    assert after_approval.handoff_id not in {first.handoff_id, another_run.handoff_id}
+    assert after_approval.status == "waiting-for-human"
+
+
+def test_backend_prevents_multiple_pending_banners_for_distinct_mutations_in_same_run(tmp_path, monkeypatch):
+    from workstation.integrations.hermes import tool_batch_admission as admission
+
+    monkeypatch.setattr(admission, "get_hermes_home", lambda: tmp_path)
+    agent = _agent()
+    agent._canonical_work_task_id = "browser-task"
+    agent._canonical_work_run_id = "run-1"
+    args_one = {"path": "first.txt", "content": "a"}
+    args_two = {"path": "second.txt", "content": "b"}
+    agent._work_mutation_evidence = {
+        call_key("write_file", args_one): {"status": "uncertain"},
+        call_key("write_file", args_two): {"status": "uncertain"},
+    }
+    first = admission.workstation_tool_batch_admission(agent, [_call("write_file", args_one)])
+    second = admission.workstation_tool_batch_admission(agent, [_call("write_file", args_two)])
+    assert first is not None and second is not None
+    first_result = json.loads(first.decisions[0].synthetic_result)
+    second_result = json.loads(second.decisions[0].synthetic_result)
+    assert first_result["status"] == second_result["status"] == "handoff_requested"
+    assert first_result["handoff_id"] == second_result["handoff_id"]
+    path = tmp_path / "workstation" / "human_handoffs.json"
+    assert len(HumanHandoffManager(path)._handoffs) == 1
+
+def test_whatsapp_identity_refusal_does_not_poison_mutation_replay(tmp_path, monkeypatch):
+    from workstation.artifacts import ArtifactStore
+    import workstation.batch_detection as detector
+
+    # The tool returned before any browser side effect. Its refusal is
+    # terminal for this call, not an uncertain outbound message.
+    store = ArtifactStore(tmp_path)
+    monkeypatch.setattr("workstation.artifacts.ArtifactStore", lambda: store)
+    agent = _agent()
+    args = {"recipient_ref": {"source": "trusted", "contact_id": 1},
+            "expected_recipient_name": "Target", "message": "text"}
+    result = {"sent": False, "state": "REVIEW_REQUIRED",
+              "error_code": "TASKRUN_AUTHORITY_REQUIRED", "failure_phase": "VERIFY_TASKRUN"}
+    record_mutation(agent, "whatsapp_send_message", args, result)
+    assert agent._work_mutation_evidence[call_key("whatsapp_send_message", args)]["status"] == "refused_no_effect"
+    decision = decisions_for_calls(agent, [_call("whatsapp_send_message", args)])
+    assert CompilationDecision.REQUIRE_HUMAN not in decision
+
+
+def test_whatsapp_uncertain_postclick_remains_uncertain(tmp_path, monkeypatch):
+    from workstation.artifacts import ArtifactStore
+    store = ArtifactStore(tmp_path)
+    monkeypatch.setattr("workstation.artifacts.ArtifactStore", lambda: store)
+    agent = _agent()
+    args = {"recipient_ref": {"source": "trusted", "contact_id": 1},
+            "expected_recipient_name": "Target", "message": "text"}
+    result = {"sent": False, "state": "UNCERTAIN", "error_code": "CLICK_OUTCOME_UNKNOWN"}
+    record_mutation(agent, "whatsapp_send_message", args, result)
+    assert agent._work_mutation_evidence[call_key("whatsapp_send_message", args)]["status"] == "uncertain"
+
+
+def test_whatsapp_early_failed_taskrun_is_not_recorded_as_uncertain(tmp_path, monkeypatch):
+    from workstation.artifacts import ArtifactStore
+    store = ArtifactStore(tmp_path)
+    monkeypatch.setattr("workstation.artifacts.ArtifactStore", lambda: store)
+    agent = _agent()
+    args = {"recipient_ref": {"source": "trusted", "contact_id": 1},
+            "expected_recipient_name": "Target", "message": "text"}
+    # Actual tool handler uses FAILED without any failure_phase when its
+    # canonical TaskRun identity is missing, before invoking the executor.
+    result = {"sent": False, "state": "FAILED", "error_code": "TASKRUN_AUTHORITY_REQUIRED"}
+    record_mutation(agent, "whatsapp_send_message", args, result)
+    assert agent._work_mutation_evidence[call_key("whatsapp_send_message", args)]["status"] == "refused_no_effect"
+    assert CompilationDecision.REQUIRE_HUMAN not in decisions_for_calls(
+        agent, [_call("whatsapp_send_message", args)])
+
+
+def test_whatsapp_later_refusal_cannot_erase_real_previous_uncertainty(tmp_path, monkeypatch):
+    from workstation.artifacts import ArtifactStore
+    store = ArtifactStore(tmp_path)
+    monkeypatch.setattr("workstation.artifacts.ArtifactStore", lambda: store)
+    agent = _agent()
+    args = {"recipient_ref": {"source": "trusted", "contact_id": 1},
+            "expected_recipient_name": "Target", "message": "text"}
+    record_mutation(agent, "whatsapp_send_message", args,
+                    {"sent": False, "state": "UNCERTAIN", "error_code": "CLICK_OUTCOME_UNKNOWN"})
+    key = call_key("whatsapp_send_message", args)
+    first = dict(agent._work_mutation_evidence[key])
+    record_mutation(agent, "whatsapp_send_message", args,
+                    {"sent": False, "state": "FAILED", "error_code": "TASKRUN_AUTHORITY_REQUIRED"})
+    assert agent._work_mutation_evidence[key] == first
+    assert agent._work_mutation_evidence[key]["status"] == "uncertain"
+    assert CompilationDecision.REQUIRE_HUMAN in decisions_for_calls(
+        agent, [_call("whatsapp_send_message", args)])

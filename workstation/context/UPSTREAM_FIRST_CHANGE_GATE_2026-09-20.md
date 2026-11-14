@@ -1,7 +1,30 @@
-# H-079 — Upstream-First Change Gate / Qualified Baseline Discipline
+# Stage A / H-079 — optional upstream synchronization
+
+**Active policy (maintainer update: 2026-11-01): Stage A is OPTIONAL.**
+
+Agents may implement, repair, refactor and test Hermes Agent / Hermes Workstation
+without completing H-079, refreshing upstream, selecting a pin, running baseline CI,
+or obtaining a Stage A waiver. Incomplete or failed Stage A qualification is
+**not a development admission gate**. It must not be used as the sole reason to
+stop unrelated implementation work.
+
+For discoverable synchronization context, read [the upstream status index](../UPSTREAM.md)
+and [the upstream delta register](../UPSTREAM_DELTA.md); snapshots can be stale.
+A live report may be prepared when useful and authorized, but is not required
+before coding. Unknown status should be reported as unknown, not inferred.
+
+When upstream sync is **explicitly requested**, the historical H-079 pinning,
+true-merge, seam and qualification procedure below remains a useful checklist.
+Keep its results honest: do not claim upstream-qualified status or a passing release
+without corresponding evidence. This change does not relax security, concurrent-work
+protection, target-specific tests, or actual release acceptance requirements.
+
+---
+
+## Historical H-079 mandatory gate (superseded for development; retained as evidence)
 
 Date established: 2026-09-20  
-Status: **PRIMARY OPERATING POLICY — MANDATORY FOR DOWNSTREAM CODE CHANGES**  
+Historical status: **SUPERSEDED — upstream sync now opt-in for development (2026-11-01)**  
 Parent programs: H-078 / H-078A / H-078B / H-078C
 
 ## Decision in one sentence

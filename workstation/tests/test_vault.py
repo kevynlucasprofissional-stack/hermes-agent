@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from workstation.vault import (
     VaultManager,
@@ -282,7 +282,7 @@ def test_custom_vault_root_persists_in_existing_config(monkeypatch, tmp_path: Pa
     try:
         resolved = configure_vault_dir(str(custom))
         persisted = config_path.read_text(encoding="utf-8")
-        parsed = yaml.safe_load(persisted)
+        parsed = YAML(typ="safe").load(persisted)
         assert resolved == custom.resolve()
         assert configured_vault_dir() == resolved
         assert "test-model" in persisted

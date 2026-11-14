@@ -1,5 +1,46 @@
 # Hermes Workstation — Coding-Agent Context
 
+## 12/11/2026 — Otimização de tokens e compactação (PLANO PREPARADO)
+
+Para reduzir contexto DeepSeek e evitar compactações inúteis, usar [plano de quatro prompts executáveis](HERMES_CONTEXT_TOKEN_OPTIMIZATION_PLAN_20261112.md). Diagnóstico confirmado: threshold_tokens=32000 explícito, poda proativa já ativa em 18000 e tool_search=auto; baseline 34.574 tokens na primeira chamada e 80–90 mil em sessões longas. **Somente preparação técnica:** nenhuma configuração ou lógica do runtime foi modificada ou homologada por este plano. Preservar WIP existente e acompanhar resultados reais antes/depois.
+
+## 12/11/2026 — Plano integrado para fazer o MVP funcionar (PREPARADO)
+
+Entrada recomendada para implementações pontuais: [Hermes Work MVP — prompts executáveis](HERMES_WORK_MVP_EXECUTION_PROMPTS_20261112.md). Consolida ingresso individual (duas políticas WhatsApp concorrentes ainda a reconciliar), Browser ACK perdido, Browser → Kanban operacional, envio individual e otimização de chamadas. **Documento de preparação; não altera status de homologação.** Planos Browser/WhatsApp específicos continuam como evidência e não devem ser refeitos por padrão.
+
+## Entrada atual 11/11/2026 — campanhas WhatsApp como capacidade nativa (WA-OPC-011)
+
+Para automação recorrente de WhatsApp e conversão de skills em operações duráveis, usar [WA-OPC-011](WHATSAPP_DETERMINISTIC_CAMPAIGNS_20261111.md), [OPC-001](PREFAB_OPERATIONAL_CAPABILITIES_2026-10-10.md) e [Progressive Compilation/H-080](PROGRESSIVE_OPERATIONAL_COMPILATION.md). Planejamento nativo sem skill e correções locais do batch implementados; envio multietapa, prova real do WhatsApp e emissão de aprovação continuam HOLD. Não usar scripts de clipboard/CDP externo ou marcar sent por evidência textual livre.
+
+
+## Entrada canônica 07/11/2026 — Database / Trello / Cron
+
+Seguir o [plano unificado](PLANO_UNIFICADO_DATABASE_TRELLO_CRON_20261107.md) antes dos registros antigos de intake abaixo. Prioridade: finalizar escrita no Database por humanos e agentes, corrigir cron perdido, depois usar Browser nativo para leitura Trello, reconciliar ambos os lados e ativar job diário. Estado atual de code slice em [CURRENT_STATE](CURRENT_STATE.md) e evidências no [jornal](engineering-journal/CURRENT.md).
+
+## Entrada atual 04/11/2026 — Hermes Work / Trello ACIRV (backlog, não runtime)
+
+Ver [ROADMAP — intake de 04/11](../ROADMAP.md), [Current State](CURRENT_STATE.md), [Engineering Journal](engineering-journal/CURRENT.md) e [detalhe Database](WORKSTATION_DASHBOARD_DATABASE_20261101.md). Duas entregas diretas abertas no Trello: importar **uma** base ACIRV para Database (#934, também checklist #944) e recuperar com segurança Cron Jobs diários que perderam o horário (#944). Escopo **somente documentado**; nenhuma correção ou integração foi declarada pronta. As tarefas de dados/CRM/MCP/relatórios correlatas são contexto, não backlog de implementação automaticamente incorporado. Preservar gates e ordem de leitura abaixo.
+
+
+## WhatsApp M3 — local causal patch, operational HOLD (2026-10-25)
+Existing executor rejects generic msg-meta; confirms only new outbound evidence tied to verified conversation/recipient, equal body and ACK. Existing SQLite operation row reserved before Browser effect; bridge carries run_id and operation_id. No new executor, DB, CDP route or external sends. Focused synthetic RED 8, GREEN 9/9. Native Browser snapshot has not been demonstrated to expose explicit recipient/direction/ACK attributes, so product gate HOLD pending validation. M4-M6 not yet approved by evidence. Stage A waived solely for local development.
+
+
+## WhatsApp — M1/M2 verificadas localmente; sem qualificação de release
+Consultar [contrato WA-D1..WA-D6](WHATSAPP_RELIABILITY_2026-10-24.md), [seis prompts](WHATSAPP_IMPLEMENTER_PROMPTS_2026-10-24.md), [código de referência](WHATSAPP_REFERENCE_PATCHES_2026-10-24.md) e [jornal WA-PII](engineering-journal/whatsapp-privacy-incident-2026-10-24.md). Exemplo de configuração por perfil:
+
+```yaml
+whatsapp:
+  sources:
+    contacts_db:
+      db_path: /absolute/path/to/authorized-contacts.sqlite
+      allowed_phone_sources:
+        - crm-import-v1
+```
+
+Use `recipient_ref: {source: contacts_db, contact_id: 123}` para identidade individual ou `{source: contacts_db, campaign_id: 45, enrollment_id: 123}` para identidade escopada a uma matrícula. `db_path` vem só do perfil confiável; caminhos não são argumento da ferramenta. Allowlist autoriza resolução de identidade/proveniência, não envio. Contato individual não tem consentimento inferido; nenhuma referência/status substitui aprovação humana nem Browser admission. M2 liga o handler à TaskRun canônica e mantém a identidade de run do recibo alinhada com a admissão. Testes focados Python/nativos e Ruff passaram; não houve envio real nem qualificação de CI/release. Reusar executor atual e manter redaction. Próxima missão: M3, prova unitária causal de mensagem nova e persistência; ver prompt M3.
+
+
 ## CW-047 — ponto de entrada operacional (2026-10-17)
 Para preparar a abertura por comando de PhotoCraft/EffectCraft no Browser nativo, após H-079 e a ordem canônica de contexto, seguir [handoff objetivo](../creative-workstation/CW047_IMPLEMENTER_HANDOFF_2026-10-17.md). Helpers Python já versionados, **não conectados nem testados em Electron**. Baixo acoplamento D-046 continua premissa, sem autorização para novo browser/UI/kernel ou integração 3D profunda.
 
@@ -62,16 +103,17 @@ Active coordination: [protocol](AGENT_COLLABORATION_PROTOCOL.md), [live/durable 
 Before changing Workstation code, read these documents in order:
 
 1. [`../../AGENTS.md`](../../AGENTS.md) — repository-wide engineering rules and invariants.
-> **Primary gate before any code-changing Workstation task:** read and execute
-> [UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md)
-> before target implementation. Upstream baseline refresh, seam reconciliation and baseline
-> qualification happen before the requested downstream change.
-> **One-pin closure:** the selected upstream SHA remains fixed through PR and promotion. The
-> final upstream fetch classifies drift for the next cycle; it does not trigger another merge
-> into the active candidate merely because `upstream/main` moved.
-> **Current blocking corrective lane:**
-> [H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md)
-> records the off-main upstream/installer/test promotion gap. Read it before any new code-changing lane; new feature work is blocked until this closure is qualified.
+> **Regra atual (2026-11-01): Stage A / H-079 é opcional para
+> desenvolvimento.** O agente pode implementar, corrigir e testar sem fetch,
+> merge, pin, qualificação do baseline ou autorização especial para dispensá-los.
+> Consulte o [relatório de sincronização](../UPSTREAM.md) e o
+> [delta documentado](../UPSTREAM_DELTA.md) quando essa informação for útil;
+> relatórios datados não comprovam alinhamento ao vivo.
+> A [rotina H-079](UPSTREAM_FIRST_CHANGE_GATE_2026-09-20.md) é usada quando a
+> sincronização for solicitada. Preserve segurança, trabalho em andamento,
+> testes proporcionais à alteração e a qualificação exigida para o release.
+> O histórico [H-079.2](H079_2_UPSTREAM_DOGFOOD_CLOSURE_2026-09-20.md)
+> continua consultável, mas **não bloqueia novos trabalhos de implementação**.
 
 
 2. [`CURRENT_STATE.md`](CURRENT_STATE.md) — what works, what is partial, what is not built, and the latest validation state.
