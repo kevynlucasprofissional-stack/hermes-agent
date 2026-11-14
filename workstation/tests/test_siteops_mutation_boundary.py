@@ -9,11 +9,12 @@ from workstation.integrations.hermes import whatsapp_recipient_resolution as rec
 PHONE = "5511999990000"
 MESSAGE = "Fixture: confirmacao operacional"
 SCOPE = {
-    "task_id": "task-fixture",
+    "task_id": "card-fixture",
     "session_id": "session-fixture",
     "kanban_card_id": "card-fixture",
     "run_id": "run-fixture",
     "operation_id": "op-fixture-001",
+    "use_native_bridge": False,
 }
 
 RECIPIENT_REF = {"source": "fixture", "contact_id": "contact-synthetic-1"}

@@ -1872,6 +1872,7 @@ def whatsapp_send_message(
     run_id: Optional[str] = None,
     operation_id: Optional[str] = None,
     batch_item_key: Optional[str] = None,
+    use_native_bridge: bool = True,
 ) -> dict[str, Any]:
     """Native WhatsApp single-send operation.
     recipient_ref selects one trusted contact. The active Hermes session and
@@ -1913,7 +1914,10 @@ def whatsapp_send_message(
     # and the runtime tool-call ID as a fresh run/operation scope.
     if task_id is None and kanban_card_id is None:
         run_id = run_id or operation_id
-    elif (not task_id or task_id != kanban_card_id or not run_id):
+    elif not task_id or not run_id:
+        return {"sent": False, "state": STATE_FAILED,
+                "error_code": "TASKRUN_AUTHORITY_REQUIRED", "failure_phase": "PRE_SEND"}
+    elif kanban_card_id and task_id != kanban_card_id:
         return {"sent": False, "state": STATE_FAILED,
                 "error_code": "INVALID_BROWSER_SCOPE", "failure_phase": "PRE_SEND"}
 
@@ -2089,8 +2093,8 @@ def whatsapp_send_message(
             browser_navigate=_nav,
             browser_snapshot=_snap,
             browser_click=_click,
-            browser_inspect=_inspect,
-            browser_type=_type,
+            browser_inspect=_inspect if use_native_bridge else None,
+            browser_type=_type if use_native_bridge else None,
             opened_chat_name=target_name or opened_verified_title,
             session_context_verified=session_context_verified,
             approval_fingerprint=None,
